@@ -168,6 +168,8 @@ function categorizeNavigationItems(
 ): NavigationSection[] {
   const categories = {
     fundamentals: [] as NavigationItem[],
+    sql: [] as NavigationItem[],
+    nosql: [] as NavigationItem[],
     databases: [] as NavigationItem[],
     projects: [] as NavigationItem[],
     utilities: [] as NavigationItem[],
@@ -183,14 +185,19 @@ function categorizeNavigationItems(
     const pathSegments = path
       .split("/")
       .filter((segment) => segment.length > 0);
+
     for (const segment of pathSegments) {
       const { category } = extractCategoryFromPath(segment);
+
       if (category) {
         // Map category prefixes to section names
         switch (category) {
           case "sql":
+            return "sql";
           case "nosql":
+            return "nosql";
           case "db":
+          case "api":
             return "databases";
           case "fund":
             return "fundamentals";
@@ -203,8 +210,6 @@ function categorizeNavigationItems(
             return "advanced";
           case "util":
             return "utilities";
-          case "api":
-            return "databases"; // APIs often relate to database interactions
         }
       }
     }
@@ -223,19 +228,45 @@ function categorizeNavigationItems(
         return "advanced";
       }
 
+      // Check for SQL database sections
+      if (
+        path.includes("mysql") ||
+        path.includes("postgresql") ||
+        path.includes("sqlite") ||
+        path.includes("sql") ||
+        title.includes("mysql") ||
+        title.includes("postgresql") ||
+        title.includes("sqlite") ||
+        title.includes("sql")
+      ) {
+        return "sql";
+      }
+
+      // Check for NoSQL database sections
+      if (
+        path.includes("mongodb") ||
+        path.includes("redis") ||
+        path.includes("nosql") ||
+        path.includes("cassandra") ||
+        path.includes("dynamodb") ||
+        title.includes("mongodb") ||
+        title.includes("redis") ||
+        title.includes("nosql") ||
+        title.includes("cassandra") ||
+        title.includes("dynamodb")
+      ) {
+        return "nosql";
+      }
+
       // Check for core technology sections
       if (
-        path.includes("database") ||
         path.includes("database") ||
         path.includes("environment-setup") ||
         path.includes("managers") ||
         path.includes("version") ||
         path.includes("transaction-models") ||
         path.includes("data") ||
-        path.includes("mysql") ||
-        path.includes("redis") ||
         path.includes("graphql") ||
-        path.includes("mongodb") ||
         title.includes("database") ||
         title.includes("databases") ||
         title.includes("managers") ||
@@ -243,10 +274,7 @@ function categorizeNavigationItems(
         title.includes("version") ||
         title.includes("transaction") ||
         title.includes("data") ||
-        title.includes("mysql") ||
-        title.includes("graphql") ||
-        title.includes("mongodb") ||
-        title.includes("redis")
+        title.includes("graphql")
       ) {
         return "databases";
       }
@@ -265,6 +293,30 @@ function categorizeNavigationItems(
       path.includes("abbreviations")
     ) {
       return "fundamentals";
+    } else if (
+      path.includes("mysql") ||
+      path.includes("postgresql") ||
+      path.includes("sqlite") ||
+      path.includes("sql") ||
+      title.includes("mysql") ||
+      title.includes("postgresql") ||
+      title.includes("sqlite") ||
+      title.includes("sql")
+    ) {
+      return "sql";
+    } else if (
+      path.includes("mongodb") ||
+      path.includes("redis") ||
+      path.includes("nosql") ||
+      path.includes("cassandra") ||
+      path.includes("dynamodb") ||
+      title.includes("mongodb") ||
+      title.includes("redis") ||
+      title.includes("nosql") ||
+      title.includes("cassandra") ||
+      title.includes("dynamodb")
+    ) {
+      return "nosql";
     } else if (
       path.includes("docker") ||
       path.includes("kubernetes") ||
@@ -331,6 +383,20 @@ function categorizeNavigationItems(
     sections.push({
       title: "Fundamentals",
       items: categories.fundamentals,
+    });
+  }
+
+  if (categories.sql.length > 0) {
+    sections.push({
+      title: "SQL",
+      items: categories.sql,
+    });
+  }
+
+  if (categories.nosql.length > 0) {
+    sections.push({
+      title: "NoSQL",
+      items: categories.nosql,
     });
   }
 
@@ -504,7 +570,7 @@ async function scanDirectory(
           if (children.length > 0) {
             items.push({
               title: toSmartTitleCase(entry.name),
-              href: "#",
+              href: routePath, // Use the actual route path instead of "#" for categorization
               children: sortNavigationItems(children),
             });
           }
