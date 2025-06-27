@@ -3,61 +3,65 @@ import Link from "next/link";
 export default function Resources() {
   const resources = [
     {
-      title: "MDN Web Docs",
-      description: "The authoritative guide for HTML, CSS, and JavaScript.",
-      href: "https://developer.mozilla.org/",
+      title: "Node.js Documentation",
+      description: "Official Node.js documentation for server-side JavaScript.",
+      href: "https://nodejs.org/docs/",
       external: true,
     },
     {
-      title: "Can I Use",
-      description: "Check browser compatibility for web technologies.",
-      href: "https://caniuse.com/",
+      title: "MDN HTTP Guide",
+      description:
+        "Complete guide to HTTP protocol, methods, and status codes.",
+      href: "https://developer.mozilla.org/en-US/docs/Web/HTTP",
       external: true,
     },
     {
-      title: "CSS-Tricks",
-      description: "Articles, guides, and snippets for modern CSS techniques.",
-      href: "https://css-tricks.com/",
+      title: "MySQL Documentation",
+      description: "Comprehensive MySQL database documentation and tutorials.",
+      href: "https://dev.mysql.com/doc/",
       external: true,
     },
     {
-      title: "JavaScript.info",
-      description: "In-depth JavaScript tutorials from beginner to advanced.",
-      href: "https://javascript.info/",
+      title: "Docker Documentation",
+      description:
+        "Official Docker guides for containerization and deployment.",
+      href: "https://docs.docker.com/",
       external: true,
     },
     {
-      title: "freeCodeCamp",
-      description: "Free coding bootcamp with hands-on projects.",
-      href: "https://www.freecodecamp.org/",
+      title: "Express.js Guide",
+      description:
+        "Fast, unopinionated web framework for Node.js applications.",
+      href: "https://expressjs.com/",
       external: true,
     },
     {
-      title: "Web Accessibility Guidelines",
-      description: "WCAG guidelines for building accessible websites.",
-      href: "https://www.w3.org/WAI/WCAG21/quickref/",
+      title: "REST API Design",
+      description:
+        "Best practices for designing RESTful APIs and web services.",
+      href: "https://restfulapi.net/",
       external: true,
     },
     {
-      title: "Course Vocabulary",
-      description: "Essential web development terms and definitions.",
-      href: "/vocabulary",
+      title: "Git & Version Control",
+      description:
+        "Master Git workflows and collaborative development practices.",
+      href: "/tools-practices/version-control",
       external: false,
     },
     {
-      title: "Developer Resources",
-      description:
-        "Tools, hosting, and deployment resources for web developers.",
-      href: "/developer-tools-and-resources",
+      title: "Database Design Guide",
+      description: "Learn database modeling, normalization, and schema design.",
+      href: "/databases/database-design",
       external: false,
     },
   ];
 
   return (
     <div className="my-12 not-prose">
-      <div className="mx-auto max-w-6xl">
+      <div className="mx-auto">
         <h2 className="mb-8 font-bold text-2xl text-gray-900">
-          Essential Resources
+          Back-end Development Resources
         </h2>
         <div className="gap-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {resources.map((resource) => (

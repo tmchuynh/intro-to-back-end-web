@@ -322,6 +322,7 @@ pre code.hljs {
   --color-sidebar-active-text: var(--sidebar-active-text);
   --color-nav-item-hover: var(--nav-item-hover);
   --color-nav-item-active: var(--nav-item-active);
+  --color-nav-item-active-text: var(--nav-item-active-text);
   --color-nav-text-hover: var(--nav-text-hover);
   --color-border: var(--border);
   --color-card: var(--card);
@@ -392,6 +393,7 @@ pre code.hljs {
 
   --nav-item-hover: #ffebeb;
   --nav-item-active: #a3422f;
+  --nav-item-active-text: #f2ecec;
   --nav-text-hover: #101010;
 
   --border: #efece8;
@@ -469,6 +471,7 @@ pre code.hljs {
 
   --nav-item-hover: #270202;
   --nav-item-active: #780000;
+  --nav-item-active-text: #f2ecec;
   --nav-text-hover: #f2ecec;
 
   --border: #0e0e0e;
