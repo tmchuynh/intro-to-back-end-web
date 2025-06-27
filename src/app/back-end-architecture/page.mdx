@@ -466,25 +466,13 @@ Storage Optimization:
 - Optimize database schemas and query performance
 - Use content delivery networks for static assets
 
-#### Auto-scaling
+### Auto-scaling Strategies
 
-Reactive Scaling:
-- Scale based on current resource utilization metrics
-- CPU, memory, and network utilization thresholds
-- Queue length and response time monitoring
-- Automatic scaling policies and rules
-
-Predictive Scaling:
-- Scale based on historical patterns and forecasts
-- Machine learning models for demand prediction
-- Scheduled scaling for known traffic patterns
-- Proactive resource provisioning
-
-Cloud Auto-scaling:
-- Cloud provider auto-scaling services
-- Integration with load balancers and health checks
-- Multi-zone deployment for high availability
-- Cost optimization through right-sizing
+| Strategy Type | Approach | Implementation | Best For |
+|---------------|----------|----------------|----------|
+| Reactive Scaling | Scale based on current metrics | CPU, memory, network thresholds; queue length monitoring | Variable workloads with predictable patterns |
+| Predictive Scaling | Scale based on forecasts | Machine learning models, historical patterns | Known traffic patterns, seasonal variations |
+| Cloud Auto-scaling | Provider-managed scaling | Integration with load balancers, multi-zone deployment | Cloud-native applications, cost optimization |
 
 ## Best Practices
 
@@ -550,47 +538,14 @@ Application Monitoring:
 
 ### Testing Strategies
 
-#### Unit Testing
+### Testing Strategy Comparison
 
-Test Isolation:
-- Test individual components in isolation
-- Use mock objects for external dependencies
-- Fast execution and reliable results
-- High code coverage for critical business logic
-
-Test-Driven Development:
-- Write tests before implementing functionality
-- Red-green-refactor development cycle
-- Better code design through testability requirements
-- Living documentation through test specifications
-
-#### Integration Testing
-
-Component Integration:
-- Test interactions between different components
-- Verify data flow and communication protocols
-- Test configuration and deployment procedures
-- Validate third-party service integrations
-
-End-to-End Testing:
-- Test complete user workflows and scenarios
-- Verify system behavior from user perspective
-- Test in production-like environments
-- Automated testing for regression prevention
-
-#### Performance Testing
-
-Load Testing:
-- Test system behavior under expected load
-- Identify performance bottlenecks and limitations
-- Validate scaling strategies and auto-scaling policies
-- Ensure acceptable response times under load
-
-Stress Testing:
-- Test system behavior beyond normal capacity
-- Identify breaking points and failure modes
-- Test recovery procedures and error handling
-- Validate system resilience and fault tolerance
+| Testing Type | Scope | Execution Speed | Dependencies | Coverage Focus |
+|--------------|-------|----------------|--------------|----------------|
+| Unit Testing | Individual components | Fast | Isolated with mocks | Critical business logic |
+| Integration Testing | Component interactions | Medium | Real dependencies | Data flow and communication |
+| End-to-End Testing | Complete workflows | Slow | Full system | User scenarios and behavior |
+| Performance Testing | System under load | Variable | Production-like environment | Bottlenecks and scalability |
 
 ## Next Steps
 
