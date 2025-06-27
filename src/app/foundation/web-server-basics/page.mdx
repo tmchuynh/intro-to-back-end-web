@@ -1,0 +1,133 @@
+import BackToTop from "@/components/BackToTop";
+
+# Web Server Basics
+
+## Table of Contents
+
+## Introduction to Web Servers
+
+Web servers are software applications that handle HTTP requests from clients (usually web browsers) and serve web content, such as HTML pages, images, and other resources. They play a crucial role in delivering web applications and services over the internet.
+
+## Functionalities of Web Servers
+
+### Request Handling
+
+Web servers receive HTTP requests from clients, process them, and return appropriate responses. They can handle various types of requests, such as GET, POST, PUT, DELETE, and more.
+
+### Static Content Delivery
+
+Web servers can serve static content, such as HTML files, CSS stylesheets, JavaScript files, and images. Static content is pre-defined and does not change dynamically based on user input.
+
+### Dynamic Content Generation
+
+Web servers can also generate dynamic content by executing server-side scripts or applications. This allows for personalized responses based on user interactions or data stored in databases.
+
+### Security Features
+
+Web servers implement security measures to protect against unauthorized access and attacks. This includes features like SSL/TLS encryption for secure communication, authentication mechanisms, and access control.
+
+### Logging and Monitoring
+
+Web servers maintain logs of incoming requests, errors, and other events. These logs are essential for troubleshooting issues, monitoring server performance, and analyzing user behavior.
+
+## Web Server Architecture
+
+Web servers typically follow a client-server architecture, where clients (web browsers or applications) send requests to the server, and the server responds with the requested resources. The architecture can be categorized into two main types:
+
+### Monolithic Architecture
+
+In a monolithic architecture, the web server handles all aspects of request processing, including routing, content delivery, and application logic. This approach is simpler to implement but can become challenging to scale as the application grows.
+
+#### Key Features of Monolithic Architecture
+
+- Single Codebase: All components of the application are bundled together, making it easier to deploy and manage.
+- Simplicity: Easier to develop and deploy, as everything is contained within a single application.
+- Performance: Can be optimized for performance since all components are tightly integrated.
+
+#### Benefits of Monolithic Architecture
+
+- Easier to develop and deploy due to a single codebase.
+- Simplicity in architecture, making it straightforward to understand and manage.
+- Performance can be optimized since all components are tightly integrated.
+
+#### Limitations of Monolithic Architecture
+
+- Scalability: Difficult to scale individual components independently, leading to potential bottlenecks.
+- Maintainability: As the application grows, it can become complex and harder to maintain.
+
+#### Example of Monolithic Architecture
+
+A traditional web application where the web server handles routing, serves static files, and processes dynamic content using server-side scripts. All components are tightly integrated, making it easy to deploy but challenging to scale.
+
+#### Example Code Snippet
+
+```javascript
+const express = require("express");
+const app = express();
+app.get("/", (req, res) => {
+  res.send("Hello, World!");
+});
+app.listen(3000, () => {
+  console.log("Server is running on port 3000");
+});
+```
+
+### Microservices Architecture
+
+In a microservices architecture, the web server acts as a gateway that routes requests to various microservices. Each microservice is responsible for a specific functionality, allowing for better scalability, maintainability, and flexibility. This architecture enables independent development, deployment, and scaling of individual services.
+
+#### Key Features of Microservices Architecture
+
+- Service Independence: Each microservice can be developed, deployed, and scaled independently, allowing for greater flexibility and agility.
+- Decentralized Data Management: Each microservice can manage its own data, reducing dependencies and improving data isolation.
+- Inter-Service Communication: Microservices communicate with each other through APIs, enabling seamless integration and collaboration.
+
+#### Benefits of Microservices Architecture
+
+- Scalability: Individual services can be scaled independently based on demand, improving resource utilization.
+- Flexibility: Different technologies and programming languages can be used for different services, allowing teams to choose the best tools for each task.
+- Resilience: If one service fails, it does not affect the entire application, improving overall system reliability.
+
+#### Limitations of Microservices Architecture
+
+- Complexity: Managing multiple services can introduce complexity in deployment, monitoring, and debugging.
+- Inter-Service Communication: Requires robust communication mechanisms between services, which can add overhead and latency.
+
+#### Example of Microservices Architecture
+
+A web application where the web server acts as a gateway, routing requests to various microservices for user management, product catalog, and order processing. Each microservice can be developed and deployed independently, allowing for greater flexibility and scalability.
+
+#### Example Code Snippet
+
+```javascript
+const express = require("express");
+const app = express();
+app.use("/users", require("./userService"));
+app.use("/products", require("./productService"));
+app.use("/orders", require("./orderService"));
+app.listen(3000, () => {
+  console.log("Gateway server is running on port 3000");
+});
+```
+
+## Web Server Protocols
+
+Web servers communicate with clients using various protocols, with HTTP (Hypertext Transfer Protocol) being the most common. Other protocols include HTTPS (HTTP Secure), FTP (File Transfer Protocol), and WebSocket for real-time communication.
+
+## Common Web Server Software
+
+Some popular web server software includes:
+
+- Apache HTTP Server: A widely used open-source web server known for its flexibility and extensive features.
+- Nginx: A high-performance web server that excels in handling concurrent connections and serving static content efficiently.
+- Microsoft Internet Information Services (IIS): A web server developed by Microsoft, commonly used in Windows environments.
+- LiteSpeed: A commercial web server known for its speed and scalability, often used for high-traffic websites.
+- Caddy: A modern web server that automatically handles HTTPS and is designed for simplicity and ease of use.
+
+## Next Steps
+
+Make sure you get through the content in the subcategory "Foundation" that is listed within "Fundamentals" to understand the foundational concepts of web servers, HTTP protocols, and RESTful services. This knowledge is essential for building robust and scalable web applications.
+
+When you're finished with the subcategory, move onto the next category "Databases" to learn about different types of databases, their architectures, and how they interact with web servers and applications.
+
+<BackToTop />
