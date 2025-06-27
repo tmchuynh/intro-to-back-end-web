@@ -124,11 +124,9 @@ function categorizeNavigationItems(
 ): NavigationSection[] {
   const categories = {
     fundamentals: [] as NavigationItem[],
-    developer_tools: [] as NavigationItem[],
     databases: [] as NavigationItem[],
     utilities: [] as NavigationItem[],
     advanced: [] as NavigationItem[],
-    advanced_projects: [] as NavigationItem[],
   };
 
   // Helper function to categorize an item and its children recursively
@@ -154,6 +152,7 @@ function categorizeNavigationItems(
       if (
         path.includes("database") ||
         path.includes("database") ||
+        path.includes("environment-setup") ||
         path.includes("transaction-models") ||
         path.includes("data") ||
         path.includes("mysql") ||
@@ -162,6 +161,7 @@ function categorizeNavigationItems(
         path.includes("mongodb") ||
         title.includes("database") ||
         title.includes("databases") ||
+        title.includes("environment") ||
         title.includes("transaction") ||
         title.includes("data") ||
         title.includes("mysql") ||
@@ -172,29 +172,7 @@ function categorizeNavigationItems(
         return "databases";
       }
 
-      // Check for developer tools sections
-      if (
-        path.includes("developer-tools") ||
-        title.includes("developer tools")
-      ) {
-        return "developer_tools";
-      }
-
-      // Check for advanced project sections
-      if (
-        path.includes("advancing") ||
-        path.includes("blog-website") ||
-        path.includes("ecommerce-platform") ||
-        title.includes("blog") ||
-        title.includes("ecommerce") ||
-        title.includes("advancing") ||
-        path.includes("project") ||
-        path.includes("website-portfolio") ||
-        title.includes("project") ||
-        title.includes("portfolio")
-      ) {
-        return "advanced_projects";
-      }
+      // Note: Advanced project sections removed - will be categorized elsewhere
     }
 
     // For individual pages or items without children, use original logic
@@ -202,7 +180,7 @@ function categorizeNavigationItems(
       path.includes("package-managers") ||
       path.includes("version-control") ||
       path.includes("foundation") ||
-      path.includes("setup") ||
+      (path.includes("setup") && !path.includes("environment-setup")) ||
       path.includes("back-end") ||
       path.includes("vocabulary") ||
       path.includes("abbreviations")
@@ -222,34 +200,9 @@ function categorizeNavigationItems(
     ) {
       return "advanced";
     } else if (
-      path.includes("browser-developer-tools") ||
-      path.includes("command-line-interface") ||
-      path.includes("tools-and-resources-overview") ||
-      path.includes("development-environment") ||
-      path.includes("git-and-github") ||
-      path.includes("hosting-and-deployment") ||
-      path.includes("package-managers") ||
-      title.includes("development environment") ||
-      title.includes("developer tools")
-    ) {
-      return "developer_tools";
-    } else if (
-      path.includes("advancing") ||
-      path.includes("blog-website") ||
-      path.includes("ecommerce-platform") ||
-      title.includes("blog") ||
-      title.includes("ecommerce") ||
-      title.includes("advancing") ||
-      path.includes("project") ||
-      path.includes("website-portfolio") ||
-      title.includes("project") ||
-      title.includes("portfolio")
-    ) {
-      return "advanced_projects";
-    } else if (
       path.includes("seo-accessibility") ||
       path.includes("introduction-to-html") ||
-      path.includes("introduction-to-css") ||
+      path.includes("environment-setup") ||
       path.includes("introduction-to-javascript") ||
       path.includes("document-object-model") ||
       path.includes("forms") ||
@@ -259,7 +212,7 @@ function categorizeNavigationItems(
       title.includes("css") ||
       title.includes("javascript") ||
       title.includes("seo") ||
-      title.includes("accessibility") ||
+      title.includes("environment") ||
       title.includes("dom") ||
       title.includes("forms") ||
       title.includes("jquery") ||
@@ -300,13 +253,6 @@ function categorizeNavigationItems(
     });
   }
 
-  if (categories.developer_tools.length > 0) {
-    sections.push({
-      title: "Developer Tools & Resources",
-      items: categories.developer_tools,
-    });
-  }
-
   if (categories.databases.length > 0) {
     sections.push({
       title: "Databases",
@@ -325,13 +271,6 @@ function categorizeNavigationItems(
     sections.push({
       title: "Advanced Topics",
       items: categories.advanced,
-    });
-  }
-
-  if (categories.advanced_projects.length > 0) {
-    sections.push({
-      title: "Projects",
-      items: categories.advanced_projects,
     });
   }
 
