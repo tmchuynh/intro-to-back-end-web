@@ -1,0 +1,111 @@
+import BackToTop from "@/components/BackToTop";
+
+# HTTP Protocol
+
+## Table of Contents
+
+## Introduction to HTTP Protocol
+
+HTTP (Hypertext Transfer Protocol) is the foundation of data communication on the World Wide Web. It is a protocol used for transmitting hypertext via the internet, allowing web browsers and servers to communicate effectively. Understanding HTTP is crucial for anyone involved in web development, API design, or network communications.
+
+## Key Concepts of HTTP
+
+- **Request and Response Model**: HTTP operates on a request-response model where a client (usually a web browser) sends a request to a server, which then processes the request and returns a response.
+- **Methods**: HTTP defines several methods (verbs) such as GET, POST, PUT, DELETE, and PATCH, each serving a specific purpose in the request lifecycle.
+- **Status Codes**: HTTP responses include status codes that indicate the outcome of the request. Common status codes include 200 (OK), 404 (Not Found), and 500 (Internal Server Error).
+- **Headers**: HTTP headers provide additional information about the request or response, such as content type, caching policies, and authentication details.
+- **Body**: The body of an HTTP request or response contains the actual data being sent, such as HTML content, JSON payloads, or file uploads.
+
+## Importance of HTTP in Web Development
+
+HTTP is essential for web development as it enables the communication between clients and servers. It allows developers to create dynamic web applications, RESTful APIs, and other services that rely on data exchange over the internet. Understanding HTTP is fundamental for debugging issues, optimizing performance, and ensuring secure data transmission.
+
+## The Role of HTTP in APIs
+
+HTTP plays a crucial role in APIs (Application Programming Interfaces) as it provides the protocol for communication between clients and servers. Most modern APIs are built on top of HTTP, leveraging its methods, status codes, and headers to facilitate data exchange. By adhering to HTTP standards, APIs can ensure compatibility with various clients and platforms, making them accessible and easy to use.
+
+## The Methods
+
+### GET
+
+The GET method is used to retrieve data from a server. It is the most common HTTP method and is typically used to fetch resources such as web pages, images, or API data. GET requests are idempotent, meaning that multiple identical requests will yield the same result without causing any side effects.
+
+#### Example Using MySQL
+
+```sql
+SELECT * FROM users WHERE id = 1;
+```
+
+### POST
+
+The POST method is used to send data to a server, often resulting in the creation of a new resource. It is commonly used for submitting forms, uploading files, or sending JSON data to APIs. Unlike GET, POST requests can have a body containing the data to be sent, and they are not idempotent, meaning that multiple identical requests may result in different outcomes (e.g., creating multiple resources).
+
+#### Example Using MySQL
+
+```sql
+INSERT INTO users (name, email) VALUES ('John Doe', 'john_doe@sample.com');
+```
+
+#### Example Using MongoDB
+
+```javascript
+db.users.insertOne({ name: "John Doe", email: "john_doe@sample.com" });
+```
+
+### PUT
+
+The PUT method is used to update an existing resource on the server. It replaces the entire resource with the data provided in the request body. PUT requests are idempotent, meaning that sending the same request multiple times will yield the same result without causing additional changes.
+
+#### Example Using MySQL
+
+```sql
+UPDATE users SET name = 'Jane Doe', email = 'john_doe@sample.com' WHERE id = 1;
+```
+
+#### Example Using MongoDB
+
+```javascript
+db.users.updateOne(
+  { _id: ObjectId("60c72b2f9b1d4c3f8e4b2a1") },
+  { $set: { name: "Jane Doe", email: "john_doe@sample.com" } }
+);
+```
+
+### DELETE
+
+The DELETE method is used to remove a resource from the server. It is typically used to delete items such as user accounts, blog posts, or files. DELETE requests are idempotent, meaning that sending the same request multiple times will not result in further deletions after the resource has been removed.
+
+#### Example Using MySQL
+
+```sql
+DELETE FROM users WHERE id = 1;
+```
+
+#### Example Using MongoDB
+
+```javascript
+db.users.deleteOne({ _id: ObjectId("60c72b2f9b1d4c3f8e4b2a1") });
+```
+
+### PATCH
+
+The PATCH method is used to apply partial modifications to a resource. Unlike PUT, which replaces the entire resource, PATCH allows clients to send only the changes they want to make. This is useful for updating specific fields in a resource without affecting the entire object. PATCH requests are not necessarily idempotent, as the outcome may vary based on the current state of the resource.
+
+#### Example Using MySQL
+
+```sql
+UPDATE users SET email = 'john_doe@sample.com' WHERE id = 1;
+```
+
+#### Example Using MongoDB
+
+```javascript
+db.users.updateOne(
+  { _id: ObjectId("60c72b2f9b1d4c3f8e4b2a1") },
+  { $set: { email: "john_doe@sample.com" } }
+);
+```
+
+## Next Steps
+
+<BackToTop />
