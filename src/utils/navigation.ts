@@ -16,7 +16,47 @@ export interface NavigationSection {
   items: NavigationItem[];
 }
 
+// Category prefixes that should be stripped from display titles
+const CATEGORY_PREFIXES = [
+  'sql',
+  'nosql', 
+  'fund', // fundamentals
+  'adv',  // advanced
+  'util', // utilities
+  'db',   // database
+  'api',
+  'sec',  // security
+  'perf', // performance
+  'dep',  // deployment
+];
+
+// Extract category from filename prefix and return both category and clean name
+export function extractCategoryFromPath(pathName: string): { category: string | null; cleanName: string } {
+  const parts = pathName.split('-');
+  
+  if (parts.length > 1) {
+    const firstPart = parts[0].toLowerCase();
+    
+    // Check if first part matches a category prefix
+    if (CATEGORY_PREFIXES.includes(firstPart)) {
+      const cleanName = parts.slice(1).join('-'); // Remove the first part (prefix)
+      return {
+        category: firstPart,
+        cleanName: cleanName
+      };
+    }
+  }
+  
+  return {
+    category: null,
+    cleanName: pathName
+  };
+}
+
 export function toSmartTitleCase(str: string): string {
+  // Extract category and clean name first
+  const { cleanName } = extractCategoryFromPath(str);
+
   // Define words to be lowercased (articles, conjunctions, short prepositions)
   const minorWords = new Set([
     "a",
@@ -43,15 +83,15 @@ export function toSmartTitleCase(str: string): string {
     "v.",
   ]);
 
-  if (str.startsWith("use") && !str.startsWith("user")) {
-    return str;
+  if (cleanName.startsWith("use") && !cleanName.startsWith("user")) {
+    return cleanName;
   }
 
-  if (str === "jQuery") {
+  if (cleanName === "jQuery") {
     return "jQuery"; // Keep jQuery as is
   }
 
-  return str
+  return cleanName
     .split("-")
     .map((word, index, array) => {
       // Always capitalize the first word of the title
@@ -133,6 +173,34 @@ function categorizeNavigationItems(
   function categorizeItem(item: NavigationItem): string {
     const path = item.href.toLowerCase();
     const title = item.title.toLowerCase();
+
+    // Extract category from path segments
+    const pathSegments = path
+      .split("/")
+      .filter((segment) => segment.length > 0);
+    for (const segment of pathSegments) {
+      const { category } = extractCategoryFromPath(segment);
+      if (category) {
+        // Map category prefixes to section names
+        switch (category) {
+          case "sql":
+          case "nosql":
+          case "db":
+            return "databases";
+          case "fund":
+            return "fundamentals";
+          case "adv":
+          case "sec":
+          case "perf":
+          case "dep":
+            return "advanced";
+          case "util":
+            return "utilities";
+          case "api":
+            return "databases"; // APIs often relate to database interactions
+        }
+      }
+    }
 
     // If item has children, check if it's a top-level section that should be categorized as a whole
     if (item.children && item.children.length > 0) {
