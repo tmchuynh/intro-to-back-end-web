@@ -373,14 +373,14 @@ pre code.hljs {
   --accent-foreground: oklch(100% 0 0);
   --destructive: #b91c1c;
 
-  --muted: #fef2f2;
+  --muted: #f9f9f9;
   --muted-foreground: #6b7280;
 
   --table-head: #7f1d1d;
-  --table-head-foreground: #fef2f2;
-  --table-body: #fff7ed;
+  --table-head-foreground: #f5f4f4;
+  --table-body: #faf9f6;
   --table-body-foreground: #1f2937;
-  --table-hover: #fed7aa;
+  --table-hover: #f4f4f4;
 
   --code: #059669;
 
@@ -454,11 +454,11 @@ pre code.hljs {
   --muted: #451a03;
   --muted-foreground: #a3a3a3;
 
-  --table-head: #7f1d1d;
+  --table-head: #510202;
   --table-head-foreground: #fef2f2;
-  --table-body: #292524;
+  --table-body: #090909;
   --table-body-foreground: #f5f5f4;
-  --table-hover: #44403c;
+  --table-hover: #010000;
 
   --code: #10b981;
 
