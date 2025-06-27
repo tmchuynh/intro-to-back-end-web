@@ -153,6 +153,8 @@ function categorizeNavigationItems(
         path.includes("database") ||
         path.includes("database") ||
         path.includes("environment-setup") ||
+        path.includes("managers") ||
+        path.includes("version") ||
         path.includes("transaction-models") ||
         path.includes("data") ||
         path.includes("mysql") ||
@@ -161,7 +163,9 @@ function categorizeNavigationItems(
         path.includes("mongodb") ||
         title.includes("database") ||
         title.includes("databases") ||
+        title.includes("managers") ||
         title.includes("environment") ||
+        title.includes("version") ||
         title.includes("transaction") ||
         title.includes("data") ||
         title.includes("mysql") ||
@@ -189,11 +193,13 @@ function categorizeNavigationItems(
     } else if (
       path.includes("docker") ||
       path.includes("kubernetes") ||
+      path.includes("advanced") ||
       path.includes("principles") ||
       path.includes("quality-security-performance") ||
       path.includes("deployment-strategies") ||
       title.includes("docker") ||
       title.includes("principles") ||
+      title.includes("advanced") ||
       title.includes("security") ||
       title.includes("kubernetes") ||
       title.includes("deployment")
