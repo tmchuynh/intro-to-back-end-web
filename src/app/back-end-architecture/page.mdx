@@ -19,30 +19,12 @@ In this model:
 
 The client-server architecture evolved from mainframe computing models:
 
-1. Mainframe Era (1960s-1970s): Centralized computing with terminals
-   - All processing performed on central mainframe computers
-   - Terminals provided basic input/output capabilities
-   - Batch processing and time-sharing systems
-   - Limited user interaction and real-time processing
-
-2. Client-Server Era (1980s-1990s): Distributed computing with desktop clients
-   - Personal computers with local processing power
-   - Network connections enabling distributed applications
-   - File servers and database servers emerge
-   - GUI applications and improved user experience
-
-3. Web Era (1990s-2000s): Browser-based clients with web servers
-   - Universal access through web browsers
-   - HTML, CSS, and JavaScript for rich web applications
-   - HTTP protocol becomes standard for web communication
-   - E-commerce and online services proliferation
-
-4. Modern Era (2000s-present): Mobile apps, SPAs, microservices, and cloud computing
-   - Mobile devices as primary computing platforms
-   - Single-page applications with rich user interfaces
-   - Cloud computing and serverless architectures
-   - API-first development and microservices patterns
-   - Real-time applications and progressive web apps
+| Era | Period | Key Characteristics |
+|-----|--------|-------------------|
+| Mainframe Era | 1960s-1970s | All processing on central mainframe computers, terminals for basic I/O, batch processing and time-sharing, limited user interaction |
+| Client-Server Era | 1980s-1990s | Personal computers with local processing, network connections for distributed apps, file and database servers emerge, GUI applications |
+| Web Era | 1990s-2000s | Universal browser access, HTML/CSS/JavaScript for rich web apps, HTTP protocol standard, e-commerce proliferation |
+| Modern Era | 2000s-present | Mobile devices as primary platforms, SPAs with rich UIs, cloud computing and serverless, API-first development, real-time applications |
 
 ### Types of Client-Server Architectures
 
@@ -126,29 +108,12 @@ Client applications handle various responsibilities to provide optimal user expe
 
 ##### Client Types
 
-Web Browsers: Chrome, Firefox, Safari, Edge
-- Universal access through standard web technologies
-- No installation required for users
-- Automatic updates and security patches
-- Cross-platform compatibility
-
-Mobile Applications: Native iOS/Android apps, hybrid apps
-- Device-specific features and optimizations
-- Offline capabilities and local data storage
-- Push notifications and background processing
-- App store distribution and monetization
-
-Desktop Applications: Electron apps, native desktop software
-- Full system access and integration
-- Complex user interfaces and workflows
-- Local file system access and processing
-- Professional and enterprise software solutions
-
-API Clients: Other servers, microservices, third-party integrations
-- Server-to-server communication
-- Automated data exchange and processing
-- Integration with external services and platforms
-- Machine-to-machine communication patterns
+| Client Type | Examples | Key Features |
+|-------------|----------|--------------|
+| Web Browsers | Chrome, Firefox, Safari, Edge | Universal access through standard web technologies, no installation required, automatic updates, cross-platform compatibility |
+| Mobile Applications | Native iOS/Android apps, hybrid apps | Device-specific features, offline capabilities, push notifications, app store distribution |
+| Desktop Applications | Electron apps, native desktop software | Full system access, complex user interfaces, local file system access, professional enterprise solutions |
+| API Clients | Other servers, microservices, third-party integrations | Server-to-server communication, automated data exchange, external service integration, machine-to-machine patterns |
 
 #### 2. Server Side (Back-end)
 
@@ -180,49 +145,20 @@ Server applications manage critical backend operations:
 
 ##### Server Architecture Patterns
 
-Monolithic Architecture:
-- Single deployable unit containing all application components
-- Simplified development and deployment for small applications
-- Easier debugging and testing in development environments
-- Can become complex and difficult to scale as applications grow
-
-Microservices Architecture:
-- Application split into small, independent services
-- Each service handles specific business functionality
-- Independent deployment and scaling of individual services
-- Improved fault isolation and technology diversity
-
-Serverless Architecture:
-- Functions run in managed cloud environments
-- Automatic scaling and resource management
-- Pay-per-execution pricing model
-- Simplified deployment and maintenance
+| Architecture Type | Characteristics | Best Use Cases |
+|------------------|----------------|----------------|
+| Monolithic | Single deployable unit, simplified development/deployment, easier debugging, can become complex to scale | Small applications, simple requirements, rapid prototyping |
+| Microservices | Small independent services, specific business functionality, independent deployment/scaling, fault isolation | Large applications, complex domains, multiple teams |
+| Serverless | Functions in managed cloud environments, automatic scaling, pay-per-execution, simplified deployment | Event-driven applications, variable workloads, cost optimization |
 
 ##### Server Types
 
-Web Servers: Apache, Nginx, IIS
-- Handle HTTP requests and serve static content
-- Reverse proxy and load balancing capabilities
-- SSL termination and security features
-- High-performance static file serving
-
-Application Servers: Node.js, Django, Spring Boot, .NET
-- Execute application business logic
-- Handle dynamic content generation
-- Manage application state and sessions
-- Provide runtime environments for applications
-
-Database Servers: MySQL, PostgreSQL, MongoDB, Redis
-- Store and manage application data
-- Provide data querying and manipulation capabilities
-- Ensure data consistency and integrity
-- Handle concurrent access and transactions
-
-Microservices: Specialized services handling specific functions
-- Domain-specific business logic
-- Independent scaling and deployment
-- Service-to-service communication
-- Distributed system architecture
+| Server Type | Examples | Primary Functions |
+|-------------|----------|------------------|
+| Web Servers | Apache, Nginx, IIS | Handle HTTP requests, serve static content, reverse proxy, SSL termination |
+| Application Servers | Node.js, Django, Spring Boot, .NET | Execute business logic, handle dynamic content, manage sessions, provide runtime environments |
+| Database Servers | MySQL, PostgreSQL, MongoDB, Redis | Store and manage data, provide querying capabilities, ensure data consistency, handle transactions |
+| Microservices | Domain-specific services | Handle specific business functions, independent scaling, service-to-service communication |
 
 ### Communication Flow
 
@@ -240,41 +176,19 @@ The communication between clients and servers follows a well-defined pattern:
 
 #### Types of Communication Patterns
 
-##### Synchronous Communication
-- Request-response pattern where client waits for server response
-- Simple to implement and understand
-- Can lead to blocking behavior and poor user experience
-- Common in traditional web applications and REST APIs
-
-##### Asynchronous Communication
-- Client sends request but continues other operations
-- Server responds when ready, client handles response when available
-- Better user experience and resource utilization
-- Implemented using callbacks, promises, or async/await patterns
-
-##### Real-time Communication
-- Continuous bidirectional communication
-- WebSockets, Server-Sent Events, or polling mechanisms
-- Essential for chat applications, live updates, and collaborative tools
+| Pattern Type | Characteristics | Use Cases |
+|--------------|----------------|-----------|
+| Synchronous | Client waits for server response, simple to implement, can cause blocking behavior | Traditional web applications, REST APIs, simple request-response scenarios |
+| Asynchronous | Client continues operations while waiting, better user experience, implemented with callbacks/promises | Modern web applications, improved performance, non-blocking operations |
+| Real-time | Continuous bidirectional communication, WebSockets/Server-Sent Events | Chat applications, live updates, collaborative tools, gaming |
 
 #### Communication Protocols
 
-##### HTTP/HTTPS
-- Most common protocol for web applications
-- Stateless protocol with various methods (GET, POST, PUT, DELETE)
-- Built-in caching mechanisms and status codes
-- Secure variant (HTTPS) provides encryption and authentication
-
-##### TCP/UDP
-- Low-level transport protocols
-- TCP provides reliable, ordered delivery
-- UDP offers faster, connectionless communication
-- Used for custom protocols and high-performance applications
-
-##### WebSocket
-- Full-duplex communication over single connection
-- Lower latency than HTTP for real-time applications
-- Maintains persistent connection between client and server
+| Protocol | Characteristics | Best Use Cases |
+|----------|----------------|----------------|
+| HTTP/HTTPS | Most common web protocol, stateless, various methods (GET, POST, PUT, DELETE), built-in caching | Web applications, REST APIs, standard web communication |
+| TCP/UDP | Low-level transport protocols, TCP reliable/ordered, UDP faster/connectionless | Custom protocols, high-performance applications, real-time systems |
+| WebSocket | Full-duplex communication, lower latency, persistent connection | Real-time applications, live chat, collaborative tools, gaming |
 
 ### Architecture Benefits
 
