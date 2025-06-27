@@ -1,0 +1,91 @@
+import BackToTop from "@/components/BackToTop";
+
+# Introduction To Backend
+
+## Table of Contents
+
+## Before You Start
+
+Welcome! Your journey into back-end development begins here. Before diving into the technical aspects, it's crucial to understand the foundational concepts that underpin web development.
+
+There is also a section on some [Essential Vocabulary](/essential-vocabulary) that will help you understand the terminology used in back-end development as well as a list of [abbreviations](/essential-abbreviations) This vocabulary is crucial for effective communication and comprehension of back-end concepts.
+
+## How Data Travels
+
+The Internet is a vast network of interconnected computers that communicate using standardized protocols. To understand back-end development, it's essential to grasp how the Internet works at a fundamental level.
+
+When you access a website, data travels across the Internet in small packets. These packets take different routes through various networks to reach their destination, much like cars taking different streets to reach the same location. This system ensures reliability and efficiency - if one route is congested or down, the data can take alternative paths.
+
+## IP Addresses
+
+Every device connected to the Internet has a unique identifier called an IP (Internet Protocol) address. IP addresses come in two versions:
+
+- IPv4: Consists of four numbers separated by dots (e.g., 192.168.1.1)
+- IPv6: Uses eight groups of hexadecimal digits separated by colons (e.g., 2001:0db8:85a3:0000:0000:8a2e:0370:7334)
+
+## Domain Name System
+
+The Domain Name System (DNS) acts as the Internet's phone book. Instead of remembering IP addresses like 142.250.190.78, we can use human-friendly domain names like google.com. DNS servers translate these domain names into IP addresses.
+
+### DNS Resolution Process
+
+1. DNS Query: When you type a URL in your browser, your computer first checks its local DNS cache.
+2. Recursive Resolution: If not found locally, the query goes to your ISP's DNS resolver.
+3. Root Nameservers: These servers direct the query to the appropriate Top-Level Domain (TLD) servers.
+4. TLD Servers: Direct the query to the authoritative nameservers for the specific domain.
+5. Authoritative Nameservers: Provide the final IP address for the requested domain.
+
+## HTTP/HTTPS
+
+### HTTP Protocol
+
+HTTP (Hypertext Transfer Protocol) is the foundation of data communication on the web. It defines how messages are formatted and transmitted between web browsers (clients) and web servers.
+
+#### Key Concepts
+
+1. Request Methods:
+   - GET: Retrieve data
+   - POST: Submit data
+   - PUT: Update existing data
+   - DELETE: Remove data
+   - PATCH: Partially update data
+
+2. Status Codes:
+   - 2xx (Success): 200 OK, 201 Created
+   - 3xx (Redirection): 301 Moved Permanently
+   - 4xx (Client Error): 404 Not Found, 403 Forbidden
+   - 5xx (Server Error): 500 Internal Server Error
+
+### HTTPS
+
+HTTPS (HTTP Secure) adds encryption to HTTP using SSL/TLS protocols. This ensures:
+
+- Data confidentiality
+- Data integrity
+- Server authentication
+
+## Web Sockets
+
+### Real-Time Communication
+
+Unlike HTTP's request-response model, WebSocket provides full-duplex communication channels over a single TCP connection. This enables:
+
+- Real-time data transfer
+- Bi-directional communication
+- Lower latency than HTTP polling
+
+### Common Use Cases
+
+- Chat applications
+- Live sports updates
+- Real-time analytics
+- Collaborative tools
+- Gaming applications
+
+## Next Steps
+
+Now that you have a foundational understanding of back-end development concepts, you're ready to explore more advanced topics. The next section will delve into [Back-end Architecture](/back-end-architecture).
+
+This section provides an overview of the client-server model, which is essential for understanding how back-end systems operate. Familiarizing yourself with this architecture will help you grasp the interactions between clients and servers, and how data flows through web applications.
+
+<BackToTop />
