@@ -1,0 +1,427 @@
+import Image from "next/image";
+import Link from "next/link";
+import {
+  FaBolt,
+  FaBook,
+  FaCheckCircle,
+  FaChevronRight,
+  FaCode,
+  FaDatabase,
+  FaEye,
+  FaFilter,
+  FaHeart,
+  FaLayerGroup,
+  FaPaintBrush,
+  FaReact,
+  FaRocket,
+  FaTools,
+  FaTrophy,
+  FaWpforms,
+} from "react-icons/fa";
+import { SiJquery } from "react-icons/si";
+import Button from "../components/Button.tsx";
+import Guides from "../components/Guides";
+import Resources from "../components/Resources";
+
+export const chapters = [
+  {
+    href: "/overview",
+    title: "Web Development Overview",
+    description:
+      "Web development basics, client-server architecture, and fundamentals.",
+    bgColor: "sidebar-active-bg",
+    icon: FaBook,
+    ctaText: "Start Here",
+  },
+  {
+    href: "/vocabulary",
+    title: "Vocabulary & Abbreviations",
+    description: "Essential web development terminology and acronyms.",
+    bgColor: "tertiary",
+    icon: FaCode,
+    ctaText: "Learn Terms",
+  },
+  {
+    href: "/development-tools",
+    title: "Development Tools",
+    description:
+      "Essential development tools, editors, and productivity resources.",
+    bgColor: "sidebar-active-bg",
+    icon: FaTools,
+    ctaText: "Get Tools",
+  },
+  {
+    href: "/browser-developer-tools",
+    title: "Browser Developer Tools",
+    description: "Master browser DevTools for debugging and optimization.",
+    bgColor: "sidebar-text",
+    icon: FaEye,
+    ctaText: "Debug Better",
+  },
+  {
+    href: "/development-environments",
+    title: "Development Environments",
+    description: "Setting up optimal development environments and workflows.",
+    bgColor: "sidebar-text",
+    icon: FaDatabase,
+    ctaText: "Setup Environment",
+  },
+  {
+    href: "/introduction-to-HTML",
+    title: "HTML Fundamentals",
+    description: "Semantic HTML, document structure, and modern elements.",
+    bgColor: "code",
+    icon: FaCode,
+    ctaText: "Build Structure",
+  },
+  {
+    href: "/introduction-to-CSS",
+    title: "CSS Styling",
+    description: "Styling, layouts, responsive design, and CSS frameworks.",
+    bgColor: "secondary",
+    icon: FaPaintBrush,
+    ctaText: "Style Everything",
+  },
+  {
+    href: "/UX-UI-Design",
+    title: "UX/UI Design",
+    description: "Design principles, user experience, and interface design.",
+    bgColor: "sidebar-active-bg",
+    icon: FaHeart,
+    ctaText: "Design Better",
+  },
+  {
+    href: "/introduction-to-javascript",
+    title: "JavaScript Programming",
+    description: "Core JavaScript, ES6+, DOM manipulation, and APIs.",
+    bgColor: "accent",
+    icon: FaBolt,
+    ctaText: "Add Interactivity",
+  },
+  {
+    href: "/document-object-model-DOM",
+    title: "Document Object Model",
+    description: "DOM manipulation, events, and browser interactions.",
+    bgColor: "tertiary",
+    icon: FaDatabase,
+    ctaText: "Control the DOM",
+  },
+  {
+    href: "/forms",
+    title: "Forms & Validation",
+    description: "HTML forms, client-side validation, and form handling.",
+    bgColor: "secondary",
+    icon: FaWpforms,
+    ctaText: "Handle Forms",
+  },
+  {
+    href: "/jQuery",
+    title: "jQuery Library",
+    description: "jQuery fundamentals, DOM manipulation, and AJAX.",
+    bgColor: "tertiary",
+    icon: SiJquery,
+    ctaText: "Simplify DOM",
+  },
+  {
+    href: "/introduction-to-APIs",
+    title: "APIs & Data",
+    description: "Working with APIs, fetch requests, and data integration.",
+    bgColor: "tertiary",
+    icon: FaRocket,
+    ctaText: "Connect APIs",
+  },
+  {
+    href: "/introduction-to-frameworks-and-libraries",
+    title: "Frameworks & Libraries",
+    description: "Modern frameworks, libraries, and build tools overview.",
+    bgColor: "secondary",
+    icon: FaFilter,
+    ctaText: "Scale Up",
+  },
+  {
+    href: "/introduction-to-typescript",
+    title: "TypeScript",
+    description: "Type-safe JavaScript for better development experience.",
+    bgColor: "sidebar-text",
+    icon: FaLayerGroup,
+    ctaText: "Add Types",
+  },
+  {
+    href: "/introduction-to-react",
+    title: "React Development",
+    description: "Component-based UI development with React.",
+    bgColor: "secondary",
+    icon: FaReact,
+    ctaText: "Build Components",
+  },
+  {
+    href: "/introduction-to-next.js",
+    title: "Next.js Framework",
+    description: "Full-stack React framework for production applications.",
+    bgColor: "sidebar-active-bg",
+    icon: FaRocket,
+    ctaText: "Go Full-Stack",
+  },
+  {
+    href: "/portfolio-website",
+    title: "Portfolio Project",
+    description: "Build your professional portfolio website from scratch.",
+    bgColor: "secondary",
+    icon: FaTrophy,
+    ctaText: "Show Your Work",
+  },
+  {
+    href: "/performance",
+    title: "Performance & Security",
+    description: "Web performance optimization and security best practices.",
+    bgColor: "destructive",
+    icon: FaCheckCircle,
+    ctaText: "Optimize & Secure",
+  },
+  {
+    href: "/hosting-and-deployment",
+    title: "Hosting & Deployment",
+    description:
+      "Deploy applications to production with modern hosting platforms.",
+    bgColor: "accent",
+    icon: FaRocket,
+    ctaText: "Deploy Live",
+  },
+];
+
+# Welcome to Web Development!
+
+Your complete journey from beginner to proficient web developer. This 17-chapter course will take you from absolute beginner to building real-world applications with modern frameworks.
+
+## About This Course
+
+In today's fast-paced, information-rich world, learning web development can feel overwhelming. With countless resources, tutorials, and technologies available, it's easy to suffer from choice overload and not know where to start.
+
+As someone deeply immersed in the tech industry, I understand this challenge firsthand. The constant evolution of technology means that developers are inundated with choices and must navigate a sea of information to find what truly matters.
+
+**That's precisely what this course aims to solve.** Inside, you'll find a carefully curated and structured learning path that cuts through the noise, saving you time and focusing on what's truly valuable for becoming a successful front-end developer.
+
+This isn't just another collection of tutorials - it's a guide that takes you step-by-step through everything you need to know, from basic HTML to advanced React applications.
+
+## Complete Learning Path
+
+Follow our structured learning path designed to build your skills progressively:
+
+<div className="gap-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mt-8">
+  {chapters.map((chapter) => {
+    const IconComponent = chapter.icon;
+    return (
+      <Link
+        key={chapter.href}
+        href={chapter.href}
+        className="group flex flex-col justify-between -800 hover:shadow-lg p-4 border border-gray-200 dark:border-gray-700 rounded-lg no-underline transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600"
+      >
+        <div
+          className="flex items-center justify-center mb-3 rounded-lg h-10 w-10"
+          style={{ backgroundColor: `var(--${chapter.bgColor})` }}
+        >
+          <IconComponent className={`h-5 w-5 text-background`} />
+        </div>
+        <div>
+          <h3 className="mb-2 font-semibold text-base leading-snug">
+            {chapter.title}
+          </h3>
+          <p className="mb-3  text-sm leading-relaxed ">
+            {chapter.description}
+          </p>
+        </div>
+        <p className={`font-medium text-sm flex items-center`}>
+          {chapter.ctaText}{" "}
+          <FaChevronRight className="ml-1 h-3 w-3 duration-300 group-hover:translate-x-2 ease-in-out" />
+        </p>
+      </Link>
+    );
+  })}
+</div>
+
+## Additional Resources
+
+Beyond the main curriculum, we provide supplementary resources to enhance your learning experience:
+
+<div className="gap-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mt-6">
+  <Link
+    href="/tools-and-resources"
+    className="group flex items-center -800 hover:shadow-md shadow-sm p-4 border border-gray-200 dark:border-gray-700 rounded-lg no-underline transition-all duration-200"
+  >
+    <div className="flex items-center justify-center bg-tertiary text-background mr-3 rounded-lg h-10 w-10">
+      <FaTools className="h-5 w-5 " />
+    </div>
+    <div>
+      <h4 className="font-semibold text-gray-900 text-sm dark:text-white">Tools & Resources</h4>
+      <p className="text-gray-600 text-xs dark:text-gray-400">Curated development tools and utilities</p>
+    </div>
+    <FaChevronRight className="ml-auto h-4 w-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300" />
+  </Link>
+  
+  <Link
+    href="/design-tools"
+    className="group flex items-center -800 hover:shadow-md p-4 border border-gray-200 dark:border-gray-700 rounded-lg no-underline transition-all duration-200"
+  >
+    <div className="flex items-center justify-center bg-secondary text-background mr-3 rounded-lg h-10 w-10">
+      <FaPaintBrush className="h-5 w-5 " />
+    </div>
+    <div>
+      <h4 className="font-semibold text-gray-900 text-sm dark:text-white">Design Tools</h4>
+      <p className="text-gray-600 text-xs dark:text-gray-400">Design software and resources</p>
+    </div>
+    <FaChevronRight className="ml-auto h-4 w-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300" />
+  </Link>
+
+<Link
+  href="/package-managers"
+  className="group flex items-center -800 hover:shadow-md p-4 border border-gray-200 dark:border-gray-700 rounded-lg no-underline transition-all duration-200"
+>
+  <div className="flex items-center justify-center bg-primary/85 text-background mr-3 rounded-lg h-10 w-10">
+    <FaDatabase className="h-5 w-5 " />
+  </div>
+  <div>
+    <h4 className="font-semibold text-gray-900 text-sm dark:text-white">
+      Package Managers
+    </h4>
+    <p className="text-gray-600 text-xs dark:text-gray-400">
+      npm, yarn, and dependency management
+    </p>
+  </div>
+  <FaChevronRight className="ml-auto h-4 w-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300" />
+</Link>
+
+<Link
+  href="/security"
+  className="group flex items-center -800 hover:shadow-md p-4 border border-gray-200 dark:border-gray-700 rounded-lg no-underline transition-all duration-200"
+>
+  <div className="flex items-center justify-center bg-primary/65 text-background mr-3 rounded-lg h-10 w-10">
+    <FaCheckCircle className="h-5 w-5 " />
+  </div>
+  <div>
+    <h4 className="font-semibold text-gray-900 text-sm dark:text-white">
+      Security
+    </h4>
+    <p className="text-gray-600 text-xs dark:text-gray-400">
+      Web security best practices
+    </p>
+  </div>
+  <FaChevronRight className="ml-auto h-4 w-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300" />
+</Link>
+
+<Link
+  href="/abbreviations"
+  className="group flex items-center -800 hover:shadow-md p-4 border border-gray-200 dark:border-gray-700 rounded-lg no-underline transition-all duration-200"
+>
+  <div className="flex items-center justify-center bg-primary text-background mr-3 rounded-lg h-10 w-10">
+    <FaBook className="h-5 w-5 " />
+  </div>
+  <div>
+    <h4 className="font-semibold text-gray-900 text-sm dark:text-white">
+      Abbreviations
+    </h4>
+    <p className="text-gray-600 text-xs dark:text-gray-400">
+      Common acronyms and abbreviations
+    </p>
+  </div>
+  <FaChevronRight className="ml-auto h-4 w-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300" />
+</Link>
+
+  <Link
+    href="/advancing-onwards"
+    className="group flex items-center -800 hover:shadow-md p-4 border border-gray-200 dark:border-gray-700 rounded-lg no-underline transition-all duration-200"
+  >
+    <div className="flex items-center justify-center bg-primary/44 text-background mr-3 rounded-lg h-10 w-10">
+      <FaRocket className="h-5 w-5 " />
+    </div>
+    <div>
+      <h4 className="font-semibold text-gray-900 text-sm dark:text-white">Advancing Onwards</h4>
+      <p className="text-gray-600 text-xs dark:text-gray-400">Next steps in your development journey</p>
+    </div>
+    <FaChevronRight className="ml-auto h-4 w-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300" />
+  </Link>
+</div>
+
+## Course Curriculum
+
+### Foundation & Setup
+
+- Web Development Overview - Understanding the web, client-server architecture, and developer roles
+- Vocabulary & Terms - Essential terminology and abbreviations every developer should know
+- Development Tools - Code editors, browser tools, and productivity resources
+- Development Environments - Setting up optimal workflows and configurations
+
+### Core Technologies
+
+- HTML Fundamentals - Semantic markup, document structure, and accessibility
+- CSS Styling - Layouts, responsive design, debugging, and frameworks
+- JavaScript Programming - Core language features, ES6+, and modern patterns
+- Document Object Model - DOM manipulation, events, and browser interactions
+
+### Design & User Experience
+
+- UX/UI Design - Design principles, user-centered thinking, and interface patterns
+- Forms & Validation - Creating accessible forms and client-side validation
+- Responsive Design - Mobile-first development and cross-device compatibility
+
+### Advanced Development
+
+- APIs & Data Integration - Working with REST APIs, fetch requests, and data handling
+- Performance & Security - Optimization techniques and security best practices
+- jQuery Library - DOM manipulation and AJAX with the popular library
+
+### Modern Frameworks & Tools
+
+- Frameworks & Libraries - Overview of modern development ecosystem
+- TypeScript - Type-safe JavaScript for better development experience
+- React Development - Component-based UI development and modern patterns
+- Next.js Framework - Full-stack React applications and server-side rendering
+
+### Professional Development
+
+- Portfolio Project - Build a complete professional portfolio website
+- Hosting & Deployment - Deploy applications to production platforms
+- Package Managers - npm, dependency management, and build tools
+- Browser Developer Tools - Debugging, profiling, and optimization techniques
+
+## Why Learn Web Development?
+
+Web development is one of the most in-demand and rewarding careers in technology. This course prepares you for success by covering:
+
+- Career Opportunities: High-demand skills with excellent job prospects
+- Creative Expression: Combine technical skills with design and user experience
+- Global Impact: Build applications used by people worldwide
+- Versatile Skills: Create websites, web apps, and mobile applications
+- Continuous Growth: Always learning new technologies and techniques
+- Problem Solving: Turn ideas into functional, interactive experiences
+
+## Getting Started
+
+Ready to begin your web development journey? Here's how to get the most out of this course:
+
+1. **Start with the Basics** - Begin with the [Overview](/overview) to understand web development fundamentals
+2. **Learn HTML First** - Master semantic HTML and document structure
+3. **Add CSS Styling** - Learn to create beautiful, responsive designs
+4. **Add JavaScript** - Bring interactivity and dynamic behavior to your sites
+5. **Build Projects** - Apply your skills with hands-on coding projects
+6. **Explore Advanced Topics** - Dive into modern frameworks and tools
+
+Each section builds upon the previous one, so we recommend following the curriculum in order for the best learning experience.
+
+## Ready to Start?
+
+Begin your web development journey today! Whether you're completely new to programming or looking to enhance your skills, this course will guide you from beginner to proficient developer.
+
+<div className="mt-8 flex items-center">
+  <Button
+    href="/overview"
+    variant="text"
+    className="group font-medium text-primary-600 text-sm hover:text-primary-800 dark:hover:text-primary-300 dark:text-primary-400 flex items-center  transition-all duration-200"
+  >
+    Start Learning Web Development
+    <FaChevronRight className="ml-1 h-3 w-3 duration-300 group-hover:translate-x-2 ease-in-out" />
+  </Button>
+</div>
+
+<Guides />
+
+<Resources />
