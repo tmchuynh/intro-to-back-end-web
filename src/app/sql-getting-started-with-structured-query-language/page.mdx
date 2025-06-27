@@ -1,0 +1,368 @@
+import BackToTop from "@/components/BackToTop";
+
+# Structured Query Lanuage (SQL)
+
+## Table of Contents
+
+## Introduction
+
+Structured Query Language (SQL) is a powerful language used to manage and manipulate relational databases. It allows users to perform various operations such as querying data, updating records, and managing database structures. SQL is essential for anyone working with databases, as it provides a standardized way to interact with data.
+
+It is widely used in various applications, from small-scale projects to large enterprise systems. Understanding SQL is crucial for developers, data analysts, and anyone involved in data management. Developers use SQL to create, read, update, and delete data in databases, while data analysts leverage SQL to extract insights and perform data analysis.
+
+### Key Concepts
+
+- Database: A structured collection of data stored electronically. It can be thought of as an organized set of tables that hold related information.
+- Table: A collection of related data organized in rows and columns. Each table represents a specific entity, such as customers or products.
+- Row: A single record in a table, representing a specific instance of the entity. For example, a row in a customer table might contain information about a specific customer.
+- Column: A specific attribute of the entity represented by the table. For example, a customer table might have columns for customer ID, name, and email address.
+- Primary Key: A unique identifier for each row in a table. It ensures that each record can be uniquely identified, preventing duplicate entries.
+- Foreign Key: A field in one table that refers to the primary key of another table. It establishes a relationship between two tables, allowing data to be linked across them.
+- Query: A request for data or information from a database. Queries are written in SQL and can retrieve, insert, update, or delete data.
+- SQL Statement: A command written in SQL to perform a specific operation on a database. Common SQL statements include `SELECT`, `INSERT`, `UPDATE`, and `DELETE`.
+- Data Manipulation Language (DML): A subset of SQL used to manipulate data within a database. It includes commands like `SELECT`, `INSERT`, `UPDATE`, and `DELETE`.
+- Data Definition Language (DDL): A subset of SQL used to define and manage database structures. It includes commands like `CREATE`, `ALTER`, and `DROP` to create, modify, or delete database objects.
+- Data Control Language (DCL): A subset of SQL used to control access to data in a database. It includes commands like `GRANT` and `REVOKE` to manage user permissions.
+- Transaction: A sequence of one or more SQL operations that are executed as a single unit. Transactions ensure data integrity and consistency, allowing multiple operations to be treated as a single logical unit.
+- Index: A data structure that improves the speed of data retrieval operations on a database table. Indexes are used to quickly locate and access data without scanning the entire table.
+- View: A virtual table that is based on the result of a SQL query. Views allow users to simplify complex queries and present data in a specific format without storing it physically.
+- Stored Procedure: A precompiled SQL code that can be executed as a single unit. Stored procedures allow for reusable and efficient database operations, encapsulating complex logic and reducing network traffic.
+- Trigger: A special type of stored procedure that automatically executes in response to certain events on a table, such as `INSERT`, `UPDATE`, or `DELETE`. Triggers are used to enforce business rules and maintain data integrity.
+- Normalization: The process of organizing data in a database to reduce redundancy and improve data integrity. It involves dividing large tables into smaller, related tables and defining relationships between them.
+- Denormalization: The process of combining tables to improve query performance by reducing the number of joins required. It is often used in data warehousing and reporting scenarios.
+- ACID Properties: A set of properties (Atomicity, Consistency, Isolation, Durability) that ensure reliable processing of database transactions. These properties guarantee that transactions are processed reliably and maintain data integrity.
+
+### Benefits of SQL
+
+- Standardization: SQL is a standardized language, which means that it can be used across different database systems with minimal changes. This allows for easier migration and integration of databases.
+- Ease of Use: SQL provides a simple and intuitive syntax for querying and manipulating data. Its declarative nature allows users to focus on what they want to achieve rather than how to achieve it.
+- Flexibility: SQL can handle a wide range of data types and structures, making it suitable for various applications. It can work with structured, semi-structured, and unstructured data, allowing for versatile data management.
+- Scalability: SQL databases can handle large volumes of data and support high concurrency. They can scale horizontally by adding more servers or vertically by upgrading hardware, making them suitable for both small and large applications.
+- Data Integrity: SQL provides mechanisms to enforce data integrity through constraints, such as primary keys, foreign keys, and unique constraints. These constraints ensure that data remains consistent and valid, preventing errors and inconsistencies.
+- Security: SQL databases offer robust security features, including user authentication, access control, and encryption. These features help protect sensitive data and ensure that only authorized users can access or modify it.
+- Community Support: SQL has a large and active community, providing extensive resources, documentation, and support. This makes it easier for users to find help, share knowledge, and collaborate on database-related projects.
+- Integration: SQL can be easily integrated with various programming languages and frameworks, allowing developers to build applications that interact with databases seamlessly. It can be used in web development, data analysis, business intelligence, and more.
+- Performance: SQL databases are optimized for performance, with features like indexing, query optimization, and caching. These optimizations help improve the speed of data retrieval and manipulation, making SQL suitable for high-performance applications.
+- Data Analysis: SQL is widely used for data analysis and reporting. Its powerful querying capabilities allow users to extract insights from large datasets, perform aggregations, and generate reports. SQL is often used in business intelligence tools and data analytics platforms to analyze and visualize data.
+- Cross-Platform Compatibility: SQL is supported by various database management systems (DBMS) such as MySQL, PostgreSQL, Oracle, and Microsoft SQL Server. This cross-platform compatibility allows users to work with different databases without having to learn a new language or syntax.
+- Data Migration: SQL provides tools and techniques for migrating data between different databases or systems. This is particularly useful when upgrading or transitioning to a new database system, as it allows for smooth data transfer without losing data integrity.
+- Data Warehousing: SQL is commonly used in data warehousing solutions, where large volumes of data are stored and analyzed. Its ability to handle complex queries and perform aggregations makes it suitable for extracting insights from large datasets in a data warehouse environment.
+- Reporting and Visualization: SQL can be used to generate reports and visualizations from database data. Many reporting tools and business intelligence platforms support SQL, allowing users to create dashboards, charts, and graphs based on database queries. This enables users to present data in a meaningful way and make informed decisions based on the insights derived from the data.
+
+## SQL Syntax
+
+SQL syntax is the set of rules that define how SQL statements are written and structured. Understanding SQL syntax is essential for writing effective queries and interacting with databases. Here are some key components of SQL syntax:
+
+- Keywords: SQL statements are composed of keywords that define the operation to be performed. Common keywords include `SELECT`, `FROM`, `WHERE`, `INSERT`, `UPDATE`, and `DELETE`. Keywords are typically written in uppercase, but SQL is case-insensitive.
+- Identifiers: Identifiers are names used to refer to database objects such as tables, columns, and databases. Identifiers can be alphanumeric and may include underscores. They should be unique within their scope. For example, a table name like `customers` or a column name like `customer_id`.
+- Literals: Literals are fixed values used in SQL statements. They can be strings, numbers, or dates. Strings are enclosed in single quotes (e.g., `'John Doe'`), while numbers and dates do not require quotes (e.g., `123` or `2023-10-01`).
+- Operators: SQL includes various operators for performing operations on data. Common operators include comparison operators (`=`, `!=`, `<`, `>`, `<=`, `>=`), logical operators (`AND`, `OR`, `NOT`), and arithmetic operators (`+`, `-`, `*`, `/`). These operators are used to filter and manipulate data in SQL queries.
+- Clauses: SQL statements are often composed of multiple clauses that define different parts of the query. Common clauses include:
+  - `SELECT`: Specifies the columns to retrieve from a table.
+  - `FROM`: Specifies the table(s) from which to retrieve data.
+  - `WHERE`: Filters the results based on specified conditions.
+  - `ORDER BY`: Sorts the results based on specified columns.
+  - `GROUP BY`: Groups the results based on specified columns for aggregation.
+  - `HAVING`: Filters the results of a `GROUP BY` clause based on specified conditions.
+  - `JOIN`: Combines rows from two or more tables based on a related column.
+- Comments: SQL allows for comments to be included in the code for documentation purposes. Comments can be single-line (using `--`) or multi-line (using `/* ... */`).
+- Semicolon: SQL statements are typically terminated with a semicolon (`;`). This is especially important when executing multiple statements in a single script or batch.
+
+## Examples
+
+### SQL `SELECT` Statement
+
+The `SELECT` statement is used to retrieve data from one or more tables in a database. It allows users to specify which columns to retrieve and apply filters to the results.
+
+```sql
+SELECT column1, column2
+FROM table_name
+WHERE condition;
+```
+
+In this example, `column1` and `column2` are the columns to be retrieved from the `table_name`. The `WHERE` clause is used to filter the results based on a specified condition.
+
+This would be used to retrieve specific data from a table, such as all customers with a specific last name or all products in a certain category.
+
+### SQL `DISTINCT` Keyword
+
+The `DISTINCT` keyword is used in a `SELECT` statement to return only unique values from a column. It eliminates duplicate rows from the result set.
+
+```sql
+SELECT DISTINCT column_name
+FROM table_name;
+```
+
+In this example, `column_name` is the column from which unique values will be retrieved from the `table_name`. This would be used to find all unique customer names or product categories in a table.
+
+### SQL `COUNT` Function
+
+The `COUNT` function is an aggregate function used to count the number of rows that match a specified condition. It can be used to count all rows or only distinct values.
+
+```sql
+SELECT COUNT(*)
+FROM table_name
+WHERE condition;
+```
+
+In this example, `COUNT(*)` counts all rows in the `table_name` that meet the specified condition. This would be used to determine how many customers are in a customer table or how many products are available in a product table.
+
+### SQL `SUM` Function
+
+The `SUM` function is an aggregate function used to calculate the total sum of a numeric column. It is often used to calculate totals for financial data or quantities.
+
+```sql
+SELECT SUM(column_name)
+FROM table_name
+WHERE condition;
+```
+
+In this example, `SUM(column_name)` calculates the total of the specified numeric column in the `table_name` that meets the specified condition. This would be used to calculate the total sales amount for a specific product or the total quantity of items sold in a given period.
+
+### SQL `AVG` Function
+
+The `AVG` function is an aggregate function used to calculate the average value of a numeric column. It is commonly used to find the average of a set of values, such as prices or scores.
+
+```sql
+SELECT AVG(column_name)
+FROM table_name
+WHERE condition;
+```
+
+In this example, `AVG(column_name)` calculates the average value of the specified numeric column in the `table_name` that meets the specified condition. This would be used to find the average price of products in a product table or the average score of students in a student table.
+
+### SQL `MAX` and `MIN` Functions
+
+The `MAX` and `MIN` functions are aggregate functions used to find the maximum and minimum values in a numeric column, respectively. They are useful for identifying the highest and lowest values in a dataset.
+
+```sql
+SELECT MAX(column_name), MIN(column_name)
+FROM table_name
+WHERE condition;
+```
+
+In this example, `MAX(column_name)` retrieves the highest value and `MIN(column_name)` retrieves the lowest value from the specified numeric column in the `table_name` that meets the specified condition. This would be used to find the highest and lowest prices of products in a product table or the highest and lowest scores of students in a student table.
+
+### SQL `LIKE` Operator
+
+The `LIKE` operator is used in a `WHERE` clause to search for a specified pattern in a column. It allows for flexible string matching using wildcard characters.
+
+```sql
+SELECT column1, column2
+FROM table_name
+WHERE column_name LIKE 'pattern';
+```
+
+In this example, `column_name` is the column being searched, and `pattern` is the string pattern to match. The `%` character is a wildcard that matches any sequence of characters, while `_` matches a single character. This would be used to find all customers whose names start with "J" or products that contain "Pro" in their names.
+
+### SQL `IN` Operator
+
+The `IN` operator is used in a `WHERE` clause to specify multiple values in a condition. It allows users to filter results based on a list of values.
+
+```sql
+SELECT column1, column2
+FROM table_name
+WHERE column_name IN (value1, value2, ...);
+```
+
+In this example, `column_name` is the column being filtered, and `value1`, `value2`, etc., are the values to match. This would be used to retrieve all customers from specific cities or all products in certain categories.
+
+### SQL `BETWEEN` Operator
+
+The `BETWEEN` operator is used in a `WHERE` clause to filter results based on a range of values. It allows users to specify a lower and upper bound for the values to match.
+
+```sql
+SELECT column1, column2
+FROM table_name
+WHERE column_name BETWEEN value1 AND value2;
+```
+
+In this example, `column_name` is the column being filtered, and `value1` and `value2` define the range of values to match. This would be used to retrieve all customers who registered between two specific dates or all products priced within a certain range.
+
+### SQL `AS` Keyword
+
+The `AS` keyword is used to rename a column or table in the result set. It allows users to provide a more meaningful or user-friendly name for the column or table in the output.
+
+```sql
+SELECT column_name AS new_name
+FROM table_name;
+```
+
+In this example, `column_name` is the original column name, and `new_name` is the new name that will be used in the result set. This would be used to rename a column for better readability, such as renaming a column from `first_name` to `First Name`.
+
+### SQL `UNION` Operator
+
+The `UNION` operator is used to combine the results of two or more `SELECT` statements into a single result set. It allows users to retrieve data from multiple tables or queries and merge the results.
+
+```sql
+SELECT column1, column2
+FROM table1
+UNION
+SELECT column1, column2
+FROM table2;
+```
+
+In this example, the `UNION` operator combines the results of two `SELECT` statements that retrieve data from `table1` and `table2`. The columns in both `SELECT` statements must have the same data types and be in the same order. This would be used to retrieve a list of customers from two different customer tables or to combine product lists from two different product categories.
+
+### SQL `CASE` Statement
+
+The `CASE` statement is used to perform conditional logic in SQL queries. It allows users to return different values based on specified conditions, similar to an `IF` statement in programming languages.
+
+```sql
+SELECT column1,
+       CASE
+           WHEN condition1 THEN result1
+           WHEN condition2 THEN result2
+           ELSE result3
+       END AS new_column
+FROM table_name;
+```
+
+In this example, the `CASE` statement evaluates conditions and returns `result1`, `result2`, or `result3` based on the specified conditions. The `AS new_column` part renames the resulting column in the output. This would be used to categorize customers based on their purchase history or to assign labels to products based on their price ranges.
+
+### SQL `INSERT` Statement
+
+The `INSERT` statement is used to add new records to a table in a database. It allows users to specify the values for each column in the new record.
+
+```sql
+INSERT INTO table_name (column1, column2)
+VALUES (value1, value2);
+```
+
+In this example, `table_name` is the name of the table where the new record will be inserted, and `column1` and `column2` are the columns to be populated with `value1` and `value2`, respectively.
+
+This would be used to add a new customer to a customer table or a new product to a product table.
+
+### SQL `CREATE TABLE` Statement
+
+The `CREATE TABLE` statement is used to create a new table in a database. It allows users to define the structure of the table, including the columns and their data types.
+
+```sql
+CREATE TABLE table_name (
+    column1 data_type,
+    column2 data_type,
+    ...
+    PRIMARY KEY (column1)
+);
+```
+
+In this example, `table_name` is the name of the new table being created. Each `column` is defined with a specific `data_type`, such as `INT`, `VARCHAR`, or `DATE`. The `PRIMARY KEY` constraint is used to specify which column uniquely identifies each record in the table.
+
+This would be used to create a new table for storing customer information or product details in a database.
+
+### SQL `ALTER TABLE` Statement
+
+The `ALTER TABLE` statement is used to modify the structure of an existing table in a database. It allows users to add, modify, or delete columns in a table.
+
+```sql
+ALTER TABLE table_name
+ADD column_name data_type;
+```
+
+In this example, `table_name` is the name of the table being modified, and `column_name` is the new column being added with a specified `data_type`.
+
+This would be used to add a new column to an existing customer table, such as adding a column for the customer's phone number or address.
+
+### SQL `DROP TABLE` Statement
+
+The `DROP TABLE` statement is used to delete an existing table from a database. It removes the table and all of its data permanently.
+
+```sql
+DROP TABLE table_name;
+```
+
+In this example, `table_name` is the name of the table being deleted. This operation cannot be undone, so it should be used with caution.
+
+This would be used to remove a table that is no longer needed, such as deleting a temporary table used for testing or a table that has been replaced by a new one.
+
+### SQL `CREATE INDEX` Statement
+
+The `CREATE INDEX` statement is used to create an index on one or more columns of a table. Indexes improve the speed of data retrieval operations by allowing the database to quickly locate rows based on the indexed columns.
+
+```sql
+CREATE INDEX index_name
+ON table_name (column1, column2);
+```
+
+In this example, `index_name` is the name of the index being created, `table_name` is the name of the table on which the index is created, and `column1`, `column2` are the columns to be indexed.
+
+### SQL `UPDATE` Statement
+
+The `UPDATE` statement is used to modify existing records in a table. It allows users to change the values of one or more columns for specific records.
+
+```sql
+UPDATE table_name
+SET column1 = value1, column2 = value2
+WHERE condition;
+```
+
+In this example, `table_name` is the name of the table where the records will be updated. The `SET` clause specifies the columns to be modified and their new values. The `WHERE` clause is used to filter which records will be updated based on a specified condition.
+
+This would be used to change a customer's email address or update the price of a product in a table.
+
+### SQL `TRUNCATE TABLE` Statement
+
+The `TRUNCATE TABLE` statement is used to remove all records from a table without deleting the table itself. It is a faster way to delete all rows in a table compared to the `DELETE` statement, as it does not log individual row deletions.
+
+```sql
+TRUNCATE TABLE table_name;
+```
+
+In this example, `table_name` is the name of the table from which all records will be removed. This operation cannot be rolled back, so it should be used with caution.
+
+### SQL `DELETE` Statement
+
+The `DELETE` statement is used to remove records from a table. It allows users to specify which records to delete based on a condition.
+
+```sql
+DELETE FROM table_name
+WHERE condition;
+```
+
+In this example, `table_name` is the name of the table from which records will be deleted. The `WHERE` clause is used to filter which records will be removed based on a specified condition.
+
+This would be used to delete a specific customer from a customer table or remove a product from a product table.
+
+### SQL `JOIN` Statement
+
+The `JOIN` statement is used to combine rows from two or more tables based on a related column. It allows users to retrieve data from multiple tables in a single query.
+
+```sql
+SELECT column1, column2
+FROM table1
+JOIN table2 ON table1.common_column = table2.common_column
+WHERE condition;
+```
+
+In this example, `table1` and `table2` are the names of the tables being joined. The `ON` clause specifies the common column used to link the two tables. The `WHERE` clause is used to filter the results based on a specified condition.
+
+This would be used to retrieve data from related tables, such as getting customer information along with their orders by joining a customer table with an orders table.
+
+### SQL `GROUP BY` Statement
+
+The `GROUP BY` statement is used to group rows that have the same values in specified columns. It is often used in conjunction with aggregate functions to perform calculations on grouped data.
+
+```sql
+SELECT column1, COUNT(*)
+FROM table_name
+GROUP BY column1
+HAVING COUNT(*) > 1;
+```
+
+In this example, `column1` is the column used to group the rows in the `table_name`. The `COUNT(*)` function counts the number of rows in each group. The `HAVING` clause filters the results to include only groups with more than one row.
+
+This would be used to find duplicate records in a table, such as identifying customers with the same email address or products with the same name.
+
+### SQL `ORDER BY` Statement
+
+The `ORDER BY` statement is used to sort the results of a query based on one or more columns. It allows users to specify the order in which the results should be returned.
+
+```sql
+SELECT column1, column2
+FROM table_name
+ORDER BY column1 ASC, column2 DESC;
+```
+
+In this example, `column1` and `column2` are the columns used to sort the results from the `table_name`. The `ASC` keyword specifies ascending order, while `DESC` specifies descending order.
+
+This would be used to retrieve a list of customers sorted by their last names in ascending order and their first names in descending order, or to sort products by price in ascending order.
