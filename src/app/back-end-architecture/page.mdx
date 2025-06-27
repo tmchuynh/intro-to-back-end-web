@@ -298,91 +298,38 @@ Service layer provides an application's business logic and coordinates between d
 
 #### Types of Load Balancing
 
-Round Robin:
-- Requests distributed sequentially across servers
-- Simple implementation and fair distribution
-- No consideration of server capacity or current load
-- Suitable for servers with similar capabilities
-
-Weighted Round Robin:
-- Assigns weights to servers based on capacity
-- More powerful servers receive more requests
-- Adaptable to heterogeneous server environments
-- Better resource utilization across different hardware
-
-Least Connections:
-- Routes requests to server with fewest active connections
-- Better performance for long-running requests
-- Dynamic adaptation to current server load
-- Improved response time distribution
-
-IP Hash:
-- Routes requests based on client IP address
-- Ensures session affinity for stateful applications
-- Consistent routing for same client
-- Potential for uneven distribution with limited client IPs
+| Load Balancing Type | How It Works | Advantages | Considerations |
+|--------------------|--------------|------------|----------------|
+| Round Robin | Requests distributed sequentially across servers | Simple implementation, fair distribution | No consideration of server capacity or load |
+| Weighted Round Robin | Assigns weights to servers based on capacity | Better resource utilization, adaptable to different hardware | Requires manual weight configuration |
+| Least Connections | Routes to server with fewest active connections | Better for long-running requests, dynamic load adaptation | Slight overhead tracking connections |
+| IP Hash | Routes based on client IP address | Session affinity, consistent routing | Potential uneven distribution with limited client IPs |
 
 #### Load Balancer Placement
 
-Layer 4 (Transport Layer):
-- Operates at TCP/UDP level
-- Fast processing with minimal overhead
-- Cannot inspect application-level content
-- Suitable for high-throughput applications
-
-Layer 7 (Application Layer):
-- Operates at HTTP/HTTPS level
-- Content-based routing decisions
-- SSL termination and content modification
-- More sophisticated routing rules
+| Layer | Operation Level | Characteristics | Best For |
+|-------|----------------|-----------------|----------|
+| Layer 4 (Transport) | TCP/UDP level | Fast processing, minimal overhead, cannot inspect application content | High-throughput applications |
+| Layer 7 (Application) | HTTP/HTTPS level | Content-based routing, SSL termination, sophisticated rules | Complex routing requirements |
 
 ### Caching Strategies
 
 #### Cache Types
 
-Browser Caching:
-- Stores resources locally in user's browser
-- Reduces server load and improves user experience
-- HTTP headers control caching behavior
-- Effective for static assets and infrequently changing content
-
-CDN Caching:
-- Geographically distributed cache servers
-- Reduces latency through proximity to users
-- Handles static content and API responses
-- Automatic cache invalidation and updates
-
-Application Caching:
-- In-memory caching within application servers
-- Fast access to frequently used data
-- Reduced database queries and external API calls
-- Examples: Redis, Memcached, in-process caches
-
-Database Caching:
-- Query result caching within database systems
-- Optimized execution plans and index usage
-- Buffer pools for frequently accessed data pages
-- Materialized views for complex query results
+| Cache Type | Location | Benefits | Use Cases |
+|------------|----------|----------|-----------|
+| Browser Caching | User's browser | Reduces server load, improves user experience | Static assets, infrequently changing content |
+| CDN Caching | Geographically distributed servers | Reduces latency through proximity | Static content, API responses |
+| Application Caching | Application servers (Redis, Memcached) | Fast access to frequently used data | Reduced database queries, external API calls |
+| Database Caching | Database systems | Optimized execution plans, buffer pools | Query results, frequently accessed data pages |
 
 #### Cache Invalidation Strategies
 
-Time-based Expiration:
-- Cache entries expire after specified time period
-- Simple implementation and predictable behavior
-- May serve stale data if updates occur frequently
-- Suitable for data with predictable change patterns
-
-Event-based Invalidation:
-- Cache invalidated when underlying data changes
-- Immediate consistency with data sources
-- Complex implementation requiring event coordination
-- Better user experience with always fresh data
-
-Manual Invalidation:
-- Explicit cache clearing by application logic
-- Full control over cache lifecycle
-- Risk of serving stale data if invalidation is missed
-- Suitable for critical data with known update patterns
+| Strategy | How It Works | Advantages | Considerations |
+|----------|--------------|------------|----------------|
+| Time-based Expiration | Cache entries expire after specified time | Simple implementation, predictable behavior | May serve stale data if updates occur frequently |
+| Event-based Invalidation | Cache invalidated when data changes | Immediate consistency, always fresh data | Complex implementation, requires event coordination |
+| Manual Invalidation | Explicit cache clearing by application | Full control over cache lifecycle | Risk of serving stale data if invalidation missed |
 
 ### Database Optimization
 
@@ -408,17 +355,10 @@ Connection Pooling:
 
 #### Database Scaling
 
-Vertical Scaling:
-- Increase server hardware resources (CPU, RAM, storage)
-- Simple implementation requiring minimal code changes
-- Limited by maximum hardware specifications
-- Higher cost for incremental improvements
-
-Horizontal Scaling:
-- Distribute data across multiple database servers
-- Read replicas for scaling read operations
-- Sharding for distributing write operations
-- Complex implementation requiring application changes
+| Scaling Type | Approach | Implementation | Characteristics |
+|--------------|----------|----------------|-----------------|
+| Vertical Scaling | Increase server hardware resources | Add CPU, RAM, storage | Simple implementation, limited by hardware specs, higher incremental costs |
+| Horizontal Scaling | Distribute across multiple servers | Read replicas, sharding | Complex implementation, requires application changes, unlimited potential |
 
 ## Security Architecture
 
@@ -426,103 +366,39 @@ Horizontal Scaling:
 
 #### Single Sign-On (SSO)
 
-SAML (Security Assertion Markup Language):
-- XML-based standard for exchanging authentication data
-- Enterprise-focused with comprehensive feature set
-- Complex implementation requiring significant infrastructure
-- Strong security with detailed attribute exchange
-
-OAuth 2.0:
-- Authorization framework for third-party access
-- Widely adopted for API access control
-- Flexible implementation with multiple grant types
-- Requires additional protocols for authentication (OpenID Connect)
-
-OpenID Connect:
-- Identity layer built on top of OAuth 2.0
-- Standardized authentication with JSON Web Tokens
-- Simple implementation for modern applications
-- Wide industry support and adoption
+| Protocol | Data Format | Focus | Implementation Complexity | Best For |
+|----------|-------------|-------|---------------------------|----------|
+| SAML | XML-based | Enterprise features, detailed attribute exchange | High complexity, significant infrastructure | Enterprise environments |
+| OAuth 2.0 | JSON | Authorization framework, API access control | Medium complexity, flexible grant types | API access, third-party integrations |
+| OpenID Connect | JSON Web Tokens | Identity layer on OAuth 2.0, standardized authentication | Low complexity, wide support | Modern applications |
 
 #### Multi-Factor Authentication
 
-Something You Know:
-- Passwords, PINs, security questions
-- Traditional authentication method
-- Vulnerable to phishing and credential theft
-- Should be combined with additional factors
-
-Something You Have:
-- Hardware tokens, mobile devices, smart cards
-- Physical possession required for access
-- More secure than knowledge-based factors
-- Can be lost or stolen requiring backup procedures
-
-Something You Are:
-- Biometric authentication (fingerprints, facial recognition)
-- Difficult to replicate or steal
-- High user convenience and security
-- Requires specialized hardware and privacy considerations
+| Factor Type | Examples | Security Level | Considerations |
+|-------------|----------|----------------|----------------|
+| Something You Know | Passwords, PINs, security questions | Low (vulnerable to theft) | Should be combined with other factors |
+| Something You Have | Hardware tokens, mobile devices, smart cards | Medium | Can be lost or stolen, requires backup procedures |
+| Something You Are | Fingerprints, facial recognition | High | Requires specialized hardware, privacy considerations |
 
 ### Data Protection
 
-#### Encryption at Rest
+#### Encryption Types
 
-Database Encryption:
-- Encrypt sensitive data stored in databases
-- Transparent data encryption (TDE) for automatic encryption
-- Column-level encryption for specific sensitive fields
-- Key management and rotation procedures
-
-File System Encryption:
-- Encrypt files and directories on server storage
-- Full disk encryption for comprehensive protection
-- Application-level encryption for specific files
-- Cloud provider encryption services integration
-
-#### Encryption in Transit
-
-TLS/SSL:
-- Encrypt data transmitted between client and server
-- Certificate-based authentication and key exchange
-- Protection against eavesdropping and tampering
-- Modern cipher suites and protocol versions
-
-VPN (Virtual Private Network):
-- Secure tunnels for private network communication
-- Site-to-site connectivity for distributed systems
-- Remote access for administrators and developers
-- Network-level encryption and routing
+| Encryption Type | Scope | Technologies | Use Cases |
+|-----------------|-------|--------------|-----------|
+| Database Encryption | Data at rest in databases | TDE, column-level encryption | Sensitive data protection, compliance |
+| File System Encryption | Files and directories | Full disk encryption, application-level | Server storage protection, cloud integration |
+| TLS/SSL | Data in transit | Certificate-based authentication | Client-server communication, API security |
+| VPN | Network communication | Site-to-site connectivity, remote access | Distributed systems, administrator access |
 
 ### Access Control
 
-#### Role-Based Access Control (RBAC)
+### Access Control Models
 
-Role Definition:
-- Define roles based on job functions and responsibilities
-- Assign permissions to roles rather than individual users
-- Hierarchical role structures for complex organizations
-- Regular review and updates of role definitions
-
-Permission Management:
-- Granular permissions for specific system functions
-- Principle of least privilege for minimum required access
-- Separation of duties for critical operations
-- Audit trails for permission changes and usage
-
-#### Attribute-Based Access Control (ABAC)
-
-Dynamic Authorization:
-- Access decisions based on user, resource, and environment attributes
-- Fine-grained control with flexible policy expressions
-- Context-aware access control (time, location, device)
-- Complex policy evaluation requiring robust infrastructure
-
-Policy Management:
-- Centralized policy definition and management
-- Policy testing and validation procedures
-- Policy versioning and rollback capabilities
-- Integration with existing identity management systems
+| Model | Approach | Key Features | Best For |
+|-------|----------|--------------|----------|
+| RBAC (Role-Based) | Assign permissions to roles, users to roles | Role hierarchy, principle of least privilege, audit trails | Traditional organizational structures |
+| ABAC (Attribute-Based) | Dynamic decisions based on attributes | Fine-grained control, context-aware, flexible policies | Complex authorization requirements |
 
 ## Scalability Strategies
 
