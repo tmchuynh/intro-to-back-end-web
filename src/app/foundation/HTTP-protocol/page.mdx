@@ -4,108 +4,2031 @@ import BackToTop from "@/components/BackToTop";
 
 ## Table of Contents
 
+- [Introduction to HTTP Protocol](#introduction-to-http-protocol)
+- [Key Concepts of HTTP](#key-concepts-of-http)
+- [HTTP Architecture and Flow](#http-architecture-and-flow)
+- [Importance of HTTP in Web Development](#importance-of-http-in-web-development)
+- [The Role of HTTP in APIs](#the-role-of-http-in-apis)
+- [HTTP Methods](#http-methods)
+- [HTTP Status Codes](#http-status-codes)
+- [HTTP Headers](#http-headers)
+- [RESTful API Design with HTTP](#restful-api-design-with-http)
+- [Caching Strategies](#caching-strategies)
+- [Security Considerations](#security-considerations)
+- [Performance Optimization](#performance-optimization)
+- [Best Practices](#best-practices)
+- [Common Pitfalls and Solutions](#common-pitfalls-and-solutions)
+- [Next Steps](#next-steps)
+
 ## Introduction to HTTP Protocol
 
-HTTP (Hypertext Transfer Protocol) is the foundation of data communication on the World Wide Web. It is a protocol used for transmitting hypertext via the internet, allowing web browsers and servers to communicate effectively. Understanding HTTP is crucial for anyone involved in web development, API design, or network communications.
+HTTP (Hypertext Transfer Protocol) is the foundation of data communication on the World Wide Web and serves as the backbone for modern web applications and APIs. Originally designed in the early 1990s by Tim Berners-Lee, HTTP has evolved through several versions (HTTP/1.0, HTTP/1.1, HTTP/2, and HTTP/3) to become the primary protocol for transmitting hypertext and other data across the internet.
+
+HTTP is an application-layer protocol that operates on top of TCP/IP, enabling web browsers, mobile applications, and servers to communicate effectively. It follows a client-server architecture where clients initiate requests and servers respond with the requested resources or appropriate error messages. Understanding HTTP is crucial for anyone involved in web development, API design, microservices architecture, or network communications, as it forms the foundation for virtually all web-based interactions.
 
 ## Key Concepts of HTTP
 
-- **Request and Response Model**: HTTP operates on a request-response model where a client (usually a web browser) sends a request to a server, which then processes the request and returns a response.
-- **Methods**: HTTP defines several methods (verbs) such as GET, POST, PUT, DELETE, and PATCH, each serving a specific purpose in the request lifecycle.
-- **Status Codes**: HTTP responses include status codes that indicate the outcome of the request. Common status codes include 200 (OK), 404 (Not Found), and 500 (Internal Server Error).
-- **Headers**: HTTP headers provide additional information about the request or response, such as content type, caching policies, and authentication details.
-- **Body**: The body of an HTTP request or response contains the actual data being sent, such as HTML content, JSON payloads, or file uploads.
+### Request and Response Model
+
+HTTP operates on a stateless request-response model where a client (web browser, mobile app, or API client) initiates communication by sending a request to a server. The server processes this request and returns an appropriate response. Each HTTP transaction is independent, meaning the server doesn't retain information about previous requests from the same client unless explicitly implemented through mechanisms like cookies or sessions.
+
+HTTP Request Structure:
+
+```
+Method URI HTTP-Version
+Headers
+(blank line)
+Body (optional)
+```
+
+HTTP Response Structure:
+
+```
+HTTP-Version Status-Code Reason-Phrase
+Headers
+(blank line)
+Body (optional)
+```
+
+### HTTP Methods (Verbs)
+
+HTTP defines several methods that indicate the desired action to be performed on a given resource. These methods are sometimes referred to as HTTP verbs and each serves a specific purpose in the request lifecycle:
+
+- GET: Retrieve data from the server
+- POST: Submit data to create a new resource
+- PUT: Update or replace an entire existing resource
+- PATCH: Apply partial modifications to a resource
+- DELETE: Remove a resource from the server
+- HEAD: Retrieve headers only (like GET but without the body)
+- OPTIONS: Get information about communication options for a resource
+
+### Status Codes
+
+HTTP responses include three-digit status codes that indicate the outcome of the request. These codes are grouped into five categories:
+
+- 1xx (Informational): Request received, continuing process
+- 2xx (Success): Request successfully received, understood, and accepted
+- 3xx (Redirection): Further action needs to be taken to complete the request
+- 4xx (Client Error): Request contains bad syntax or cannot be fulfilled
+- 5xx (Server Error): Server failed to fulfill a valid request
+
+Common status codes include:
+
+- 200 OK: Request successful
+- 201 Created: Resource successfully created
+- 400 Bad Request: Invalid request syntax
+- 401 Unauthorized: Authentication required
+- 403 Forbidden: Server understood but refuses to authorize
+- 404 Not Found: Resource not found
+- 500 Internal Server Error: Generic server error
+
+### HTTP Headers
+
+HTTP headers provide additional information about the request or response, acting as metadata that helps both client and server understand how to handle the message. Headers are key-value pairs that appear after the request/response line and before the message body.
+
+Common Request Headers:
+
+- Content-Type: Indicates the media type of the request body
+- Authorization: Contains credentials for authenticating the client
+- Accept: Specifies media types acceptable for the response
+- User-Agent: Identifies the client application making the request
+- Cache-Control: Directives for caching mechanisms
+
+Common Response Headers:
+
+- Content-Type: Media type of the response body
+- Content-Length: Size of the response body in bytes
+- Set-Cookie: Sends cookies from server to client
+- Location: Used in redirects to specify the new resource location
+- Server: Information about the server software
+
+### Message Body
+
+The body of an HTTP request or response contains the actual data being transmitted. Not all HTTP messages have a body - for example, GET requests typically don't include a body, while POST and PUT requests usually do. The body can contain various types of data such as:
+
+- HTML content for web pages
+- JSON or XML payloads for API communications
+- Form data for web form submissions
+- Binary data for file uploads
+- Plain text for simple data transmission
+
+## HTTP Architecture and Flow
+
+### Client-Server Communication Flow
+
+1. Connection Establishment: Client establishes a TCP connection to the server (usually on port 80 for HTTP or 443 for HTTPS)
+
+2. Request Transmission: Client sends an HTTP request containing:
+   - Method and URI (resource path)
+   - HTTP version
+   - Headers with metadata
+   - Optional message body
+
+3. Server Processing: Server receives and processes the request:
+   - Parses the request method and URI
+   - Authenticates and authorizes if required
+   - Processes business logic
+   - Accesses databases or other resources as needed
+
+4. Response Generation: Server generates an HTTP response containing:
+   - Status code indicating success or failure
+   - Response headers with metadata
+   - Optional response body with requested data
+
+5. Response Transmission: Server sends the response back to the client
+
+6. Connection Handling: Connection may be closed or kept alive for additional requests (depending on HTTP version and headers)
+
+### Stateless Nature
+
+HTTP is inherently stateless, meaning each request is independent and contains all information necessary for the server to understand and process it. This design provides several benefits:
+
+- Scalability: Servers don't need to maintain client state between requests
+- Reliability: No risk of losing client state if server restarts
+- Simplicity: Easier to implement and debug
+
+However, many applications require state management, which is typically handled through:
+
+- Cookies: Small pieces of data stored in the client's browser
+- Sessions: Server-side storage of user state, identified by session tokens
+- JWT Tokens: Self-contained tokens that carry user information
+- Database persistence: Storing state in databases for long-term persistence
 
 ## Importance of HTTP in Web Development
 
-HTTP is essential for web development as it enables the communication between clients and servers. It allows developers to create dynamic web applications, RESTful APIs, and other services that rely on data exchange over the internet. Understanding HTTP is fundamental for debugging issues, optimizing performance, and ensuring secure data transmission.
+HTTP serves as the fundamental communication protocol that enables modern web development, forming the backbone for virtually all web-based interactions. Its importance extends across multiple domains:
+
+### Web Application Development
+
+HTTP enables the creation of dynamic, interactive web applications by facilitating communication between browsers and web servers. Developers rely on HTTP to:
+
+- Load Resources: Fetch HTML, CSS, JavaScript, images, and other assets
+- Submit Forms: Send user input to servers for processing
+- Enable AJAX: Create responsive, single-page applications through asynchronous requests
+- Implement Authentication: Secure user login and session management
+- Cache Management: Optimize performance through intelligent caching strategies
+
+### API Development and Integration
+
+Modern applications heavily depend on HTTP-based APIs for data exchange and service integration:
+
+- Microservices Architecture: HTTP enables communication between distributed services
+- Third-party Integrations: Connect with external services like payment processors, social media platforms, and cloud services
+- Mobile Applications: Provide data connectivity between mobile apps and backend services
+- IoT Communications: Enable device-to-server communication in Internet of Things implementations
+
+### Performance Optimization
+
+Understanding HTTP is crucial for optimizing web application performance:
+
+- Reducing Latency: Minimize round trips through efficient request patterns
+- Bandwidth Optimization: Compress responses and minimize payload sizes
+- Caching Strategies: Leverage HTTP caching headers for improved performance
+- Connection Management: Optimize TCP connection usage and HTTP keep-alive
+
+### Debugging and Troubleshooting
+
+HTTP knowledge is essential for identifying and resolving issues:
+
+- Network Analysis: Use browser developer tools and network analyzers to inspect HTTP traffic
+- Status Code Interpretation: Quickly identify the root cause of failures
+- Header Analysis: Debug caching, authentication, and content delivery issues
+- Performance Monitoring: Track response times and identify bottlenecks
 
 ## The Role of HTTP in APIs
 
-HTTP plays a crucial role in APIs (Application Programming Interfaces) as it provides the protocol for communication between clients and servers. Most modern APIs are built on top of HTTP, leveraging its methods, status codes, and headers to facilitate data exchange. By adhering to HTTP standards, APIs can ensure compatibility with various clients and platforms, making them accessible and easy to use.
+HTTP serves as the foundation for modern API design and implementation, providing a standardized way for applications to communicate over networks. Understanding HTTP's role in APIs is crucial for building robust, scalable, and maintainable systems.
 
-## The Methods
+### RESTful API Architecture
+
+Representational State Transfer (REST) is an architectural style that leverages HTTP's inherent features to create scalable web services:
+
+REST Principles with HTTP:
+
+- Stateless Communication: Each HTTP request contains all necessary information
+- Resource-Based URLs: Use HTTP URIs to identify resources
+- HTTP Methods: Map CRUD operations to HTTP verbs (GET, POST, PUT, DELETE)
+- Status Codes: Provide meaningful feedback about operation results
+- Content Negotiation: Use HTTP headers to specify data formats
+
+### API Design Patterns
+
+HTTP enables several important API design patterns:
+
+Resource-Oriented Design:
+
+```
+GET /api/users          # Retrieve all users
+GET /api/users/123      # Retrieve specific user
+POST /api/users         # Create new user
+PUT /api/users/123      # Update entire user
+PATCH /api/users/123    # Update specific user fields
+DELETE /api/users/123   # Delete user
+```
+
+Nested Resources:
+
+```
+GET /api/users/123/orders       # Get orders for specific user
+POST /api/users/123/orders      # Create order for user
+GET /api/users/123/orders/456   # Get specific order for user
+```
+
+### Content Negotiation
+
+HTTP headers enable flexible data format handling:
+
+Request Headers:
+
+```
+Accept: application/json, application/xml
+Content-Type: application/json
+Accept-Language: en-US, en;q=0.9
+Accept-Encoding: gzip, deflate
+```
+
+Response Headers:
+
+```
+Content-Type: application/json; charset=utf-8
+Content-Encoding: gzip
+Cache-Control: public, max-age=3600
+```
+
+### Authentication and Security
+
+HTTP provides mechanisms for securing API communications:
+
+- Basic Authentication: Credentials in Authorization header
+- Bearer Tokens: JWT or OAuth tokens for stateless authentication
+- API Keys: Simple authentication through custom headers
+- OAuth 2.0: Industry-standard authorization framework
+- HTTPS: Encryption for secure data transmission
+
+### Error Handling
+
+HTTP status codes provide standardized error communication:
+
+```json
+{
+  "error": {
+    "code": 400,
+    "message": "Invalid email format",
+    "details": "Email must be a valid email address",
+    "timestamp": "2023-12-07T10:30:00Z"
+  }
+}
+```
+
+## HTTP Methods
 
 ### GET
 
-The GET method is used to retrieve data from a server. It is the most common HTTP method and is typically used to fetch resources such as web pages, images, or API data. GET requests are idempotent, meaning that multiple identical requests will yield the same result without causing any side effects.
+The GET method is the most fundamental HTTP method, designed to retrieve data from a server without causing any side effects. It's the primary method used for fetching resources such as web pages, images, API data, or any other content. GET requests are idempotent, meaning that multiple identical requests will always yield the same result without causing any changes to the server state.
 
-#### Example Using MySQL
+Key Characteristics:
+
+- Idempotent: Multiple requests produce the same result
+- Safe: No side effects on server state
+- Cacheable: Responses can be cached by browsers and proxies
+- Visible: Parameters are visible in URL query string
+- Length Limitations: URL length limits may restrict parameter size
+
+#### RESTful API Example
+
+Request to retrieve user information:
+
+```http
+GET /api/v1/users/123 HTTP/1.1
+Host: api.example.com
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Accept: application/json
+Cache-Control: no-cache
+```
+
+Successful response with user data:
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+Cache-Control: public, max-age=300
+ETag: "user-123-v5"
+
+{
+  "id": 123,
+  "name": "John Doe",
+  "email": "john.doe@example.com",
+  "created_at": "2023-12-01T10:00:00Z",
+  "last_login": "2023-12-07T09:30:00Z",
+  "profile": {
+    "bio": "Software Engineer",
+    "location": "San Francisco, CA"
+  }
+}
+```
+
+#### Database Examples
+
+Retrieve specific user from MySQL:
 
 ```sql
-SELECT * FROM users WHERE id = 1;
+-- Retrieve a specific user with basic information
+SELECT id, name, email, created_at, last_login
+FROM users
+WHERE id = 123 AND status = 'active';
+```
+
+Retrieve users with pagination from MySQL:
+
+```sql
+-- Retrieve users with pagination and ordering
+SELECT id, name, email, created_at, last_login
+FROM users
+WHERE status = 'active'
+ORDER BY created_at DESC
+LIMIT 20 OFFSET 0;
+```
+
+Filter active users created this year from MySQL:
+
+```sql
+-- Retrieve users with filtering conditions
+SELECT u.id, u.name, u.email, u.created_at,
+       COUNT(o.id) as order_count
+FROM users u
+LEFT JOIN orders o ON u.id = o.user_id
+WHERE u.status = 'active'
+  AND u.created_at >= '2023-01-01'
+GROUP BY u.id, u.name, u.email, u.created_at
+HAVING COUNT(o.id) > 0;
+```
+
+Retrieve user with related profile data from PostgreSQL:
+
+```sql
+-- Retrieve user with related data using JSON aggregation
+SELECT u.id, u.name, u.email, u.created_at,
+       jsonb_build_object(
+         'bio', p.bio,
+         'avatar_url', p.avatar_url,
+         'preferences', p.preferences
+       ) as profile
+FROM users u
+LEFT JOIN profiles p ON u.id = p.user_id
+WHERE u.id = 123;
+```
+
+Complex analytics query from PostgreSQL:
+
+```sql
+-- Complex query with aggregation and window functions
+SELECT u.name, u.email,
+       COUNT(o.id) as order_count,
+       SUM(o.total) as total_spent,
+       AVG(o.total) as avg_order_value,
+       RANK() OVER (ORDER BY SUM(o.total) DESC) as spending_rank
+FROM users u
+LEFT JOIN orders o ON u.id = o.user_id
+WHERE u.created_at >= '2023-01-01'
+  AND u.status = 'active'
+GROUP BY u.id, u.name, u.email
+ORDER BY total_spent DESC
+LIMIT 50;
+```
+
+Retrieve cached user data from Redis:
+
+```bash
+# Retrieve cached user data with TTL information
+GET user:123
+TTL user:123
+```
+
+Retrieve multiple users efficiently from Redis:
+
+```bash
+# Retrieve multiple users in a single operation
+MGET user:123 user:124 user:125
+```
+
+Get comprehensive user session data from Redis:
+
+```bash
+# Get user's session data as hash
+HGETALL session:user:123
+# Returns: user_id, login_time, ip_address, user_agent, etc.
+```
+
+Retrieve user ranking from sorted set in Redis:
+
+```bash
+# Retrieve from sorted set (e.g., user leaderboard)
+ZREVRANGE leaderboard:users 0 9 WITHSCORES
+ZRANK leaderboard:users user:123
+ZSCORE leaderboard:users user:123
 ```
 
 ### POST
 
-The POST method is used to send data to a server, often resulting in the creation of a new resource. It is commonly used for submitting forms, uploading files, or sending JSON data to APIs. Unlike GET, POST requests can have a body containing the data to be sent, and they are not idempotent, meaning that multiple identical requests may result in different outcomes (e.g., creating multiple resources).
+The POST method is used to submit data to a server, typically resulting in the creation of a new resource or triggering a specific action. Unlike GET, POST requests include a message body containing the data to be processed. POST requests are not idempotent, meaning that multiple identical requests may result in different outcomes, such as creating multiple resources or triggering side effects.
 
-#### Example Using MySQL
+Key Characteristics:
 
-```sql
-INSERT INTO users (name, email) VALUES ('John Doe', 'john_doe@sample.com');
+- Non-idempotent: Multiple requests may create different results
+- Unsafe: Can cause side effects on server state
+- Not cacheable: Responses are typically not cached
+- Body included: Data sent in request body, not URL
+- No length limitations: Can handle large amounts of data
+
+#### RESTful API Example
+
+Request to create a new user:
+
+```http
+POST /api/v1/users HTTP/1.1
+Host: api.example.com
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+Content-Length: 234
+X-Request-ID: req-456789
+
+{
+  "name": "Jane Smith",
+  "email": "jane.smith@example.com",
+  "password": "securePassword123",
+  "role": "user",
+  "preferences": {
+    "notifications": true,
+    "theme": "dark",
+    "language": "en-US"
+  },
+  "profile": {
+    "bio": "Data Scientist",
+    "location": "New York, NY"
+  }
+}
 ```
 
-#### Example Using MongoDB
+Successful user creation response:
+
+```http
+HTTP/1.1 201 Created
+Content-Type: application/json
+Location: /api/v1/users/124
+X-Request-ID: req-456789
+Cache-Control: no-cache
+
+{
+  "id": 124,
+  "name": "Jane Smith",
+  "email": "jane.smith@example.com",
+  "role": "user",
+  "created_at": "2023-12-07T10:15:00Z",
+  "preferences": {
+    "notifications": true,
+    "theme": "dark",
+    "language": "en-US"
+  },
+  "profile": {
+    "bio": "Data Scientist",
+    "location": "New York, NY"
+  },
+  "_links": {
+    "self": "/api/v1/users/124",
+    "profile": "/api/v1/users/124/profile"
+  }
+}
+```
+
+#### Database Examples
+
+Create new user in MySQL:
+
+```sql
+-- Create a new user with basic information
+INSERT INTO users (name, email, password_hash, role, created_at)
+VALUES ('Jane Smith', 'jane.smith@example.com', '$2b$12$...', 'user', NOW());
+```
+
+Create user with transaction for related data in MySQL:
+
+```sql
+-- Create user with related data in transaction
+START TRANSACTION;
+
+INSERT INTO users (name, email, password_hash, role, created_at)
+VALUES ('Jane Smith', 'jane.smith@example.com', '$2b$12$...', 'user', NOW());
+
+SET @user_id = LAST_INSERT_ID();
+
+INSERT INTO profiles (user_id, bio, location, avatar_url)
+VALUES (@user_id, 'Data Scientist', 'New York, NY', '/avatars/default.jpg');
+
+INSERT INTO user_preferences (user_id, notifications, theme, language)
+VALUES (@user_id, TRUE, 'dark', 'en-US');
+
+COMMIT;
+```
+
+Create user and return data in PostgreSQL:
+
+```sql
+-- Create user and return the created record with generated values
+WITH new_user AS (
+  INSERT INTO users (name, email, password_hash, role, created_at)
+  VALUES ('Jane Smith', 'jane.smith@example.com', '$2b$12$...', 'user', NOW())
+  RETURNING id, name, email, role, created_at
+),
+new_profile AS (
+  INSERT INTO profiles (user_id, bio, location)
+  SELECT id, 'Data Scientist', 'New York, NY'
+  FROM new_user
+  RETURNING user_id, bio, location
+)
+SELECT u.id, u.name, u.email, u.role, u.created_at,
+       jsonb_build_object(
+         'bio', p.bio,
+         'location', p.location
+       ) as profile
+FROM new_user u
+JOIN new_profile p ON u.id = p.user_id;
+```
+
+Bulk insert multiple users in PostgreSQL:
+
+```sql
+-- Bulk insert multiple users with JSONB preferences
+INSERT INTO users (name, email, role, preferences, created_at)
+VALUES
+  ('User 1', 'user1@example.com', 'user',
+   '{"notifications": true, "theme": "light"}'::jsonb, NOW()),
+  ('User 2', 'user2@example.com', 'user',
+   '{"notifications": false, "theme": "dark"}'::jsonb, NOW()),
+  ('Admin User', 'admin@example.com', 'admin',
+   '{"notifications": true, "theme": "system"}'::jsonb, NOW())
+RETURNING id, name, email, created_at;
+```
+
+Create user document in MongoDB:
 
 ```javascript
-db.users.insertOne({ name: "John Doe", email: "john_doe@sample.com" });
+// Create a single user with embedded profile
+db.users.insertOne({
+  name: "Jane Smith",
+  email: "jane.smith@example.com",
+  password_hash: "$2b$12$...",
+  role: "user",
+  created_at: new Date(),
+  preferences: {
+    notifications: true,
+    theme: "dark",
+    language: "en-US",
+  },
+  profile: {
+    bio: "Data Scientist",
+    location: "New York, NY",
+    avatar_url: "/avatars/default.jpg",
+  },
+  tags: ["new-user", "data-science"],
+  status: "active",
+});
+```
+
+Bulk create users in MongoDB:
+
+```javascript
+// Create multiple users with different roles
+db.users.insertMany([
+  {
+    name: "User 1",
+    email: "user1@example.com",
+    role: "user",
+    created_at: new Date(),
+    department: "Engineering",
+  },
+  {
+    name: "User 2",
+    email: "user2@example.com",
+    role: "admin",
+    created_at: new Date(),
+    department: "Management",
+  },
+  {
+    name: "User 3",
+    email: "user3@example.com",
+    role: "moderator",
+    created_at: new Date(),
+    department: "Support",
+  },
+]);
+```
+
+Cache new user data in Redis:
+
+```bash
+# Cache new user data with expiration
+SET user:124 '{"id":124,"name":"Jane Smith","email":"jane.smith@example.com","role":"user"}' EX 3600
+```
+
+Create user session in Redis:
+
+```bash
+# Set comprehensive user session data
+HSET session:user:124 \
+  user_id 124 \
+  login_time "2023-12-07T10:15:00Z" \
+  ip "192.168.1.1" \
+  user_agent "Mozilla/5.0..." \
+  session_token "sess_abc123"
+
+# Set session expiration
+EXPIRE session:user:124 86400
 ```
 
 ### PUT
 
-The PUT method is used to update an existing resource on the server. It replaces the entire resource with the data provided in the request body. PUT requests are idempotent, meaning that sending the same request multiple times will yield the same result without causing additional changes.
+The PUT method is used to update an existing resource on the server by completely replacing it with the data provided in the request body. PUT requests are idempotent, meaning that sending the same request multiple times will yield the same result without causing additional changes. This method implements the "replace entire resource" semantic.
 
-#### Example Using MySQL
+Key Characteristics:
 
-```sql
-UPDATE users SET name = 'Jane Doe', email = 'john_doe@sample.com' WHERE id = 1;
+- Idempotent: Multiple identical requests produce the same result
+- Complete replacement: Replaces the entire resource, not just specified fields
+- Create or update: May create resource if it doesn't exist (depending on implementation)
+- Requires full resource data: Should include all fields for the resource
+
+#### RESTful API Example
+
+```http
+PUT /api/v1/users/123 HTTP/1.1
+Host: api.example.com
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "id": 123,
+  "name": "John Doe Updated",
+  "email": "john.doe.updated@example.com",
+  "role": "admin",
+  "preferences": {
+    "notifications": false,
+    "theme": "light"
+  },
+  "last_updated": "2023-12-07T10:30:00Z"
+}
 ```
 
-#### Example Using MongoDB
+Response:
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "id": 123,
+  "name": "John Doe Updated",
+  "email": "john.doe.updated@example.com",
+  "role": "admin",
+  "preferences": {
+    "notifications": false,
+    "theme": "light"
+  },
+  "updated_at": "2023-12-07T10:30:00Z"
+}
+```
+
+#### Database Examples
+
+MySQL:
+
+```sql
+-- Replace entire user record
+UPDATE users
+SET
+  name = 'John Doe Updated',
+  email = 'john.doe.updated@example.com',
+  role = 'admin',
+  updated_at = NOW()
+WHERE id = 123;
+
+-- Update with conditional logic
+UPDATE users
+SET
+  name = 'John Doe Updated',
+  email = 'john.doe.updated@example.com',
+  version = version + 1,
+  updated_at = NOW()
+WHERE id = 123 AND version = 5; -- Optimistic locking
+```
+
+PostgreSQL:
+
+```sql
+-- Update user with JSON preferences
+UPDATE users
+SET
+  name = 'John Doe Updated',
+  email = 'john.doe.updated@example.com',
+  preferences = '{"notifications": false, "theme": "light"}'::jsonb,
+  updated_at = NOW()
+WHERE id = 123
+RETURNING id, name, email, updated_at;
+
+-- Upsert operation (INSERT or UPDATE)
+INSERT INTO users (id, name, email, role, created_at)
+VALUES (123, 'John Doe', 'john.doe@example.com', 'user', NOW())
+ON CONFLICT (id)
+DO UPDATE SET
+  name = EXCLUDED.name,
+  email = EXCLUDED.email,
+  updated_at = NOW();
+```
+
+MongoDB:
 
 ```javascript
-db.users.updateOne(
+// Replace entire document
+db.users.replaceOne(
   { _id: ObjectId("60c72b2f9b1d4c3f8e4b2a1") },
-  { $set: { name: "Jane Doe", email: "john_doe@sample.com" } }
+  {
+    name: "John Doe Updated",
+    email: "john.doe.updated@example.com",
+    role: "admin",
+    preferences: {
+      notifications: false,
+      theme: "light",
+    },
+    updated_at: new Date(),
+  }
 );
+
+// Upsert with replaceOne
+db.users.replaceOne(
+  { email: "john.doe@example.com" },
+  {
+    name: "John Doe Updated",
+    email: "john.doe.updated@example.com",
+    role: "admin",
+    updated_at: new Date(),
+  },
+  { upsert: true }
+);
+```
+
+Redis:
+
+```bash
+# Replace cached user data completely
+SET user:123 '{"id":123,"name":"John Doe Updated","email":"john.doe.updated@example.com","role":"admin"}'
+
+# Update hash completely (delete and recreate)
+DEL user:123:profile
+HSET user:123:profile name "John Doe Updated" email "john.doe.updated@example.com" role "admin"
+
+# Update session data
+HSET session:user:123 last_activity "2023-12-07T10:30:00Z" role "admin"
 ```
 
 ### DELETE
 
-The DELETE method is used to remove a resource from the server. It is typically used to delete items such as user accounts, blog posts, or files. DELETE requests are idempotent, meaning that sending the same request multiple times will not result in further deletions after the resource has been removed.
+The DELETE method is used to remove a resource from the server. It's designed to delete specific resources identified by their URI. DELETE requests are idempotent, meaning that sending the same request multiple times will not result in further deletions after the resource has been removed - subsequent requests should return a 404 Not Found or maintain the same state.
 
-#### Example Using MySQL
+**Key Characteristics:**
 
-```sql
-DELETE FROM users WHERE id = 1;
+- **Idempotent**: Multiple requests produce the same result
+- **Destructive**: Permanently removes resources
+- **No body typically**: Usually doesn't include request body
+- **Various response codes**: 200, 204, or 404 depending on implementation
+
+#### RESTful API Example
+
+```http
+DELETE /api/v1/users/123 HTTP/1.1
+Host: api.example.com
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
-#### Example Using MongoDB
+**Response (Resource Deleted):**
+
+```http
+HTTP/1.1 204 No Content
+```
+
+**Response (Resource Not Found):**
+
+```http
+HTTP/1.1 404 Not Found
+Content-Type: application/json
+
+{
+  "error": {
+    "code": "RESOURCE_NOT_FOUND",
+    "message": "User with ID 123 not found"
+  }
+}
+```
+
+#### Database Examples
+
+**MySQL:**
+
+```sql
+-- Delete a specific user
+DELETE FROM users WHERE id = 123;
+
+-- Soft delete (mark as deleted instead of removing)
+UPDATE users
+SET deleted_at = NOW(), status = 'deleted'
+WHERE id = 123;
+
+-- Delete with cascading (delete related records)
+DELETE u, p, o
+FROM users u
+LEFT JOIN profiles p ON u.id = p.user_id
+LEFT JOIN orders o ON u.id = o.user_id
+WHERE u.id = 123;
+
+-- Conditional delete with safety check
+DELETE FROM users
+WHERE id = 123 AND role != 'admin';
+```
+
+**PostgreSQL:**
+
+```sql
+-- Delete user and return deleted record
+DELETE FROM users
+WHERE id = 123
+RETURNING id, name, email, deleted_at;
+
+-- Delete with CTE for complex logic
+WITH deleted_user AS (
+  DELETE FROM users
+  WHERE id = 123
+  RETURNING id, name
+)
+INSERT INTO user_deletion_log (user_id, user_name, deleted_at)
+SELECT id, name, NOW() FROM deleted_user;
+
+-- Delete old records with date condition
+DELETE FROM user_sessions
+WHERE created_at < NOW() - INTERVAL '30 days';
+```
+
+**MongoDB:**
 
 ```javascript
+// Delete a single user
 db.users.deleteOne({ _id: ObjectId("60c72b2f9b1d4c3f8e4b2a1") });
+
+// Delete with additional conditions
+db.users.deleteOne({
+  _id: ObjectId("60c72b2f9b1d4c3f8e4b2a1"),
+  role: { $ne: "admin" },
+});
+
+// Soft delete (mark as deleted)
+db.users.updateOne(
+  { _id: ObjectId("60c72b2f9b1d4c3f8e4b2a1") },
+  {
+    $set: {
+      deleted_at: new Date(),
+      status: "deleted",
+    },
+  }
+);
+
+// Delete multiple users
+db.users.deleteMany({
+  status: "inactive",
+  last_login: { $lt: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000) },
+});
+```
+
+**Redis:**
+
+```bash
+# Delete cached user data
+DEL user:123
+
+# Delete user session
+DEL session:user:123
+
+# Remove from sets and lists
+SREM online_users 123
+SREM active_users 123
+LREM user:123:activity 0 "all_activities"
+
+# Delete multiple related keys
+DEL user:123 user:123:profile user:123:preferences user:123:cache
 ```
 
 ### PATCH
 
-The PATCH method is used to apply partial modifications to a resource. Unlike PUT, which replaces the entire resource, PATCH allows clients to send only the changes they want to make. This is useful for updating specific fields in a resource without affecting the entire object. PATCH requests are not necessarily idempotent, as the outcome may vary based on the current state of the resource.
+The PATCH method is used to apply partial modifications to a resource. Unlike PUT, which replaces the entire resource, PATCH allows clients to send only the specific changes they want to make. This is particularly useful for updating individual fields without affecting the rest of the resource. PATCH requests may or may not be idempotent, depending on the specific implementation and the nature of the operations being performed.
 
-#### Example Using MySQL
+**Key Characteristics:**
 
-```sql
-UPDATE users SET email = 'john_doe@sample.com' WHERE id = 1;
+- **Partial updates**: Only specified fields are modified
+- **Efficient**: Reduces bandwidth by sending only changed data
+- **Conditional idempotency**: May be idempotent depending on operations
+- **Flexible**: Supports various patch formats (JSON Patch, JSON Merge Patch)
+
+#### RESTful API Example
+
+```http
+PATCH /api/v1/users/123 HTTP/1.1
+Host: api.example.com
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "email": "newemail@example.com",
+  "preferences": {
+    "notifications": true
+  },
+  "last_login": "2023-12-07T10:45:00Z"
+}
 ```
 
-#### Example Using MongoDB
+**JSON Patch Format Example:**
+
+```http
+PATCH /api/v1/users/123 HTTP/1.1
+Content-Type: application/json-patch+json
+
+[
+  { "op": "replace", "path": "/email", "value": "newemail@example.com" },
+  { "op": "add", "path": "/preferences/notifications", "value": true },
+  { "op": "remove", "path": "/temporary_field" }
+]
+```
+
+**Response:**
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "id": 123,
+  "name": "John Doe",
+  "email": "newemail@example.com",
+  "role": "user",
+  "preferences": {
+    "notifications": true,
+    "theme": "dark"
+  },
+  "last_login": "2023-12-07T10:45:00Z",
+  "updated_at": "2023-12-07T10:45:00Z"
+}
+```
+
+#### Database Examples
+
+**MySQL:**
+
+```sql
+-- Update only specific fields
+UPDATE users
+SET
+  email = 'newemail@example.com',
+  last_login = NOW(),
+  updated_at = NOW()
+WHERE id = 123;
+
+-- Conditional update with version control
+UPDATE users
+SET
+  email = 'newemail@example.com',
+  version = version + 1,
+  updated_at = NOW()
+WHERE id = 123 AND version = 3;
+
+-- Update with JSON field modification
+UPDATE users
+SET preferences = JSON_SET(
+  preferences,
+  '$.notifications', true,
+  '$.theme', 'light'
+)
+WHERE id = 123;
+```
+
+**PostgreSQL:**
+
+```sql
+-- Update specific fields and return updated record
+UPDATE users
+SET
+  email = 'newemail@example.com',
+  last_login = NOW(),
+  updated_at = NOW()
+WHERE id = 123
+RETURNING id, email, last_login, updated_at;
+
+-- Update JSONB field partially
+UPDATE users
+SET preferences = preferences || '{"notifications": true, "new_feature": false}'::jsonb
+WHERE id = 123;
+
+-- Update with conditional logic
+UPDATE users
+SET
+  email = CASE
+    WHEN email != 'newemail@example.com' THEN 'newemail@example.com'
+    ELSE email
+  END,
+  updated_at = CASE
+    WHEN email != 'newemail@example.com' THEN NOW()
+    ELSE updated_at
+  END
+WHERE id = 123;
+```
+
+**MongoDB:**
 
 ```javascript
+// Update specific fields only
 db.users.updateOne(
   { _id: ObjectId("60c72b2f9b1d4c3f8e4b2a1") },
-  { $set: { email: "john_doe@sample.com" } }
+  {
+    $set: {
+      email: "newemail@example.com",
+      last_login: new Date(),
+      "preferences.notifications": true,
+    },
+  }
+);
+
+// Update with array operations
+db.users.updateOne(
+  { _id: ObjectId("60c72b2f9b1d4c3f8e4b2a1") },
+  {
+    $addToSet: { tags: "premium" },
+    $inc: { login_count: 1 },
+    $set: { last_login: new Date() },
+  }
+);
+
+// Update nested document fields
+db.users.updateOne(
+  { _id: ObjectId("60c72b2f9b1d4c3f8e4b2a1") },
+  {
+    $set: {
+      "profile.bio": "Updated bio",
+      "preferences.theme": "dark",
+    },
+  }
 );
 ```
 
-## Next Steps
+**Redis:**
 
-<BackToTop />
+```bash
+# Update specific hash fields
+HSET user:123 email "newemail@example.com" last_login "2023-12-07T10:45:00Z"
+
+# Update JSON document partially (Redis JSON module)
+JSON.SET user:123 $.email '"newemail@example.com"'
+JSON.SET user:123 $.preferences.notifications true
+
+# Increment counters
+HINCRBY user:123:stats login_count 1
+INCR user:123:page_views
+
+# Update sets
+SADD user:123:interests "technology" "programming"
+SREM user:123:interests "old_interest"
+```
+
+## HTTP Status Codes
+
+HTTP status codes provide essential feedback about the outcome of requests, helping clients understand how to handle responses appropriately. Understanding these codes is crucial for effective API design and debugging.
+
+### 1xx Informational
+
+These codes indicate that the request has been received and the process is continuing:
+
+- **100 Continue**: Server has received request headers and client should proceed with request body
+- **101 Switching Protocols**: Server is switching protocols as requested by client
+- **102 Processing**: Server has received and is processing the request (WebDAV)
+
+### 2xx Success
+
+These codes indicate that the request was successfully received, understood, and accepted:
+
+- **200 OK**: Standard success response
+- **201 Created**: Resource successfully created
+- **202 Accepted**: Request accepted for processing but not completed
+- **204 No Content**: Success but no content to return
+- **206 Partial Content**: Partial content response (used with range requests)
+
+### 3xx Redirection
+
+These codes indicate that further action needs to be taken to complete the request:
+
+- **301 Moved Permanently**: Resource permanently moved to new URL
+- **302 Found**: Resource temporarily moved
+- **304 Not Modified**: Resource hasn't changed since last request
+- **307 Temporary Redirect**: Temporary redirect preserving request method
+
+### 4xx Client Error
+
+These codes indicate that the client made an error:
+
+- **400 Bad Request**: Invalid request syntax or parameters
+- **401 Unauthorized**: Authentication required
+- **403 Forbidden**: Server understood but refuses to authorize
+- **404 Not Found**: Resource not found
+- **409 Conflict**: Request conflicts with current resource state
+- **422 Unprocessable Entity**: Request well-formed but contains semantic errors
+- **429 Too Many Requests**: Client has sent too many requests
+
+### 5xx Server Error
+
+These codes indicate that the server failed to fulfill a valid request:
+
+- **500 Internal Server Error**: Generic server error
+- **502 Bad Gateway**: Invalid response from upstream server
+- **503 Service Unavailable**: Server temporarily overloaded or under maintenance
+- **504 Gateway Timeout**: Upstream server timeout
+
+## HTTP Headers
+
+HTTP headers provide essential metadata about requests and responses, enabling features like caching, authentication, content negotiation, and security.
+
+### Request Headers
+
+**Authentication and Authorization:**
+
+```http
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Authorization: Basic dXNlcm5hbWU6cGFzc3dvcmQ=
+X-API-Key: your-api-key-here
+```
+
+**Content Negotiation:**
+
+```http
+Accept: application/json, application/xml;q=0.9, */*;q=0.8
+Accept-Language: en-US,en;q=0.9,es;q=0.8
+Accept-Encoding: gzip, deflate, br
+Content-Type: application/json; charset=utf-8
+```
+
+**Caching Control:**
+
+```http
+Cache-Control: no-cache, must-revalidate
+If-None-Match: "686897696a7c876b7e"
+If-Modified-Since: Wed, 21 Oct 2015 07:28:00 GMT
+```
+
+**Client Information:**
+
+```http
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
+Referer: https://example.com/previous-page
+X-Forwarded-For: 192.168.1.1, 10.0.0.1
+```
+
+### Response Headers
+
+**Content Information:**
+
+```http
+Content-Type: application/json; charset=utf-8
+Content-Length: 1234
+Content-Encoding: gzip
+Content-Language: en-US
+```
+
+**Caching Directives:**
+
+```http
+Cache-Control: public, max-age=3600, must-revalidate
+ETag: "686897696a7c876b7e"
+Last-Modified: Wed, 21 Oct 2015 07:28:00 GMT
+Expires: Thu, 01 Dec 2023 16:00:00 GMT
+```
+
+**Security Headers:**
+
+```http
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+X-Content-Type-Options: nosniff
+X-Frame-Options: DENY
+X-XSS-Protection: 1; mode=block
+```
+
+**CORS Headers:**
+
+```http
+Access-Control-Allow-Origin: https://trusted-domain.com
+Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
+Access-Control-Allow-Headers: Content-Type, Authorization
+Access-Control-Max-Age: 86400
+```
+
+## RESTful API Design with HTTP
+
+### Resource-Oriented Architecture
+
+RESTful APIs leverage HTTP's natural structure to create intuitive, scalable web services. Resources are the fundamental concept, representing entities that can be accessed and manipulated through standard HTTP methods.
+
+#### Resource Identification Patterns
+
+Standard resource URL patterns:
+
+```http
+# Collection resources
+GET /api/v1/users                    # Get all users
+POST /api/v1/users                   # Create new user
+
+# Individual resources
+GET /api/v1/users/123                # Get specific user
+PUT /api/v1/users/123                # Update entire user
+PATCH /api/v1/users/123              # Update specific user fields
+DELETE /api/v1/users/123             # Delete user
+```
+
+Nested resource relationships:
+
+```http
+# User's orders
+GET /api/v1/users/123/orders         # Get user's orders
+POST /api/v1/users/123/orders        # Create order for user
+GET /api/v1/users/123/orders/456     # Get specific order for user
+
+# User's profile
+GET /api/v1/users/123/profile        # Get user profile
+PUT /api/v1/users/123/profile        # Update user profile
+```
+
+#### Content Negotiation Examples
+
+Client requesting JSON data:
+
+```http
+GET /api/v1/users/123 HTTP/1.1
+Host: api.example.com
+Accept: application/json
+Accept-Language: en-US,en;q=0.9
+Accept-Encoding: gzip, deflate, br
+```
+
+Server response with content metadata:
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+Content-Language: en-US
+Content-Encoding: gzip
+Vary: Accept, Accept-Language
+
+{
+  "id": 123,
+  "name": "John Doe",
+  "email": "john.doe@example.com"
+}
+```
+
+Client requesting XML format:
+
+```http
+GET /api/v1/users/123 HTTP/1.1
+Accept: application/xml
+```
+
+Server XML response:
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/xml; charset=utf-8
+
+<?xml version="1.0" encoding="UTF-8"?>
+<user>
+  <id>123</id>
+  <name>John Doe</name>
+  <email>john.doe@example.com</email>
+</user>
+```
+
+### Error Handling Patterns
+
+#### Standardized Error Responses
+
+Client error with validation details:
+
+```http
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Request validation failed",
+    "details": [
+      {
+        "field": "email",
+        "message": "Invalid email format",
+        "value": "invalid-email"
+      },
+      {
+        "field": "password",
+        "message": "Password must be at least 8 characters",
+        "value": null
+      }
+    ],
+    "timestamp": "2023-12-07T10:30:00Z",
+    "request_id": "req-456789"
+  }
+}
+```
+
+Server error with debugging information:
+
+```http
+HTTP/1.1 500 Internal Server Error
+Content-Type: application/json
+
+{
+  "error": {
+    "code": "INTERNAL_ERROR",
+    "message": "An unexpected error occurred",
+    "timestamp": "2023-12-07T10:30:00Z",
+    "request_id": "req-456789",
+    "support_contact": "support@example.com"
+  }
+}
+```
+
+### Pagination and Filtering
+
+#### Query Parameter Patterns
+
+Request with pagination and filtering:
+
+```http
+GET /api/v1/users?page=2&limit=20&status=active&created_after=2023-01-01&sort=created_at:desc HTTP/1.1
+Host: api.example.com
+Authorization: Bearer token123
+```
+
+Response with pagination metadata:
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+X-Total-Count: 500
+Link: </api/v1/users?page=1&limit=20>; rel="first",
+      </api/v1/users?page=1&limit=20>; rel="prev",
+      </api/v1/users?page=3&limit=20>; rel="next",
+      </api/v1/users?page=25&limit=20>; rel="last"
+
+{
+  "data": [
+    {
+      "id": 124,
+      "name": "Jane Smith",
+      "email": "jane.smith@example.com",
+      "status": "active",
+      "created_at": "2023-12-07T10:15:00Z"
+    }
+  ],
+  "pagination": {
+    "current_page": 2,
+    "per_page": 20,
+    "total_pages": 25,
+    "total_count": 500,
+    "has_next": true,
+    "has_prev": true
+  }
+}
+```
+
+#### Database Implementation for Pagination
+
+PostgreSQL pagination with performance optimization:
+
+```sql
+-- Efficient pagination using OFFSET and LIMIT with total count
+WITH filtered_users AS (
+  SELECT id, name, email, status, created_at
+  FROM users
+  WHERE status = 'active'
+    AND created_at >= '2023-01-01'
+),
+total_count AS (
+  SELECT COUNT(*) as total FROM filtered_users
+)
+SELECT f.*, t.total
+FROM filtered_users f
+CROSS JOIN total_count t
+ORDER BY f.created_at DESC
+OFFSET 20 LIMIT 20;
+```
+
+Cursor-based pagination for better performance:
+
+```sql
+-- Cursor-based pagination using created_at timestamp
+SELECT id, name, email, status, created_at
+FROM users
+WHERE status = 'active'
+  AND created_at < '2023-12-07T10:00:00Z'  -- cursor from previous page
+ORDER BY created_at DESC
+LIMIT 21;  -- Request one extra to check if there's a next page
+```
+
+### HATEOAS Implementation
+
+Response with hypermedia links:
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "id": 123,
+  "name": "John Doe",
+  "email": "john.doe@example.com",
+  "status": "active",
+  "_links": {
+    "self": {
+      "href": "/api/v1/users/123",
+      "method": "GET"
+    },
+    "update": {
+      "href": "/api/v1/users/123",
+      "method": "PATCH"
+    },
+    "delete": {
+      "href": "/api/v1/users/123",
+      "method": "DELETE"
+    },
+    "orders": {
+      "href": "/api/v1/users/123/orders",
+      "method": "GET"
+    },
+    "profile": {
+      "href": "/api/v1/users/123/profile",
+      "method": "GET"
+    }
+  }
+}
+```
+
+## Caching Strategies
+
+### HTTP Cache Headers
+
+#### Client-Side Caching
+
+Response with cache directives:
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+Cache-Control: public, max-age=3600, must-revalidate
+ETag: "user-123-v7"
+Last-Modified: Wed, 07 Dec 2023 09:30:00 GMT
+Expires: Wed, 07 Dec 2023 10:30:00 GMT
+
+{
+  "id": 123,
+  "name": "John Doe",
+  "email": "john.doe@example.com"
+}
+```
+
+Conditional request using ETag:
+
+```http
+GET /api/v1/users/123 HTTP/1.1
+Host: api.example.com
+If-None-Match: "user-123-v7"
+```
+
+Not modified response:
+
+```http
+HTTP/1.1 304 Not Modified
+ETag: "user-123-v7"
+Cache-Control: public, max-age=3600
+```
+
+#### Redis Caching Implementation
+
+Cache user data with expiration:
+
+```bash
+# Set user data with 1 hour expiration
+SET user:123 '{"id":123,"name":"John Doe","email":"john.doe@example.com"}' EX 3600
+
+# Set cache with Redis JSON (if Redis JSON module is available)
+JSON.SET user:123 $ '{"id":123,"name":"John Doe","email":"john.doe@example.com"}'
+EXPIRE user:123 3600
+```
+
+Implement cache-aside pattern:
+
+```bash
+# Check cache first
+GET user:123
+
+# If cache miss, set from database result
+SET user:123 '{"id":123,"name":"John Doe","email":"john.doe@example.com"}' EX 3600
+
+# Cache user's frequently accessed data
+HSET user:123:quick name "John Doe" email "john.doe@example.com" status "active"
+EXPIRE user:123:quick 1800
+```
+
+Cache invalidation strategies:
+
+```bash
+# Invalidate user cache on update
+DEL user:123
+DEL user:123:quick
+
+# Pattern-based cache invalidation
+EVAL "return redis.call('del', unpack(redis.call('keys', ARGV[1])))" 0 "user:123:*"
+
+# Tag-based invalidation using sets
+SADD cache:tags:user:123 "user:123" "user:123:profile" "user:123:orders"
+# When invalidating, get all keys from set and delete them
+```
+
+### Database Query Caching
+
+PostgreSQL query result caching:
+
+```sql
+-- Cache expensive aggregation query results
+CREATE MATERIALIZED VIEW user_statistics AS
+SELECT
+  u.id,
+  u.name,
+  COUNT(o.id) as order_count,
+  SUM(o.total) as total_spent,
+  AVG(o.total) as avg_order_value,
+  MAX(o.created_at) as last_order_date
+FROM users u
+LEFT JOIN orders o ON u.id = o.user_id
+WHERE u.status = 'active'
+GROUP BY u.id, u.name;
+
+-- Refresh materialized view periodically
+REFRESH MATERIALIZED VIEW user_statistics;
+```
+
+Application-level query caching with Redis:
+
+```bash
+# Cache complex query results with composite key
+SET "query:user_stats:active:2023" '{
+  "total_users": 1500,
+  "total_orders": 5000,
+  "total_revenue": 150000,
+  "avg_order_value": 30.00,
+  "generated_at": "2023-12-07T10:00:00Z"
+}' EX 1800
+```
+
+## Security Considerations
+
+### Authentication and Authorization
+
+#### Bearer Token Authentication
+
+Request with JWT token:
+
+```http
+GET /api/v1/users/123 HTTP/1.1
+Host: api.example.com
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+```
+
+Unauthorized response:
+
+```http
+HTTP/1.1 401 Unauthorized
+Content-Type: application/json
+WWW-Authenticate: Bearer realm="api"
+
+{
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "Invalid or expired token",
+    "timestamp": "2023-12-07T10:30:00Z"
+  }
+}
+```
+
+#### API Key Authentication
+
+Request with API key:
+
+```http
+GET /api/v1/users HTTP/1.1
+Host: api.example.com
+X-API-Key: sk_live_51234567890abcdef
+X-API-Version: 2023-12-01
+```
+
+Rate limiting response:
+
+```http
+HTTP/1.1 429 Too Many Requests
+Content-Type: application/json
+X-RateLimit-Limit: 1000
+X-RateLimit-Remaining: 0
+X-RateLimit-Reset: 1701940800
+Retry-After: 3600
+
+{
+  "error": {
+    "code": "RATE_LIMIT_EXCEEDED",
+    "message": "API rate limit exceeded",
+    "retry_after": 3600
+  }
+}
+```
+
+### HTTPS and Security Headers
+
+Secure response with security headers:
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+X-Content-Type-Options: nosniff
+X-Frame-Options: DENY
+X-XSS-Protection: 1; mode=block
+Content-Security-Policy: default-src 'self'
+Referrer-Policy: strict-origin-when-cross-origin
+
+{
+  "id": 123,
+  "name": "John Doe"
+}
+```
+
+CORS configuration for cross-origin requests:
+
+```http
+# Preflight OPTIONS request
+OPTIONS /api/v1/users HTTP/1.1
+Origin: https://app.example.com
+Access-Control-Request-Method: POST
+Access-Control-Request-Headers: Content-Type, Authorization
+
+# CORS preflight response
+HTTP/1.1 204 No Content
+Access-Control-Allow-Origin: https://app.example.com
+Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS
+Access-Control-Allow-Headers: Content-Type, Authorization, X-Request-ID
+Access-Control-Max-Age: 86400
+Access-Control-Allow-Credentials: true
+```
+
+## Performance Optimization
+
+### HTTP/2 and HTTP/3 Features
+
+HTTP/2 multiplexing benefits:
+
+```http
+# Multiple requests over single connection
+# Request 1
+GET /api/v1/users/123 HTTP/2
+Host: api.example.com
+
+# Request 2 (simultaneous)
+GET /api/v1/users/123/orders HTTP/2
+Host: api.example.com
+
+# Request 3 (simultaneous)
+GET /api/v1/users/123/profile HTTP/2
+Host: api.example.com
+```
+
+Server push capabilities:
+
+```http
+# Server can push related resources
+PUSH_PROMISE for /api/v1/users/123/profile
+PUSH_PROMISE for /api/v1/users/123/preferences
+```
+
+### Compression and Optimization
+
+Request with compression support:
+
+```http
+GET /api/v1/users HTTP/1.1
+Host: api.example.com
+Accept-Encoding: gzip, deflate, br
+```
+
+Compressed response:
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+Content-Encoding: gzip
+Content-Length: 1234
+Vary: Accept-Encoding
+
+# Gzipped JSON content
+```
+
+### Database Query Optimization for HTTP APIs
+
+Optimized PostgreSQL query for API responses:
+
+```sql
+-- Optimized query with proper indexing for API pagination
+SELECT u.id, u.name, u.email, u.status,
+       jsonb_build_object(
+         'order_count', COALESCE(o.order_count, 0),
+         'total_spent', COALESCE(o.total_spent, 0)
+       ) as stats
+FROM users u
+LEFT JOIN (
+  SELECT user_id,
+         COUNT(*) as order_count,
+         SUM(total) as total_spent
+  FROM orders
+  GROUP BY user_id
+) o ON u.id = o.user_id
+WHERE u.status = 'active'
+ORDER BY u.created_at DESC
+LIMIT 20 OFFSET $1;
+
+-- Supporting index for performance
+CREATE INDEX CONCURRENTLY idx_users_status_created
+ON users (status, created_at DESC)
+WHERE status = 'active';
+```
+
+Redis optimization for API caching:
+
+```bash
+# Use Redis pipelines for multiple operations
+MULTI
+GET user:123
+HGETALL user:123:stats
+ZRANK leaderboard user:123
+EXEC
+
+# Use Redis Lua scripts for atomic operations
+EVAL "
+  local user_data = redis.call('GET', KEYS[1])
+  if user_data then
+    redis.call('HINCRBY', KEYS[2], 'view_count', 1)
+    return user_data
+  else
+    return nil
+  end
+" 2 user:123 user:123:stats
+```
+
+## Best Practices
+
+### HTTP Method Usage Guidelines
+
+#### Proper Method Selection
+
+Use GET for safe, idempotent operations:
+
+```http
+# Correct: Retrieving data without side effects
+GET /api/v1/users/123/profile HTTP/1.1
+```
+
+Use POST for creating resources:
+
+```http
+# Correct: Creating new resources
+POST /api/v1/users HTTP/1.1
+Content-Type: application/json
+
+{
+  "name": "New User",
+  "email": "newuser@example.com"
+}
+```
+
+Use PUT for complete resource replacement:
+
+```http
+# Correct: Replacing entire resource
+PUT /api/v1/users/123 HTTP/1.1
+Content-Type: application/json
+
+{
+  "id": 123,
+  "name": "Updated Name",
+  "email": "updated@example.com",
+  "status": "active"
+}
+```
+
+Use PATCH for partial updates:
+
+```http
+# Correct: Updating specific fields only
+PATCH /api/v1/users/123 HTTP/1.1
+Content-Type: application/json
+
+{
+  "status": "inactive"
+}
+```
+
+### URL Design Principles
+
+#### Hierarchical Resource Structure
+
+Well-designed resource URLs:
+
+```http
+# Good: Clear resource hierarchy
+GET /api/v1/users/123/orders/456/items
+POST /api/v1/organizations/789/users
+GET /api/v1/projects/101/tasks/202/comments
+
+# Avoid: Unclear or overly nested structures
+GET /api/v1/get-user-order-items?userId=123&orderId=456
+POST /api/v1/org-user-create
+```
+
+#### Consistent Naming Conventions
+
+Use consistent plural nouns for collections:
+
+```http
+# Good: Consistent plural naming
+GET /api/v1/users           # Collection
+GET /api/v1/users/123       # Individual resource
+GET /api/v1/orders          # Collection
+GET /api/v1/products        # Collection
+
+# Avoid: Inconsistent naming
+GET /api/v1/user            # Should be plural
+GET /api/v1/getUsers        # Should not include verbs
+```
+
+### Response Design Standards
+
+#### Consistent Response Structure
+
+Standardized success response format:
+
+```json
+{
+  "status": "success",
+  "data": {
+    "id": 123,
+    "name": "John Doe",
+    "email": "john.doe@example.com"
+  },
+  "meta": {
+    "timestamp": "2023-12-07T10:30:00Z",
+    "version": "1.0",
+    "request_id": "req-456789"
+  }
+}
+```
+
+Standardized error response format:
+
+```json
+{
+  "status": "error",
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Request validation failed",
+    "details": [
+      {
+        "field": "email",
+        "message": "Invalid email format"
+      }
+    ]
+  },
+  "meta": {
+    "timestamp": "2023-12-07T10:30:00Z",
+    "request_id": "req-456789"
+  }
+}
+```
+
+### Status Code Best Practices
+
+#### Appropriate Status Code Usage
+
+Success responses:
+
+```http
+# 200 OK: Successful GET, PUT, PATCH
+HTTP/1.1 200 OK
+
+# 201 Created: Successful POST with resource creation
+HTTP/1.1 201 Created
+Location: /api/v1/users/124
+
+# 204 No Content: Successful DELETE or PUT with no response body
+HTTP/1.1 204 No Content
+```
+
+Client error responses:
+
+```http
+# 400 Bad Request: Invalid request syntax or data
+HTTP/1.1 400 Bad Request
+
+# 401 Unauthorized: Authentication required
+HTTP/1.1 401 Unauthorized
+WWW-Authenticate: Bearer
+
+# 403 Forbidden: Valid authentication but insufficient permissions
+HTTP/1.1 403 Forbidden
+
+# 404 Not Found: Resource not found
+HTTP/1.1 404 Not Found
+
+# 409 Conflict: Request conflicts with current resource state
+HTTP/1.1 409 Conflict
+```
+
+### Security Best Practices
+
+#### Input Validation and Sanitization
+
+Validate request data at API level:
+
+```http
+POST /api/v1/users HTTP/1.1
+Content-Type: application/json
+
+{
+  "name": "John Doe",
+  "email": "john.doe@example.com",
+  "age": 25
+}
+```
+
+Validation implementation in PostgreSQL:
+
+```sql
+-- Create table with proper constraints
+CREATE TABLE users (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(100) NOT NULL CHECK (LENGTH(name) >= 2),
+  email VARCHAR(255) NOT NULL UNIQUE CHECK (email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'),
+  age INTEGER CHECK (age >= 13 AND age <= 120),
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Validate and insert with proper error handling
+INSERT INTO users (name, email, age)
+VALUES ($1, $2, $3)
+RETURNING id, name, email, created_at;
+```
+
+#### Rate Limiting Implementation
+
+Redis-based rate limiting:
+
+```bash
+# Sliding window rate limiting
+MULTI
+ZREMRANGEBYSCORE rate_limit:user:123 0 (TIMESTAMP - 3600)
+ZCARD rate_limit:user:123
+ZADD rate_limit:user:123 TIMESTAMP "request_id"
+EXPIRE rate_limit:user:123 3600
+EXEC
+```
+
+Rate limit response headers:
+
+```http
+HTTP/1.1 200 OK
+X-RateLimit-Limit: 1000
+X-RateLimit-Remaining: 999
+X-RateLimit-Reset: 1701944400
+X-RateLimit-Window: 3600
+```
+
+### Performance Optimization Guidelines
+
+#### Efficient Database Queries
+
+Optimize N+1 query problems:
+
+```sql
+-- Bad: N+1 queries (one for users, then one for user
+```
