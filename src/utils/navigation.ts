@@ -18,38 +18,42 @@ export interface NavigationSection {
 
 // Category prefixes that should be stripped from display titles
 const CATEGORY_PREFIXES = [
-  'sql',
-  'nosql', 
-  'fund', // fundamentals
-  'adv',  // advanced
-  'util', // utilities
-  'db',   // database
-  'api',
-  'sec',  // security
-  'perf', // performance
-  'dep',  // deployment
+  "sql",
+  "nosql",
+  "fund", // fundamentals
+  "adv", // advanced
+  "util", // utilities
+  "db", // database
+  "api",
+  "sec", // security
+  "perf", // performance
+  "dep", // deployment
+  "proj", // projects
 ];
 
 // Extract category from filename prefix and return both category and clean name
-export function extractCategoryFromPath(pathName: string): { category: string | null; cleanName: string } {
-  const parts = pathName.split('-');
-  
+export function extractCategoryFromPath(pathName: string): {
+  category: string | null;
+  cleanName: string;
+} {
+  const parts = pathName.split("-");
+
   if (parts.length > 1) {
     const firstPart = parts[0].toLowerCase();
-    
+
     // Check if first part matches a category prefix
     if (CATEGORY_PREFIXES.includes(firstPart)) {
-      const cleanName = parts.slice(1).join('-'); // Remove the first part (prefix)
+      const cleanName = parts.slice(1).join("-"); // Remove the first part (prefix)
       return {
         category: firstPart,
-        cleanName: cleanName
+        cleanName: cleanName,
       };
     }
   }
-  
+
   return {
     category: null,
-    cleanName: pathName
+    cleanName: pathName,
   };
 }
 
@@ -165,6 +169,7 @@ function categorizeNavigationItems(
   const categories = {
     fundamentals: [] as NavigationItem[],
     databases: [] as NavigationItem[],
+    projects: [] as NavigationItem[],
     utilities: [] as NavigationItem[],
     advanced: [] as NavigationItem[],
   };
@@ -189,6 +194,8 @@ function categorizeNavigationItems(
             return "databases";
           case "fund":
             return "fundamentals";
+          case "proj":
+            return "projects";
           case "adv":
           case "sec":
           case "perf":
@@ -331,6 +338,13 @@ function categorizeNavigationItems(
     sections.push({
       title: "Databases",
       items: categories.databases,
+    });
+  }
+
+  if (categories.projects.length > 0) {
+    sections.push({
+      title: "Projects",
+      items: categories.projects,
     });
   }
 
