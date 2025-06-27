@@ -6,206 +6,202 @@ import {
   FaCheckCircle,
   FaChevronRight,
   FaCode,
+  FaCogs,
   FaDatabase,
-  FaEye,
-  FaFilter,
-  FaHeart,
-  FaLayerGroup,
-  FaPaintBrush,
-  FaReact,
+  FaDocker,
+  FaGitAlt,
+  FaLock,
+  FaNetworkWired,
   FaRocket,
+  FaServer,
+  FaShieldAlt,
+  FaTachometerAlt,
   FaTools,
-  FaTrophy,
-  FaWpforms,
+  FaVial,
 } from "react-icons/fa";
-import { SiJquery } from "react-icons/si";
+import { SiGraphql, SiMysql } from "react-icons/si";
 import Button from "../components/Button.tsx";
 import Guides from "../components/Guides";
 import Resources from "../components/Resources";
 
 export const chapters = [
   {
-    href: "/overview",
-    title: "Web Development Overview",
+    href: "/introduction-to-back-end",
+    title: "Introduction to Back-end",
     description:
-      "Web development basics, client-server architecture, and fundamentals.",
-    bgColor: "sidebar-active-bg",
-    icon: FaBook,
+      "Server-side programming, architecture, and environment setup.",
+    bgColor: "primary",
+    icon: FaServer,
     ctaText: "Start Here",
   },
   {
-    href: "/vocabulary",
-    title: "Vocabulary & Abbreviations",
-    description: "Essential web development terminology and acronyms.",
-    bgColor: "tertiary",
-    icon: FaCode,
-    ctaText: "Learn Terms",
+    href: "/foundation",
+    title: "Web Server Fundamentals",
+    description: "HTTP protocol, RESTful services, and API design basics.",
+    bgColor: "secondary",
+    icon: FaNetworkWired,
+    ctaText: "Learn Servers",
   },
   {
-    href: "/development-tools",
-    title: "Development Tools",
+    href: "/version-control",
+    title: "Version Control",
     description:
-      "Essential development tools, editors, and productivity resources.",
-    bgColor: "sidebar-active-bg",
+      "Git fundamentals, branching strategies, and collaborative development.",
+    bgColor: "tertiary",
+    icon: FaGitAlt,
+    ctaText: "Master Git",
+  },
+  {
+    href: "/package-managers",
+    title: "Package Managers",
+    description: "NPM, dependency management, and package.json configuration.",
+    bgColor: "accent",
     icon: FaTools,
-    ctaText: "Get Tools",
+    ctaText: "Manage Dependencies",
   },
   {
-    href: "/browser-developer-tools",
-    title: "Browser Developer Tools",
-    description: "Master browser DevTools for debugging and optimization.",
-    bgColor: "sidebar-text",
-    icon: FaEye,
-    ctaText: "Debug Better",
+    href: "/principles",
+    title: "Software Design Principles",
+    description: "SOLID principles, design patterns, and clean code practices.",
+    bgColor: "tertiary",
+    icon: FaCogs,
+    ctaText: "Code Better",
   },
   {
-    href: "/development-environments",
-    title: "Development Environments",
-    description: "Setting up optimal development environments and workflows.",
-    bgColor: "sidebar-text",
-    icon: FaDatabase,
-    ctaText: "Setup Environment",
-  },
-  {
-    href: "/introduction-to-HTML",
-    title: "HTML Fundamentals",
-    description: "Semantic HTML, document structure, and modern elements.",
-    bgColor: "code",
-    icon: FaCode,
-    ctaText: "Build Structure",
-  },
-  {
-    href: "/introduction-to-CSS",
-    title: "CSS Styling",
-    description: "Styling, layouts, responsive design, and CSS frameworks.",
+    href: "/database-design",
+    title: "Database Design",
+    description: "Schema design, normalization, and relationship modeling.",
     bgColor: "secondary",
-    icon: FaPaintBrush,
-    ctaText: "Style Everything",
+    icon: FaDatabase,
+    ctaText: "Design Schemas",
   },
   {
-    href: "/UX-UI-Design",
-    title: "UX/UI Design",
-    description: "Design principles, user experience, and interface design.",
-    bgColor: "sidebar-active-bg",
-    icon: FaHeart,
-    ctaText: "Design Better",
-  },
-  {
-    href: "/introduction-to-javascript",
-    title: "JavaScript Programming",
-    description: "Core JavaScript, ES6+, DOM manipulation, and APIs.",
-    bgColor: "accent",
+    href: "/transaction-models",
+    title: "ACID & BASE",
+    description: "Transaction management, consistency models, and properties.",
+    bgColor: "secondary",
     icon: FaBolt,
-    ctaText: "Add Interactivity",
+    ctaText: "Understand Transactions",
   },
   {
-    href: "/document-object-model-DOM",
-    title: "Document Object Model",
-    description: "DOM manipulation, events, and browser interactions.",
+    href: "/data-warehousing",
+    title: "Data Warehousing",
+    description: "ETL processes, data modeling, and business intelligence.",
+    bgColor: "accent",
+    icon: FaNetworkWired,
+    ctaText: "Process Data",
+  },
+  {
+    href: "/introduction-to-databases",
+    title: "Database Types",
+    description: "Relational, NoSQL, GraphQL, and selection criteria.",
+    bgColor: "primary",
+    icon: FaDatabase,
+    ctaText: "Choose Databases",
+  },
+  {
+    href: "/mySQL",
+    title: "MySQL",
+    description: "Query optimization, indexing, and administration.",
+    bgColor: "secondary",
+    icon: SiMysql,
+    ctaText: "Master MySQL",
+  },
+  {
+    href: "/mongoDB",
+    title: "MongoDB",
+    description: "NoSQL database fundamentals, schema design, and queries.",
     bgColor: "tertiary",
     icon: FaDatabase,
-    ctaText: "Control the DOM",
+    ctaText: "Learn MongoDB",
   },
   {
-    href: "/forms",
-    title: "Forms & Validation",
-    description: "HTML forms, client-side validation, and form handling.",
+    href: "/redis",
+    title: "Redis",
+    description: "In-memory data structure store, caching, and pub/sub.",
     bgColor: "secondary",
-    icon: FaWpforms,
-    ctaText: "Handle Forms",
+    icon: FaDatabase,
+    ctaText: "Use Redis",
   },
   {
-    href: "/jQuery",
-    title: "jQuery Library",
-    description: "jQuery fundamentals, DOM manipulation, and AJAX.",
-    bgColor: "tertiary",
-    icon: SiJquery,
-    ctaText: "Simplify DOM",
+    href: "/data-storage",
+    title: "Data Storage",
+    description: "Storage systems, file systems, and caching strategies.",
+    bgColor: "sidebar-active-text",
+    icon: FaServer,
+    ctaText: "Store Data",
   },
   {
-    href: "/introduction-to-APIs",
-    title: "APIs & Data",
-    description: "Working with APIs, fetch requests, and data integration.",
-    bgColor: "tertiary",
-    icon: FaRocket,
-    ctaText: "Connect APIs",
-  },
-  {
-    href: "/introduction-to-frameworks-and-libraries",
-    title: "Frameworks & Libraries",
-    description: "Modern frameworks, libraries, and build tools overview.",
-    bgColor: "secondary",
-    icon: FaFilter,
-    ctaText: "Scale Up",
-  },
-  {
-    href: "/introduction-to-typescript",
-    title: "TypeScript",
-    description: "Type-safe JavaScript for better development experience.",
+    href: "/graphQL",
+    title: "GraphQL",
+    description: "Schema definition, resolvers, and API implementation.",
     bgColor: "sidebar-text",
-    icon: FaLayerGroup,
-    ctaText: "Add Types",
+    icon: SiGraphql,
+    ctaText: "Query Efficiently",
   },
   {
-    href: "/introduction-to-react",
-    title: "React Development",
-    description: "Component-based UI development with React.",
+    href: "/docker",
+    title: "Docker",
+    description: "Docker fundamentals, Kubernetes, and deployment strategies.",
     bgColor: "secondary",
-    icon: FaReact,
-    ctaText: "Build Components",
+    icon: FaDocker,
+    ctaText: "Containerize",
   },
   {
-    href: "/introduction-to-next.js",
-    title: "Next.js Framework",
-    description: "Full-stack React framework for production applications.",
-    bgColor: "sidebar-active-bg",
-    icon: FaRocket,
-    ctaText: "Go Full-Stack",
+    href: "/kubernetes",
+    title: "Kubernetes",
+    description: "Container orchestration, scaling, and management.",
+    bgColor: "tertiary",
+    icon: FaDocker,
+    ctaText: "Containerize",
   },
   {
-    href: "/portfolio-website",
-    title: "Portfolio Project",
-    description: "Build your professional portfolio website from scratch.",
-    bgColor: "secondary",
-    icon: FaTrophy,
-    ctaText: "Show Your Work",
-  },
-  {
-    href: "/performance",
-    title: "Performance & Security",
-    description: "Web performance optimization and security best practices.",
-    bgColor: "destructive",
-    icon: FaCheckCircle,
-    ctaText: "Optimize & Secure",
-  },
-  {
-    href: "/hosting-and-deployment",
-    title: "Hosting & Deployment",
-    description:
-      "Deploy applications to production with modern hosting platforms.",
+    href: "/quality-security-performance/testing",
+    title: "Testing",
+    description: "Unit, integration, performance testing, and automation.",
     bgColor: "accent",
-    icon: FaRocket,
-    ctaText: "Deploy Live",
+    icon: FaVial,
+    ctaText: "Test Everything",
+  },
+  {
+    href: "/quality-security-performance/security",
+    title: "Security",
+    description: "Authentication, authorization, and security best practices.",
+    bgColor: "secondary",
+    icon: FaShieldAlt,
+    ctaText: "Secure Apps",
+  },
+  {
+    href: "/quality-security-performance/performance",
+    title: "Performance",
+    description: "Optimization, scalability, monitoring, and load balancing.",
+    bgColor: "sidebar-text",
+    icon: FaTachometerAlt,
+    ctaText: "Optimize Performance",
   },
 ];
 
-# Welcome to Web Development!
+# Welcome to Back-end Development!
 
-Your complete journey from beginner to proficient web developer. This 17-chapter course will take you from absolute beginner to building real-world applications with modern frameworks.
+Your complete journey from beginner to proficient back-end developer. This comprehensive 16-module course will take you from absolute beginner to building production-ready server-side applications.
 
 ## About This Course
 
-In today's fast-paced, information-rich world, learning web development can feel overwhelming. With countless resources, tutorials, and technologies available, it's easy to suffer from choice overload and not know where to start.
+In today's complex technology landscape, mastering back-end development can feel overwhelming. With countless frameworks, databases, and architectural patterns available, it's easy to suffer from choice overload and not know where to start.
 
-As someone deeply immersed in the tech industry, I understand this challenge firsthand. The constant evolution of technology means that developers are inundated with choices and must navigate a sea of information to find what truly matters.
+As someone deeply immersed in server-side development and distributed systems, I understand this challenge firsthand. The constant evolution of back-end technologies means that developers must navigate a vast ecosystem of tools and practices to build scalable, secure applications.
 
-**That's precisely what this course aims to solve.** Inside, you'll find a carefully curated and structured learning path that cuts through the noise, saving you time and focusing on what's truly valuable for becoming a successful front-end developer.
+That's precisely what this course aims to solve. Inside, you'll find a carefully curated and structured learning path that cuts through the noise, saving you time and focusing on what's truly valuable for becoming a successful back-end developer.
 
-This isn't just another collection of tutorials - it's a guide that takes you step-by-step through everything you need to know, from basic HTML to advanced React applications.
+This isn't just another collection of tutorials - it's a comprehensive guide that takes you step-by-step through everything you need to know, from server fundamentals to containerized microservices.
+
+## Definition of Back-End Development
+
+A Back End dev uses a set of Back End developer languages to bring the Front End language of a developer to life. While a Front End dev creates the user experience within a browser, the Back End dev is creating the logic that makes those requests a reality. In some ways, a Back End dev is creating the brains and logic of the website. Back End devs can be more technical and organized, but they are still a part of a larger team. While they need to know how to create the logic that efficiently pulls the data to fulfill a request, they also need to communicate their needs and potential limitations to the Front End dev. They are also responsible for maintaining this logic system. Back End devs are working with databases, servers, an application programming interface (API) that creates a structure for component interaction and the integration of all these processes. Back-end development starts with writing code that defines the application’s core functionality. From there, you’ll host the code on a server, manage database operations, and handle APIs. Let’s break down each of these areas.
 
 ## Complete Learning Path
 
-Follow our structured learning path designed to build your skills progressively:
+Follow our structured learning path designed to build your back-end skills progressively:
 
 <div className="gap-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mt-8">
   {chapters.map((chapter) => {
@@ -214,7 +210,7 @@ Follow our structured learning path designed to build your skills progressively:
       <Link
         key={chapter.href}
         href={chapter.href}
-        className="group flex flex-col justify-between -800 hover:shadow-lg p-4 border border-gray-200 dark:border-gray-700 rounded-lg no-underline transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600"
+        className="group flex flex-col justify-between text-foreground hover:shadow-lg p-4 border border-gray-200 dark:border-gray-700 rounded-lg no-underline transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600"
       >
         <div
           className="flex items-center justify-center mb-3 rounded-lg h-10 w-10"
@@ -245,97 +241,97 @@ Beyond the main curriculum, we provide supplementary resources to enhance your l
 
 <div className="gap-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mt-6">
   <Link
-    href="/tools-and-resources"
-    className="group flex items-center -800 hover:shadow-md shadow-sm p-4 border border-gray-200 dark:border-gray-700 rounded-lg no-underline transition-all duration-200"
+    href="/version-control"
+    className="group flex items-center  hover:shadow-md shadow-sm p-4 border border-gray-200 dark:border-gray-700 rounded-lg no-underline transition-all duration-200"
   >
-    <div className="flex items-center justify-center bg-tertiary text-background mr-3 rounded-lg h-10 w-10">
-      <FaTools className="h-5 w-5 " />
+    <div className="flex items-center justify-center bg-accent text-background mr-3 rounded-lg h-10 w-10">
+      <FaGitAlt className="h-5 w-5 " />
     </div>
     <div>
-      <h4 className="font-semibold text-gray-900 text-sm dark:text-white">Tools & Resources</h4>
-      <p className="text-gray-600 text-xs dark:text-gray-400">Curated development tools and utilities</p>
+      <h4 className="font-semibold text-gray-900 text-sm dark:text-white">Version Control</h4>
+      <p className="text-gray-600 text-xs dark:text-gray-400">Git fundamentals and collaborative development</p>
     </div>
     <FaChevronRight className="ml-auto h-4 w-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300" />
   </Link>
   
   <Link
-    href="/design-tools"
-    className="group flex items-center -800 hover:shadow-md p-4 border border-gray-200 dark:border-gray-700 rounded-lg no-underline transition-all duration-200"
+    href="/introduction-to-databases"
+    className="group flex items-center  hover:shadow-md p-4 border border-gray-200 dark:border-gray-700 rounded-lg no-underline transition-all duration-200"
   >
-    <div className="flex items-center justify-center bg-secondary text-background mr-3 rounded-lg h-10 w-10">
-      <FaPaintBrush className="h-5 w-5 " />
+    <div className="flex items-center justify-center bg-primary text-background mr-3 rounded-lg h-10 w-10">
+      <FaDatabase className="h-5 w-5 " />
     </div>
     <div>
-      <h4 className="font-semibold text-gray-900 text-sm dark:text-white">Design Tools</h4>
-      <p className="text-gray-600 text-xs dark:text-gray-400">Design software and resources</p>
+      <h4 className="font-semibold text-gray-900 text-sm dark:text-white">Database Technologies</h4>
+      <p className="text-gray-600 text-xs dark:text-gray-400">Relational, NoSQL, and data management systems</p>
     </div>
     <FaChevronRight className="ml-auto h-4 w-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300" />
   </Link>
 
 <Link
-  href="/package-managers"
-  className="group flex items-center -800 hover:shadow-md p-4 border border-gray-200 dark:border-gray-700 rounded-lg no-underline transition-all duration-200"
+  href="/docker"
+  className="group flex items-center  hover:shadow-md p-4 border border-gray-200 dark:border-gray-700 rounded-lg no-underline transition-all duration-200"
 >
-  <div className="flex items-center justify-center bg-primary/85 text-background mr-3 rounded-lg h-10 w-10">
-    <FaDatabase className="h-5 w-5 " />
+  <div className="flex items-center justify-center bg-secondary text-background mr-3 rounded-lg h-10 w-10">
+    <FaDocker className="h-5 w-5 " />
   </div>
   <div>
     <h4 className="font-semibold text-gray-900 text-sm dark:text-white">
-      Package Managers
+      Containerization
     </h4>
     <p className="text-gray-600 text-xs dark:text-gray-400">
-      npm, yarn, and dependency management
+      Docker, Kubernetes, and deployment strategies
     </p>
   </div>
   <FaChevronRight className="ml-auto h-4 w-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300" />
 </Link>
 
 <Link
-  href="/security"
-  className="group flex items-center -800 hover:shadow-md p-4 border border-gray-200 dark:border-gray-700 rounded-lg no-underline transition-all duration-200"
+  href="/quality-security-performance/security"
+  className="group flex items-center  hover:shadow-md p-4 border border-gray-200 dark:border-gray-700 rounded-lg no-underline transition-all duration-200"
 >
-  <div className="flex items-center justify-center bg-primary/65 text-background mr-3 rounded-lg h-10 w-10">
-    <FaCheckCircle className="h-5 w-5 " />
+  <div className="flex items-center justify-center bg-secondary text-background mr-3 rounded-lg h-10 w-10">
+    <FaShieldAlt className="h-5 w-5 " />
   </div>
   <div>
     <h4 className="font-semibold text-gray-900 text-sm dark:text-white">
       Security
     </h4>
     <p className="text-gray-600 text-xs dark:text-gray-400">
-      Web security best practices
+      Authentication, authorization, and security best practices
     </p>
   </div>
   <FaChevronRight className="ml-auto h-4 w-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300" />
 </Link>
 
 <Link
-  href="/abbreviations"
-  className="group flex items-center -800 hover:shadow-md p-4 border border-gray-200 dark:border-gray-700 rounded-lg no-underline transition-all duration-200"
+  href="/quality-security-performance/performance"
+  className="group flex items-center  hover:shadow-md p-4 border border-gray-200 dark:border-gray-700 rounded-lg no-underline transition-all duration-200"
 >
-  <div className="flex items-center justify-center bg-primary text-background mr-3 rounded-lg h-10 w-10">
-    <FaBook className="h-5 w-5 " />
+  <div className="flex items-center justify-center bg-sidebar-text text-background mr-3 rounded-lg h-10 w-10">
+    <FaTachometerAlt className="h-5 w-5 " />
   </div>
   <div>
     <h4 className="font-semibold text-gray-900 text-sm dark:text-white">
-      Abbreviations
+      Performance Optimization
     </h4>
     <p className="text-gray-600 text-xs dark:text-gray-400">
-      Common acronyms and abbreviations
+      Scalability, monitoring, and load balancing
     </p>
   </div>
   <FaChevronRight className="ml-auto h-4 w-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300" />
 </Link>
 
   <Link
-    href="/advancing-onwards"
-    className="group flex items-center -800 hover:shadow-md p-4 border border-gray-200 dark:border-gray-700 rounded-lg no-underline transition-all duration-200"
+    href="/quality-security-performance/testing"
+    className="group flex items-center  hover:shadow-md p-4 border border-gray-200 dark:border-gray-700 rounded-lg no-underline transition-all duration-200"
   >
-    <div className="flex items-center justify-center bg-primary/44 text-background mr-3 rounded-lg h-10 w-10">
-      <FaRocket className="h-5 w-5 " />
+    <div className="flex items-center justify-center bg-sidebar-active-text text-background mr-3 rounded-lg h-10 w-10">
+      <FaVial className="h-5 w-5 " />
     </div>
     <div>
-      <h4 className="font-semibold text-gray-900 text-sm dark:text-white">Advancing Onwards</h4>
-      <p className="text-gray-600 text-xs dark:text-gray-400">Next steps in your development journey</p>
+      <h4 className="font-semibold text-gray-900 text-sm dark:text-white">Testing Strategies</h4>
+      <p className="text-gray-600 text-xs dark:text-gray-400">Unit, integration, and performance testing</p>
     </div>
     <FaChevronRight className="ml-auto h-4 w-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300" />
   </Link>
@@ -343,81 +339,77 @@ Beyond the main curriculum, we provide supplementary resources to enhance your l
 
 ## Course Curriculum
 
-### Foundation & Setup
+### Foundations & Server Fundamentals
 
-- Web Development Overview - Understanding the web, client-server architecture, and developer roles
-- Vocabulary & Terms - Essential terminology and abbreviations every developer should know
-- Development Tools - Code editors, browser tools, and productivity resources
-- Development Environments - Setting up optimal workflows and configurations
+- Introduction to Back-end Development - Server-side programming, architecture, and environment setup
+- Web Server Fundamentals - HTTP protocol, RESTful services, and API design principles
+- Understanding client-server communication and back-end responsibilities
 
-### Core Technologies
+### Development Tools & Best Practices
 
-- HTML Fundamentals - Semantic markup, document structure, and accessibility
-- CSS Styling - Layouts, responsive design, debugging, and frameworks
-- JavaScript Programming - Core language features, ES6+, and modern patterns
-- Document Object Model - DOM manipulation, events, and browser interactions
+- Version Control - Git fundamentals, branching strategies, and collaborative development workflows
+- Package Managers - NPM, dependency management, and package.json configuration
+- Software Design Principles - SOLID principles, design patterns, and clean code practices
 
-### Design & User Experience
+### Database Technologies & Data Management
 
-- UX/UI Design - Design principles, user-centered thinking, and interface patterns
-- Forms & Validation - Creating accessible forms and client-side validation
-- Responsive Design - Mobile-first development and cross-device compatibility
+- Database Design - Schema design, normalization, and relationship modeling
+- Transaction Models - ACID/BASE properties, transaction management, and consistency
+- Data Warehousing - ETL processes, data modeling, and business intelligence
+- Database Types - Relational databases, NoSQL systems, and selection criteria
+- MySQL - Query optimization, indexing, and database administration
+- MongoDB - NoSQL database fundamentals, schema design, and queries
+- GraphQL - Schema definition, resolvers, and efficient API implementation
+- Redis - In-memory data structure store, caching, and pub/sub messaging
+- Data Storage - Storage systems, file systems, and caching strategies
 
-### Advanced Development
+### Deployment & Containerization
 
-- APIs & Data Integration - Working with REST APIs, fetch requests, and data handling
-- Performance & Security - Optimization techniques and security best practices
-- jQuery Library - DOM manipulation and AJAX with the popular library
+- Docker - Docker fundamentals, containerization, and deployment strategies
+- Kubernetes - Container orchestration, scaling, and management
 
-### Modern Frameworks & Tools
+### Quality Assurance, Security & Performance
 
-- Frameworks & Libraries - Overview of modern development ecosystem
-- TypeScript - Type-safe JavaScript for better development experience
-- React Development - Component-based UI development and modern patterns
-- Next.js Framework - Full-stack React applications and server-side rendering
+- Testing Strategies - Unit testing, integration testing, performance testing, and automation
+- Security Implementation - Authentication, authorization, and security best practices
+- Performance Optimization - Scalability patterns, monitoring, and load balancing techniques
 
-### Professional Development
+## Why Learn Back-end Development?
 
-- Portfolio Project - Build a complete professional portfolio website
-- Hosting & Deployment - Deploy applications to production platforms
-- Package Managers - npm, dependency management, and build tools
-- Browser Developer Tools - Debugging, profiling, and optimization techniques
+Back-end development is the backbone of modern web applications and one of the most critical and rewarding careers in technology. This course prepares you for success by covering:
 
-## Why Learn Web Development?
-
-Web development is one of the most in-demand and rewarding careers in technology. This course prepares you for success by covering:
-
-- Career Opportunities: High-demand skills with excellent job prospects
-- Creative Expression: Combine technical skills with design and user experience
-- Global Impact: Build applications used by people worldwide
-- Versatile Skills: Create websites, web apps, and mobile applications
-- Continuous Growth: Always learning new technologies and techniques
-- Problem Solving: Turn ideas into functional, interactive experiences
+- High-Demand Skills: Server-side development skills are in extremely high demand with excellent career prospects
+- System Architecture: Learn to design scalable, efficient systems that power millions of users
+- Data Management: Master databases, data modeling, and information architecture
+- Security Expertise: Implement robust security measures and protect sensitive data
+- Performance Optimization: Build fast, scalable applications that handle massive traffic
+- Problem Solving: Tackle complex technical challenges in distributed systems
+- Full-Stack Understanding: Gain deep knowledge of how web applications work end-to-end
 
 ## Getting Started
 
-Ready to begin your web development journey? Here's how to get the most out of this course:
+Ready to begin your back-end development journey? Here's how to get the most out of this course:
 
-1. **Start with the Basics** - Begin with the [Overview](/overview) to understand web development fundamentals
-2. **Learn HTML First** - Master semantic HTML and document structure
-3. **Add CSS Styling** - Learn to create beautiful, responsive designs
-4. **Add JavaScript** - Bring interactivity and dynamic behavior to your sites
-5. **Build Projects** - Apply your skills with hands-on coding projects
-6. **Explore Advanced Topics** - Dive into modern frameworks and tools
+1. Start with Foundations - Begin with [Introduction to Back-end](/introduction-to-back-end) to understand server-side fundamentals
+2. Master the Basics - Learn HTTP, RESTful services, and API design principles
+3. Learn Version Control - Master Git for collaborative development and code management
+4. Understand Databases - Dive deep into database design, SQL, and data management
+5. Build Secure Applications - Implement authentication, authorization, and security best practices
+6. Deploy to Production - Learn containerization, deployment strategies, and monitoring
 
-Each section builds upon the previous one, so we recommend following the curriculum in order for the best learning experience.
+Each module builds upon the previous one, so we recommend following the curriculum in order for the best learning experience.
 
 ## Ready to Start?
 
-Begin your web development journey today! Whether you're completely new to programming or looking to enhance your skills, this course will guide you from beginner to proficient developer.
+Begin your back-end development journey today! Whether you're completely new to server-side programming or looking to enhance your skills, this course will guide you from beginner to proficient back-end developer.
 
 <div className="mt-8 flex items-center">
   <Button
-    href="/overview"
+    href="/introduction-to-back-end"
     variant="text"
-    className="group font-medium text-primary-600 text-sm hover:text-primary-800 dark:hover:text-primary-300 dark:text-primary-400 flex items-center  transition-all duration-200"
+    className="group font-medium text-primary-600 text-sm hover:text-primary dark:hover:text-primary-300 dark:text-primary-400 flex items-center  transition-all duration-200"
   >
-    Start Learning Web Development
+    Start Learning Back-end Development
     <FaChevronRight className="ml-1 h-3 w-3 duration-300 group-hover:translate-x-2 ease-in-out" />
   </Button>
 </div>
