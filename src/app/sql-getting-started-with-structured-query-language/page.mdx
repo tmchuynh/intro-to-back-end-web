@@ -1,14 +1,26 @@
 import BackToTop from "@/components/BackToTop";
 
-# Structured Query Lanuage (SQL)
+# Structured Query Language (SQL)
 
 ## Table of Contents
 
 ## Introduction
 
-Structured Query Language (SQL) is a powerful language used to manage and manipulate relational databases. It allows users to perform various operations such as querying data, updating records, and managing database structures. SQL is essential for anyone working with databases, as it provides a standardized way to interact with data.
+Structured Query Language (SQL) is a powerful, standardized programming language designed specifically for managing and manipulating relational databases. Developed in the 1970s at IBM, SQL has become the universal language for database interaction, allowing users to perform various operations such as querying data, updating records, creating database structures, and controlling access to data.
 
-It is widely used in various applications, from small-scale projects to large enterprise systems. Understanding SQL is crucial for developers, data analysts, and anyone involved in data management. Developers use SQL to create, read, update, and delete data in databases, while data analysts leverage SQL to extract insights and perform data analysis.
+SQL is essential for anyone working with databases, as it provides a standardized way to interact with data across different database management systems. Whether you're working with MySQL, PostgreSQL, Oracle, or SQL Server, the core SQL syntax remains largely consistent, making it a valuable skill that transfers across platforms.
+
+SQL is widely used in various applications, from small personal projects to large enterprise systems powering major corporations. Understanding SQL is crucial for developers, data analysts, database administrators, and anyone involved in data management. Developers use SQL to create, read, update, and delete data in databases (often referred to as CRUD operations), while data analysts leverage SQL to extract insights, perform statistical analysis, and generate reports from large datasets.
+
+### Real-World Applications
+
+SQL powers many aspects of modern technology:
+
+- E-commerce websites use SQL to manage product catalogs, customer accounts, and order processing
+- Social media platforms rely on SQL for user management, content storage, and activity tracking
+- Banking systems use SQL for transaction processing, account management, and fraud detection
+- Healthcare systems utilize SQL for patient records, medical history, and appointment scheduling
+- Business intelligence tools depend on SQL for data analysis, reporting, and dashboard creation
 
 ### Key Concepts
 
@@ -68,301 +80,1593 @@ SQL syntax is the set of rules that define how SQL statements are written and st
 - Comments: SQL allows for comments to be included in the code for documentation purposes. Comments can be single-line (using `--`) or multi-line (using `/* ... */`).
 - Semicolon: SQL statements are typically terminated with a semicolon (`;`). This is especially important when executing multiple statements in a single script or batch.
 
-## Examples
+## Data Retrieval Operations
+
+Data retrieval is one of the most fundamental aspects of SQL. These operations allow you to extract specific information from your database tables based on various criteria.
 
 ### SQL `SELECT` Statement
 
-The `SELECT` statement is used to retrieve data from one or more tables in a database. It allows users to specify which columns to retrieve and apply filters to the results.
+The `SELECT` statement is the cornerstone of SQL data retrieval. It allows you to specify exactly which columns and rows you want to retrieve from one or more tables.
 
-```sql
-SELECT column1, column2
+#### Basic SELECT Syntax
+
+```sql title="Basic SELECT statement structure"
+SELECT column1, column2, column3
 FROM table_name
 WHERE condition;
 ```
 
-In this example, `column1` and `column2` are the columns to be retrieved from the `table_name`. The `WHERE` clause is used to filter the results based on a specified condition.
+#### Real-World Examples
 
-This would be used to retrieve specific data from a table, such as all customers with a specific last name or all products in a certain category.
+```sql title="E-commerce: Retrieving product information"
+-- Get all products with their names and prices
+SELECT product_name, price, category
+FROM products
+WHERE price > 50.00;
+
+-- Find all electronics products under $500
+SELECT product_id, product_name, price, stock_quantity
+FROM products
+WHERE category = 'Electronics' AND price < 500.00;
+```
+
+```sql title="Customer management: Finding specific customers"
+-- Get customer contact information for a specific region
+SELECT first_name, last_name, email, phone
+FROM customers
+WHERE state = 'California' AND status = 'Active';
+
+-- Find customers who joined in the last 30 days
+SELECT customer_id, first_name, last_name, registration_date
+FROM customers
+WHERE registration_date >= DATE_SUB(NOW(), INTERVAL 30 DAY);
+```
+
+#### Use Cases
+
+- E-commerce: Display product listings on a website
+- CRM Systems: Generate customer contact lists
+- Inventory Management: Check stock levels and product details
+- Financial Systems: Retrieve account balances and transaction history
 
 ### SQL `DISTINCT` Keyword
 
-The `DISTINCT` keyword is used in a `SELECT` statement to return only unique values from a column. It eliminates duplicate rows from the result set.
+The `DISTINCT` keyword eliminates duplicate values from query results, ensuring each unique value appears only once.
 
-```sql
-SELECT DISTINCT column_name
-FROM table_name;
+```sql title="Finding unique values in datasets"
+-- Get all unique product categories
+SELECT DISTINCT category
+FROM products;
+
+-- Find unique customer cities and states
+SELECT DISTINCT city, state
+FROM customers
+ORDER BY state, city;
+
+-- Get unique order statuses to understand workflow stages
+SELECT DISTINCT order_status
+FROM orders;
 ```
 
-In this example, `column_name` is the column from which unique values will be retrieved from the `table_name`. This would be used to find all unique customer names or product categories in a table.
+#### Real-World Use Cases
+
+- Analytics: Identify unique visitor locations for a website
+- Marketing: Find distinct customer segments for targeted campaigns
+- Inventory: List all available product categories for navigation menus
+- HR Systems: Get unique department names for organizational charts
+
+### Advanced SELECT Operations
+
+#### Wildcard Selections
+
+```sql title="Using wildcards for flexible data retrieval"
+-- Select all columns from a table
+SELECT * FROM customers;
+
+-- Get all customer information for data export
+SELECT *
+FROM customers
+WHERE registration_date >= '2024-01-01';
+```
+
+#### Column Aliases for Better Readability
+
+```sql title="Using aliases to improve query readability"
+-- Create user-friendly column names for reports
+SELECT 
+    first_name AS "First Name",
+    last_name AS "Last Name",
+    email AS "Email Address",
+    registration_date AS "Member Since"
+FROM customers
+WHERE status = 'Premium';
+
+-- Calculate derived values with descriptive names
+SELECT 
+    product_name AS "Product",
+    price AS "Unit Price",
+    stock_quantity AS "In Stock",
+    price * stock_quantity AS "Total Inventory Value"
+FROM products;
+```
+
+## Aggregate Functions
+
+Aggregate functions perform calculations on multiple rows of data and return a single result. They are essential for data analysis, reporting, and generating business insights.
 
 ### SQL `COUNT` Function
 
-The `COUNT` function is an aggregate function used to count the number of rows that match a specified condition. It can be used to count all rows or only distinct values.
+The `COUNT` function calculates the number of rows that match specified criteria. It's one of the most commonly used functions for data analysis.
 
-```sql
-SELECT COUNT(*)
-FROM table_name
-WHERE condition;
+```sql title="Counting records for business metrics"
+-- Count total number of customers
+SELECT COUNT(*) AS total_customers
+FROM customers;
+
+-- Count active customers only
+SELECT COUNT(*) AS active_customers
+FROM customers
+WHERE status = 'Active';
+
+-- Count customers by region
+SELECT state, COUNT(*) AS customer_count
+FROM customers
+GROUP BY state
+ORDER BY customer_count DESC;
 ```
 
-In this example, `COUNT(*)` counts all rows in the `table_name` that meet the specified condition. This would be used to determine how many customers are in a customer table or how many products are available in a product table.
+#### Real-World Applications
+
+```sql title="E-commerce analytics using COUNT"
+-- Daily order volume analysis
+SELECT 
+    DATE(order_date) AS order_day,
+    COUNT(*) AS daily_orders
+FROM orders
+WHERE order_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+GROUP BY DATE(order_date)
+ORDER BY order_day;
+
+-- Product popularity analysis
+SELECT 
+    p.product_name,
+    COUNT(oi.order_item_id) AS times_ordered
+FROM products p
+JOIN order_items oi ON p.product_id = oi.product_id
+GROUP BY p.product_id, p.product_name
+ORDER BY times_ordered DESC
+LIMIT 10;
+```
 
 ### SQL `SUM` Function
 
-The `SUM` function is an aggregate function used to calculate the total sum of a numeric column. It is often used to calculate totals for financial data or quantities.
+The `SUM` function calculates the total of numeric values, essential for financial calculations and quantity tracking.
 
-```sql
-SELECT SUM(column_name)
-FROM table_name
-WHERE condition;
+```sql title="Financial calculations and inventory totals"
+-- Calculate total revenue
+SELECT SUM(total_amount) AS total_revenue
+FROM orders
+WHERE order_status = 'Completed';
+
+-- Monthly revenue analysis
+SELECT 
+    DATE_FORMAT(order_date, '%Y-%m') AS month,
+    SUM(total_amount) AS monthly_revenue
+FROM orders
+WHERE order_status = 'Completed'
+GROUP BY DATE_FORMAT(order_date, '%Y-%m')
+ORDER BY month;
+
+-- Inventory value by category
+SELECT 
+    category,
+    SUM(price * stock_quantity) AS total_inventory_value
+FROM products
+GROUP BY category;
 ```
 
-In this example, `SUM(column_name)` calculates the total of the specified numeric column in the `table_name` that meets the specified condition. This would be used to calculate the total sales amount for a specific product or the total quantity of items sold in a given period.
+#### Business Use Cases
+
+```sql title="Sales performance and inventory management"
+-- Sales representative performance
+SELECT 
+    sr.rep_name,
+    SUM(o.total_amount) AS total_sales,
+    COUNT(o.order_id) AS orders_closed
+FROM sales_reps sr
+JOIN orders o ON sr.rep_id = o.sales_rep_id
+WHERE o.order_date >= '2024-01-01'
+GROUP BY sr.rep_id, sr.rep_name
+ORDER BY total_sales DESC;
+
+-- Customer lifetime value
+SELECT 
+    c.customer_id,
+    c.first_name,
+    c.last_name,
+    SUM(o.total_amount) AS lifetime_value
+FROM customers c
+JOIN orders o ON c.customer_id = o.customer_id
+GROUP BY c.customer_id, c.first_name, c.last_name
+HAVING lifetime_value > 1000
+ORDER BY lifetime_value DESC;
+```
 
 ### SQL `AVG` Function
 
-The `AVG` function is an aggregate function used to calculate the average value of a numeric column. It is commonly used to find the average of a set of values, such as prices or scores.
+The `AVG` function calculates the average value of numeric columns, useful for performance metrics and trend analysis.
 
-```sql
-SELECT AVG(column_name)
-FROM table_name
-WHERE condition;
+```sql title="Performance metrics and trend analysis"
+-- Average order value
+SELECT AVG(total_amount) AS average_order_value
+FROM orders
+WHERE order_status = 'Completed';
+
+-- Average product rating
+SELECT 
+    p.product_name,
+    AVG(r.rating) AS average_rating,
+    COUNT(r.review_id) AS review_count
+FROM products p
+JOIN reviews r ON p.product_id = r.product_id
+GROUP BY p.product_id, p.product_name
+HAVING review_count >= 5
+ORDER BY average_rating DESC;
+
+-- Monthly average performance
+SELECT 
+    DATE_FORMAT(order_date, '%Y-%m') AS month,
+    AVG(total_amount) AS avg_order_value,
+    AVG(DATEDIFF(shipped_date, order_date)) AS avg_shipping_days
+FROM orders
+WHERE order_status = 'Completed'
+GROUP BY DATE_FORMAT(order_date, '%Y-%m')
+ORDER BY month;
 ```
-
-In this example, `AVG(column_name)` calculates the average value of the specified numeric column in the `table_name` that meets the specified condition. This would be used to find the average price of products in a product table or the average score of students in a student table.
 
 ### SQL `MAX` and `MIN` Functions
 
-The `MAX` and `MIN` functions are aggregate functions used to find the maximum and minimum values in a numeric column, respectively. They are useful for identifying the highest and lowest values in a dataset.
+These functions find the highest and lowest values in datasets, useful for identifying outliers and performance benchmarks.
 
-```sql
-SELECT MAX(column_name), MIN(column_name)
-FROM table_name
-WHERE condition;
+```sql title="Finding extremes and performance benchmarks"
+-- Find highest and lowest order values
+SELECT 
+    MAX(total_amount) AS highest_order,
+    MIN(total_amount) AS lowest_order,
+    AVG(total_amount) AS average_order
+FROM orders;
+
+-- Product price analysis
+SELECT 
+    category,
+    MAX(price) AS most_expensive,
+    MIN(price) AS least_expensive,
+    AVG(price) AS average_price
+FROM products
+GROUP BY category;
+
+-- Customer activity analysis
+SELECT 
+    MAX(order_date) AS most_recent_order,
+    MIN(order_date) AS first_order,
+    DATEDIFF(MAX(order_date), MIN(order_date)) AS days_active
+FROM orders
+WHERE customer_id = 123;
 ```
 
-In this example, `MAX(column_name)` retrieves the highest value and `MIN(column_name)` retrieves the lowest value from the specified numeric column in the `table_name` that meets the specified condition. This would be used to find the highest and lowest prices of products in a product table or the highest and lowest scores of students in a student table.
+#### Business Intelligence Applications
+
+```sql title="Performance monitoring and outlier detection"
+-- Daily sales performance tracking
+SELECT 
+    DATE(order_date) AS sales_date,
+    COUNT(*) AS orders_count,
+    SUM(total_amount) AS daily_revenue,
+    MAX(total_amount) AS largest_order,
+    AVG(total_amount) AS avg_order_size
+FROM orders
+WHERE order_date >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+GROUP BY DATE(order_date)
+ORDER BY sales_date;
+
+-- Customer segmentation by order value
+SELECT 
+    CASE 
+        WHEN total_amount >= 1000 THEN 'Premium'
+        WHEN total_amount >= 500 THEN 'Standard'
+        ELSE 'Basic'
+    END AS customer_tier,
+    COUNT(*) AS order_count,
+    AVG(total_amount) AS avg_order_value
+FROM orders
+GROUP BY customer_tier;
+```
+
+## Pattern Matching and Filtering
+
+SQL provides powerful tools for filtering data based on patterns and specific criteria. These operators are essential for creating flexible search functionality and data analysis.
 
 ### SQL `LIKE` Operator
 
-The `LIKE` operator is used in a `WHERE` clause to search for a specified pattern in a column. It allows for flexible string matching using wildcard characters.
+The `LIKE` operator enables pattern matching using wildcard characters, making it invaluable for search functionality and flexible data filtering.
 
-```sql
-SELECT column1, column2
-FROM table_name
-WHERE column_name LIKE 'pattern';
+#### Wildcard Characters
+
+- `%` - Matches any sequence of characters (including zero characters)
+- `_` - Matches exactly one character
+
+```sql title="Customer search functionality using LIKE"
+-- Find customers whose names start with 'J'
+SELECT customer_id, first_name, last_name, email
+FROM customers
+WHERE first_name LIKE 'J%';
+
+-- Search for customers with 'son' in their last name
+SELECT customer_id, first_name, last_name
+FROM customers
+WHERE last_name LIKE '%son%';
+
+-- Find customers with exactly 4-letter first names
+SELECT first_name, last_name
+FROM customers
+WHERE first_name LIKE '____';
 ```
 
-In this example, `column_name` is the column being searched, and `pattern` is the string pattern to match. The `%` character is a wildcard that matches any sequence of characters, while `_` matches a single character. This would be used to find all customers whose names start with "J" or products that contain "Pro" in their names.
+#### Real-World Search Applications
+
+```sql title="E-commerce product search implementation"
+-- Product search by name (case-insensitive)
+SELECT product_id, product_name, price, category
+FROM products
+WHERE LOWER(product_name) LIKE LOWER('%laptop%')
+   OR LOWER(product_name) LIKE LOWER('%computer%');
+
+-- Find products with specific model patterns
+SELECT product_name, model_number, price
+FROM products
+WHERE model_number LIKE 'PRO-%'  -- Professional series
+   OR model_number LIKE 'STD-%'; -- Standard series
+
+-- Email domain analysis for marketing
+SELECT 
+    SUBSTRING(email, POSITION('@' IN email) + 1) AS email_domain,
+    COUNT(*) AS customer_count
+FROM customers
+WHERE email LIKE '%@gmail.com'
+   OR email LIKE '%@yahoo.com'
+   OR email LIKE '%@hotmail.com'
+GROUP BY email_domain;
+```
 
 ### SQL `IN` Operator
 
-The `IN` operator is used in a `WHERE` clause to specify multiple values in a condition. It allows users to filter results based on a list of values.
+The `IN` operator allows filtering based on multiple specific values, making it efficient for category-based searches and multi-value filtering.
 
-```sql
-SELECT column1, column2
-FROM table_name
-WHERE column_name IN (value1, value2, ...);
+```sql title="Multi-value filtering for category management"
+-- Get products from specific categories
+SELECT product_name, category, price
+FROM products
+WHERE category IN ('Electronics', 'Computers', 'Mobile Phones')
+ORDER BY category, price;
+
+-- Find orders from specific regions
+SELECT order_id, customer_id, total_amount, shipping_state
+FROM orders
+WHERE shipping_state IN ('CA', 'NY', 'TX', 'FL')
+  AND order_status = 'Completed';
+
+-- Customer status filtering
+SELECT customer_id, first_name, last_name, status, membership_level
+FROM customers
+WHERE status IN ('Active', 'Premium')
+  AND membership_level IN ('Gold', 'Platinum');
 ```
 
-In this example, `column_name` is the column being filtered, and `value1`, `value2`, etc., are the values to match. This would be used to retrieve all customers from specific cities or all products in certain categories.
+#### Advanced IN Operator Usage
 
-### SQL `BETWEEN` Operator
+```sql title="Dynamic filtering and subquery integration"
+-- Find customers who have placed orders in the last 30 days
+SELECT c.customer_id, c.first_name, c.last_name, c.email
+FROM customers c
+WHERE c.customer_id IN (
+    SELECT DISTINCT o.customer_id
+    FROM orders o
+    WHERE o.order_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+);
 
-The `BETWEEN` operator is used in a `WHERE` clause to filter results based on a range of values. It allows users to specify a lower and upper bound for the values to match.
-
-```sql
-SELECT column1, column2
-FROM table_name
-WHERE column_name BETWEEN value1 AND value2;
-```
-
-In this example, `column_name` is the column being filtered, and `value1` and `value2` define the range of values to match. This would be used to retrieve all customers who registered between two specific dates or all products priced within a certain range.
-
-### SQL `AS` Keyword
-
-The `AS` keyword is used to rename a column or table in the result set. It allows users to provide a more meaningful or user-friendly name for the column or table in the output.
-
-```sql
-SELECT column_name AS new_name
-FROM table_name;
-```
-
-In this example, `column_name` is the original column name, and `new_name` is the new name that will be used in the result set. This would be used to rename a column for better readability, such as renaming a column from `first_name` to `First Name`.
-
-### SQL `UNION` Operator
-
-The `UNION` operator is used to combine the results of two or more `SELECT` statements into a single result set. It allows users to retrieve data from multiple tables or queries and merge the results.
-
-```sql
-SELECT column1, column2
-FROM table1
-UNION
-SELECT column1, column2
-FROM table2;
-```
-
-In this example, the `UNION` operator combines the results of two `SELECT` statements that retrieve data from `table1` and `table2`. The columns in both `SELECT` statements must have the same data types and be in the same order. This would be used to retrieve a list of customers from two different customer tables or to combine product lists from two different product categories.
-
-### SQL `CASE` Statement
-
-The `CASE` statement is used to perform conditional logic in SQL queries. It allows users to return different values based on specified conditions, similar to an `IF` statement in programming languages.
-
-```sql
-SELECT column1,
-       CASE
-           WHEN condition1 THEN result1
-           WHEN condition2 THEN result2
-           ELSE result3
-       END AS new_column
-FROM table_name;
-```
-
-In this example, the `CASE` statement evaluates conditions and returns `result1`, `result2`, or `result3` based on the specified conditions. The `AS new_column` part renames the resulting column in the output. This would be used to categorize customers based on their purchase history or to assign labels to products based on their price ranges.
-
-### SQL `INSERT` Statement
-
-The `INSERT` statement is used to add new records to a table in a database. It allows users to specify the values for each column in the new record.
-
-```sql
-INSERT INTO table_name (column1, column2)
-VALUES (value1, value2);
-```
-
-In this example, `table_name` is the name of the table where the new record will be inserted, and `column1` and `column2` are the columns to be populated with `value1` and `value2`, respectively.
-
-This would be used to add a new customer to a customer table or a new product to a product table.
-
-### SQL `CREATE TABLE` Statement
-
-The `CREATE TABLE` statement is used to create a new table in a database. It allows users to define the structure of the table, including the columns and their data types.
-
-```sql
-CREATE TABLE table_name (
-    column1 data_type,
-    column2 data_type,
-    ...
-    PRIMARY KEY (column1)
+-- Products that have been ordered more than 10 times
+SELECT p.product_name, p.category, p.price
+FROM products p
+WHERE p.product_id IN (
+    SELECT oi.product_id
+    FROM order_items oi
+    GROUP BY oi.product_id
+    HAVING COUNT(*) > 10
 );
 ```
 
-In this example, `table_name` is the name of the new table being created. Each `column` is defined with a specific `data_type`, such as `INT`, `VARCHAR`, or `DATE`. The `PRIMARY KEY` constraint is used to specify which column uniquely identifies each record in the table.
+### SQL `BETWEEN` Operator
 
-This would be used to create a new table for storing customer information or product details in a database.
+The `BETWEEN` operator filters data within a specified range, useful for date ranges, price ranges, and numeric filtering.
 
-### SQL `ALTER TABLE` Statement
+```sql title="Range-based filtering for analytics and reporting"
+-- Products in a specific price range
+SELECT product_name, price, category
+FROM products
+WHERE price BETWEEN 100.00 AND 500.00
+ORDER BY price;
 
-The `ALTER TABLE` statement is used to modify the structure of an existing table in a database. It allows users to add, modify, or delete columns in a table.
+-- Orders from a specific date range
+SELECT order_id, customer_id, order_date, total_amount
+FROM orders
+WHERE order_date BETWEEN '2024-01-01' AND '2024-12-31'
+  AND order_status = 'Completed';
 
-```sql
-ALTER TABLE table_name
-ADD column_name data_type;
+-- Customer age demographics
+SELECT 
+    COUNT(*) AS customer_count,
+    AVG(age) AS average_age
+FROM customers
+WHERE age BETWEEN 25 AND 35;
 ```
 
-In this example, `table_name` is the name of the table being modified, and `column_name` is the new column being added with a specified `data_type`.
+#### Business Intelligence with BETWEEN
 
-This would be used to add a new column to an existing customer table, such as adding a column for the customer's phone number or address.
+```sql title="Performance analysis using date and value ranges"
+-- Quarterly sales analysis
+SELECT 
+    QUARTER(order_date) AS quarter,
+    COUNT(*) AS orders_count,
+    SUM(total_amount) AS quarterly_revenue
+FROM orders
+WHERE order_date BETWEEN '2024-01-01' AND '2024-12-31'
+  AND order_status = 'Completed'
+GROUP BY QUARTER(order_date)
+ORDER BY quarter;
 
-### SQL `DROP TABLE` Statement
+-- Customer segmentation by lifetime value
+SELECT 
+    CASE 
+        WHEN lifetime_value BETWEEN 0 AND 500 THEN 'Bronze'
+        WHEN lifetime_value BETWEEN 501 AND 1500 THEN 'Silver'
+        WHEN lifetime_value BETWEEN 1501 AND 5000 THEN 'Gold'
+        ELSE 'Platinum'
+    END AS customer_tier,
+    COUNT(*) AS customer_count,
+    AVG(lifetime_value) AS avg_lifetime_value
+FROM (
+    SELECT 
+        c.customer_id,
+        SUM(o.total_amount) AS lifetime_value
+    FROM customers c
+    JOIN orders o ON c.customer_id = o.customer_id
+    GROUP BY c.customer_id
+) customer_values
+GROUP BY customer_tier;
 
-The `DROP TABLE` statement is used to delete an existing table from a database. It removes the table and all of its data permanently.
-
-```sql
-DROP TABLE table_name;
+-- Inventory turnover analysis
+SELECT 
+    p.category,
+    COUNT(*) AS products_in_range,
+    AVG(p.stock_quantity) AS avg_stock
+FROM products p
+WHERE p.stock_quantity BETWEEN 10 AND 100  -- Optimal stock range
+GROUP BY p.category;
 ```
 
-In this example, `table_name` is the name of the table being deleted. This operation cannot be undone, so it should be used with caution.
+#### Advanced Pattern Matching
 
-This would be used to remove a table that is no longer needed, such as deleting a temporary table used for testing or a table that has been replaced by a new one.
+```sql title="Complex search patterns for advanced filtering"
+-- Advanced email validation patterns
+SELECT customer_id, email
+FROM customers
+WHERE email LIKE '%@%.%'  -- Basic email format
+  AND email NOT LIKE '%@%@%'  -- Avoid multiple @ symbols
+  AND LENGTH(email) > 5;
 
-### SQL `CREATE INDEX` Statement
+-- Product code pattern matching
+SELECT product_name, product_code, category
+FROM products
+WHERE product_code LIKE '[A-Z][A-Z][A-Z]-[0-9][0-9][0-9][0-9]'  -- Format: ABC-1234
+  AND category IN ('Electronics', 'Appliances');
 
-The `CREATE INDEX` statement is used to create an index on one or more columns of a table. Indexes improve the speed of data retrieval operations by allowing the database to quickly locate rows based on the indexed columns.
-
-```sql
-CREATE INDEX index_name
-ON table_name (column1, column2);
+-- Phone number format validation
+SELECT customer_id, first_name, last_name, phone
+FROM customers
+WHERE phone LIKE '___-___-____'  -- Format: 123-456-7890
+   OR phone LIKE '(___)___-____'  -- Format: (123)456-7890
+   OR phone LIKE '+1-___-___-____';  -- Format: +1-123-456-7890
 ```
 
-In this example, `index_name` is the name of the index being created, `table_name` is the name of the table on which the index is created, and `column1`, `column2` are the columns to be indexed.
+## Data Combination and Advanced Querying
+
+Advanced SQL operations allow you to combine data from multiple sources, create conditional logic, and perform complex data transformations.
+
+### SQL `AS` Keyword (Column and Table Aliases)
+
+The `AS` keyword creates aliases for columns and tables, improving query readability and enabling complex operations.
+
+```sql title="Creating meaningful column names for reports"
+-- Customer report with readable column names
+SELECT 
+    customer_id AS "Customer ID",
+    CONCAT(first_name, ' ', last_name) AS "Full Name",
+    email AS "Email Address",
+    DATE_FORMAT(registration_date, '%M %d, %Y') AS "Member Since",
+    status AS "Account Status"
+FROM customers
+WHERE status = 'Active';
+
+-- Sales performance dashboard
+SELECT 
+    sr.rep_name AS "Sales Representative",
+    COUNT(o.order_id) AS "Orders Closed",
+    SUM(o.total_amount) AS "Total Revenue",
+    AVG(o.total_amount) AS "Average Deal Size"
+FROM sales_reps sr
+JOIN orders o ON sr.rep_id = o.sales_rep_id
+WHERE o.order_date >= '2024-01-01'
+GROUP BY sr.rep_id, sr.rep_name;
+```
+
+#### Table Aliases for Complex Joins
+
+```sql title="Simplifying complex queries with table aliases"
+-- Multi-table customer order analysis
+SELECT 
+    c.first_name,
+    c.last_name,
+    o.order_date,
+    p.product_name,
+    oi.quantity,
+    oi.unit_price,
+    (oi.quantity * oi.unit_price) AS line_total
+FROM customers c
+JOIN orders o ON c.customer_id = o.customer_id
+JOIN order_items oi ON o.order_id = oi.order_id
+JOIN products p ON oi.product_id = p.product_id
+WHERE o.order_date >= '2024-01-01'
+ORDER BY c.last_name, o.order_date;
+```
+
+### SQL `UNION` Operator
+
+The `UNION` operator combines results from multiple SELECT statements, useful for consolidating data from similar tables or creating comprehensive reports.
+
+```sql title="Combining data from multiple sources"
+-- Combine current and archived customer data
+SELECT customer_id, first_name, last_name, email, 'Current' AS status
+FROM customers
+WHERE status = 'Active'
+UNION
+SELECT customer_id, first_name, last_name, email, 'Archived' AS status
+FROM archived_customers
+ORDER BY last_name, first_name;
+
+-- Comprehensive product inventory report
+SELECT 
+    product_name,
+    'In Stock' AS availability,
+    stock_quantity AS quantity,
+    warehouse_location
+FROM products
+WHERE stock_quantity > 0
+UNION
+SELECT 
+    product_name,
+    'Out of Stock' AS availability,
+    0 AS quantity,
+    'N/A' AS warehouse_location
+FROM products
+WHERE stock_quantity = 0
+ORDER BY availability, product_name;
+```
+
+#### Advanced UNION Applications
+
+```sql title="Creating comprehensive business reports"
+-- Monthly sales summary combining different order types
+SELECT 
+    'Online Orders' AS order_type,
+    DATE_FORMAT(order_date, '%Y-%m') AS month,
+    COUNT(*) AS order_count,
+    SUM(total_amount) AS revenue
+FROM online_orders
+WHERE order_date >= '2024-01-01'
+GROUP BY DATE_FORMAT(order_date, '%Y-%m')
+UNION ALL
+SELECT 
+    'In-Store Orders' AS order_type,
+    DATE_FORMAT(order_date, '%Y-%m') AS month,
+    COUNT(*) AS order_count,
+    SUM(total_amount) AS revenue
+FROM store_orders
+WHERE order_date >= '2024-01-01'
+GROUP BY DATE_FORMAT(order_date, '%Y-%m')
+ORDER BY month, order_type;
+
+-- Customer contact preferences consolidation
+SELECT email AS contact_method, 'Email' AS type, customer_id
+FROM customers
+WHERE email_notifications = 1
+UNION
+SELECT phone AS contact_method, 'Phone' AS type, customer_id
+FROM customers
+WHERE phone_notifications = 1
+UNION
+SELECT mailing_address AS contact_method, 'Mail' AS type, customer_id
+FROM customers
+WHERE mail_notifications = 1;
+```
+
+### SQL `CASE` Statement
+
+The `CASE` statement provides conditional logic within SQL queries, enabling data transformation and categorization.
+
+```sql title="Customer segmentation using conditional logic"
+-- Customer tier classification
+SELECT 
+    customer_id,
+    first_name,
+    last_name,
+    total_spent,
+    CASE 
+        WHEN total_spent >= 5000 THEN 'Platinum'
+        WHEN total_spent >= 2000 THEN 'Gold'
+        WHEN total_spent >= 500 THEN 'Silver'
+        ELSE 'Bronze'
+    END AS customer_tier,
+    CASE 
+        WHEN total_spent >= 5000 THEN 15
+        WHEN total_spent >= 2000 THEN 10
+        WHEN total_spent >= 500 THEN 5
+        ELSE 0
+    END AS discount_percentage
+FROM (
+    SELECT 
+        c.customer_id,
+        c.first_name,
+        c.last_name,
+        COALESCE(SUM(o.total_amount), 0) AS total_spent
+    FROM customers c
+    LEFT JOIN orders o ON c.customer_id = o.customer_id
+    GROUP BY c.customer_id, c.first_name, c.last_name
+) customer_totals;
+```
+
+#### Advanced CASE Applications
+
+```sql title="Business intelligence and performance categorization"
+-- Product performance analysis
+SELECT 
+    product_name,
+    category,
+    stock_quantity,
+    units_sold_last_month,
+    CASE 
+        WHEN units_sold_last_month = 0 THEN 'No Sales'
+        WHEN units_sold_last_month BETWEEN 1 AND 10 THEN 'Low Performer'
+        WHEN units_sold_last_month BETWEEN 11 AND 50 THEN 'Average Performer'
+        WHEN units_sold_last_month > 50 THEN 'Top Performer'
+    END AS performance_category,
+    CASE 
+        WHEN stock_quantity = 0 THEN 'Out of Stock'
+        WHEN stock_quantity <= 10 THEN 'Low Stock'
+        WHEN stock_quantity <= 50 THEN 'Normal Stock'
+        ELSE 'High Stock'
+    END AS stock_status
+FROM products p
+LEFT JOIN (
+    SELECT 
+        product_id,
+        SUM(quantity) AS units_sold_last_month
+    FROM order_items oi
+    JOIN orders o ON oi.order_id = o.order_id
+    WHERE o.order_date >= DATE_SUB(NOW(), INTERVAL 1 MONTH)
+    GROUP BY product_id
+) sales ON p.product_id = sales.product_id;
+
+-- Order fulfillment time analysis
+SELECT 
+    order_id,
+    order_date,
+    shipped_date,
+    DATEDIFF(shipped_date, order_date) AS processing_days,
+    CASE 
+        WHEN DATEDIFF(shipped_date, order_date) <= 1 THEN 'Same/Next Day'
+        WHEN DATEDIFF(shipped_date, order_date) <= 3 THEN 'Standard'
+        WHEN DATEDIFF(shipped_date, order_date) <= 7 THEN 'Slow'
+        WHEN shipped_date IS NULL THEN 'Not Shipped'
+        ELSE 'Very Slow'
+    END AS shipping_performance,
+    total_amount
+FROM orders
+WHERE order_date >= DATE_SUB(NOW(), INTERVAL 3 MONTH)
+ORDER BY order_date DESC;
+```
+
+#### Nested CASE Statements for Complex Logic
+
+```sql title="Advanced customer analysis with nested conditions"
+-- Advanced customer risk assessment
+SELECT 
+    c.customer_id,
+    c.first_name,
+    c.last_name,
+    c.registration_date,
+    DATEDIFF(NOW(), c.registration_date) AS days_as_customer,
+    order_stats.total_orders,
+    order_stats.total_spent,
+    order_stats.last_order_date,
+    CASE 
+        WHEN order_stats.total_orders IS NULL THEN 'Never Purchased'
+        WHEN DATEDIFF(NOW(), order_stats.last_order_date) > 365 THEN 
+            CASE 
+                WHEN order_stats.total_spent > 1000 THEN 'High Value Inactive'
+                ELSE 'Low Value Inactive'
+            END
+        WHEN DATEDIFF(NOW(), order_stats.last_order_date) > 180 THEN 'At Risk'
+        WHEN order_stats.total_orders >= 10 AND order_stats.total_spent > 2000 THEN 'VIP Active'
+        WHEN order_stats.total_orders >= 5 THEN 'Regular Active'
+        ELSE 'New/Occasional'
+    END AS customer_status
+FROM customers c
+LEFT JOIN (
+    SELECT 
+        customer_id,
+        COUNT(*) AS total_orders,
+        SUM(total_amount) AS total_spent,
+        MAX(order_date) AS last_order_date
+    FROM orders
+    GROUP BY customer_id
+) order_stats ON c.customer_id = order_stats.customer_id
+ORDER BY customer_status, total_spent DESC;
+```
+
+## Data Modification Operations
+
+Data modification operations are essential for maintaining and updating database content. These operations allow you to add new records, modify existing data, and remove obsolete information.
+
+### SQL `INSERT` Statement
+
+The `INSERT` statement adds new records to database tables. It's fundamental for populating databases with new data from user registrations, orders, products, and other business activities.
+
+#### Basic INSERT Operations
+
+```sql title="Adding new customer records"
+-- Single customer registration
+INSERT INTO customers (first_name, last_name, email, phone, registration_date)
+VALUES ('John', 'Smith', 'john.smith@email.com', '555-0123', NOW());
+
+-- Multiple customers in one statement
+INSERT INTO customers (first_name, last_name, email, status, registration_date)
+VALUES 
+    ('Sarah', 'Johnson', 'sarah.j@email.com', 'Active', NOW()),
+    ('Mike', 'Davis', 'mike.davis@email.com', 'Active', NOW()),
+    ('Lisa', 'Wilson', 'lisa.wilson@email.com', 'Pending', NOW());
+```
+
+#### Real-World INSERT Applications
+
+```sql title="E-commerce order processing system"
+-- Creating a new order with multiple items
+INSERT INTO orders (customer_id, order_date, order_status, total_amount, shipping_address)
+VALUES (
+    123, 
+    NOW(), 
+    'Processing', 
+    299.97,
+    '123 Main St, Anytown, ST 12345'
+);
+
+-- Adding order items (assuming order_id is 1001)
+INSERT INTO order_items (order_id, product_id, quantity, unit_price)
+VALUES 
+    (1001, 501, 2, 49.99),  -- 2 units of product 501
+    (1001, 502, 1, 199.99), -- 1 unit of product 502
+    (1001, 503, 1, 0.00);   -- 1 free promotional item
+
+-- Product inventory management
+INSERT INTO products (product_name, category, price, stock_quantity, supplier_id, created_date)
+VALUES 
+    ('Wireless Bluetooth Headphones', 'Electronics', 89.99, 150, 10, NOW()),
+    ('Ergonomic Office Chair', 'Furniture', 299.99, 25, 15, NOW()),
+    ('Stainless Steel Water Bottle', 'Accessories', 24.99, 200, 8, NOW());
+```
+
+#### Advanced INSERT with Subqueries
+
+```sql title="Data migration and calculated inserts"
+-- Creating summary records from transaction data
+INSERT INTO monthly_sales_summary (year_month, total_orders, total_revenue, avg_order_value)
+SELECT 
+    DATE_FORMAT(order_date, '%Y-%m') AS year_month,
+    COUNT(*) AS total_orders,
+    SUM(total_amount) AS total_revenue,
+    AVG(total_amount) AS avg_order_value
+FROM orders
+WHERE order_status = 'Completed'
+  AND order_date >= '2024-01-01'
+GROUP BY DATE_FORMAT(order_date, '%Y-%m');
+
+-- Customer loyalty points calculation
+INSERT INTO loyalty_points (customer_id, points_earned, transaction_date, description)
+SELECT 
+    customer_id,
+    FLOOR(total_amount / 10) AS points_earned,  -- 1 point per $10 spent
+    order_date,
+    CONCAT('Order #', order_id, ' - ', total_amount, ' spent')
+FROM orders
+WHERE order_status = 'Completed'
+  AND order_date >= DATE_SUB(NOW(), INTERVAL 1 DAY);
+```
 
 ### SQL `UPDATE` Statement
 
-The `UPDATE` statement is used to modify existing records in a table. It allows users to change the values of one or more columns for specific records.
+The `UPDATE` statement modifies existing records in database tables. It's crucial for maintaining current information, correcting errors, and implementing business process changes.
 
-```sql
-UPDATE table_name
-SET column1 = value1, column2 = value2
-WHERE condition;
+```sql title="Customer information management"
+-- Update customer contact information
+UPDATE customers
+SET 
+    email = 'john.smith.new@email.com',
+    phone = '555-0199',
+    updated_date = NOW()
+WHERE customer_id = 123;
+
+-- Update customer status based on activity
+UPDATE customers
+SET 
+    status = 'Inactive',
+    updated_date = NOW()
+WHERE customer_id IN (
+    SELECT customer_id
+    FROM (
+        SELECT c.customer_id
+        FROM customers c
+        LEFT JOIN orders o ON c.customer_id = o.customer_id
+        WHERE c.status = 'Active'
+        GROUP BY c.customer_id
+        HAVING MAX(o.order_date) < DATE_SUB(NOW(), INTERVAL 1 YEAR)
+           OR MAX(o.order_date) IS NULL
+    ) inactive_customers
+);
 ```
 
-In this example, `table_name` is the name of the table where the records will be updated. The `SET` clause specifies the columns to be modified and their new values. The `WHERE` clause is used to filter which records will be updated based on a specified condition.
+#### Inventory and Price Management
 
-This would be used to change a customer's email address or update the price of a product in a table.
+```sql title="Product inventory and pricing updates"
+-- Bulk price increase for a category
+UPDATE products
+SET 
+    price = price * 1.05,  -- 5% price increase
+    updated_date = NOW()
+WHERE category = 'Electronics'
+  AND price > 0;
 
-### SQL `TRUNCATE TABLE` Statement
+-- Inventory adjustment after receiving shipment
+UPDATE products
+SET 
+    stock_quantity = stock_quantity + CASE product_id
+        WHEN 101 THEN 50
+        WHEN 102 THEN 30
+        WHEN 103 THEN 75
+        ELSE 0
+    END,
+    last_restocked_date = NOW()
+WHERE product_id IN (101, 102, 103);
 
-The `TRUNCATE TABLE` statement is used to remove all records from a table without deleting the table itself. It is a faster way to delete all rows in a table compared to the `DELETE` statement, as it does not log individual row deletions.
-
-```sql
-TRUNCATE TABLE table_name;
+-- Automatic low stock status update
+UPDATE products
+SET 
+    stock_status = CASE 
+        WHEN stock_quantity = 0 THEN 'Out of Stock'
+        WHEN stock_quantity <= 10 THEN 'Low Stock'
+        WHEN stock_quantity <= 50 THEN 'Normal Stock'
+        ELSE 'High Stock'
+    END,
+    updated_date = NOW()
+WHERE stock_status != CASE 
+    WHEN stock_quantity = 0 THEN 'Out of Stock'
+    WHEN stock_quantity <= 10 THEN 'Low Stock'
+    WHEN stock_quantity <= 50 THEN 'Normal Stock'
+    ELSE 'High Stock'
+END;
 ```
 
-In this example, `table_name` is the name of the table from which all records will be removed. This operation cannot be rolled back, so it should be used with caution.
+#### Order Processing Updates
+
+```sql title="Order status and fulfillment management"
+-- Update order status when shipped
+UPDATE orders
+SET 
+    order_status = 'Shipped',
+    shipped_date = NOW(),
+    tracking_number = 'TR123456789US'
+WHERE order_id = 1001
+  AND order_status = 'Processing';
+
+-- Automatic order status progression
+UPDATE orders
+SET 
+    order_status = 'Ready to Ship',
+    updated_date = NOW()
+WHERE order_status = 'Processing'
+  AND DATEDIFF(NOW(), order_date) >= 2
+  AND order_id IN (
+      SELECT DISTINCT order_id
+      FROM order_items oi
+      JOIN products p ON oi.product_id = p.product_id
+      WHERE p.stock_quantity >= oi.quantity
+  );
+```
 
 ### SQL `DELETE` Statement
 
-The `DELETE` statement is used to remove records from a table. It allows users to specify which records to delete based on a condition.
+The `DELETE` statement removes records from database tables. It's used for data cleanup, removing obsolete records, and implementing data retention policies.
 
-```sql
-DELETE FROM table_name
-WHERE condition;
+```sql title="Data cleanup and maintenance operations"
+-- Remove test customers
+DELETE FROM customers
+WHERE email LIKE '%test%'
+   OR email LIKE '%example.com'
+   OR first_name = 'Test';
+
+-- Remove old temporary sessions
+DELETE FROM user_sessions
+WHERE expires_at < NOW()
+   OR created_at < DATE_SUB(NOW(), INTERVAL 30 DAY);
+
+-- Clean up old promotional codes
+DELETE FROM promotional_codes
+WHERE expiry_date < NOW()
+  AND usage_count = 0;
 ```
 
-In this example, `table_name` is the name of the table from which records will be deleted. The `WHERE` clause is used to filter which records will be removed based on a specified condition.
+#### Advanced DELETE Operations
 
-This would be used to delete a specific customer from a customer table or remove a product from a product table.
+```sql title="Business rule enforcement and data archival"
+-- Remove incomplete orders older than 7 days
+DELETE FROM orders
+WHERE order_status IN ('Cart', 'Pending')
+  AND order_date < DATE_SUB(NOW(), INTERVAL 7 DAY);
 
-### SQL `JOIN` Statement
+-- Remove orphaned order items (orders that no longer exist)
+DELETE FROM order_items
+WHERE order_id NOT IN (
+    SELECT order_id FROM orders
+);
 
-The `JOIN` statement is used to combine rows from two or more tables based on a related column. It allows users to retrieve data from multiple tables in a single query.
+-- Data retention policy enforcement
+DELETE FROM activity_logs
+WHERE log_date < DATE_SUB(NOW(), INTERVAL 90 DAY)
+  AND log_level = 'INFO';
 
-```sql
-SELECT column1, column2
-FROM table1
-JOIN table2 ON table1.common_column = table2.common_column
-WHERE condition;
+-- Customer data cleanup (GDPR compliance)
+DELETE FROM customers
+WHERE status = 'Deleted'
+  AND updated_date < DATE_SUB(NOW(), INTERVAL 30 DAY)
+  AND customer_id NOT IN (
+      SELECT DISTINCT customer_id
+      FROM orders
+      WHERE order_status = 'Completed'
+  );
 ```
 
-In this example, `table1` and `table2` are the names of the tables being joined. The `ON` clause specifies the common column used to link the two tables. The `WHERE` clause is used to filter the results based on a specified condition.
+### SQL `TRUNCATE TABLE` Statement
 
-This would be used to retrieve data from related tables, such as getting customer information along with their orders by joining a customer table with an orders table.
+The `TRUNCATE TABLE` statement quickly removes all records from a table while preserving the table structure. It's more efficient than DELETE for removing all data.
 
-### SQL `GROUP BY` Statement
+```sql title="Efficient bulk data removal"
+-- Clear temporary import table
+TRUNCATE TABLE temp_product_import;
 
-The `GROUP BY` statement is used to group rows that have the same values in specified columns. It is often used in conjunction with aggregate functions to perform calculations on grouped data.
+-- Reset session data
+TRUNCATE TABLE user_sessions;
 
-```sql
-SELECT column1, COUNT(*)
-FROM table_name
-GROUP BY column1
-HAVING COUNT(*) > 1;
+-- Clear cache tables
+TRUNCATE TABLE search_cache;
+TRUNCATE TABLE recommendation_cache;
 ```
 
-In this example, `column1` is the column used to group the rows in the `table_name`. The `COUNT(*)` function counts the number of rows in each group. The `HAVING` clause filters the results to include only groups with more than one row.
+#### Use Cases for TRUNCATE
 
-This would be used to find duplicate records in a table, such as identifying customers with the same email address or products with the same name.
+- Data import preparation: Clear staging tables before new data loads
+- Cache clearing: Remove all cached data for fresh calculations
+- Testing environments: Reset test data between test runs
+- Seasonal cleanup: Clear temporary promotional data
+- Performance optimization: Remove all data from heavily fragmented tables
+
+```sql title="Data warehouse ETL process"
+-- ETL process example
+TRUNCATE TABLE staging_sales_data;
+
+INSERT INTO staging_sales_data
+SELECT * FROM external_sales_feed
+WHERE import_date = CURRENT_DATE;
+
+-- Validate and process the staged data
+INSERT INTO processed_sales_data
+SELECT 
+    sale_id,
+    customer_id,
+    product_id,
+    sale_amount,
+    sale_date,
+    'Imported' AS status
+FROM staging_sales_data
+WHERE sale_amount > 0
+  AND customer_id IS NOT NULL
+  AND product_id IS NOT NULL;
+```
+
+## Database Structure Management
+
+Database structure management involves creating, modifying, and maintaining the schema and objects that define how data is organized and stored.
+
+### SQL `CREATE TABLE` Statement
+
+The `CREATE TABLE` statement defines new database tables with their structure, data types, constraints, and relationships.
+
+```sql title="E-commerce database table creation"
+-- Customer table with comprehensive structure
+CREATE TABLE customers (
+    customer_id INT AUTO_INCREMENT PRIMARY KEY,
+    first_name VARCHAR(50) NOT NULL,
+    last_name VARCHAR(50) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    phone VARCHAR(20),
+    date_of_birth DATE,
+    registration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status ENUM('Active', 'Inactive', 'Suspended') DEFAULT 'Active',
+    loyalty_points INT DEFAULT 0,
+    INDEX idx_email (email),
+    INDEX idx_status (status),
+    INDEX idx_registration_date (registration_date)
+);
+
+-- Product catalog table
+CREATE TABLE products (
+    product_id INT AUTO_INCREMENT PRIMARY KEY,
+    product_name VARCHAR(200) NOT NULL,
+    description TEXT,
+    category_id INT,
+    price DECIMAL(10,2) NOT NULL CHECK (price >= 0),
+    cost_price DECIMAL(10,2) CHECK (cost_price >= 0),
+    stock_quantity INT DEFAULT 0 CHECK (stock_quantity >= 0),
+    sku VARCHAR(50) UNIQUE,
+    weight_kg DECIMAL(8,3),
+    dimensions_cm VARCHAR(50),
+    is_active BOOLEAN DEFAULT TRUE,
+    created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_category (category_id),
+    INDEX idx_sku (sku),
+    INDEX idx_price (price),
+    INDEX idx_active (is_active)
+);
+```
+
+#### Advanced Table Creation with Relationships
+
+```sql title="Order management system with foreign key relationships"
+-- Orders table with customer relationship
+CREATE TABLE orders (
+    order_id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id INT NOT NULL,
+    order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    order_status ENUM('Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled') DEFAULT 'Pending',
+    shipping_address TEXT NOT NULL,
+    billing_address TEXT,
+    subtotal DECIMAL(10,2) NOT NULL,
+    tax_amount DECIMAL(10,2) DEFAULT 0,
+    shipping_cost DECIMAL(10,2) DEFAULT 0,
+    total_amount DECIMAL(10,2) GENERATED ALWAYS AS (subtotal + tax_amount + shipping_cost) STORED,
+    payment_method VARCHAR(50),
+    payment_status ENUM('Pending', 'Paid', 'Failed', 'Refunded') DEFAULT 'Pending',
+    notes TEXT,
+    shipped_date TIMESTAMP NULL,
+    delivered_date TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE RESTRICT,
+    INDEX idx_customer (customer_id),
+    INDEX idx_order_date (order_date),
+    INDEX idx_status (order_status),
+    INDEX idx_payment_status (payment_status)
+);
+
+-- Order items for many-to-many relationship
+CREATE TABLE order_items (
+    order_item_id INT AUTO_INCREMENT PRIMARY KEY,
+    order_id INT NOT NULL,
+    product_id INT NOT NULL,
+    quantity INT NOT NULL CHECK (quantity > 0),
+    unit_price DECIMAL(10,2) NOT NULL CHECK (unit_price >= 0),
+    line_total DECIMAL(10,2) GENERATED ALWAYS AS (quantity * unit_price) STORED,
+    FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES products(product_id) ON DELETE RESTRICT,
+    UNIQUE KEY unique_order_product (order_id, product_id),
+    INDEX idx_order (order_id),
+    INDEX idx_product (product_id)
+);
+```
+
+### SQL `ALTER TABLE` Statement
+
+The `ALTER TABLE` statement modifies existing table structures, allowing you to add columns, change data types, add constraints, and optimize table design.
+
+```sql title="Database evolution and optimization"
+-- Add new columns for enhanced customer tracking
+ALTER TABLE customers 
+ADD COLUMN preferred_language VARCHAR(10) DEFAULT 'en',
+ADD COLUMN marketing_consent BOOLEAN DEFAULT FALSE,
+ADD COLUMN last_login_date TIMESTAMP NULL,
+ADD COLUMN account_tier ENUM('Bronze', 'Silver', 'Gold', 'Platinum') DEFAULT 'Bronze';
+
+-- Add indexes for better query performance
+ALTER TABLE customers
+ADD INDEX idx_preferred_language (preferred_language),
+ADD INDEX idx_account_tier (account_tier),
+ADD INDEX idx_last_login (last_login_date);
+
+-- Modify existing columns
+ALTER TABLE products
+MODIFY COLUMN description TEXT NOT NULL,
+MODIFY COLUMN price DECIMAL(12,2) NOT NULL,  -- Increased precision
+ADD COLUMN average_rating DECIMAL(3,2) DEFAULT 0.00 CHECK (average_rating BETWEEN 0 AND 5),
+ADD COLUMN review_count INT DEFAULT 0;
+```
+
+#### Table Structure Optimization
+
+```sql title="Performance optimization and constraint management"
+-- Add performance-critical indexes
+ALTER TABLE orders
+ADD INDEX idx_order_date_status (order_date, order_status),
+ADD INDEX idx_customer_status (customer_id, order_status),
+ADD INDEX idx_total_amount (total_amount);
+
+-- Add business rule constraints
+ALTER TABLE products
+ADD CONSTRAINT chk_profit_margin CHECK (price >= cost_price),
+ADD CONSTRAINT chk_sku_format CHECK (sku REGEXP '^[A-Z]{2,3}-[0-9]{4,6}$');
+
+-- Add audit columns
+ALTER TABLE customers
+ADD COLUMN created_by VARCHAR(50) DEFAULT 'system',
+ADD COLUMN updated_by VARCHAR(50) DEFAULT 'system';
+
+-- Modify table to support soft deletes
+ALTER TABLE products
+ADD COLUMN deleted_at TIMESTAMP NULL,
+ADD INDEX idx_deleted_at (deleted_at);
+```
+
+### SQL `DROP TABLE` Statement
+
+The `DROP TABLE` statement permanently removes tables and all their data from the database.
+
+```sql title="Database cleanup and maintenance"
+-- Remove temporary tables
+DROP TABLE IF EXISTS temp_customer_import;
+DROP TABLE IF EXISTS staging_product_data;
+DROP TABLE IF EXISTS backup_old_orders;
+
+-- Remove deprecated tables (with dependency consideration)
+DROP TABLE IF EXISTS legacy_user_preferences;
+DROP TABLE IF EXISTS old_inventory_tracking;
+```
+
+#### Safe Table Removal Process
+
+```sql title="Safe table removal with backup strategy"
+-- Create backup before dropping important table
+CREATE TABLE backup_old_promotions_20241225 
+AS SELECT * FROM old_promotions;
+
+-- Verify backup was created successfully
+SELECT COUNT(*) FROM backup_old_promotions_20241225;
+SELECT COUNT(*) FROM old_promotions;
+
+-- Remove original table after backup verification
+DROP TABLE old_promotions;
+
+-- Clean up empty dependent tables
+DROP TABLE IF EXISTS promotion_usage_history;
+DROP TABLE IF EXISTS promotion_customer_eligibility;
+```
+
+### SQL `CREATE INDEX` Statement
+
+Indexes dramatically improve query performance by creating fast lookup structures for frequently accessed columns.
+
+```sql title="Performance optimization through strategic indexing"
+-- E-commerce search optimization
+CREATE INDEX idx_product_search ON products(product_name, category_id, is_active);
+CREATE INDEX idx_price_range ON products(price, is_active);
+CREATE INDEX idx_product_category_active ON products(category_id, is_active, price);
+
+-- Customer analysis indexes
+CREATE INDEX idx_customer_activity ON customers(status, last_login_date);
+CREATE INDEX idx_customer_tier_points ON customers(account_tier, loyalty_points);
+
+-- Order processing optimization
+CREATE INDEX idx_order_processing ON orders(order_status, order_date);
+CREATE INDEX idx_customer_orders ON orders(customer_id, order_date DESC);
+CREATE INDEX idx_revenue_analysis ON orders(order_date, total_amount) WHERE order_status = 'Completed';
+```
+
+#### Advanced Indexing Strategies
+
+```sql title="Advanced indexing for complex queries"
+-- Composite indexes for common query patterns
+CREATE INDEX idx_customer_order_analysis ON orders(customer_id, order_status, order_date, total_amount);
+
+-- Partial indexes for specific conditions
+CREATE INDEX idx_active_expensive_products ON products(price DESC) 
+WHERE is_active = TRUE AND price > 100;
+
+-- Text search optimization
+CREATE FULLTEXT INDEX idx_product_text_search ON products(product_name, description);
+
+-- Covering indexes (include frequently selected columns)
+CREATE INDEX idx_order_summary ON orders(customer_id, order_date) 
+INCLUDE (order_status, total_amount, payment_status);
+
+-- Function-based indexes for calculated fields
+CREATE INDEX idx_customer_name_search ON customers((LOWER(CONCAT(first_name, ' ', last_name))));
+```
+
+#### Index Management and Monitoring
+
+```sql title="Index maintenance and performance monitoring"
+-- View index usage statistics
+SHOW INDEX FROM customers;
+SHOW INDEX FROM products;
+SHOW INDEX FROM orders;
+
+-- Remove unused indexes
+DROP INDEX idx_old_customer_code ON customers;
+DROP INDEX idx_unused_product_field ON products;
+
+-- Rebuild indexes for optimization
+ALTER TABLE orders DROP INDEX idx_order_date_status;
+CREATE INDEX idx_order_date_status ON orders(order_date, order_status, customer_id);
+```
+
+### Database Schema Best Practices
+
+```sql title="Complete e-commerce schema with best practices"
+-- Categories table for product organization
+CREATE TABLE categories (
+    category_id INT AUTO_INCREMENT PRIMARY KEY,
+    category_name VARCHAR(100) NOT NULL UNIQUE,
+    parent_category_id INT NULL,
+    description TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
+    sort_order INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (parent_category_id) REFERENCES categories(category_id),
+    INDEX idx_parent_category (parent_category_id),
+    INDEX idx_active_sort (is_active, sort_order)
+);
+
+-- Add the foreign key relationship to products table
+ALTER TABLE products
+ADD FOREIGN KEY (category_id) REFERENCES categories(category_id);
+
+-- Reviews table for customer feedback
+CREATE TABLE product_reviews (
+    review_id INT AUTO_INCREMENT PRIMARY KEY,
+    product_id INT NOT NULL,
+    customer_id INT NOT NULL,
+    rating TINYINT NOT NULL CHECK (rating BETWEEN 1 AND 5),
+    review_title VARCHAR(200),
+    review_text TEXT,
+    is_verified_purchase BOOLEAN DEFAULT FALSE,
+    helpful_votes INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (product_id) REFERENCES products(product_id) ON DELETE CASCADE,
+    FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE CASCADE,
+    UNIQUE KEY unique_customer_product_review (customer_id, product_id),
+    INDEX idx_product_rating (product_id, rating),
+    INDEX idx_customer_reviews (customer_id),
+    INDEX idx_verified_purchase (is_verified_purchase)
+);
+```
+
+## Advanced Query Operations
+
+Advanced SQL operations enable complex data analysis, multi-table relationships, and sophisticated data organization.
+
+### SQL `JOIN` Operations
+
+JOIN operations combine data from multiple tables based on related columns, enabling complex queries across normalized database structures.
+
+#### INNER JOIN
+
+```sql title="Customer order analysis with INNER JOIN"
+-- Get customers who have placed orders with order details
+SELECT 
+    c.customer_id,
+    c.first_name,
+    c.last_name,
+    c.email,
+    o.order_id,
+    o.order_date,
+    o.total_amount,
+    o.order_status
+FROM customers c
+INNER JOIN orders o ON c.customer_id = o.customer_id
+WHERE o.order_date >= '2024-01-01'
+ORDER BY c.last_name, o.order_date DESC;
+
+-- Product sales analysis with multiple tables
+SELECT 
+    p.product_name,
+    p.category,
+    oi.quantity,
+    oi.unit_price,
+    (oi.quantity * oi.unit_price) AS line_total,
+    o.order_date,
+    c.first_name,
+    c.last_name
+FROM products p
+INNER JOIN order_items oi ON p.product_id = oi.product_id
+INNER JOIN orders o ON oi.order_id = o.order_id
+INNER JOIN customers c ON o.customer_id = c.customer_id
+WHERE o.order_status = 'Completed'
+  AND o.order_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+ORDER BY o.order_date DESC, line_total DESC;
+```
+
+#### LEFT JOIN for Comprehensive Analysis
+
+```sql title="Customer activity analysis including inactive customers"
+-- All customers with their order activity (including those who never ordered)
+SELECT 
+    c.customer_id,
+    c.first_name,
+    c.last_name,
+    c.registration_date,
+    COUNT(o.order_id) AS total_orders,
+    COALESCE(SUM(o.total_amount), 0) AS total_spent,
+    MAX(o.order_date) AS last_order_date,
+    CASE 
+        WHEN COUNT(o.order_id) = 0 THEN 'Never Purchased'
+        WHEN MAX(o.order_date) < DATE_SUB(NOW(), INTERVAL 6 MONTH) THEN 'Inactive'
+        WHEN COUNT(o.order_id) >= 10 THEN 'VIP'
+        ELSE 'Active'
+    END AS customer_status
+FROM customers c
+LEFT JOIN orders o ON c.customer_id = o.customer_id
+GROUP BY c.customer_id, c.first_name, c.last_name, c.registration_date
+ORDER BY total_spent DESC;
+
+-- Product performance including products with no sales
+SELECT 
+    p.product_id,
+    p.product_name,
+    p.category,
+    p.price,
+    p.stock_quantity,
+    COALESCE(sales_data.units_sold, 0) AS units_sold,
+    COALESCE(sales_data.revenue, 0) AS revenue
+FROM products p
+LEFT JOIN (
+    SELECT 
+        oi.product_id,
+        SUM(oi.quantity) AS units_sold,
+        SUM(oi.quantity * oi.unit_price) AS revenue
+    FROM order_items oi
+    JOIN orders o ON oi.order_id = o.order_id
+    WHERE o.order_status = 'Completed'
+      AND o.order_date >= DATE_SUB(NOW(), INTERVAL 3 MONTH)
+    GROUP BY oi.product_id
+) sales_data ON p.product_id = sales_data.product_id
+WHERE p.is_active = TRUE
+ORDER BY revenue DESC;
+```
+
+#### Advanced JOIN Patterns
+
+```sql title="Complex business intelligence queries"
+-- Customer lifetime value with detailed breakdown
+SELECT 
+    c.customer_id,
+    c.first_name,
+    c.last_name,
+    c.registration_date,
+    COUNT(DISTINCT o.order_id) AS total_orders,
+    COUNT(DISTINCT oi.product_id) AS unique_products_purchased,
+    SUM(oi.quantity) AS total_items_purchased,
+    SUM(oi.quantity * oi.unit_price) AS total_spent,
+    AVG(o.total_amount) AS avg_order_value,
+    MAX(o.order_date) AS last_order_date,
+    MIN(o.order_date) AS first_order_date,
+    DATEDIFF(MAX(o.order_date), MIN(o.order_date)) AS customer_lifespan_days
+FROM customers c
+INNER JOIN orders o ON c.customer_id = o.customer_id
+INNER JOIN order_items oi ON o.order_id = oi.order_id
+WHERE o.order_status = 'Completed'
+GROUP BY c.customer_id, c.first_name, c.last_name, c.registration_date
+HAVING total_spent > 500
+ORDER BY total_spent DESC;
+```
+
+### SQL `GROUP BY` and Aggregation
+
+GROUP BY organizes data into groups for aggregate analysis, essential for reporting and business intelligence.
+
+```sql title="Comprehensive sales and inventory reporting"
+-- Monthly sales performance analysis
+SELECT 
+    DATE_FORMAT(o.order_date, '%Y-%m') AS month,
+    COUNT(DISTINCT o.order_id) AS total_orders,
+    COUNT(DISTINCT o.customer_id) AS unique_customers,
+    SUM(o.total_amount) AS total_revenue,
+    AVG(o.total_amount) AS avg_order_value,
+    MAX(o.total_amount) AS largest_order,
+    SUM(oi.quantity) AS total_items_sold
+FROM orders o
+INNER JOIN order_items oi ON o.order_id = oi.order_id
+WHERE o.order_status = 'Completed'
+  AND o.order_date >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
+GROUP BY DATE_FORMAT(o.order_date, '%Y-%m')
+ORDER BY month;
+
+-- Product category performance
+SELECT 
+    p.category,
+    COUNT(DISTINCT p.product_id) AS products_in_category,
+    COUNT(DISTINCT oi.order_id) AS orders_containing_category,
+    SUM(oi.quantity) AS units_sold,
+    SUM(oi.quantity * oi.unit_price) AS category_revenue,
+    AVG(oi.unit_price) AS avg_selling_price,
+    SUM(p.stock_quantity) AS total_inventory
+FROM products p
+LEFT JOIN order_items oi ON p.product_id = oi.product_id
+LEFT JOIN orders o ON oi.order_id = o.order_id AND o.order_status = 'Completed'
+WHERE p.is_active = TRUE
+GROUP BY p.category
+ORDER BY category_revenue DESC;
+```
+
+#### Advanced GROUP BY with HAVING
+
+```sql title="Customer segmentation and high-value analysis"
+-- High-value customer identification
+SELECT 
+    c.customer_id,
+    c.first_name,
+    c.last_name,
+    c.account_tier,
+    COUNT(o.order_id) AS order_count,
+    SUM(o.total_amount) AS lifetime_value,
+    AVG(o.total_amount) AS avg_order_value,
+    DATEDIFF(NOW(), MAX(o.order_date)) AS days_since_last_order
+FROM customers c
+INNER JOIN orders o ON c.customer_id = o.customer_id
+WHERE o.order_status = 'Completed'
+GROUP BY c.customer_id, c.first_name, c.last_name, c.account_tier
+HAVING lifetime_value > 2000
+   AND order_count >= 5
+   AND days_since_last_order <= 90
+ORDER BY lifetime_value DESC;
+
+-- Product performance analysis - identify bestsellers
+SELECT 
+    p.product_name,
+    p.category,
+    p.price,
+    COUNT(oi.order_item_id) AS times_ordered,
+    SUM(oi.quantity) AS total_quantity_sold,
+    SUM(oi.quantity * oi.unit_price) AS total_revenue,
+    (SUM(oi.quantity * oi.unit_price) - (SUM(oi.quantity) * p.cost_price)) AS gross_profit
+FROM products p
+INNER JOIN order_items oi ON p.product_id = oi.product_id
+INNER JOIN orders o ON oi.order_id = o.order_id
+WHERE o.order_status = 'Completed'
+  AND o.order_date >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+GROUP BY p.product_id, p.product_name, p.category, p.price, p.cost_price
+HAVING times_ordered >= 10
+   AND total_revenue > 1000
+ORDER BY total_revenue DESC
+LIMIT 20;
+```
 
 ### SQL `ORDER BY` Statement
 
-The `ORDER BY` statement is used to sort the results of a query based on one or more columns. It allows users to specify the order in which the results should be returned.
+ORDER BY controls the sequence of query results, essential for presenting data in meaningful ways.
 
-```sql
-SELECT column1, column2
-FROM table_name
-ORDER BY column1 ASC, column2 DESC;
+```sql title="Advanced sorting for business reports"
+-- Customer ranking by multiple criteria
+SELECT 
+    c.customer_id,
+    c.first_name,
+    c.last_name,
+    c.account_tier,
+    COUNT(o.order_id) AS total_orders,
+    SUM(o.total_amount) AS total_spent,
+    MAX(o.order_date) AS last_order_date
+FROM customers c
+LEFT JOIN orders o ON c.customer_id = o.customer_id
+GROUP BY c.customer_id, c.first_name, c.last_name, c.account_tier
+ORDER BY 
+    c.account_tier DESC,  -- Platinum, Gold, Silver, Bronze
+    total_spent DESC,     -- Highest spenders first
+    last_order_date DESC, -- Most recent activity first
+    c.last_name ASC;      -- Alphabetical by last name
+
+-- Product inventory management with complex sorting
+SELECT 
+    product_id,
+    product_name,
+    category,
+    price,
+    stock_quantity,
+    CASE 
+        WHEN stock_quantity = 0 THEN 1      -- Out of stock (highest priority)
+        WHEN stock_quantity <= 10 THEN 2    -- Low stock
+        WHEN stock_quantity <= 50 THEN 3    -- Normal stock
+        ELSE 4                              -- High stock (lowest priority)
+    END AS stock_priority,
+    (price - cost_price) AS profit_margin
+FROM products
+WHERE is_active = TRUE
+ORDER BY 
+    stock_priority ASC,     -- Critical stock issues first
+    profit_margin DESC,     -- High margin products first
+    category ASC,           -- Group by category
+    product_name ASC;       -- Alphabetical within category
 ```
 
-In this example, `column1` and `column2` are the columns used to sort the results from the `table_name`. The `ASC` keyword specifies ascending order, while `DESC` specifies descending order.
+#### Dynamic Sorting for Reports
 
-This would be used to retrieve a list of customers sorted by their last names in ascending order and their first names in descending order, or to sort products by price in ascending order.
+```sql title="Flexible sorting for different business perspectives"
+-- Sales performance with conditional sorting
+SELECT 
+    DATE(o.order_date) AS sale_date,
+    COUNT(o.order_id) AS daily_orders,
+    SUM(o.total_amount) AS daily_revenue,
+    AVG(o.total_amount) AS avg_order_value,
+    COUNT(DISTINCT o.customer_id) AS unique_customers
+FROM orders o
+WHERE o.order_status = 'Completed'
+  AND o.order_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+GROUP BY DATE(o.order_date)
+ORDER BY 
+    CASE 
+        WHEN DAYOFWEEK(sale_date) IN (1, 7) THEN 1  -- Weekend days first
+        ELSE 2                                       -- Weekdays second
+    END,
+    daily_revenue DESC,  -- Highest revenue days first
+    sale_date DESC;      -- Most recent first
+
+-- Customer communication prioritization
+SELECT 
+    c.customer_id,
+    c.first_name,
+    c.last_name,
+    c.email,
+    c.status,
+    COALESCE(SUM(o.total_amount), 0) AS lifetime_value,
+    COALESCE(MAX(o.order_date), c.registration_date) AS last_activity,
+    DATEDIFF(NOW(), COALESCE(MAX(o.order_date), c.registration_date)) AS days_inactive
+FROM customers c
+LEFT JOIN orders o ON c.customer_id = o.customer_id
+WHERE c.status = 'Active'
+  AND c.marketing_consent = TRUE
+GROUP BY c.customer_id, c.first_name, c.last_name, c.email, c.status, c.registration_date
+ORDER BY 
+    CASE 
+        WHEN days_inactive BETWEEN 30 AND 90 THEN 1   -- At-risk customers (highest priority)
+        WHEN lifetime_value > 1000 THEN 2             -- High-value customers
+        WHEN days_inactive > 180 THEN 3               -- Win-back candidates
+        ELSE 4                                        -- Regular customers
+    END,
+    lifetime_value DESC,
+    last_activity DESC;
+```
