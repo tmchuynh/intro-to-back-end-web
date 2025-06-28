@@ -26,7 +26,7 @@ import Resources from "../components/Resources";
 
 export const chapters = [
   {
-    href: "/introduction-to-back-end",
+    href: "/fund-introduction-to-back-end",
     title: "Introduction to Back-end",
     description:
       "Server-side programming, architecture, and environment setup.",
@@ -35,7 +35,7 @@ export const chapters = [
     ctaText: "Start Here",
   },
   {
-    href: "/foundation",
+    href: "/fund-foundation",
     title: "Web Server Fundamentals",
     description: "HTTP protocol, RESTful services, and API design basics.",
     bgColor: "secondary",
@@ -43,7 +43,7 @@ export const chapters = [
     ctaText: "Learn Servers",
   },
   {
-    href: "/version-control",
+    href: "/db-version-control-fundamentals",
     title: "Version Control",
     description:
       "Git fundamentals, branching strategies, and collaborative development.",
@@ -52,15 +52,15 @@ export const chapters = [
     ctaText: "Master Git",
   },
   {
-    href: "/package-managers",
-    title: "Package Managers",
-    description: "NPM, dependency management, and package.json configuration.",
+    href: "/fund-back-end-architecture",
+    title: "Back-end Architecture",
+    description: "System design, scalability, and architectural patterns.",
     bgColor: "accent",
     icon: FaTools,
-    ctaText: "Manage Dependencies",
+    ctaText: "Build Architecture",
   },
   {
-    href: "/principles",
+    href: "/adv-software-principles",
     title: "Software Design Principles",
     description: "SOLID principles, design patterns, and clean code practices.",
     bgColor: "tertiary",
@@ -68,7 +68,7 @@ export const chapters = [
     ctaText: "Code Better",
   },
   {
-    href: "/database-design",
+    href: "/db-getting-started-with-database-design",
     title: "Database Design",
     description: "Schema design, normalization, and relationship modeling.",
     bgColor: "secondary",
@@ -76,7 +76,7 @@ export const chapters = [
     ctaText: "Design Schemas",
   },
   {
-    href: "/transaction-models",
+    href: "/db-transaction-models",
     title: "ACID & BASE",
     description: "Transaction management, consistency models, and properties.",
     bgColor: "secondary",
@@ -84,7 +84,7 @@ export const chapters = [
     ctaText: "Understand Transactions",
   },
   {
-    href: "/data-warehousing",
+    href: "/db-data-warehousing",
     title: "Data Warehousing",
     description: "ETL processes, data modeling, and business intelligence.",
     bgColor: "accent",
@@ -92,7 +92,7 @@ export const chapters = [
     ctaText: "Process Data",
   },
   {
-    href: "/introduction-to-databases",
+    href: "/db-different-databases-and-their-foundational-concepts",
     title: "Database Types",
     description: "Relational, NoSQL, GraphQL, and selection criteria.",
     bgColor: "primary",
@@ -100,7 +100,7 @@ export const chapters = [
     ctaText: "Choose Databases",
   },
   {
-    href: "/mySQL",
+    href: "/sql-mySQL",
     title: "MySQL",
     description: "Query optimization, indexing, and administration.",
     bgColor: "secondary",
@@ -108,7 +108,7 @@ export const chapters = [
     ctaText: "Master MySQL",
   },
   {
-    href: "/mongoDB",
+    href: "/nosql-mongoDB",
     title: "MongoDB",
     description: "NoSQL database fundamentals, schema design, and queries.",
     bgColor: "tertiary",
@@ -116,7 +116,7 @@ export const chapters = [
     ctaText: "Learn MongoDB",
   },
   {
-    href: "/redis",
+    href: "/nosql-redis",
     title: "Redis",
     description: "In-memory data structure store, caching, and pub/sub.",
     bgColor: "secondary",
@@ -124,7 +124,7 @@ export const chapters = [
     ctaText: "Use Redis",
   },
   {
-    href: "/data-storage",
+    href: "/db-data-storage",
     title: "Data Storage",
     description: "Storage systems, file systems, and caching strategies.",
     bgColor: "sidebar-active-text",
@@ -132,7 +132,7 @@ export const chapters = [
     ctaText: "Store Data",
   },
   {
-    href: "/graphQL",
+    href: "/spec-graphQL",
     title: "GraphQL",
     description: "Schema definition, resolvers, and API implementation.",
     bgColor: "sidebar-text",
@@ -140,23 +140,23 @@ export const chapters = [
     ctaText: "Query Efficiently",
   },
   {
-    href: "/docker",
+    href: "/adv-docker",
     title: "Docker",
-    description: "Docker fundamentals, Kubernetes, and deployment strategies.",
+    description: "Docker fundamentals, containerization, and deployment.",
     bgColor: "secondary",
     icon: FaDocker,
     ctaText: "Containerize",
   },
   {
-    href: "/kubernetes",
+    href: "/adv-kubernetes",
     title: "Kubernetes",
     description: "Container orchestration, scaling, and management.",
     bgColor: "tertiary",
     icon: FaDocker,
-    ctaText: "Containerize",
+    ctaText: "Orchestrate",
   },
   {
-    href: "/quality-security-performance/testing",
+    href: "/adv-quality-security-performance",
     title: "Testing",
     description: "Unit, integration, performance testing, and automation.",
     bgColor: "accent",
@@ -164,7 +164,7 @@ export const chapters = [
     ctaText: "Test Everything",
   },
   {
-    href: "/quality-security-performance/security",
+    href: "/adv-quality-security-performance",
     title: "Security",
     description: "Authentication, authorization, and security best practices.",
     bgColor: "secondary",
@@ -172,7 +172,7 @@ export const chapters = [
     ctaText: "Secure Apps",
   },
   {
-    href: "/quality-security-performance/performance",
+    href: "/adv-quality-security-performance",
     title: "Performance",
     description: "Optimization, scalability, monitoring, and load balancing.",
     bgColor: "sidebar-text",
@@ -212,21 +212,25 @@ They will be in the following format:
 
 | Priority   | Action                                                                                                               | Purpose              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------- | -------------------- |
-| **High**   | [Learn about relational databases](/db-different-databases-and-their-foundational-concepts/relational-databases)     | Practical experience |
-| **Medium** | [Reviewing Version Control](/db-version-control-fundamentals/git-fundamentals)                                       | Essential tooling    |
-| **Low**    | [Explore specific database categories](/db-different-databases-and-their-foundational-concepts/relational-databases) | Practical experience |
+| **High**   | [Learn about relational databases](/sql-introduction-to-relational-databases)     | Practical experience |
+| **Medium** | [Reviewing Version Control](/db-version-control-fundamentals)                                       | Essential tooling    |
+| **Low**    | [Explore specific database categories](/db-different-databases-and-their-foundational-concepts) | Practical experience |
 
 ### Optional Actions
 
 | Action                                                                                                            | Purpose         |
 | ----------------------------------------------------------------------------------------------------------------- | --------------- |
-| [Explore Git and GitHub Tools and Resources](/db-version-control-fundamentals/git-and-GitHub-tools-and-resources) | Practical tools |
+| [Explore Git and GitHub Tools and Resources](/db-version-control-fundamentals) | Practical tools |
 
 </blockquote>
 
 At any point, you can revisit this curriculum page to see the entire course outline at a glance. This makes it easy to check your progress, plan your learning, or revisit earlier topics when you need a refresher. The curriculum is laid out in a logical sequence, so the first recommended action in each “Next Steps” section will always point you to the most critical topic for your current stage—helping you build a strong foundation before tackling more advanced subjects.
 
 This structured approach helps you avoid the overwhelm that often comes with trying to navigate the vast sea of online resources alone. By following a clear, thoughtfully designed progression, you can stay focused, motivated, and confident that you’re investing your time effectively in building practical, job-ready skills.
+
+##### NOTE 
+
+> The "Next Steps" sections will assume you are following the course in order, so they will always point to the next logical topic based on the current module. If you choose to skip around, you may need to adjust your path accordingly.
 
 Follow our structured learning path designed to build your back-end skills progressively:
 
@@ -268,7 +272,7 @@ Beyond the main curriculum, we provide supplementary resources to enhance your l
 
 <div className="gap-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mt-6">
   <Link
-    href="/version-control"
+    href="/db-version-control-fundamentals"
     className="group flex items-center  hover:shadow-md shadow-sm p-4 border border-gray-200 dark:border-gray-700 rounded-lg no-underline transition-all duration-200"
   >
     <div className="flex items-center justify-center bg-accent text-background mr-3 rounded-lg h-10 w-10">
@@ -282,7 +286,7 @@ Beyond the main curriculum, we provide supplementary resources to enhance your l
   </Link>
   
   <Link
-    href="/introduction-to-databases"
+    href="/db-different-databases-and-their-foundational-concepts"
     className="group flex items-center  hover:shadow-md p-4 border border-gray-200 dark:border-gray-700 rounded-lg no-underline transition-all duration-200"
   >
     <div className="flex items-center justify-center bg-primary text-background mr-3 rounded-lg h-10 w-10">
@@ -296,7 +300,7 @@ Beyond the main curriculum, we provide supplementary resources to enhance your l
   </Link>
 
 <Link
-  href="/docker"
+  href="/adv-docker"
   className="group flex items-center  hover:shadow-md p-4 border border-gray-200 dark:border-gray-700 rounded-lg no-underline transition-all duration-200"
 >
   <div className="flex items-center justify-center bg-secondary text-background mr-3 rounded-lg h-10 w-10">
@@ -314,7 +318,7 @@ Beyond the main curriculum, we provide supplementary resources to enhance your l
 </Link>
 
 <Link
-  href="/quality-security-performance/security"
+  href="/adv-quality-security-performance"
   className="group flex items-center  hover:shadow-md p-4 border border-gray-200 dark:border-gray-700 rounded-lg no-underline transition-all duration-200"
 >
   <div className="flex items-center justify-center bg-secondary text-background mr-3 rounded-lg h-10 w-10">
@@ -332,7 +336,7 @@ Beyond the main curriculum, we provide supplementary resources to enhance your l
 </Link>
 
 <Link
-  href="/quality-security-performance/performance"
+  href="/adv-quality-security-performance"
   className="group flex items-center  hover:shadow-md p-4 border border-gray-200 dark:border-gray-700 rounded-lg no-underline transition-all duration-200"
 >
   <div className="flex items-center justify-center bg-sidebar-text text-background mr-3 rounded-lg h-10 w-10">
@@ -350,7 +354,7 @@ Beyond the main curriculum, we provide supplementary resources to enhance your l
 </Link>
 
   <Link
-    href="/quality-security-performance/testing"
+    href="/adv-quality-security-performance"
     className="group flex items-center  hover:shadow-md p-4 border border-gray-200 dark:border-gray-700 rounded-lg no-underline transition-all duration-200"
   >
     <div className="flex items-center justify-center bg-sidebar-active-text text-background mr-3 rounded-lg h-10 w-10">
@@ -417,7 +421,7 @@ Back-end development is the backbone of modern web applications and one of the m
 
 Ready to begin your back-end development journey? Here's how to get the most out of this course:
 
-1. Start with Foundations - Begin with [Introduction to Back-end](/introduction-to-back-end) to understand server-side fundamentals
+1. Start with Foundations - Begin with [Introduction to Back-end](/fund-introduction-to-back-end) to understand server-side fundamentals
 2. Master the Basics - Learn HTTP, RESTful services, and API design principles
 3. Learn Version Control - Master Git for collaborative development and code management
 4. Understand Databases - Dive deep into database design, SQL, and data management
@@ -432,7 +436,7 @@ Begin your back-end development journey today! Whether you're completely new to 
 
 <div className="mt-8 flex items-center">
   <Button
-    href="/introduction-to-back-end"
+    href="/fund-introduction-to-back-end"
     variant="text"
     className="group font-medium text-primary-600 text-sm hover:text-primary dark:hover:text-primary-300 dark:text-primary-400 flex items-center  transition-all duration-200"
   >
