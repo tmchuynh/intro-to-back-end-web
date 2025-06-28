@@ -4,22 +4,6 @@ import BackToTop from "@/components/BackToTop";
 
 ## Table of Contents
 
-- [Introduction to HTTP Protocol](#introduction-to-http-protocol)
-- [Key Concepts of HTTP](#key-concepts-of-http)
-- [HTTP Architecture and Flow](#http-architecture-and-flow)
-- [Importance of HTTP in Web Development](#importance-of-http-in-web-development)
-- [The Role of HTTP in APIs](#the-role-of-http-in-apis)
-- [HTTP Methods](#http-methods)
-- [HTTP Status Codes](#http-status-codes)
-- [HTTP Headers](#http-headers)
-- [RESTful API Design with HTTP](#restful-api-design-with-http)
-- [Caching Strategies](#caching-strategies)
-- [Security Considerations](#security-considerations)
-- [Performance Optimization](#performance-optimization)
-- [Best Practices](#best-practices)
-- [Common Pitfalls and Solutions](#common-pitfalls-and-solutions)
-- [Next Steps](#next-steps)
-
 ## Introduction to HTTP Protocol
 
 HTTP (Hypertext Transfer Protocol) is the foundation of data communication on the World Wide Web and serves as the backbone for modern web applications and APIs. Originally designed in the early 1990s by Tim Berners-Lee, HTTP has evolved through several versions (HTTP/1.0, HTTP/1.1, HTTP/2, and HTTP/3) to become the primary protocol for transmitting hypertext and other data across the internet.
@@ -34,7 +18,7 @@ HTTP operates on a stateless request-response model where a client (web browser,
 
 HTTP Request Structure:
 
-```
+```bash
 Method URI HTTP-Version
 Headers
 (blank line)
@@ -43,7 +27,7 @@ Body (optional)
 
 HTTP Response Structure:
 
-```
+```bash
 HTTP-Version Status-Code Reason-Phrase
 Headers
 (blank line)
@@ -217,7 +201,7 @@ HTTP enables several important API design patterns:
 
 Resource-Oriented Design:
 
-```
+```bash
 GET /api/users          # Retrieve all users
 GET /api/users/123      # Retrieve specific user
 POST /api/users         # Create new user
@@ -228,7 +212,7 @@ DELETE /api/users/123   # Delete user
 
 Nested Resources:
 
-```
+```bash
 GET /api/users/123/orders       # Get orders for specific user
 POST /api/users/123/orders      # Create order for user
 GET /api/users/123/orders/456   # Get specific order for user
@@ -249,7 +233,7 @@ Accept-Encoding: gzip, deflate
 
 Response Headers:
 
-```
+```bash
 Content-Type: application/json; charset=utf-8
 Content-Encoding: gzip
 Cache-Control: public, max-age=3600
@@ -2031,4 +2015,38 @@ Optimize N+1 query problems:
 
 ```sql
 -- Bad: N+1 queries (one for users, then one for user
+
+-- orders)
+SELECT u.id, u.name, o.id as order_id
+FROM users u
+LEFT JOIN orders o ON u.id = o.user_id
+WHERE u.id IN (1, 2, 3);
+-- Good: Single query with JOIN
+SELECT u.id, u.name, array_agg(o.id) as order_ids
+FROM users u
+LEFT JOIN orders o ON u.id = o.user_id
+WHERE u.id IN (1, 2, 3)
+GROUP BY u.id, u.name;
 ```
+
+Optimize query performance with indexing:
+
+```sql
+-- Create index on frequently queried fields
+CREATE INDEX idx_users_email ON users (email);
+-- Use EXPLAIN to analyze query performance
+EXPLAIN ANALYZE
+SELECT * FROM users WHERE email = 'someEmail@sample.com';
+```
+
+## Next Steps
+
+### Immediate Actions
+
+| Priority   | Action                                                           | Purpose                                                            |
+| ---------- | ---------------------------------------------------------------- | ------------------------------------------------------------------ |
+| **High**   | [Web Server Basics](/fund-foundation/web-server-basics)          | Learning about web server roles                                    |
+| **High**   | [RESTful Services](/fund-foundation/RESTful-services)            | Exploring RESTful API design                                       |
+| **Medium** | [Database Selection Criteria](/fund-foundation/RESTful-services) | Introduction to database categories and performance considerations |
+
+<BackToTop />
