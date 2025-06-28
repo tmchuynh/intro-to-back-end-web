@@ -1,0 +1,198 @@
+import BackToTop from "@/components/BackToTop";
+
+# Database Normalization And Relationships
+
+## Table of Contents
+
+## Overview
+
+Database normalization and understanding relationships are fundamental concepts in relational database design. Normalization is the process of organizing data to reduce redundancy and improve data integrity, while relationships define how data in one table relates to data in another. Together, these concepts help create efficient, scalable, and maintainable databases.
+
+## Database Normalization
+
+Database normalization is a crucial process in database design that aims to reduce data redundancy and improve data integrity. It involves organizing the fields and tables of a relational database to minimize duplication of information. The process typically involves dividing large tables into smaller, related tables and defining relationships between them. This helps ensure that data is stored efficiently and can be retrieved easily without unnecessary duplication.Normalization is achieved through a series of steps known as normal forms, each with specific rules that must be followed. The most common normal forms are:
+
+- **First Normal Form (1NF)**: Ensures that each column contains atomic values and each record is unique.
+- **Second Normal Form (2NF)**: Builds on 1NF by ensuring that all non-key attributes are fully functionally dependent on the primary key.
+- **Third Normal Form (3NF)**: Further refines 2NF by ensuring that all attributes are only dependent on the primary key and not on other non-key attributes.
+- **Boyce-Codd Normal Form (BCNF)**: A stronger version of 3NF that addresses certain types of anomalies not handled by 3NF.
+- **Fourth Normal Form (4NF)**: Deals with multi-valued dependencies, ensuring that no table contains two or more independent multi-valued facts about an entity.
+- **Fifth Normal Form (5NF)**: Ensures that all join dependencies are implied by the candidate keys, allowing for the decomposition of tables without losing information.
+- **Sixth Normal Form (6NF)**: Deals with temporal data and allows for the representation of time-varying data in a normalized form.
+
+Normalization helps eliminate data anomalies, such as insertion, update, and deletion anomalies, which can lead to inconsistent data. By organizing data into well-defined tables and relationships, normalization enhances data integrity, reduces redundancy, and improves query performance. However, it is essential to balance normalization with performance considerations, as overly normalized databases can lead to complex queries and slower performance in some cases.
+
+![Database Normalization Process](https://miro.medium.com/v2/resize:fit:724/1*Aai9p1Lp5kQiLeG22eE5Ng.png)
+
+### First Normal Form (1NF)
+
+First Normal Form (1NF) is the foundational step in the normalization process. It requires that each column in a table contains atomic values, meaning that each value is indivisible. Additionally, each record in the table must be unique, which is typically enforced by a primary key.
+1NF helps eliminate repeating groups and ensures that each piece of data is stored in its own column. This leads to a more organized and structured database, making it easier to query and maintain.
+
+### Second Normal Form (2NF)
+
+Second Normal Form (2NF) builds upon First Normal Form by ensuring that all non-key attributes are fully functionally dependent on the primary key. This means that if a table has a composite primary key (a primary key consisting of multiple columns), all non-key attributes must depend on the entire composite key, not just part of it.
+2NF eliminates partial dependencies, where a non-key attribute depends only on part of a composite key. This helps reduce redundancy and ensures that each piece of data is stored in the appropriate table.
+
+### Third Normal Form (3NF)
+
+Third Normal Form (3NF) further refines the database structure by ensuring that all attributes are only dependent on the primary key and not on other non-key attributes. In other words, there should be no transitive dependencies, where a non-key attribute depends on another non-key attribute.
+3NF helps eliminate redundancy and ensures that each piece of data is stored in the most appropriate table. This leads to a more efficient database design, as it reduces the chances of data anomalies and inconsistencies.
+
+### Boyce-Codd Normal Form (BCNF)
+
+Boyce-Codd Normal Form (BCNF) is a stronger version of Third Normal Form that addresses certain types of anomalies not handled by 3NF. In BCNF, for every functional dependency, the left-hand side must be a superkey. This means that if a non-key attribute determines another non-key attribute, the determining attribute must be a superkey.
+BCNF helps ensure that the database structure is free from redundancy and anomalies, providing a more robust design. It is particularly useful in cases where there are multiple candidate keys, and it helps maintain data integrity by enforcing stricter rules on functional dependencies.
+
+![Normalized Database vs De-Normalized Database](https://datatas.com/wp-content/uploads/2024/12/what-is-database-normalization-and-why-is-it-important.png)
+
+### Fourth Normal Form (4NF)
+
+Fourth Normal Form (4NF) deals with multi-valued dependencies, which occur when a table contains two or more independent multi-valued facts about an entity. In 4NF, a table should not contain two or more independent multi-valued facts about an entity. Instead, each multi-valued fact should be stored in a separate table.
+4NF helps eliminate redundancy and ensures that each piece of data is stored in the most appropriate table. This leads to a more organized and structured database, making it easier to query and maintain. It also helps prevent anomalies that can arise from having multiple independent multi-valued facts in a single table.
+
+### Fifth Normal Form (5NF)
+
+Fifth Normal Form (5NF) ensures that all join dependencies are implied by the candidate keys, allowing for the decomposition of tables without losing information. In 5NF, a table should not contain any join dependencies that are not implied by the candidate keys. This means that if a table can be decomposed into smaller tables without losing information, it should be done.
+5NF helps ensure that the database structure is free from redundancy and anomalies, providing a more robust design. It is particularly useful in cases where there are complex relationships between entities, and it helps maintain data integrity by enforcing stricter rules on join dependencies. By decomposing tables into smaller, more manageable pieces, 5NF allows for more efficient queries and easier maintenance of the database.
+
+### Sixth Normal Form (6NF)
+
+Sixth Normal Form (6NF) is a relatively advanced normalization form that deals with temporal data and allows for the representation of time-varying data in a normalized form. In 6NF, a table should be decomposed into smaller tables that represent different time periods or states of the data. This means that if a table contains data that changes over time, it should be split into multiple tables, each representing a specific time period or state.
+6NF helps eliminate redundancy and ensures that each piece of data is stored in the most appropriate table. This leads to a more organized and structured database, making it easier to query and maintain. It also helps prevent anomalies that can arise from having time-varying data in a single table. By representing temporal data in a normalized form, 6NF allows for more efficient queries and easier maintenance of the database, especially in applications that require tracking changes over time, such as financial systems or historical records.
+
+![Database Normalization Spliting Large Database Table](https://miro.medium.com/v2/resize:fit:927/0*zmKwN4cd5FG2JwL1.png)
+
+## Relationships in Databases
+
+In relational databases, relationships define how data in one table relates to data in another. Understanding these relationships is essential for effective database design and normalization. The main types of relationships are:
+
+- **One-to-One (1:1)**: Each record in Table A is related to one and only one record in Table B, and vice versa. This relationship is often used to split a table into two for better organization or security.
+- **One-to-Many (1:N)**: A record in Table A can be related to multiple records in Table B, but each record in Table B is related to only one record in Table A. This is the most common type of relationship and is used to represent entities that can have multiple instances, such as a customer having multiple orders.
+- **Many-to-One (N:1)**: This is the inverse of a one-to-many relationship, where multiple records in Table A can relate to a single record in Table B. This is often used to represent relationships where many instances of one entity relate to a single instance of another, such as multiple employees working in one department.
+- **Many-to-Many (M:N)**: Records in Table A can relate to multiple records in Table B, and records in Table B can relate to multiple records in Table A. This relationship is typically implemented using a junction table that contains foreign keys referencing the primary keys of both related tables. An example is students enrolling in multiple courses, where each course can have multiple students.
+
+These relationships are established using foreign keys, which are fields in one table that reference the primary key of another table. Properly defining relationships helps maintain data integrity, enforce referential integrity, and enable complex queries that join data from multiple tables.
+
+##### NOTE
+
+> Linked in the optional actions table at the bottom of the page, there is a section for [documentation and schema visualization tools](/util-documentation-and-schema-visualization-tools) that can help you create ERDs. These tools often provide features for collaboration, version control, and integration with database management systems, making it easier to maintain and update the data model as requirements evolve.
+
+### One-to-One (1:1) Relationships
+
+A one-to-one relationship in a database occurs when each record in Table A is related to one and only one record in Table B, and vice versa. This type of relationship is often used to split a table into two for better organization or security. For example, a user profile table might be split into a user table and a user details table, where each user has exactly one set of details.
+
+### One-to-Many (1:N) Relationships
+
+A one-to-many relationship is the most common type of relationship in databases. In this relationship, a record in Table A can be related to multiple records in Table B, but each record in Table B is related to only one record in Table A. This is often used to represent entities that can have multiple instances, such as a customer having multiple orders. For example, a customer table can have a one-to-many relationship with an orders table, where each customer can have multiple orders, but each order belongs to only one customer.
+
+### Many-to-One (N:1) Relationships
+
+A many-to-one relationship is the inverse of a one-to-many relationship. In this relationship, multiple records in Table A can relate to a single record in Table B. This is often used to represent relationships where many instances of one entity relate to a single instance of another, such as multiple employees working in one department. For example, an employee table can have a many-to-one relationship with a department table, where multiple employees can belong to the same department, but each employee belongs to only one department.
+
+### Many-to-Many (M:N) Relationships
+
+A many-to-many relationship occurs when records in Table A can relate to multiple records in Table B, and records in Table B can relate to multiple records in Table A. This relationship is typically implemented using a junction table that contains foreign keys referencing the primary keys of both related tables. An example is students enrolling in multiple courses, where each course can have multiple students. In this case, a junction table called "enrollments" can be created, which contains foreign keys referencing both the students and courses tables. This allows for efficient querying and management of the many-to-many relationship, enabling operations such as retrieving all courses a student is enrolled in or all students enrolled in a specific course.
+
+### Table Joins
+
+Table joins are a fundamental aspect of relational databases that allow you to combine data from two or more tables based on related columns. Joins are essential for retrieving related data efficiently and are often used in conjunction with relationships defined between tables. The most common types of joins include:
+
+- **Inner Join**: Returns only the rows that have matching values in both tables. This is the most common type of join and is used to retrieve related data from multiple tables.
+- **Left Join (or Left Outer Join)**: Returns all rows from the left table and the matched rows from the right table. If there is no match, NULL values are returned for columns from the right table. This is useful when you want to retrieve all records from one table, regardless of whether there are matching records in the other table.
+- **Right Join (or Right Outer Join)**: Returns all rows from the right table and the matched rows from the left table. If there is no match, NULL values are returned for columns from the left table. This is similar to a left join but focuses on the right table.
+- **Full Join (or Full Outer Join)**: Returns all rows from both tables, with NULL values in places where there is no match. This join is useful when you want to retrieve all records from both tables, regardless of whether there are matching records in either table.
+- **Cross Join**: Returns the Cartesian product of both tables, meaning it combines every row from the first table with every row from the second table. This type of join is less commonly used but can be useful in specific scenarios where you need to generate combinations of records from both tables.
+
+#### Inner Join
+
+An inner join is a type of join that returns only the rows that have matching values in both tables. It is the most common type of join used in relational databases and is essential for retrieving related data efficiently. When performing an inner join, you specify the columns from each table that should be compared to find matching records.
+For example, consider two tables: `customers` and `orders`. An inner join between these tables would return only the customers who have placed orders, along with the details of those orders. The result set would include only the rows where there is a match between the `customer_id` in the `customers` table and the `customer_id` in the `orders` table. This allows you to retrieve relevant information from both tables while excluding any customers who have not placed orders.
+
+```sql title="Inner Join Example Using SQL"
+SELECT customers.customer_id, customers.name, orders.order_id, orders.amount
+FROM customers
+INNER JOIN orders ON customers.customer_id = orders.customer_id;
+```
+
+In this example, the inner join combines the `customers` and `orders` tables based on the `customer_id` column, returning only the rows where there is a match. The result set will include the customer ID, customer name, order ID, and order amount for each customer who has placed an order. Inner joins are powerful for retrieving related data and are commonly used in database queries to establish relationships between tables.
+
+#### Left Join
+
+A left join, also known as a left outer join, is a type of join that returns all rows from the left table and the matched rows from the right table. If there is no match, NULL values are returned for columns from the right table. This type of join is useful when you want to retrieve all records from one table, regardless of whether there are matching records in the other table.
+For example, consider two tables: `customers` and `orders`. A left join between these tables would return all customers, including those who have not placed any orders. For customers without orders, the order-related columns will contain NULL values. This allows you to see all customers and their associated orders, even if some customers have not made any purchases.
+
+```sql title="Left Join Example Using SQL"
+SELECT customers.customer_id, customers.name, orders.order_id, orders.amount
+FROM customers
+LEFT JOIN orders ON customers.customer_id = orders.customer_id;
+```
+
+In this example, the left join combines the `customers` and `orders` tables based on the `customer_id` column. The result set will include all customers, along with their order details. For customers who have not placed any orders, the `order_id` and `amount` columns will contain NULL values. Left joins are particularly useful for generating reports that include all records from one table while still providing related information from another table, even when there are no matches.
+
+#### Right Join
+
+A right join, also known as a right outer join, is a type of join that returns all rows from the right table and the matched rows from the left table. If there is no match, NULL values are returned for columns from the left table. This type of join is similar to a left join but focuses on the right table, ensuring that all records from the right table are included in the result set.
+For example, consider two tables: `products` and `sales`. A right join between these tables would return all sales records, including those that do not have corresponding product information.
+For sales without matching products, the product-related columns will contain NULL values. This allows you to see all sales records and their associated product details, even if some sales do not have matching products.
+
+```sql title="Right Join Example Using SQL"
+SELECT products.product_id, products.name, sales.sale_id, sales.amount
+FROM products
+RIGHT JOIN sales ON products.product_id = sales.product_id;
+```
+
+In this example, the right join combines the `products` and `sales` tables based on the `product_id` column. The result set will include all sales records, along with their product details. For sales that do not have matching products, the `product_id` and `name` columns will contain NULL values. Right joins are useful for generating reports that include all records from one table while still providing related information from another table, even when there are no matches.
+
+#### Full Join
+
+A full join, also known as a full outer join, is a type of join that returns all rows from both tables, with NULL values in places where there is no match. This type of join is useful when you want to retrieve all records from both tables, regardless of whether there are matching records in either table. It combines the results of both left and right joins, ensuring that all records from both tables are included in the result set.
+For example, consider two tables: `employees` and `departments`. A full join between these tables would return all employees and all departments, including those that do not have corresponding records in the other table. For employees without matching departments, the department-related columns will contain NULL values, and for departments without matching employees, the employee-related columns will contain NULL values. This allows you to see the complete picture of both employees and departments, even when there are no matches.
+
+```sql title="Full Join Example Using SQL"
+SELECT employees.employee_id, employees.name, departments.department_id, departments.name AS department_name
+FROM employees
+FULL JOIN departments ON employees.department_id = departments.department_id;
+```
+
+In this example, the full join combines the `employees` and `departments` tables based on the `department_id` column. The result set will include all employees and all departments, along with their associated details. For employees who do not belong to any department, the `department_id` and `department_name` columns will contain NULL values, and for departments that do not have any employees, the `employee_id` and `name` columns will contain NULL values. Full joins are particularly useful for generating comprehensive reports that include all records from both tables, providing a complete view of the data.
+
+#### Cross Join
+
+A cross join is a type of join that returns the Cartesian product of both tables, meaning it combines every row from the first table with every row from the second table. This type of join is less commonly used but can be useful in specific scenarios where you need to generate combinations of records from both tables. A cross join does not require any condition to match rows; instead, it simply pairs every row from the first table with every row from the second table, resulting in a potentially large result set.
+For example, consider two tables: `colors` and `shapes`. A cross join between these tables would return all possible combinations of colors and shapes, creating a result set that includes every color paired with every shape. This can be useful for generating test data or exploring combinations of attributes.
+
+```sql title="Cross Join Example Using SQL"
+SELECT colors.color, shapes.shape
+FROM colors
+CROSS JOIN shapes;
+```
+
+In this example, the cross join combines the `colors` and `shapes` tables, resulting in a result set that includes every color paired with every shape. The output will contain all possible combinations of colors and shapes, with each row representing a unique pairing. Cross joins can lead to large result sets, especially when both tables contain a significant number of records, so they should be used judiciously. They are particularly useful in scenarios where you need to explore all combinations of attributes or generate test data for analysis.
+
+## Benefits of Normalization and Relationships
+
+Normalization and understanding relationships in databases provide several benefits:
+
+- **Data Integrity**: Ensures that data is accurate, consistent, and free from anomalies.
+- **Reduced Redundancy**: Minimizes duplicate data, leading to more efficient storage and easier maintenance.
+- **Improved Query Performance**: Well-structured tables and relationships can lead to more efficient queries, as the database engine can optimize access patterns.
+- **Easier Maintenance**: Changes to the database schema can be made with minimal impact on existing data and queries.
+- **Scalability**: A normalized database can handle larger datasets and more complex queries without performance degradation.
+
+## Next Steps
+
+### Immediate Actions
+
+| Priority | Action                                                                                                       | Purpose                                                      |
+| -------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------ |
+| **High** | [Database Schema Design and Migration](/db-getting-started-with-database-design/schema-design-and-migration) | Apply design patterns for scalable database architecture     |
+| **High** | [Relational Database Concepts](/db-different-databases-and-their-foundational-concepts/relational-databases) | Understand the foundational concepts of relational databases |
+
+### Optional Actions
+
+| Action                                                                                             | Purpose                                                           |
+| -------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| [Documentation and Schema Visualization Tools](/util-documentation-and-schema-visualization-tools) | Get hands-on experience with MySQL, a popular relational database |
+
+<BackToTop />
