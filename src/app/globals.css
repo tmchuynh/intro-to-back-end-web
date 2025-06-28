@@ -363,40 +363,40 @@ pre code.hljs {
   --background: oklch(100% 0 0);
   --foreground: oklch(0.1 0 0);
 
-  --primary: #581908;
+  --primary: oklch(31.392% 0.09654 35.512);
   --primary-foreground: oklch(100% 0 0);
-  --secondary: #1e40af;
+  --secondary: oklch(42.446% 0.18094 265.652);
   --secondary-foreground: oklch(100% 0 0);
-  --tertiary: #a3320b;
-  --teritary-foreground: oklch(0.1 0 0);
-  --accent: #e41818;
+  --tertiary: oklch(48.271% 0.15523 36.78);
+  --teritary-foreground: oklch(100% 0 0);
+  --accent: oklch(58.397% 0.2297 28.318);
   --accent-foreground: oklch(100% 0 0);
-  --destructive: #b91c1c;
+  --destructive: oklch(50.54% 0.19049 27.505);
 
-  --muted: #f9f9f9;
-  --muted-foreground: #6b7280;
+  --muted: oklch(98.212% 0.00011 271.152);
+  --muted-foreground: oklch(0.55 0.02 264.36 / 1);
 
-  --table-head: #7f1d1d;
-  --table-head-foreground: #f5f4f4;
-  --table-body: #faf9f6;
-  --table-body-foreground: #1f2937;
-  --table-hover: #f4f4f4;
+  --table-head: oklch(0.40 0.13 25.72 / 1);
+  --table-head-foreground: oklch(0.97 0 17.18 / 1);
+  --table-body: oklch(0.98 0 91.45 / 1);
+  --table-body-foreground: oklch(0.28 0.03 256.85 / 1);
+  --table-hover: oklch(0.97 0 0 / 1);
 
-  --code: #059669;
+  --code: oklch(59.598% 0.12741 163.254);
 
-  --sidebar-bg: #ffffff;
-  --sidebar-text: #b50505;
-  --sidebar-text-secondary: #6b7280;
-  --sidebar-hover-bg: #ffebeb;
-  --sidebar-active-bg: #850a0a;
-  --sidebar-active-text: #090909;
+  --sidebar-bg: oklch(1 0 0 / 1);
+  --sidebar-text: oklch(0.49 0.20 28.97 / 1);
+  --sidebar-text-secondary: oklch(0.55 0.02 264.36 / 1);
+  --sidebar-hover-bg: oklch(0.96 0.02 17.54 / 1);
+  --sidebar-active-bg: oklch(0.39 0.15 28.25 / 1);
+  --sidebar-active-text: oklch(0.14 0 0 / 1);
 
-  --nav-item-hover: #ffebeb;
-  --nav-item-active: #a3422f;
-  --nav-item-active-text: #f2ecec;
-  --nav-text-hover: #101010;
+  --nav-item-hover: oklch(0.96 0.02 17.54 / 1);
+  --nav-item-active: oklch(0.51 0.13 32.89 / 1);
+  --nav-item-active-text: oklch(0.95 0.01 17.27 / 1);
+  --nav-text-hover: oklch(0.17 0 0 / 1);
 
-  --border: #efece8;
+  --border: oklch(94.43% 0.00616 75.142);
 
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
@@ -438,43 +438,43 @@ pre code.hljs {
 }
 
 .dark {
-  --background: #050101;
+  --background: oklch(0.08 0.02 21.77 / 1);
   --foreground: oklch(0.95 0.01 20);
 
-  --primary: #911515;
+  --primary: oklch(42.34% 0.15818 27.348);
   --primary-foreground: oklch(0.1 0 0);
-  --secondary: #7ea5ed;
+  --secondary: oklch(71.988% 0.11551 262.354);
   --secondary-foreground: oklch(0.1 0 0);
-  --tertiary: #ba8080;
+  --tertiary: oklch(66.16% 0.07216 19.111);
   --teritary-foreground: oklch(0.1 0 0);
-  --accent: #c9cacc;
+  --accent: oklch(83.57% 0.00308 264.751);
   --accent-foreground: oklch(100% 0 0);
-  --destructive: #f87171;
+  --destructive: oklch(71.218% 0.16488 22.126);
 
-  --muted: #451a03;
-  --muted-foreground: #a3a3a3;
+  --muted: oklch(27.912% 0.07418 45.622);
+  --muted-foreground: oklch(0.72 0 0 / 1);
 
-  --table-head: #510202;
-  --table-head-foreground: #fef2f2;
-  --table-body: #090909;
-  --table-body-foreground: #f5f5f4;
-  --table-hover: #010000;
+  --table-head: oklch(0.28 0.11 28.65 / 1);
+  --table-head-foreground: oklch(0.97 0.01 17.38 / 1);
+  --table-body: oklch(0.14 0 0 / 1);
+  --table-body-foreground: oklch(0.97 0 106.42 / 1);
+  --table-hover: oklch(0.04 0.02 29.23 / 1);
 
-  --code: #10b981;
+  --code: oklch(69.018% 0.1483 162.268);
 
-  --sidebar-bg: #050101;
-  --sidebar-text: #c00606;
-  --sidebar-text-secondary: #a3a3a3;
-  --sidebar-hover-bg: #270202;
-  --sidebar-active-bg: #4f0000;
-  --sidebar-active-text: #dddfe3;
+  --sidebar-bg: oklch(0.08 0.02 21.77 / 1);
+  --sidebar-text: oklch(0.51 0.21 28.96 / 1);
+  --sidebar-text-secondary: oklch(0.72 0 0 / 1);
+  --sidebar-hover-bg: oklch(0.18 0.07 27.16 / 1);
+  --sidebar-active-bg: oklch(0.27 0.11 29.23 / 1);
+  --sidebar-active-text: oklch(0.90 0.01 264.53 / 1);
 
-  --nav-item-hover: #270202;
-  --nav-item-active: #780000;
-  --nav-item-active-text: #f2ecec;
-  --nav-text-hover: #f2ecec;
+  --nav-item-hover: oklch(0.18 0.07 27.16 / 1);
+  --nav-item-active: oklch(0.36 0.15 29.23 / 1);
+  --nav-item-active-text: oklch(0.95 0.01 17.27 / 1);
+  --nav-text-hover: oklch(0.95 0.01 17.27 / 1);
 
-  --border: #0e0e0e;
+  --border: oklch(16.376% 0.00002 271.152);
   --card: oklch(0.1 0.02 20);
   --card-foreground: oklch(0.9 0.02 20);
   --popover: oklch(0.12 0.03 20);
