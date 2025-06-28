@@ -29,6 +29,7 @@ const CATEGORY_PREFIXES = [
   "perf", // performance
   "dep", // deployment
   "proj", // projects
+  "spec", // specialized databases
 ];
 
 // Extract category from filename prefix and return both category and clean name
@@ -172,6 +173,7 @@ function categorizeNavigationItems(
     sql: [] as NavigationItem[],
     nosql: [] as NavigationItem[],
     databases: [] as NavigationItem[],
+    specialized: [] as NavigationItem[],
     projects: [] as NavigationItem[],
     utilities: [] as NavigationItem[],
     advanced: [] as NavigationItem[],
@@ -215,6 +217,8 @@ function categorizeNavigationItems(
             return "advanced";
           case "util":
             return "utilities";
+          case "spec": // specialized databases
+            return "specialized";
         }
       }
     }
@@ -263,6 +267,30 @@ function categorizeNavigationItems(
         return "nosql";
       }
 
+      // Check for specialized database sections
+      if (
+        path.includes("caching") ||
+        path.includes("redis") ||
+        path.includes("data-warehousing") ||
+        path.includes("warehouse") ||
+        path.includes("time-series") ||
+        path.includes("search") ||
+        path.includes("elasticsearch") ||
+        path.includes("graph") ||
+        path.includes("neo4j") ||
+        title.includes("caching") ||
+        title.includes("redis") ||
+        title.includes("warehouse") ||
+        title.includes("warehousing") ||
+        title.includes("time-series") ||
+        title.includes("search") ||
+        title.includes("elasticsearch") ||
+        title.includes("graph") ||
+        title.includes("neo4j")
+      ) {
+        return "specialized";
+      }
+
       // Check for core technology sections
       if (
         path.includes("database") ||
@@ -309,6 +337,27 @@ function categorizeNavigationItems(
       title.includes("sql")
     ) {
       return "sql";
+    } else if (
+      path.includes("caching") ||
+      path.includes("redis") ||
+      path.includes("data-warehousing") ||
+      path.includes("warehouse") ||
+      path.includes("time-series") ||
+      path.includes("search") ||
+      path.includes("elasticsearch") ||
+      path.includes("graph") ||
+      path.includes("neo4j") ||
+      title.includes("caching") ||
+      title.includes("redis") ||
+      title.includes("warehouse") ||
+      title.includes("warehousing") ||
+      title.includes("time-series") ||
+      title.includes("search") ||
+      title.includes("elasticsearch") ||
+      title.includes("graph") ||
+      title.includes("neo4j")
+    ) {
+      return "specialized";
     } else if (
       path.includes("mongodb") ||
       path.includes("redis") ||
@@ -409,6 +458,13 @@ function categorizeNavigationItems(
     sections.push({
       title: "Databases",
       items: categories.databases,
+    });
+  }
+
+  if (categories.specialized.length > 0) {
+    sections.push({
+      title: "Specialized Databases",
+      items: categories.specialized,
     });
   }
 
