@@ -6,7 +6,7 @@ import BackToTop from "@/components/BackToTop";
 
 ## Overview
 
-Load testing and benchmarking tools are essential for evaluating the performance, scalability, and reliability of applications and systems. These tools help identify bottlenecks, measure response times, and ensure that applications can handle expected user loads.
+Load testing and benchmarking tools are essential for evaluating the performance, scalability, and reliability of applications and systems. These tools help identify bottlenecks, measure response times, and# Reset statistics
 
 Effective load testing involves simulating real-world user behavior to assess how an application performs under various conditions. Benchmarking, on the other hand, focuses on comparing the performance of different systems or configurations to determine the best options for deployment.
 
@@ -29,6 +29,30 @@ It generates detailed reports that include metrics like average response time, s
 - **Detailed Reporting**: Generates comprehensive reports with metrics such as average response time, standard deviation, and query execution statistics.
 - **Configuration Testing**: Supports testing different MySQL configurations, such as varying the number of clients, query types, and database settings.
 
+#### Usage Example
+
+```bash
+# Basic benchmark with auto-generated data
+mysqlslap --user=root --password --host=localhost --concurrency=50 --iterations=10 --number-of-queries=1000 --auto-generate-sql
+
+# Custom query benchmark
+mysqlslap --user=root --password --host=localhost --concurrency=25 --iterations=5 --query="SELECT * FROM users WHERE id = RAND() * 1000" --create-schema=testdb
+
+# Benchmark with custom SQL file
+mysqlslap --user=root --password --host=localhost --concurrency=10 --iterations=3 --query=custom_queries.sql --create-schema=benchmarkdb
+
+# Compare different engines
+mysqlslap --user=root --password --host=localhost --concurrency=20 --iterations=5 --auto-generate-sql --engine=innodb,myisam
+
+# Detailed output with debugging
+mysqlslap --user=root --password --host=localhost --concurrency=15 --iterations=5 --auto-generate-sql --verbose --debug-info
+```
+
+#### Documentation
+
+- [mysqlslap Documentation](https://dev.mysql.com/doc/refman/8.0/en/mysqlslap.html)
+- [MySQL Performance Testing Guide](https://dev.mysql.com/doc/refman/8.0/en/performance-tuning.html)
+
 ### HammerDB
 
 HammerDB is an open-source database benchmarking tool that supports multiple database systems, including MySQL, PostgreSQL, Oracle, and SQL Server. It provides a graphical user interface (GUI) for creating and executing load tests, making it accessible to users with varying levels of expertise. HammerDB allows users to simulate realistic workloads by generating transactions based on industry-standard benchmarks like TPC-C and TPC-H.
@@ -42,6 +66,51 @@ It provides detailed performance metrics, including transactions per second (TPS
 - **Industry-Standard Benchmarks**: Supports industry-standard benchmarks like TPC-C and TPC-H for generating realistic workloads.
 - **Detailed Performance Metrics**: Generates comprehensive reports with metrics such as transactions per second (TPS), response times, and resource utilization.
 - **Distributed Testing**: Supports both single-node and distributed testing, allowing users to scale their tests across multiple servers to simulate high-load scenarios.
+
+#### Usage Example
+
+```bash
+# Download and install HammerDB
+wget https://github.com/TPC-Council/HammerDB/releases/download/v4.7/HammerDB-4.7-Linux.tar.gz
+tar -xzf HammerDB-4.7-Linux.tar.gz
+cd HammerDB-4.7
+
+# Run HammerDB GUI
+./hammerdb
+
+# Command line TPC-C benchmark for MySQL
+./hammerdbcli auto mysql_tpcc.tcl
+
+# Create TPC-C schema
+./hammerdbcli << EOF
+dbset db mysql
+dbset bm TPC-C
+diset connection mysql_host localhost
+diset connection mysql_port 3306
+diset tpcc mysql_user root
+diset tpcc mysql_pass password
+diset tpcc mysql_dbase tpcc
+buildschema
+EOF
+
+# Run TPC-C test
+./hammerdbcli << EOF
+dbset db mysql
+dbset bm TPC-C
+diset connection mysql_host localhost
+vuset logtotemp 1
+loadcomplete
+vuset vu 10
+vucreate
+vurun
+EOF
+```
+
+#### Documentation
+
+- [HammerDB Documentation](https://www.hammerdb.com/docs/)
+- [HammerDB User Guide](https://www.hammerdb.com/document.html)
+- [TPC-C Benchmark Guide](https://www.hammerdb.com/docs/ch03.html)
 
 ### MySQL Performance Schema
 
@@ -61,6 +130,51 @@ It provides a flexible and extensible framework for monitoring MySQL performance
 - **Real-Time Analysis**: Enables real-time monitoring of query performance, resource usage, and system health.
 - **Extensible Framework**: Provides a flexible framework for monitoring MySQL performance, allowing users to customize the data collected and analyzed.
 
+#### Usage Example
+
+```sql
+-- Enable Performance Schema (in my.cnf)
+-- performance_schema = ON
+
+-- Check if Performance Schema is enabled
+SELECT @@performance_schema;
+
+-- View current events and waits
+SELECT EVENT_NAME, COUNT_STAR, SUM_TIMER_WAIT/1000000000 AS total_time_ms
+FROM performance_schema.events_waits_summary_global_by_event_name
+WHERE COUNT_STAR > 0
+ORDER BY SUM_TIMER_WAIT DESC
+LIMIT 10;
+
+-- Analyze query performance
+SELECT SCHEMA_NAME, DIGEST_TEXT, COUNT_STAR, 
+       AVG_TIMER_WAIT/1000000000 AS avg_time_ms,
+       SUM_TIMER_WAIT/1000000000 AS total_time_ms
+FROM performance_schema.events_statements_summary_by_digest
+ORDER BY SUM_TIMER_WAIT DESC
+LIMIT 10;
+
+-- Monitor table I/O
+SELECT OBJECT_SCHEMA, OBJECT_NAME, COUNT_READ, COUNT_WRITE,
+       SUM_TIMER_READ/1000000000 AS read_time_ms,
+       SUM_TIMER_WRITE/1000000000 AS write_time_ms
+FROM performance_schema.table_io_waits_summary_by_table
+WHERE COUNT_STAR > 0
+ORDER BY SUM_TIMER_WAIT DESC
+LIMIT 10;
+
+-- Check connection statistics
+SELECT USER, HOST, CURRENT_CONNECTIONS, TOTAL_CONNECTIONS
+FROM performance_schema.accounts
+WHERE TOTAL_CONNECTIONS > 0;
+```
+
+#### Documentation
+
+- [MySQL Performance Schema Documentation](https://dev.mysql.com/doc/refman/8.0/en/performance-schema.html)
+- [Performance Schema Quick Start](https://dev.mysql.com/doc/refman/8.0/en/performance-schema-quick-start.html)
+- [Performance Schema Query Profiling](https://dev.mysql.com/doc/refman/8.0/en/performance-schema-statement-tables.html)
+
 ### pt-query-digest
 
 pt-query-digest is a powerful tool from the Percona Toolkit that analyzes MySQL query logs to provide insights into query performance and resource utilization. It processes slow query logs, general query logs, and binary logs, allowing users to identify slow or inefficient queries that may be impacting database performance. pt-query-digest aggregates query execution statistics, such as execution time, lock time, and number of rows examined, providing a comprehensive view of query performance.
@@ -76,6 +190,50 @@ It provides insights into query execution plans, allowing users to identify pote
 - **Detailed Reporting**: Generates detailed reports that highlight the most resource-intensive queries, helping users identify performance bottlenecks and optimize their MySQL databases.
 - **Multiple Output Formats**: Supports various output formats, including text, HTML, and JSON, making it easy to integrate with other monitoring and reporting tools.
 - **Query Pattern Analysis**: Analyzes query patterns, such as the frequency of specific queries and their impact on overall system performance, providing insights into query execution plans and potential optimizations.
+
+#### Usage Example
+
+```bash
+# Install Percona Toolkit
+wget https://www.percona.com/downloads/percona-toolkit/LATEST/binary/redhat/7/x86_64/percona-toolkit-3.5.0-1.el7.x86_64.rpm
+sudo rpm -ivh percona-toolkit-3.5.0-1.el7.x86_64.rpm
+
+# Or on Ubuntu/Debian
+sudo apt-get install percona-toolkit
+
+# Analyze slow query log
+pt-query-digest /var/lib/mysql/slow.log
+
+# Analyze and save to file
+pt-query-digest /var/lib/mysql/slow.log > slow-query-analysis.txt
+
+# Analyze specific time period
+pt-query-digest --since='2023-12-01 00:00:00' --until='2023-12-01 23:59:59' /var/lib/mysql/slow.log
+
+# Generate HTML report
+pt-query-digest --output=html /var/lib/mysql/slow.log > slow-query-report.html
+
+# Analyze general query log
+pt-query-digest --type=genlog /var/lib/mysql/general.log
+
+# Analyze binary log
+pt-query-digest --type=binlog /var/lib/mysql/mysql-bin.000001
+
+# Filter queries by database
+pt-query-digest --filter='$event->{db} eq "myapp"' /var/lib/mysql/slow.log
+
+# Analyze queries from process list
+pt-query-digest --processlist h=localhost,u=root,p=password
+
+# Save analysis to database
+pt-query-digest --review h=localhost,D=test,t=query_review --create-review-table /var/lib/mysql/slow.log
+```
+
+#### Documentation
+
+- [pt-query-digest Documentation](https://docs.percona.com/percona-toolkit/pt-query-digest.html)
+- [Percona Toolkit Manual](https://docs.percona.com/percona-toolkit/index.html)
+- [Query Analysis Best Practices](https://docs.percona.com/percona-toolkit/query-analysis.html)
 
 ## PostgreSQL Benchmarking Tools
 
@@ -115,6 +273,8 @@ pgbench -c 10 -T 60 -f custom_script.sql testdb
 
 - [pgbench Documentation](https://www.postgresql.org/docs/current/pgbench.html)
 - [PostgreSQL Performance Testing Guide](https://www.postgresql.org/docs/current/performance-tips.html)
+- [PostgreSQL Query Performance Insight](https://www.postgresql.org/docs/current/monitoring-stats.html)
+- [PostgreSQL Performance Monitoring](https://www.postgresql.org/docs/current/monitoring.html)sure that applications can handle expected user loads.
 
 ### pgtune
 
@@ -139,6 +299,10 @@ pgtune -T web -M 8GB -c 100 -D ssd
 # Apply recommendations to postgresql.conf
 # Manual copy of generated settings or use automation tools
 ```
+
+#### Documentation
+
+- [pgtune GitHub Repository](https://github.com/gregs1104/pgtune)
 
 ### pg_stat_statements
 
@@ -166,6 +330,10 @@ LIMIT 10;
 -- Reset statistics
 SELECT pg_stat_statements_reset();
 ```
+
+#### Documentation
+
+- [pg_stat_statements Documentation](https://www.postgresql.org/docs/current/pgstatstatements.html)
 
 ## General Database Benchmarking
 
@@ -258,6 +426,12 @@ mvn clean package
 ./bin/ycsb run jdbc -P workloads/workloada -P db/mysql.properties
 ```
 
+#### Documentation
+
+- [YCSB GitHub Repository](https://github.com/brianfrankcooper/YCSB)
+- [YCSB Wiki](https://github.com/brianfrankcooper/YCSB/wiki)
+- [YCSB Workload Documentation](https://github.com/brianfrankcooper/YCSB/wiki/Core-Workloads)
+
 ## Redis Benchmarking Tools
 
 ### redis-benchmark
@@ -312,6 +486,39 @@ It provides detailed metrics on throughput, latency, and resource utilization, h
 - **Stress Testing**: Simulates high loads to assess how well a Redis server can handle concurrent requests, making it suitable for stress testing scenarios.
 - **Extensibility**: Offers flexibility and extensibility through scripting and support for custom workloads, making it a versatile tool for Redis performance testing.
 
+#### Usage Example
+
+```bash
+# Install redis-bench (third-party tool)
+git clone https://github.com/RedisLabs/redis-bench.git
+cd redis-bench
+make
+
+# Basic Redis benchmark
+./redis-bench -h localhost -p 6379
+
+# Custom workload with specific data patterns
+./redis-bench -h localhost -p 6379 -c 100 -n 100000 --data-size 1024 --key-pattern "user:{id}"
+
+# Test different Redis data structures
+./redis-bench -h localhost -p 6379 -c 50 -n 50000 --test-sets --test-lists --test-hashes
+
+# Benchmark with custom script
+./redis-bench -h localhost -p 6379 -c 25 -n 25000 --script custom-workload.lua
+
+# Generate detailed latency analysis
+./redis-bench -h localhost -p 6379 -c 100 -n 100000 --latency-percentiles
+
+# Test Redis Cluster
+./redis-bench -h 127.0.0.1 -p 7000 -c 50 -n 50000 --cluster-mode
+```
+
+#### Documentation
+
+- [redis-bench GitHub Repository](https://github.com/RedisLabs/redis-bench)
+- [Redis Performance Testing Guide](https://redis.io/topics/benchmarks)
+- [Redis Best Practices](https://redis.io/topics/memory-optimization)
+
 ### memtier_benchmark
 
 memtier_benchmark is a command-line utility developed by Redis Labs for load generation and benchmarking NoSQL key-value databases. It's particularly well-suited for Redis and Memcached testing.
@@ -342,6 +549,12 @@ memtier_benchmark -s localhost -p 7000 --cluster-mode -n 10000 -c 20
 # Generate detailed latency histogram
 memtier_benchmark -s localhost -p 6379 --hdr-file-prefix=redis_test
 ```
+
+#### Documentation
+
+- [memtier_benchmark GitHub Repository](https://github.com/RedisLabs/memtier_benchmark)
+- [memtier_benchmark Documentation](https://github.com/RedisLabs/memtier_benchmark/blob/master/README.md)
+- [Redis Labs Testing Tools](https://redislabs.com/redis-enterprise/redis-modules/)
 
 ## MongoDB Benchmarking Tools
 
@@ -375,6 +588,12 @@ mongodb-bench --host localhost --port 27017 --database testdb
 mongodb-bench --host localhost --port 27017 --database testdb --operations 10000 --concurrency 20
 ```
 
+#### Documentation
+
+- [mongodb-bench npm Package](https://www.npmjs.com/package/mongodb-bench)
+- [MongoDB Performance Testing](https://docs.mongodb.com/manual/administration/analyzing-mongodb-performance/)
+- [MongoDB Benchmarking Best Practices](https://docs.mongodb.com/manual/administration/performance-testing/)
+
 ### MongoDB-benchmark
 
 MongoDB-benchmark is a third-party benchmarking tool for MongoDB that provides a more comprehensive and flexible approach to performance testing. It allows users to create custom test scenarios by defining workloads that simulate real world usage patterns. MongoDB-benchmark supports various MongoDB operations and data structures, enabling users to test the performance of different operations, such as key-value pairs, documents, and collections.
@@ -390,6 +609,46 @@ MongoDB-benchmark is particularly useful for developers and database administrat
 - **Detailed Performance Metrics**: Provides comprehensive metrics on throughput, latency, and resource utilization, helping users identify performance bottlenecks and optimize their MongoDB configurations.
 - **Stress Testing**: Simulates high loads to assess how well a MongoDB server can handle concurrent requests, making it suitable for stress testing scenarios.
 - **Extensibility**: Offers flexibility and extensibility through scripting and support for custom workloads, making it a versatile tool for MongoDB performance testing.
+
+#### Usage Example
+
+```bash
+# Install MongoDB-benchmark (example implementation)
+git clone https://github.com/mongodb/mongo-tools.git
+cd mongo-tools
+go build -o mongodb-benchmark cmd/benchmark/main.go
+
+# Basic MongoDB benchmark
+./mongodb-benchmark --host=localhost:27017 --database=testdb --collection=testcol
+
+# Custom insert benchmark
+./mongodb-benchmark --host=localhost:27017 --database=testdb --collection=users \
+  --operation=insert --threads=10 --documents=100000
+
+# Mixed workload benchmark
+./mongodb-benchmark --host=localhost:27017 --database=testdb --collection=products \
+  --operation=mixed --threads=20 --duration=300s \
+  --read-ratio=70 --write-ratio=30
+
+# Query performance test
+./mongodb-benchmark --host=localhost:27017 --database=testdb --collection=orders \
+  --operation=find --threads=15 --queries=50000 \
+  --query='{"status": "active"}'
+
+# Aggregation pipeline benchmark
+./mongodb-benchmark --host=localhost:27017 --database=testdb --collection=sales \
+  --operation=aggregate --threads=8 --pipeline-file=aggregation.json
+
+# Replica set testing
+./mongodb-benchmark --host=rs0/localhost:27017,localhost:27018,localhost:27019 \
+  --database=testdb --collection=testcol --operation=mixed --threads=25
+```
+
+#### Documentation
+
+- [MongoDB Benchmarking Tools](https://github.com/mongodb/mongo-tools)
+- [MongoDB Performance Best Practices](https://docs.mongodb.com/manual/administration/performance/)
+- [MongoDB Load Testing Guide](https://docs.mongodb.com/manual/tutorial/test-with-fake-data/)
 
 ### YCSB for MongoDB
 
@@ -407,6 +666,12 @@ YCSB provides excellent support for MongoDB benchmarking with various workload p
 # Run scan workload (Workload E)
 ./bin/ycsb run mongodb -s -P workloads/workloade -p mongodb.url=mongodb://localhost:27017/ycsb
 ```
+
+#### Documentation
+
+- [YCSB MongoDB Binding](https://github.com/brianfrankcooper/YCSB/tree/master/mongodb)
+- [YCSB Workload Configuration](https://github.com/brianfrankcooper/YCSB/wiki/Core-Properties)
+- [MongoDB with YCSB Tutorial](https://docs.mongodb.com/manual/tutorial/test-with-fake-data/)
 
 ## Application Load Testing Tools
 
@@ -538,6 +803,12 @@ artillery run artillery-test.yml
 artillery quick --duration 60 --rate 10 https://httpbin.org/get
 ```
 
+#### Documentation
+
+- [Artillery Documentation](https://artillery.io/docs/)
+- [Artillery GitHub Repository](https://github.com/artilleryio/artillery)
+- [Artillery Load Testing Guide](https://artillery.io/docs/guides/getting-started/)
+
 ### Gatling
 
 Gatling is a high-performance load testing framework based on Scala, Akka, and Netty, designed for high load and providing detailed performance metrics.
@@ -582,6 +853,12 @@ class BasicSimulation extends Simulation {
 # Run specific simulation
 ./bin/gatling.sh -s BasicSimulation
 ```
+
+#### Documentation
+
+- [Gatling Documentation](https://gatling.io/docs/gatling/)
+- [Gatling User Guide](https://gatling.io/docs/gatling/tutorials/quickstart/)
+- [Gatling GitHub Repository](https://github.com/gatling/gatling)
 
 ### Locust
 
@@ -628,6 +905,12 @@ locust -f locustfile.py --host=https://example.com
 locust -f locustfile.py --host=https://example.com --users 10 --spawn-rate 2 --run-time 1m --headless
 ```
 
+#### Documentation
+
+- [Locust Documentation](https://docs.locust.io/en/stable/)
+- [Locust GitHub Repository](https://github.com/locustio/locust)
+- [Locust Quickstart Guide](https://docs.locust.io/en/stable/quickstart.html)
+
 ## API Testing and Benchmarking
 
 ### wrk
@@ -657,6 +940,12 @@ wrk -t12 -c400 -d30s -H "Accept-Encoding: gzip" http://127.0.0.1:8080/
 wrk -t12 -c400 -d30s -s script.lua http://127.0.0.1:8080/
 ```
 
+#### Documentation
+
+- [wrk GitHub Repository](https://github.com/wg/wrk)
+- [wrk Documentation](https://github.com/wg/wrk/blob/master/README.md)
+- [wrk Lua Scripting Guide](https://github.com/wg/wrk/blob/master/SCRIPTING)
+
 ### Apache Bench (ab)
 
 Apache Bench is a simple command-line tool for benchmarking HTTP web servers, included with Apache HTTP Server.
@@ -680,6 +969,12 @@ ab -n 100 -c 10 -p data.txt -T application/x-www-form-urlencoded http://www.exam
 # With custom headers
 ab -n 1000 -c 10 -H "Accept-Encoding: gzip,deflate" http://www.example.com/
 ```
+
+#### Documentation
+
+- [Apache Bench Documentation](https://httpd.apache.org/docs/2.4/programs/ab.html)
+- [Apache HTTP Server Manual](https://httpd.apache.org/docs/2.4/)
+- [Apache Bench Tutorial](https://httpd.apache.org/docs/2.4/programs/ab.html)
 
 ### curl
 
@@ -706,6 +1001,12 @@ for i in {1..100}; do
   curl -w "%{time_total}\n" -o /dev/null -s "http://example.com/"
 done
 ```
+
+#### Documentation
+
+- [curl Documentation](https://curl.se/docs/)
+- [curl Manual](https://curl.se/docs/manual.html)
+- [curl Performance Analysis Guide](https://curl.se/docs/manual.html#write-out)
 
 ### Postman
 
@@ -736,6 +1037,12 @@ newman run collection.json -n 10
 # Generate reports
 newman run collection.json -r html --reporter-html-export report.html
 ```
+
+#### Documentation
+
+- [Postman Documentation](https://learning.postman.com/docs/)
+- [Newman Documentation](https://learning.postman.com/docs/running-collections/using-newman-cli/)
+- [Postman Collection Testing Guide](https://learning.postman.com/docs/writing-scripts/test-scripts/)
 
 ## Best Practices
 
