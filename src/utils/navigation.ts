@@ -269,22 +269,12 @@ function categorizeNavigationItems(
 
       // Check for specialized database sections
       if (
-        path.includes("caching") ||
-        path.includes("redis") ||
-        path.includes("data-warehousing") ||
-        path.includes("warehouse") ||
+        path.includes("warehouses") ||
         path.includes("time-series") ||
-        path.includes("search") ||
-        path.includes("elasticsearch") ||
         path.includes("graph") ||
         path.includes("neo4j") ||
-        title.includes("caching") ||
-        title.includes("redis") ||
-        title.includes("warehouse") ||
-        title.includes("warehousing") ||
+        title.includes("warehouses") ||
         title.includes("time-series") ||
-        title.includes("search") ||
-        title.includes("elasticsearch") ||
         title.includes("graph") ||
         title.includes("neo4j")
       ) {
@@ -338,22 +328,12 @@ function categorizeNavigationItems(
     ) {
       return "sql";
     } else if (
-      path.includes("caching") ||
-      path.includes("redis") ||
-      path.includes("data-warehousing") ||
-      path.includes("warehouse") ||
+      path.includes("warehouses") ||
       path.includes("time-series") ||
-      path.includes("search") ||
-      path.includes("elasticsearch") ||
       path.includes("graph") ||
       path.includes("neo4j") ||
-      title.includes("caching") ||
-      title.includes("redis") ||
-      title.includes("warehouse") ||
-      title.includes("warehousing") ||
+      title.includes("warehouses") ||
       title.includes("time-series") ||
-      title.includes("search") ||
-      title.includes("elasticsearch") ||
       title.includes("graph") ||
       title.includes("neo4j")
     ) {
@@ -440,6 +420,13 @@ function categorizeNavigationItems(
     });
   }
 
+  if (categories.databases.length > 0) {
+    sections.push({
+      title: "Databases",
+      items: categories.databases,
+    });
+  }
+
   if (categories.sql.length > 0) {
     sections.push({
       title: "SQL",
@@ -454,10 +441,10 @@ function categorizeNavigationItems(
     });
   }
 
-  if (categories.databases.length > 0) {
+  if (categories.projects.length > 0) {
     sections.push({
-      title: "Databases",
-      items: categories.databases,
+      title: "Projects",
+      items: categories.projects,
     });
   }
 
@@ -465,13 +452,6 @@ function categorizeNavigationItems(
     sections.push({
       title: "Specialized Databases",
       items: categories.specialized,
-    });
-  }
-
-  if (categories.projects.length > 0) {
-    sections.push({
-      title: "Projects",
-      items: categories.projects,
     });
   }
 
