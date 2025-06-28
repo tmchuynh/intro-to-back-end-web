@@ -250,12 +250,12 @@ Homebrew is excellent for installing database servers and command-line tools.
 
 #### Database Tools with Homebrew
 
-| Tool          | Command                | Purpose                      |
-| ------------- | ---------------------- | ---------------------------- |
-| **pgcli**     | `brew install pgcli`   | Enhanced PostgreSQL CLI      |
-| **mycli**     | `brew install mycli`   | Enhanced MySQL CLI           |
-| **redis-cli** | Included with Redis    | Redis command-line interface |
-| **mongosh**   | `brew install mongosh` | MongoDB shell                |
+| Tool            | Command                | Purpose                      |
+| --------------- | ---------------------- | ---------------------------- |
+| **`pgcli`**     | `brew install pgcli`   | Enhanced PostgreSQL CLI      |
+| **`mycli`**     | `brew install mycli`   | Enhanced MySQL CLI           |
+| **`redis-cli`** | Included with Redis    | Redis command-line interface |
+| **`mongosh`**   | `brew install mongosh` | MongoDB shell                |
 
 ### APT (Ubuntu/Debian)
 
@@ -288,28 +288,28 @@ Package managers for Red Hat-based distributions.
 
 ### JavaScript Package Managers Comparison
 
-| Feature                | npm               | Yarn      | pnpm           |
-| ---------------------- | ----------------- | --------- | -------------- |
-| **Installation Speed** | Moderate          | Fast      | Fastest        |
-| **Disk Usage**         | High              | Moderate  | Lowest         |
-| **Lockfile**           | package-lock.json | yarn.lock | pnpm-lock.yaml |
-| **Offline Support**    | Limited           | Yes       | Yes            |
-| **Workspaces**         | Yes               | Yes       | Yes            |
-| **Security Auditing**  | Yes               | Yes       | Yes            |
-| **Learning Curve**     | Easy              | Easy      | Easy           |
-| **Ecosystem**          | Largest           | Large     | Growing        |
+| Feature                | npm                 | Yarn        | pnpm             |
+| ---------------------- | ------------------- | ----------- | ---------------- |
+| **Installation Speed** | Moderate            | Fast        | Fastest          |
+| **Disk Usage**         | High                | Moderate    | Lowest           |
+| **Lockfile**           | `package-lock.json` | `yarn.lock` | `pnpm-lock.yaml` |
+| **Offline Support**    | Limited             | Yes         | Yes              |
+| **Workspaces**         | Yes                 | Yes         | Yes              |
+| **Security Auditing**  | Yes                 | Yes         | Yes              |
+| **Learning Curve**     | Easy                | Easy        | Easy             |
+| **Ecosystem**          | Largest             | Large       | Growing          |
 
 ### Python Package Managers Comparison
 
-| Feature                    | `pip`           | `conda`         | `poetry`                  |
-| -------------------------- | --------------- | --------------- | ------------------------- |
-| **Dependency Resolution**  | Basic           | Advanced        | Advanced                  |
-| **Environment Management** | External        | Built-in        | Built-in                  |
-| **Lock Files**             | No              | environment.yml | `poetry.lock`             |
-| **Non-Python Packages**    | No              | Yes             | No                        |
-| **Publishing**             | Manual          | Manual          | Built-in                  |
-| **Learning Curve**         | Easy            | Moderate        | Moderate                  |
-| **Best For**               | Simple projects | Data science    | Modern Python development |
+| Feature                    | `pip`           | `conda`           | `poetry`                  |
+| -------------------------- | --------------- | ----------------- | ------------------------- |
+| **Dependency Resolution**  | Basic           | Advanced          | Advanced                  |
+| **Environment Management** | External        | Built-in          | Built-in                  |
+| **Lock Files**             | No              | `environment.yml` | `poetry.lock`             |
+| **Non-Python Packages**    | No              | Yes               | No                        |
+| **Publishing**             | Manual          | Manual            | Built-in                  |
+| **Learning Curve**         | Easy            | Moderate          | Moderate                  |
+| **Best For**               | Simple projects | Data science      | Modern Python development |
 
 ### When to Use Each Package Manager
 
@@ -330,14 +330,14 @@ Package managers for Red Hat-based distributions.
 
 #### Installing Node.js and `npm`
 
-**Windows:**
+##### Windows:
 
 ```bash
 # Download from nodejs.org or use Chocolatey
 choco install nodejs
 ```
 
-**macOS:**
+##### macOS:
 
 ```bash
 # Using Homebrew
@@ -346,7 +346,7 @@ brew install node
 # Or download from nodejs.org
 ```
 
-**Linux (Ubuntu/Debian):**
+##### Linux (Ubuntu/Debian):
 
 ```bash
 # Using NodeSource repository
@@ -400,7 +400,7 @@ python -m pip install --upgrade pip
 
 #### Installing `conda`
 
-**Option 1: Miniconda (Minimal)**
+##### Option 1: Miniconda (Minimal)
 
 ```bash
 # Download and install from https://docs.conda.io/en/latest/miniconda.html
@@ -408,7 +408,7 @@ wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
 bash Miniconda3-latest-Linux-x86_64.sh
 ```
 
-**Option 2: Anaconda (Full distribution)**
+##### Option 2: Anaconda (Full distribution)
 
 ```bash
 # Download from https://www.anaconda.com/products/distribution
@@ -433,7 +433,7 @@ brew install poetry
 
 #### JavaScript Project Setup
 
-**Using npm:**
+##### Using npm:
 
 ```bash
 # Initialize new project
@@ -445,7 +445,7 @@ npm install express mongoose dotenv
 npm install --save-dev nodemon jest
 ```
 
-**Using Yarn:**
+##### Using Yarn:
 
 ```bash
 # Initialize new project
@@ -456,7 +456,7 @@ yarn add express pg dotenv
 yarn add --dev nodemon @types/node
 ```
 
-**Using pnpm:**
+##### Using pnpm:
 
 ```bash
 # Initialize new project
@@ -469,7 +469,7 @@ pnpm add -D prisma tsx
 
 #### Python Project Setup
 
-**Using pip and venv:**
+##### Using pip and venv:
 
 ```bash
 # Create virtual environment
@@ -483,7 +483,7 @@ pip install sqlalchemy psycopg2-binary python-dotenv
 pip freeze > requirements.txt
 ```
 
-**Using conda:**
+##### Using conda:
 
 ```bash
 # Create environment with specific Python version
@@ -495,7 +495,7 @@ conda install sqlalchemy psycopg2 python-dotenv
 conda env export > environment.yml
 ```
 
-**Using poetry:**
+##### Using poetry:
 
 ```bash
 # Initialize project
@@ -767,11 +767,9 @@ except OperationalError as e:
 
 ### Immediate Actions
 
-| Priority   | Action                                                                                                               | Purpose              |
-| ---------- | -------------------------------------------------------------------------------------------------------------------- | -------------------- |
-| **High**   | [Getting Started with a Database Client](/db-database-starter-kit/database-clients)                                  | Essential tooling for project management and dependency handling |
-| **Medium** | [Reviewing Version Control](/db-version-control-fundamentals/git-fundamentals)                                       | Essential tooling for database interaction    |
-| **Medium** | [Set up development environment](/db-environment-setup)                                                              | Essential tooling for database interaction    |
-| **Low**    | [Explore specific database categories](/db-different-databases-and-their-foundational-concepts/relational-databases) | Getting familiar with relational databases and others |
+| Priority   | Action                                                                         | Purpose                                    |
+| ---------- | ------------------------------------------------------------------------------ | ------------------------------------------ |
+| **High** | [Set up development environment](/db-environment-setup)                        | Essential tooling for database interaction |
+| **Medium**| [Learn about relational databases](/db-different-databases-and-their-foundational-concepts/relational-databases) | Getting familiar with relational databases and others |
 
 <BackToTop />
