@@ -38,6 +38,8 @@ Application servers, in contrast, specialize in executing business logic, managi
 
 In practice, the boundaries between web servers and application servers have blurred as web servers have incorporated more application-level features and application servers have improved their HTTP handling capabilities. Many modern deployment architectures use web servers for static content delivery and reverse proxying while delegating dynamic content generation to specialized application servers or microservices.
 
+<BackToTop />
+
 ## Functionalities of Web Servers
 
 Modern web servers implement a comprehensive suite of functionalities designed to handle the diverse requirements of contemporary web applications. These functionalities work together to provide a robust, secure, and performant platform for delivering web-based services and content.
@@ -54,7 +56,7 @@ Connection management includes handling connection establishment, maintaining pe
 
 HTTP connection handling example:
 
-```
+```txt
 Connection Lifecycle:
 1. Client initiates TCP connection
 2. Server accepts connection and allocates resources
@@ -193,6 +195,8 @@ Advanced load balancing includes session affinity, geographic routing, and appli
 Load balancing requires continuous health monitoring of backend servers to ensure requests are only routed to healthy, responsive servers. Health monitoring includes active health checks, passive health detection, and graceful handling of server failures and recoveries.
 
 Health monitoring must be efficient to avoid overwhelming backend servers while providing timely detection of health changes. This includes configurable check intervals, timeout handling, and integration with service discovery systems.
+
+<BackToTop />
 
 ## Web Server Architecture
 
@@ -370,6 +374,8 @@ Edge computing patterns include edge-side includes, edge functions for request p
 
 Content delivery and computation distribution requires careful consideration of data consistency, cache invalidation, security policies, and monitoring across geographically distributed infrastructure.
 
+<BackToTop />
+
 ## Web Server Protocols and Standards
 
 Web servers implement various protocols and standards that enable interoperability, security, and performance optimization across diverse client and network environments. Understanding these protocols is essential for designing efficient and compatible web services.
@@ -485,6 +491,8 @@ HPACK compression reduces header overhead by maintaining compression contexts an
 HTTP/3 implements HTTP semantics over QUIC transport protocol, providing improved performance in lossy network conditions and reduced connection establishment latency. Web servers must implement QUIC protocol support and HTTP/3 frame processing.
 
 QUIC features include built-in encryption, stream multiplexing, and connection migration that enable improved performance and reliability. Implementation requires understanding of QUIC connection management and integration with existing HTTP/2 infrastructure.
+
+<BackToTop />
 
 ## Request Processing and Response Handling
 
@@ -616,6 +624,8 @@ Thread management includes worker thread pools, asynchronous processing, and pro
 
 Disk I/O optimization includes efficient file access patterns, asynchronous I/O, and proper buffering strategies. Servers must minimize disk access while maintaining data consistency and reliability.
 
+<BackToTop />
+
 ## Performance and Scalability
 
 Web server performance and scalability are critical factors that determine the ability to handle increasing load while maintaining acceptable response times and resource utilization. Effective performance optimization requires understanding of bottlenecks, measurement techniques, and scaling strategies.
@@ -715,6 +725,8 @@ In-memory caching provides fastest access times but is limited by available memo
 Distributed caching enables sharing of cached data across multiple server instances while providing better fault tolerance. Technologies include Redis, Memcached, and cloud-based caching services.
 
 Database query caching reduces database load by storing query results. Implementation requires cache invalidation strategies that maintain data consistency while providing performance benefits.
+
+<BackToTop />
 
 ## Common Web Server Software
 
@@ -860,6 +872,8 @@ Container and cloud-native features include configuration through environment va
 
 API and programmatic configuration enable integration with automation tools and infrastructure-as-code practices. Monitoring and metrics endpoints provide observability without external dependencies.
 
+<BackToTop />
+
 ## Configuration and Deployment
 
 Web server configuration and deployment strategies significantly impact security, performance, and operational efficiency. Effective configuration management requires understanding of security principles, performance optimization, and operational requirements.
@@ -947,6 +961,8 @@ Canary deployment involves routing a small percentage of traffic to new deployme
 Traffic splitting includes intelligent routing, user segmentation, and gradual traffic increase that enable controlled deployment validation. Splitting mechanisms should consider user experience and data consistency requirements.
 
 Monitoring and metrics collection enable detection of deployment issues through automated monitoring and alerting. Metrics should include performance indicators, error rates, and user experience measures.
+
+<BackToTop />
 
 ## Security Considerations
 
@@ -1046,6 +1062,8 @@ Investigation and forensics include evidence collection, analysis procedures, an
 
 Recovery and remediation include system restoration, vulnerability patching, and process improvement that restore operations and prevent incident recurrence. Recovery should include validation testing and monitoring enhancement.
 
+<BackToTop />
+
 ## Monitoring and Maintenance
 
 Effective web server monitoring and maintenance ensure optimal performance, security, and reliability throughout the server lifecycle. Comprehensive monitoring provides visibility into server behavior while maintenance procedures preserve system health and prevent issues.
@@ -1117,6 +1135,8 @@ Resource planning includes hardware upgrades, software scaling, and infrastructu
 Performance testing includes load testing, stress testing, and capacity testing that validate system performance under projected loads. Testing should include realistic workloads and failure scenarios.
 
 Infrastructure optimization includes resource allocation, configuration tuning, and architecture improvements that maximize performance and efficiency. Optimization should consider cost, complexity, and maintenance requirements.
+
+<BackToTop />
 
 ## Modern Web Server Trends
 
@@ -1198,8 +1218,14 @@ Threat intelligence automation includes indicator feeds, behavioral analysis, an
 
 ## Next Steps
 
-Make sure you get through the content in the subcategory "Foundation" that is listed within "Fundamentals" to understand the foundational concepts of web servers, HTTP protocols, and RESTful services. This knowledge is essential for building robust and scalable web applications.
+### Immediate Actions
 
-When you're finished with the subcategory, move onto the next category "Databases" to learn about different types of databases, their architectures, and how they interact with web servers and applications. Start with [Relational Databases](/sql-introduction-to-relational-databases) to understand the principles of relational data modeling, SQL querying, and database management systems.
+| Priority   | Action                                                                              | Purpose                                                            |
+| ---------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| **High**   | [RESTful Services](/fund-foundation/RESTful-services)                               | Exploring RESTful API design                                       |
+| **Medium** | [Database Selection Criteria](/db-database-selection-criteria)                    | Introduction to database categories and performance considerations |
+| **Medium** | [Getting Started with a Database Client](/db-database-starter-kit/database-clients) | Essential tooling for database interaction                         |
+| **Medium** | [Set up a Package Manager](/db-database-starter-kit/package-managers)               | Essential tooling for project management and dependency handling   |
+| **Low**    | [Set up development environment](/db-environment-setup)                             | Essential to be able to run the code examples in this course       |
 
 <BackToTop />

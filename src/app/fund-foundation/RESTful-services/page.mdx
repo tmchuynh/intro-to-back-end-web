@@ -595,6 +595,7 @@ Cacheability: GET responses are cacheable by default, allowing for improved perf
 #### GET Method Usage Patterns
 
 Resource Retrieval Examples:
+
 ```http
 # Retrieve a single user
 GET /users/12345 HTTP/1.1
@@ -636,6 +637,7 @@ Content-Type: application/json
 ```
 
 Query Parameters and Filtering:
+
 ```http
 # Filtered collection retrieval
 GET /users?status=active&role=admin&page=2&limit=50 HTTP/1.1
@@ -662,6 +664,7 @@ Flexible Payload: POST requests can include complex data structures in the reque
 #### POST Method Usage Patterns
 
 Resource Creation Examples:
+
 ```http
 # Create a new user
 POST /users HTTP/1.1
@@ -695,6 +698,7 @@ Content-Type: application/json
 ```
 
 Data Processing and Actions:
+
 ```http
 # Submit a search query
 POST /search HTTP/1.1
@@ -732,6 +736,7 @@ Create or Update: PUT can be used to create a new resource if it doesn't exist o
 #### PUT Method Usage Patterns
 
 Complete Resource Updates:
+
 ```http
 # Update a user's complete profile
 PUT /users/12345 HTTP/1.1
@@ -774,6 +779,7 @@ Content-Type: application/json
 ```
 
 Resource Creation with Known Identifier:
+
 ```http
 # Create a resource with a specific ID
 PUT /users/new-user-123 HTTP/1.1
@@ -808,6 +814,7 @@ Simple Operation: DELETE requests typically do not include a request body, as th
 #### DELETE Method Usage Patterns
 
 Resource Deletion Examples:
+
 ```http
 # Delete a user
 DELETE /users/12345 HTTP/1.1
@@ -830,6 +837,7 @@ HTTP/1.1 404 Not Found
 ```
 
 Soft Deletion Implementation:
+
 ```http
 # Delete request
 DELETE /users/12345 HTTP/1.1
@@ -871,6 +879,7 @@ Flexible Formats: PATCH requests can use various formats including JSON Patch, J
 #### PATCH Method Usage Patterns
 
 Simple Field Updates:
+
 ```http
 # Update only specific fields
 PATCH /users/12345 HTTP/1.1
@@ -903,6 +912,7 @@ Content-Type: application/json
 ```
 
 JSON Patch Format:
+
 ```http
 # Using JSON Patch format for precise operations
 PATCH /users/12345 HTTP/1.1
@@ -935,6 +945,7 @@ HEAD and OPTIONS methods provide metadata and capability information about resou
 The HEAD method is identical to GET except that the server must not return a message body in the response. It is used to retrieve metadata about a resource, such as checking if a resource exists, determining its size, or validating cache information.
 
 HEAD Method Examples:
+
 ```http
 # Check if a resource exists
 HEAD /users/12345 HTTP/1.1
@@ -958,6 +969,7 @@ HTTP/1.1 404 Not Found
 The OPTIONS method is used to determine the communication options available for a resource or server. It is commonly used for CORS preflight requests and API capability discovery.
 
 OPTIONS Method Examples:
+
 ```http
 # Discover available methods for a resource
 OPTIONS /users/12345 HTTP/1.1
@@ -998,6 +1010,7 @@ RESTful URI design follows established conventions that make APIs intuitive and 
 URI hierarchies should reflect the natural relationships between resources in the domain. Parent-child relationships, composition, and aggregation should be represented through nested URI structures that mirror the conceptual model.
 
 Hierarchical URI examples:
+
 ```
 User and Related Resources:
 /users                           # Collection of all users
@@ -1029,6 +1042,7 @@ Product Catalog Structure:
 Consistent naming conventions improve API discoverability and reduce cognitive load for developers. These conventions should be applied consistently across the entire API to create predictable patterns.
 
 URI Naming Guidelines:
+
 ```
 Use Nouns for Resources:
 Good: /users, /products, /orders
@@ -1064,6 +1078,7 @@ Query parameters provide a flexible mechanism for modifying resource requests wi
 Filtering parameters allow clients to request subsets of collections based on specific criteria. These parameters should be intuitive and follow consistent naming patterns across the API.
 
 Filtering Examples:
+
 ```
 Simple Filters:
 /users?status=active
@@ -1099,6 +1114,7 @@ Logical Operators:
 Sorting parameters allow clients to specify the order in which collection results should be returned. Consistent sorting syntax improves API usability and enables predictable result ordering.
 
 Sorting Examples:
+
 ```
 Simple Sorting:
 /users?sort=name
@@ -1126,6 +1142,7 @@ Explicit Sort Direction:
 Field selection parameters allow clients to request only specific fields from resources, reducing bandwidth usage and improving performance. This is particularly useful for mobile applications and bandwidth-constrained environments.
 
 Field Selection Examples:
+
 ```
 Select Specific Fields:
 /users?fields=id,name,email
@@ -1154,6 +1171,7 @@ API versioning is a critical consideration for maintaining backward compatibilit
 Different versioning strategies offer various trade-offs between simplicity, flexibility, and maintainability. The choice of strategy should align with API lifecycle management practices and client requirements.
 
 URI Versioning Examples:
+
 ```
 Version in Path:
 /v1/users
@@ -1185,6 +1203,7 @@ Namespace Versioning:
 Successful API versioning requires clear migration paths and deprecation policies. These strategies help maintain service continuity while encouraging adoption of newer API versions.
 
 Migration Strategy Examples:
+
 ```
 Gradual Deprecation:
 1. Announce new version with feature additions
@@ -1219,6 +1238,7 @@ Hypermedia controls are the mechanism by which HATEOAS is implemented in RESTful
 Link relations define the semantic meaning of relationships between resources and available operations. Standard link relations provide common understanding between clients and servers, while custom relations can express domain-specific relationships.
 
 Standard Link Relations:
+
 ```
 self: Link to the resource itself
 edit: Link to edit the resource
@@ -1232,6 +1252,7 @@ alternate: Alternative representation of the resource
 ```
 
 HATEOAS Implementation Example:
+
 ```json
 {
   "id": 12345,
@@ -1282,6 +1303,7 @@ HATEOAS Implementation Example:
 HATEOAS links should be generated based on the current state of the resource and the client's permissions. This dynamic link generation ensures that clients are only presented with actions they are authorized to perform and that are appropriate for the resource's current state.
 
 State-Based Link Examples:
+
 ```json
 {
   "id": 67890,
@@ -1338,6 +1360,7 @@ Link relations provide semantic meaning to the relationships between resources a
 Standard link relations, defined by the IANA Link Relations registry and various specifications, provide common vocabulary for describing resource relationships. Using standard relations improves interoperability and reduces the learning curve for API consumers.
 
 Common Standard Relations:
+
 ```
 Navigational Relations:
 - self: The link's context
@@ -1366,13 +1389,14 @@ Action Relations:
 APIs often require domain-specific relationships that are not covered by standard link relations. Custom relations should follow URI patterns and be well-documented to ensure client understanding.
 
 Custom Relation Examples:
+
 ```json
 {
   "id": 12345,
   "username": "johndoe",
   "account_type": "premium",
   "_links": {
-    "self": {"href": "/users/12345"},
+    "self": { "href": "/users/12345" },
     "https://api.example.com/rels/upgrade": {
       "href": "/users/12345/upgrade",
       "method": "POST",
@@ -1401,6 +1425,7 @@ Self-descriptive messages contain all the information necessary to understand an
 Self-descriptive messages include comprehensive metadata that describes the content format, encoding, language, and other relevant information. This metadata enables proper message processing and content negotiation.
 
 Self-Descriptive Message Example:
+
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/hal+json; charset=utf-8
@@ -1453,13 +1478,14 @@ Link: </users/12345/profile>; rel="edit"; title="Edit Profile"
 Self-descriptive messages can include links to schemas, documentation, and other resources that help clients understand the structure and semantics of the data. This reduces the need for out-of-band documentation and enables dynamic client adaptation.
 
 Schema Integration Examples:
+
 ```json
 {
   "id": 12345,
   "type": "user",
   "username": "johndoe",
   "_links": {
-    "self": {"href": "/users/12345"},
+    "self": { "href": "/users/12345" },
     "schema": {
       "href": "https://api.example.com/schemas/user.json",
       "type": "application/schema+json"
@@ -1489,6 +1515,7 @@ Success status codes indicate that the client's request was received, understood
 #### 2xx Success Code Usage
 
 200 OK - Standard Success Response:
+
 ```http
 # Successful resource retrieval
 GET /users/12345 HTTP/1.1
@@ -1520,6 +1547,7 @@ Content-Type: application/json
 ```
 
 201 Created - Resource Creation:
+
 ```http
 # Successful resource creation
 POST /users HTTP/1.1
@@ -1541,6 +1569,7 @@ Content-Type: application/json
 ```
 
 204 No Content - Successful Operation Without Response Body:
+
 ```http
 # Successful deletion
 DELETE /users/12345 HTTP/1.1
@@ -1564,6 +1593,7 @@ Client error status codes indicate that the client's request contains errors or 
 #### 4xx Client Error Code Usage
 
 400 Bad Request - Invalid Request Syntax or Data:
+
 ```http
 # Request with invalid JSON
 POST /users HTTP/1.1
@@ -1592,6 +1622,7 @@ Content-Type: application/json
 ```
 
 401 Unauthorized - Authentication Required:
+
 ```http
 # Request without authentication
 GET /users/12345/private-data HTTP/1.1
@@ -1609,6 +1640,7 @@ Content-Type: application/json
 ```
 
 403 Forbidden - Insufficient Permissions:
+
 ```http
 # Authenticated user trying to access restricted resource
 GET /admin/system-config HTTP/1.1
@@ -1627,6 +1659,7 @@ Content-Type: application/json
 ```
 
 404 Not Found - Resource Does Not Exist:
+
 ```http
 # Request for non-existent resource
 GET /users/99999 HTTP/1.1
@@ -1644,6 +1677,7 @@ Content-Type: application/json
 ```
 
 409 Conflict - Resource State Conflict:
+
 ```http
 # Attempting to create resource with conflicting data
 POST /users HTTP/1.1
@@ -1666,6 +1700,7 @@ Content-Type: application/json
 ```
 
 422 Unprocessable Entity - Semantic Validation Errors:
+
 ```http
 # Request with valid syntax but semantic errors
 POST /orders HTTP/1.1
@@ -1700,6 +1735,7 @@ Server error status codes indicate that the server encountered an error while pr
 #### 5xx Server Error Code Usage
 
 500 Internal Server Error - Generic Server Error:
+
 ```http
 # Server encounters unexpected error
 GET /users HTTP/1.1
@@ -1717,6 +1753,7 @@ Content-Type: application/json
 ```
 
 502 Bad Gateway - Upstream Service Error:
+
 ```http
 # API gateway cannot reach backend service
 GET /users HTTP/1.1
@@ -1734,6 +1771,7 @@ Content-Type: application/json
 ```
 
 503 Service Unavailable - Temporary Service Outage:
+
 ```http
 # Service temporarily unavailable
 GET /users HTTP/1.1
@@ -1832,6 +1870,7 @@ Relational databases provide strong consistency, ACID transactions, and well-est
 #### User Management API with PostgreSQL
 
 User Resource Operations:
+
 ```http
 # Create a new user
 POST /users HTTP/1.1
@@ -1891,6 +1930,7 @@ Content-Type: application/json
 ```
 
 Complex Query Operations:
+
 ```http
 # Advanced filtering with SQL-like capabilities
 GET /users?role=admin&created_after=2023-01-01&order_count[gte]=5&sort=-last_login HTTP/1.1
@@ -1995,6 +2035,7 @@ NoSQL databases offer different data models and consistency guarantees compared 
 #### Document Database API with MongoDB
 
 Document-Oriented Resource Design:
+
 ```http
 # Create a product document
 POST /products HTTP/1.1
@@ -2063,6 +2104,7 @@ Content-Type: application/json
 ```
 
 Nested Document Operations:
+
 ```http
 # Add a review to the product document
 POST /products/507f1f77bcf86cd799439011/reviews HTTP/1.1
@@ -2103,6 +2145,7 @@ Content-Type: application/json
 #### Key-Value Store API with Redis
 
 Simple Key-Value Operations:
+
 ```http
 # Store user session data
 PUT /sessions/user-12345-session HTTP/1.1
@@ -2155,6 +2198,7 @@ Graph databases excel at modeling and querying complex relationships between ent
 #### Social Network API with Neo4j
 
 Node and Relationship Operations:
+
 ```http
 # Create a user node
 POST /users HTTP/1.1
@@ -2207,6 +2251,7 @@ Content-Type: application/json
 ```
 
 Graph Traversal Queries:
+
 ```http
 # Find friends of friends
 GET /users/12345/friends/friends?depth=2&exclude_direct=true HTTP/1.1
@@ -2248,6 +2293,7 @@ Time series databases are optimized for handling temporal data with high write t
 #### Metrics API with InfluxDB
 
 Metric Data Ingestion:
+
 ```http
 # Write time series data points
 POST /metrics HTTP/1.1
@@ -2296,6 +2342,7 @@ Content-Type: application/json
 ```
 
 Time-Based Queries:
+
 ```http
 # Query metrics with time range and aggregation
 GET /metrics/cpu_usage?start=2023-12-07T09:00:00Z&end=2023-12-07T11:00:00Z&aggregation=mean&interval=5m&host=server-01 HTTP/1.1
@@ -2343,5 +2390,14 @@ Content-Type: application/json
 ## Next Steps
 
 If you haven't already, look through [HTTP Protocol](/fund-foundation/HTTP-protocol) to understand the HTTP protocol, which is the foundation of RESTful services, and [Web Server Basics](/fund-foundation/web-server-basics) to learn about web servers and how they interact with clients.
+
+### Immediate Actions
+
+| Priority   | Action                                                                              | Purpose                                                            |
+| ---------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| **High** | [Database Selection Criteria](/db-database-selection-criteria)                    | Introduction to database categories and performance considerations |
+| **High** | [Getting Started with a Database Client](/db-database-starter-kit/database-clients) | Essential tooling for database interaction                         |
+| **Medium** | [Set up a Package Manager](/db-database-starter-kit/package-managers)               | Essential tooling for project management and dependency handling   |
+| **Medium**    | [Set up development environment](/db-environment-setup)                             | Essential to be able to run the code examples in this course       |
 
 <BackToTop />
