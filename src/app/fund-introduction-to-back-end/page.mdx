@@ -33,6 +33,7 @@ The Internet is a vast network of interconnected computers that communicate usin
 When you access a website, data travels across the Internet in small packets. These packets take different routes through various networks to reach their destination, much like cars taking different streets to reach the same location. This system ensures reliability and efficiency - if one route is congested or down, the data can take alternative paths.
 
 Each packet contains:
+
 - **Header Information**: Source and destination addresses, packet sequence numbers
 - **Payload**: The actual data being transmitted
 - **Error Detection**: Checksums to verify data integrity
@@ -49,6 +50,7 @@ The Internet infrastructure consists of several layers:
 ### Content Delivery Networks (CDNs)
 
 Modern web applications use CDNs to improve performance by:
+
 - Caching content at edge servers closer to users
 - Reducing latency and bandwidth usage
 - Providing redundancy and improved availability
@@ -66,7 +68,6 @@ IP addresses come in two versions:
   - 32-bit addresses providing approximately 4.3 billion unique addresses
   - Format: xxx.xxx.xxx.xxx where each xxx ranges from 0-255
   - Widely used but running out of available addresses
-  
 - **IPv6**: Uses eight groups of hexadecimal digits separated by colons (e.g., 2001:0db8:85a3:0000:0000:8a2e:0370:7334)
   - 128-bit addresses providing 340 undecillion unique addresses
   - Designed to replace IPv4 and support the growing number of connected devices
@@ -82,6 +83,7 @@ IP addresses come in two versions:
 ### Network Address Translation (NAT)
 
 NAT allows multiple devices on a private network to share a single public IP address:
+
 - Conserves public IP addresses
 - Provides an additional layer of security
 - Enables home and office networks to function with limited public IPs
@@ -113,6 +115,7 @@ DNS servers store various types of records:
 ### DNS Caching and Performance
 
 DNS systems use caching at multiple levels to improve performance:
+
 - **Browser Cache**: Stores recent DNS lookups locally
 - **Operating System Cache**: System-level DNS caching
 - **Router Cache**: Network-level caching
@@ -154,6 +157,7 @@ Every HTTP request contains several components:
 3. **Body**: Optional data sent with the request (common with POST/PUT requests)
 
 ##### Example HTTP request:
+
 ```
 GET /api/users HTTP/1.1
 Host: example.com
@@ -171,6 +175,7 @@ HTTP responses follow a similar structure:
 3. **Body**: The actual response data
 
 ##### Example HTTP response:
+
 ```
 HTTP/1.1 200 OK
 Content-Type: application/json
@@ -237,7 +242,7 @@ The HTTPS connection establishment involves several steps:
 - **Domain Validated (DV)**: Basic validation of domain ownership
 - **Organization Validated (OV)**: Validates domain and organization identity
 - **Extended Validation (EV)**: Highest level of validation with rigorous identity verification
-- **Wildcard Certificates**: Secure multiple subdomains (*.example.com)
+- **Wildcard Certificates**: Secure multiple subdomains (\*.example.com)
 - **Multi-Domain Certificates**: Secure multiple different domains
 
 #### Modern Security Considerations
@@ -275,13 +280,13 @@ The WebSocket connection starts with an HTTP upgrade request:
 
 #### WebSocket vs. HTTP Comparison
 
-| Feature | HTTP | WebSocket |
-|---------|------|-----------|
-| Connection | Stateless, request-response | Stateful, persistent |
-| Overhead | High (headers with each request) | Low (minimal frame overhead) |
-| Real-time | Polling required | Native real-time support |
-| Complexity | Simple | More complex to implement |
-| Browser Support | Universal | Modern browsers only |
+| Feature         | HTTP                             | WebSocket                    |
+| --------------- | -------------------------------- | ---------------------------- |
+| Connection      | Stateless, request-response      | Stateful, persistent         |
+| Overhead        | High (headers with each request) | Low (minimal frame overhead) |
+| Real-time       | Polling required                 | Native real-time support     |
+| Complexity      | Simple                           | More complex to implement    |
+| Browser Support | Universal                        | Modern browsers only         |
 
 ### Common Use Cases
 
@@ -321,9 +326,17 @@ Popular WebSocket implementations:
 
 Now that you have a comprehensive understanding of back-end development fundamentals, you're well-prepared to explore more advanced topics. These foundational concepts form the bedrock upon which all back-end systems are built, and mastering them will serve you throughout your development career.
 
-### Your Learning Journey Continues
+### Immediate Actions
 
-The next section will delve into [Back-end Architecture](/back-end-architecture), where you'll explore:
+| Priority   | Action                                                | Purpose                                |
+| ---------- | ----------------------------------------------------- | -------------------------------------- |
+| **High**   | [Back-end Architecture](/fund-back-end-architecture)       | Understanding server-side architecture |
+| **Medium** | [API Design](/fund-foundation/API-design)             | Understanding API design principles    |
+| **Medium** | [RESTful Services](/fund-foundation/RESTful-services) | Understanding RESTful principles       |
+| **Medium** | [Web Servers](/fund-foundation/web-server-basics)     | Understanding web server concepts      |
+| **Low**    | [HTTP Protocol](/fund-foundation/HTTP-protocol)       | Understanding HTTP fundamentals        |
+
+The next section will delve into [Back-end Architecture](/fund-back-end-architecture), where you'll explore:
 
 - **System Design Principles**: How to design scalable and maintainable back-end systems
 - **Architectural Patterns**: MVC, microservices, serverless, and other architectural approaches
@@ -332,22 +345,15 @@ The next section will delve into [Back-end Architecture](/back-end-architecture)
 - **Caching Strategies**: Improving performance with various caching techniques
 - **API Design**: RESTful APIs, GraphQL, and API versioning strategies
 
-### Building on Your Foundation
-
 This section provides an overview of the client-server model, which is essential for understanding how back-end systems operate. Familiarizing yourself with this architecture will help you grasp the interactions between clients and servers, and how data flows through web applications.
 
 As you progress through your back-end development journey, remember that these fundamental concepts will repeatedly surface in more complex scenarios. The understanding of HTTP protocols will guide your API design decisions, knowledge of DNS will help you configure deployment environments, and WebSocket concepts will enable you to build real-time features.
 
-### Practical Application
+### Optional Actions
 
-Consider setting up a simple local development environment to experiment with these concepts:
-- Install a web server (Apache, Nginx, or a development server)
-- Practice making HTTP requests using tools like Postman or curl
-- Experiment with WebSocket connections using browser developer tools
-- Set up local DNS resolution to understand the name resolution process
-
-### What's Next?
-
-With this solid foundation, you're ready to dive deeper into back-end architecture patterns and start building more sophisticated server-side applications. Each subsequent topic will build upon these core concepts, gradually expanding your understanding and capabilities as a back-end developer.
+| Action                                              | Purpose                            |
+| --------------------------------------------------- | ---------------------------------- |
+| [Essential Vocabulary](/essential-vocabulary)       | Understanding terminology          |
+| [Learn the Abbreviations](/essential-abbreviations) | Understanding common abbreviations |
 
 <BackToTop />
