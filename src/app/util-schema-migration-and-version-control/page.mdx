@@ -1,0 +1,1288 @@
+import BackToTop from "@/components/BackToTop";
+
+# Schema Migration and Version Control Tools
+
+## Table of Contents
+
+## Overview
+
+Schema migration and version control tools are essential for managing database structure changes throughout the software development lifecycle. These tools enable teams to track, apply, and rollback database schema modifications in a controlled and repeatable manner, ensuring consistency across development, staging, and production environments.
+
+Modern migration tools provide features like automatic schema diffing, rollback capabilities, environment-specific configurations, and integration with CI/CD pipelines. They help prevent data loss, maintain data integrity during schema changes, and enable collaborative database development across teams.
+
+Effective schema migration strategies include versioning database changes, testing migrations in safe environments, maintaining rollback scripts, and automating deployment processes. The right migration tools can significantly reduce deployment risks, improve development velocity, and ensure database consistency across environments.
+
+## Database-Specific Migration Tools
+
+### PostgreSQL Migration Tools
+
+#### Alembic
+
+Alembic is the most popular migration tool for PostgreSQL when working with SQLAlchemy, providing powerful schema versioning and migration capabilities.
+
+##### Key Features
+
+- **Auto-generation**: Automatically generates migration scripts from model changes
+- **Revision History**: Maintains complete revision history with branching support
+- **Environment Support**: Multiple environment configurations
+- **Custom Operations**: Support for custom migration operations
+- **Rollback Support**: Full rollback and downgrade capabilities
+- **PostgreSQL Features**: Native support for PostgreSQL-specific features
+
+##### Usage Example
+
+```bash
+# Install Alembic
+pip install alembic
+
+# Initialize Alembic in your project
+alembic init migrations
+
+# Configure alembic.ini
+# sqlalchemy.url = postgresql://user:password@localhost/dbname
+
+# Create your first migration
+alembic revision --autogenerate -m "Create users table"
+
+# Apply migrations
+alembic upgrade head
+
+# Rollback to previous version
+alembic downgrade -1
+
+# Show current revision
+alembic current
+
+# Show migration history
+alembic history
+```
+
+```python
+# Migration file example: versions/001_create_users_table.py
+"""Create users table
+
+Revision ID: 001
+Revises:
+Create Date: 2023-12-01 10:00:00.000000
+
+"""
+from alembic import op
+import sqlalchemy as sa
+
+# revision identifiers
+revision = '001'
+down_revision = None
+branch_labels = None
+depends_on = None
+
+def upgrade():
+    # Create users table
+    op.create_table('users',
+        sa.Column('id', sa.Integer(), nullable=False),
+        sa.Column('username', sa.String(length=50), nullable=False),
+        sa.Column('email', sa.String(length=100), nullable=False),
+        sa.Column('created_at', sa.DateTime(), nullable=True),
+        sa.PrimaryKeyConstraint('id'),
+        sa.UniqueConstraint('email'),
+        sa.UniqueConstraint('username')
+    )
+
+    # Create index
+    op.create_index('ix_users_email', 'users', ['email'], unique=True)
+
+def downgrade():
+    # Drop index and table
+    op.drop_index('ix_users_email', table_name='users')
+    op.drop_table('users')
+```
+
+##### Documentation
+
+- [Alembic Documentation](https://alembic.sqlalchemy.org/)
+- [Alembic Tutorial](https://alembic.sqlalchemy.org/en/latest/tutorial.html)
+
+#### pgmigrate
+
+pgmigrate is a PostgreSQL-focused migration tool that provides simple, reliable schema migrations with minimal configuration.
+
+##### Key Features
+
+- **PostgreSQL Native**: Designed specifically for PostgreSQL
+- **Transactional**: All migrations run in transactions
+- **Simple Setup**: Minimal configuration required
+- **SQL-Based**: Pure SQL migration files
+- **Rollback Support**: Automatic rollback on failure
+- **Concurrent Safety**: Handles concurrent migration attempts
+
+##### Usage Example
+
+```bash
+# Install pgmigrate
+pip install pgmigrate
+
+# Initialize migration directory
+pgmigrate init
+
+# Create new migration
+pgmigrate create "add_users_table"
+
+# Apply migrations
+pgmigrate migrate
+
+# Show status
+pgmigrate status
+
+# Rollback to specific version
+pgmigrate migrate --target 001
+```
+
+```sql
+-- migrations/V001__add_users_table.sql
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_users_email ON users(email);
+
+-- migrations/V001__add_users_table.rollback.sql
+DROP INDEX idx_users_email;
+DROP TABLE users;
+```
+
+##### Documentation
+
+- [pgmigrate GitHub Repository](https://github.com/yandex/pgmigrate)
+
+### MySQL Migration Tools
+
+#### Flyway
+
+Flyway is a popular database migration tool that works well with MySQL and supports multiple database systems.
+
+##### Key Features
+
+- **Version-based**: Simple versioning scheme
+- **SQL and Java**: Supports both SQL and Java-based migrations
+- **Command Line**: Powerful CLI tool
+- **Maven/Gradle**: Build tool integration
+- **Rollback**: Commercial version supports rollback
+- **Validation**: Migration validation and checksums
+
+##### Usage Example
+
+```bash
+# Install Flyway
+wget https://repo1.maven.org/maven2/org/flywaydb/flyway-commandline/9.5.1/flyway-commandline-9.5.1.tar.gz
+tar -xzf flyway-commandline-9.5.1.tar.gz
+
+# Configure flyway.conf
+# flyway.url=jdbc:mysql://localhost:3306/mydb
+# flyway.user=root
+# flyway.password=password
+
+# Create migration directory structure
+mkdir -p sql
+
+# Apply migrations
+./flyway migrate
+
+# Show migration status
+./flyway info
+
+# Validate migrations
+./flyway validate
+
+# Clean database (development only)
+./flyway clean
+```
+
+```sql
+-- sql/V1__Create_users_table.sql
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_users_email ON users(email);
+
+-- sql/V2__Add_user_profile.sql
+CREATE TABLE user_profiles (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    first_name VARCHAR(50),
+    last_name VARCHAR(50),
+    bio TEXT,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- sql/V3__Add_posts_table.sql
+CREATE TABLE posts (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    content TEXT,
+    published BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+```
+
+##### Documentation
+
+- [Flyway Documentation](https://flywaydb.org/documentation/)
+- [Flyway MySQL Tutorial](https://flywaydb.org/documentation/database/mysql)
+
+#### mysql-migrations
+
+mysql-migrations is a lightweight migration tool specifically designed for MySQL databases.
+
+##### Key Features
+
+- **MySQL Specific**: Optimized for MySQL features
+- **Simple Configuration**: Easy setup and configuration
+- **SQL-Based**: Pure SQL migration files
+- **Rollback Support**: Built-in rollback capabilities
+- **CLI Tool**: Command-line interface
+- **Version Tracking**: Automatic version tracking
+
+##### Usage Example
+
+```bash
+# Install mysql-migrations
+npm install -g mysql-migrations
+
+# Initialize project
+mysql-migrations init
+
+# Create migration
+mysql-migrations create add_users_table
+
+# Run migrations
+mysql-migrations up
+
+# Rollback last migration
+mysql-migrations down
+
+# Show status
+mysql-migrations status
+```
+
+```javascript
+// migrations.json
+{
+  "host": "localhost",
+  "user": "root",
+  "password": "password",
+  "database": "myapp",
+  "migrations": {
+    "directory": "migrations",
+    "table": "migration_log"
+  }
+}
+```
+
+```sql
+-- migrations/1638360000000_add_users_table.up.sql
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- migrations/1638360000000_add_users_table.down.sql
+DROP TABLE users;
+```
+
+##### Documentation
+
+- [mysql-migrations GitHub Repository](https://github.com/ajcrites/mysql-migrations)
+
+### SQL Server Migration Tools
+
+#### DbUp
+
+DbUp is a .NET library that helps deploy changes to SQL Server databases by running change scripts.
+
+##### Key Features
+
+- **.NET Integration**: Native .NET library
+- **SQL Scripts**: SQL-based migration scripts
+- **Transaction Support**: Transactional execution
+- **Custom Logging**: Extensible logging system
+- **Multiple Providers**: SQL Server, PostgreSQL, MySQL support
+- **Embedded Resources**: Scripts can be embedded in assemblies
+
+##### Usage Example
+
+```csharp
+// Program.cs
+using DbUp;
+using System.Reflection;
+
+var connectionString = "Server=(local);Database=MyApp;Trusted_connection=true";
+
+var upgrader = DeployChanges.To
+    .SqlDatabase(connectionString)
+    .WithScriptsEmbeddedInAssembly(Assembly.GetExecutingAssembly())
+    .LogToConsole()
+    .Build();
+
+var result = upgrader.PerformUpgrade();
+
+if (!result.Successful)
+{
+    Console.ForegroundColor = ConsoleColor.Red;
+    Console.WriteLine(result.Error);
+    Console.ResetColor();
+    return -1;
+}
+
+Console.ForegroundColor = ConsoleColor.Green;
+Console.WriteLine("Success!");
+Console.ResetColor();
+return 0;
+```
+
+```sql
+-- Scripts/001_CreateUsersTable.sql
+CREATE TABLE Users (
+    Id INT IDENTITY(1,1) PRIMARY KEY,
+    Username NVARCHAR(50) UNIQUE NOT NULL,
+    Email NVARCHAR(100) UNIQUE NOT NULL,
+    CreatedAt DATETIME2 DEFAULT GETDATE()
+);
+
+CREATE INDEX IX_Users_Email ON Users(Email);
+
+-- Scripts/002_CreatePostsTable.sql
+CREATE TABLE Posts (
+    Id INT IDENTITY(1,1) PRIMARY KEY,
+    UserId INT NOT NULL,
+    Title NVARCHAR(200) NOT NULL,
+    Content NTEXT,
+    Published BIT DEFAULT 0,
+    CreatedAt DATETIME2 DEFAULT GETDATE(),
+    FOREIGN KEY (UserId) REFERENCES Users(Id)
+);
+```
+
+##### Documentation
+
+- [DbUp Documentation](https://dbup.readthedocs.io/)
+- [DbUp GitHub Repository](https://github.com/DbUp/DbUp)
+
+## Language-Specific Migration Tools
+
+### JavaScript/Node.js
+
+#### Knex.js Migrations
+
+Knex.js provides a powerful migration system for Node.js applications with support for multiple databases.
+
+##### Key Features
+
+- **Multi-Database**: PostgreSQL, MySQL, SQLite, SQL Server support
+- **Promise-Based**: Modern async/await support
+- **Schema Builder**: Fluent schema building API
+- **Rollback Support**: Full rollback capabilities
+- **Seed Data**: Database seeding support
+- **CLI Tools**: Command-line migration tools
+
+##### Usage Example
+
+```bash
+# Install Knex
+npm install knex
+
+# Initialize Knex
+npx knex init
+
+# Create migration
+npx knex migrate:make create_users_table
+
+# Run migrations
+npx knex migrate:latest
+
+# Rollback last migration
+npx knex migrate:rollback
+
+# Check migration status
+npx knex migrate:status
+```
+
+```javascript
+// knexfile.js
+module.exports = {
+  development: {
+    client: "postgresql",
+    connection: {
+      database: "myapp_dev",
+      user: "username",
+      password: "password",
+    },
+    migrations: {
+      directory: "./migrations",
+    },
+    seeds: {
+      directory: "./seeds",
+    },
+  },
+
+  production: {
+    client: "postgresql",
+    connection: process.env.DATABASE_URL,
+    migrations: {
+      directory: "./migrations",
+    },
+  },
+};
+```
+
+```javascript
+// migrations/20231201000001_create_users_table.js
+exports.up = function (knex) {
+  return knex.schema.createTable("users", function (table) {
+    table.increments("id").primary();
+    table.string("username", 50).unique().notNullable();
+    table.string("email", 100).unique().notNullable();
+    table.string("password_hash").notNullable();
+    table.boolean("is_active").defaultTo(true);
+    table.timestamps(true, true);
+
+    table.index("email");
+  });
+};
+
+exports.down = function (knex) {
+  return knex.schema.dropTable("users");
+};
+```
+
+##### Documentation
+
+- [Knex.js Migrations Documentation](https://knexjs.org/guide/migrations.html)
+
+#### Sequelize Migrations
+
+Sequelize provides comprehensive migration support for Node.js applications with multiple database backends.
+
+##### Key Features
+
+- **Multi-Database**: MySQL, PostgreSQL, SQLite, MariaDB, SQL Server
+- **CLI Tools**: Powerful command-line interface
+- **Model Sync**: Sync models with database schema
+- **Seed Data**: Database seeding capabilities
+- **TypeScript**: Full TypeScript support
+- **Hooks**: Migration hooks and lifecycle events
+
+##### Usage Example
+
+```bash
+# Install Sequelize CLI
+npm install --save-dev sequelize-cli
+
+# Initialize Sequelize
+npx sequelize-cli init
+
+# Create migration
+npx sequelize-cli migration:generate --name create-users-table
+
+# Run migrations
+npx sequelize-cli db:migrate
+
+# Rollback migrations
+npx sequelize-cli db:migrate:undo
+
+# Create seed
+npx sequelize-cli seed:generate --name demo-users
+```
+
+```javascript
+// config/config.json
+{
+  "development": {
+    "username": "root",
+    "password": "password",
+    "database": "myapp_dev",
+    "host": "127.0.0.1",
+    "dialect": "mysql"
+  },
+  "production": {
+    "use_env_variable": "DATABASE_URL",
+    "dialect": "postgres"
+  }
+}
+```
+
+```javascript
+// migrations/20231201000001-create-users-table.js
+"use strict";
+
+module.exports = {
+  async up(queryInterface, Sequelize) {
+    await queryInterface.createTable("Users", {
+      id: {
+        allowNull: false,
+        autoIncrement: true,
+        primaryKey: true,
+        type: Sequelize.INTEGER,
+      },
+      username: {
+        type: Sequelize.STRING(50),
+        allowNull: false,
+        unique: true,
+      },
+      email: {
+        type: Sequelize.STRING(100),
+        allowNull: false,
+        unique: true,
+      },
+      passwordHash: {
+        type: Sequelize.STRING,
+        allowNull: false,
+      },
+      isActive: {
+        type: Sequelize.BOOLEAN,
+        defaultValue: true,
+      },
+      createdAt: {
+        allowNull: false,
+        type: Sequelize.DATE,
+      },
+      updatedAt: {
+        allowNull: false,
+        type: Sequelize.DATE,
+      },
+    });
+
+    await queryInterface.addIndex("Users", ["email"]);
+  },
+
+  async down(queryInterface, Sequelize) {
+    await queryInterface.dropTable("Users");
+  },
+};
+```
+
+##### Documentation
+
+- [Sequelize Migrations Documentation](https://sequelize.org/docs/v6/other-topics/migrations/)
+
+### Python
+
+#### Django Migrations
+
+Django provides a built-in migration system that automatically generates migrations from model changes.
+
+##### Key Features
+
+- **Auto-generation**: Automatic migration creation from model changes
+- **Dependency System**: Smart dependency resolution
+- **Data Migrations**: Support for data migrations
+- **Rollback Support**: Full rollback capabilities
+- **Multiple Apps**: Handles migrations across multiple Django apps
+- **Custom Operations**: Custom migration operations
+
+##### Usage Example
+
+```bash
+# Create initial migration
+python manage.py makemigrations
+
+# Apply migrations
+python manage.py migrate
+
+# Create empty migration for data changes
+python manage.py makemigrations --empty myapp
+
+# Show migration status
+python manage.py showmigrations
+
+# Rollback to specific migration
+python manage.py migrate myapp 0001
+
+# Create migration with name
+python manage.py makemigrations --name add_user_profile myapp
+```
+
+```python
+# models.py
+from django.db import models
+
+class User(models.Model):
+    username = models.CharField(max_length=50, unique=True)
+    email = models.EmailField(unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['email']),
+        ]
+
+class Post(models.Model):
+    title = models.CharField(max_length=200)
+    content = models.TextField()
+    author = models.ForeignKey(User, on_delete=models.CASCADE)
+    published = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+```
+
+```python
+# Generated migration: 0001_initial.py
+from django.db import migrations, models
+import django.db.models.deletion
+
+class Migration(migrations.Migration):
+    initial = True
+
+    dependencies = []
+
+    operations = [
+        migrations.CreateModel(
+            name='User',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('username', models.CharField(max_length=50, unique=True)),
+                ('email', models.EmailField(max_length=254, unique=True)),
+                ('created_at', models.DateTimeField(auto_now_add=True)),
+                ('is_active', models.BooleanField(default=True)),
+            ],
+        ),
+        migrations.CreateModel(
+            name='Post',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('title', models.CharField(max_length=200)),
+                ('content', models.TextField()),
+                ('published', models.BooleanField(default=False)),
+                ('created_at', models.DateTimeField(auto_now_add=True)),
+                ('author', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='myapp.user')),
+            ],
+        ),
+        migrations.AddIndex(
+            model_name='user',
+            index=models.Index(fields=['email'], name='myapp_user_email_idx'),
+        ),
+    ]
+```
+
+##### Documentation
+
+- [Django Migrations Documentation](https://docs.djangoproject.com/en/stable/topics/migrations/)
+
+### Ruby
+
+#### Rails Migrations
+
+Ruby on Rails provides a comprehensive migration system with an elegant DSL for database schema changes.
+
+##### Key Features
+
+- **DSL**: Ruby-based domain-specific language
+- **Reversible**: Automatic rollback generation
+- **Schema Versioning**: Complete schema versioning
+- **Rake Tasks**: Integration with Rake build system
+- **Multiple Environments**: Environment-specific configurations
+- **Data Migrations**: Support for data transformations
+
+##### Usage Example
+
+```bash
+# Generate migration
+rails generate migration CreateUsers username:string email:string
+
+# Run migrations
+rails db:migrate
+
+# Rollback last migration
+rails db:rollback
+
+# Rollback multiple steps
+rails db:rollback STEP=3
+
+# Reset and run all migrations
+rails db:drop db:create db:migrate
+
+# Check migration status
+rails db:migrate:status
+```
+
+```ruby
+# db/migrate/20231201000001_create_users.rb
+class CreateUsers < ActiveRecord::Migration[7.0]
+  def change
+    create_table :users do |t|
+      t.string :username, null: false, limit: 50
+      t.string :email, null: false, limit: 100
+      t.boolean :is_active, default: true
+      t.timestamps
+    end
+
+    add_index :users, :username, unique: true
+    add_index :users, :email, unique: true
+  end
+end
+```
+
+```ruby
+# db/migrate/20231201000002_create_posts.rb
+class CreatePosts < ActiveRecord::Migration[7.0]
+  def change
+    create_table :posts do |t|
+      t.string :title, null: false, limit: 200
+      t.text :content
+      t.references :user, null: false, foreign_key: true
+      t.boolean :published, default: false
+      t.timestamps
+    end
+
+    add_index :posts, [:user_id, :published]
+  end
+end
+```
+
+```ruby
+# Complex migration with data transformation
+class AddSlugToPosts < ActiveRecord::Migration[7.0]
+  def up
+    add_column :posts, :slug, :string
+    add_index :posts, :slug, unique: true
+
+    # Populate slugs for existing posts
+    Post.find_each do |post|
+      post.update!(slug: post.title.parameterize)
+    end
+
+    change_column_null :posts, :slug, false
+  end
+
+  def down
+    remove_column :posts, :slug
+  end
+end
+```
+
+##### Documentation
+
+- [Rails Migrations Guide](https://guides.rubyonrails.org/active_record_migrations.html)
+
+## Multi-Database Migration Tools
+
+### Liquibase
+
+Liquibase is a database-agnostic migration tool that supports multiple database platforms and provides advanced features for enterprise environments.
+
+#### Key Features
+
+- **Database Agnostic**: Supports 30+ database platforms
+- **Multiple Formats**: XML, YAML, JSON, and SQL formats
+- **Change Tracking**: Comprehensive change tracking and auditing
+- **Rollback**: Advanced rollback capabilities
+- **Contexts and Labels**: Conditional execution with contexts and labels
+- **Enterprise Features**: Pro version with additional enterprise features
+
+#### Usage Example
+
+```bash
+# Install Liquibase
+# Download from https://www.liquibase.org/download
+
+# Initialize project
+liquibase init project
+
+# Create changelog
+liquibase generate-changelog
+
+# Update database
+liquibase update
+
+# Rollback changes
+liquibase rollback-count 1
+
+# Show status
+liquibase status
+```
+
+```xml
+<!-- db/changelog/db.changelog-master.xml -->
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.8.xsd">
+
+    <changeSet id="1" author="developer">
+        <createTable tableName="users">
+            <column name="id" type="int" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="username" type="varchar(50)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="email" type="varchar(100)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="created_at" type="timestamp" defaultValueComputed="CURRENT_TIMESTAMP"/>
+        </createTable>
+
+        <createIndex tableName="users" indexName="idx_users_email">
+            <column name="email"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="2" author="developer">
+        <createTable tableName="posts">
+            <column name="id" type="int" autoIncrement="true">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="title" type="varchar(200)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="content" type="text"/>
+            <column name="user_id" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="published" type="boolean" defaultValueBoolean="false"/>
+            <column name="created_at" type="timestamp" defaultValueComputed="CURRENT_TIMESTAMP"/>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="posts"
+            baseColumnNames="user_id"
+            constraintName="fk_posts_user_id"
+            referencedTableName="users"
+            referencedColumnNames="id"/>
+    </changeSet>
+</databaseChangeLog>
+```
+
+```yaml
+# Alternative YAML format
+databaseChangeLog:
+  - changeSet:
+      id: 1
+      author: developer
+      changes:
+        - createTable:
+            tableName: users
+            columns:
+              - column:
+                  name: id
+                  type: int
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: username
+                  type: varchar(50)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: email
+                  type: varchar(100)
+                  constraints:
+                    nullable: false
+                    unique: true
+```
+
+#### Documentation
+
+- [Liquibase Documentation](https://docs.liquibase.com/)
+- [Liquibase Best Practices](https://docs.liquibase.com/concepts/bestpractices.html)
+
+### Atlas
+
+Atlas is a modern database schema management tool that provides declarative migrations and schema-as-code capabilities.
+
+#### Key Features
+
+- **Schema as Code**: Define schemas using HCL or SQL
+- **Declarative**: Describe desired state, not migration steps
+- **Multi-Database**: Support for MySQL, PostgreSQL, SQLite, SQL Server
+- **Migration Planning**: Automatic migration plan generation
+- **Schema Diffing**: Compare schemas and generate diffs
+- **CI/CD Integration**: Built for modern DevOps workflows
+
+#### Usage Example
+
+```bash
+# Install Atlas
+curl -sSf https://atlasgo.sh | sh
+
+# Initialize project
+atlas migrate new --dir "migrations"
+
+# Generate migration from schema
+atlas migrate diff --to "file://schema.sql" --dir "migrations"
+
+# Apply migrations
+atlas migrate apply --url "mysql://root:password@localhost:3306/mydb" --dir "migrations"
+
+# Get migration status
+atlas migrate status --url "mysql://root:password@localhost:3306/mydb" --dir "migrations"
+```
+
+```sql
+-- schema.sql (desired state)
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE posts (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(200) NOT NULL,
+    content TEXT,
+    user_id INT NOT NULL,
+    published BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+CREATE INDEX idx_posts_user_published ON posts(user_id, published);
+```
+
+```hcl
+# schema.hcl (alternative HCL format)
+table "users" {
+  schema = schema.myapp
+  column "id" {
+    null           = false
+    type           = int
+    auto_increment = true
+  }
+  column "username" {
+    null = false
+    type = varchar(50)
+  }
+  column "email" {
+    null = false
+    type = varchar(100)
+  }
+  column "created_at" {
+    null    = false
+    type    = timestamp
+    default = sql("CURRENT_TIMESTAMP")
+  }
+  primary_key {
+    columns = [column.id]
+  }
+  index "username" {
+    unique  = true
+    columns = [column.username]
+  }
+  index "email" {
+    unique  = true
+    columns = [column.email]
+  }
+}
+```
+
+#### Documentation
+
+- [Atlas Documentation](https://atlasgo.io/docs)
+- [Atlas GitHub Repository](https://github.com/ariga/atlas)
+
+## Version Control Integration
+
+### Git Hooks for Migrations
+
+Integrating migration tools with Git hooks ensures migrations are run automatically during deployment.
+
+```bash
+#!/bin/sh
+# .git/hooks/post-receive
+# Automatically run migrations after receiving push
+
+echo "Running database migrations..."
+
+# For Node.js projects
+if [ -f "package.json" ]; then
+    npm run migrate
+fi
+
+# For Rails projects
+if [ -f "Gemfile" ]; then
+    bundle exec rails db:migrate
+fi
+
+# For Django projects
+if [ -f "manage.py" ]; then
+    python manage.py migrate
+fi
+
+echo "Migrations completed!"
+```
+
+### CI/CD Pipeline Integration
+
+```yaml
+# .github/workflows/deploy.yml
+name: Deploy Application
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run database migrations
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          npm run migrate
+
+      - name: Verify migration status
+        run: npm run migrate:status
+```
+
+## Migration Strategies
+
+### Blue-Green Deployments
+
+Blue-green deployments require careful consideration of database migrations to ensure compatibility between versions.
+
+```javascript
+// Example: Backward-compatible migration strategy
+// Phase 1: Add new column (optional)
+exports.up = function (knex) {
+  return knex.schema.table("users", function (table) {
+    table.string("new_field").nullable(); // Make nullable first
+  });
+};
+
+// Phase 2: Populate new column with data migration
+exports.up = function (knex) {
+  return knex("users").update({
+    new_field: knex.raw('CONCAT(first_name, " ", last_name)'),
+  });
+};
+
+// Phase 3: Make column required after all instances updated
+exports.up = function (knex) {
+  return knex.schema.alterTable("users", function (table) {
+    table.string("new_field").notNullable().alter();
+  });
+};
+```
+
+### Zero-Downtime Migrations
+
+Strategies for performing migrations without application downtime:
+
+1. **Additive Changes**: Only add new tables, columns, or indexes
+2. **Backward Compatibility**: Ensure old code can work with new schema
+3. **Multi-Phase Deployments**: Deploy schema changes in multiple phases
+4. **Feature Flags**: Use feature flags to control when new features are enabled
+
+```sql
+-- Safe migration example: Adding optional column
+-- Phase 1: Add nullable column
+ALTER TABLE users ADD COLUMN phone VARCHAR(20);
+
+-- Phase 2: Application updated to populate phone field
+-- (Deploy application code)
+
+-- Phase 3: Make column required if needed
+-- ALTER TABLE users MODIFY COLUMN phone VARCHAR(20) NOT NULL;
+```
+
+## Best Practices
+
+### Migration File Organization
+
+```
+migrations/
+├── 001_initial_schema.sql
+├── 002_add_users_table.sql
+├── 003_add_posts_table.sql
+├── 004_add_indexes.sql
+└── 005_add_user_profiles.sql
+
+# Or with timestamps
+migrations/
+├── 20231201100000_initial_schema.sql
+├── 20231201110000_add_users_table.sql
+├── 20231201120000_add_posts_table.sql
+└── 20231201130000_add_indexes.sql
+```
+
+### Testing Migrations
+
+```javascript
+// Test migration rollback
+describe("Migration Tests", () => {
+  beforeEach(async () => {
+    await knex.migrate.rollback();
+    await knex.migrate.latest();
+  });
+
+  test("should create users table", async () => {
+    const exists = await knex.schema.hasTable("users");
+    expect(exists).toBe(true);
+  });
+
+  test("should rollback cleanly", async () => {
+    await knex.migrate.rollback();
+    const exists = await knex.schema.hasTable("users");
+    expect(exists).toBe(false);
+  });
+});
+```
+
+### Schema Documentation
+
+```sql
+-- Migration: 001_create_users_table.sql
+-- Description: Creates the main users table for authentication
+-- Author: John Doe
+-- Date: 2023-12-01
+-- Dependencies: None
+-- Breaking Changes: None
+
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    -- Unique username for login
+    username VARCHAR(50) UNIQUE NOT NULL,
+    -- Email address for notifications
+    email VARCHAR(100) UNIQUE NOT NULL,
+    -- Password hash (never store plain text)
+    password_hash VARCHAR(255) NOT NULL,
+    -- Account status flag
+    is_active BOOLEAN DEFAULT true,
+    -- Timestamp fields for auditing
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Indexes for performance
+CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_users_active ON users(is_active);
+```
+
+## Rollback and Recovery
+
+### Automatic Rollback Strategies
+
+```javascript
+// Knex.js with transaction rollback
+exports.up = function (knex) {
+  return knex.transaction(async (trx) => {
+    try {
+      await trx.schema.createTable("users", function (table) {
+        table.increments("id");
+        table.string("username").unique();
+        table.string("email").unique();
+      });
+
+      await trx.schema.createTable("posts", function (table) {
+        table.increments("id");
+        table.string("title");
+        table.integer("user_id").references("users.id");
+      });
+
+      // If any operation fails, entire migration rolls back
+    } catch (error) {
+      console.error("Migration failed:", error);
+      throw error; // This will trigger automatic rollback
+    }
+  });
+};
+```
+
+### Manual Recovery Procedures
+
+```bash
+#!/bin/bash
+# recovery.sh - Manual recovery script
+
+echo "Starting database recovery..."
+
+# 1. Stop application
+systemctl stop myapp
+
+# 2. Create database backup
+pg_dump mydb > backup_$(date +%Y%m%d_%H%M%S).sql
+
+# 3. Rollback to last known good migration
+npm run migrate:rollback
+
+# 4. Verify database state
+npm run migrate:status
+
+# 5. Restart application
+systemctl start myapp
+
+echo "Recovery completed!"
+```
+
+### Migration Health Checks
+
+```javascript
+// migration-health-check.js
+const knex = require("knex")(config);
+
+async function healthCheck() {
+  try {
+    // Check if migration table exists
+    const migrationTableExists = await knex.schema.hasTable("knex_migrations");
+    if (!migrationTableExists) {
+      throw new Error("Migration table does not exist");
+    }
+
+    // Check for pending migrations
+    const [currentBatch] =
+      await knex("knex_migrations").max("batch as max_batch");
+
+    const pendingMigrations = await knex.migrate.list();
+    if (pendingMigrations[1].length > 0) {
+      console.warn("Pending migrations detected:", pendingMigrations[1]);
+    }
+
+    // Verify critical tables exist
+    const criticalTables = ["users", "posts"];
+    for (const table of criticalTables) {
+      const exists = await knex.schema.hasTable(table);
+      if (!exists) {
+        throw new Error(`Critical table missing: ${table}`);
+      }
+    }
+
+    console.log("Migration health check passed");
+    return true;
+  } catch (error) {
+    console.error("Migration health check failed:", error);
+    return false;
+  }
+}
+
+module.exports = { healthCheck };
+```
+
+<BackToTop />
