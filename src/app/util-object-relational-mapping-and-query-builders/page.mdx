@@ -1,0 +1,1681 @@
+import BackToTop from "@/components/BackToTop";
+
+# Object Relational Mapping (ORM) and Query Builders
+
+## Table of Contents
+
+## Overview
+
+Object Relational Mapping (ORM) tools and query builders bridge the gap between object-oriented programming languages and relational databases. They provide abstraction layers that allow developers to work with database records as objects and write database queries using familiar programming constructs rather than raw SQL.
+
+ORMs offer several advantages including database abstraction, type safety, automatic schema migrations, relationship handling, and protection against SQL injection attacks. Query builders provide a middle ground between raw SQL and full ORMs, offering programmatic query construction while maintaining more control over the generated SQL.
+
+Modern ORMs support features like lazy loading, eager loading, caching, connection pooling, and database schema versioning. They often include CLI tools for migrations, code generation, and database seeding. The choice between different ORM solutions depends on factors like programming language, database requirements, performance needs, and team expertise.
+
+## Popular ORMs by Language
+
+### JavaScript/TypeScript ORMs
+
+#### Prisma
+
+Prisma is a next-generation ORM that provides type-safe database access, declarative migrations, and powerful introspection capabilities. It generates a query engine and type-safe client based on your database schema.
+
+##### Key Features
+
+- **Type Safety**: Auto-generated TypeScript types from database schema
+- **Declarative Schema**: Define your database schema using Prisma Schema Language
+- **Database Introspection**: Generate schema from existing databases
+- **Migration System**: Declarative migrations with rollback support
+- **Query Engine**: High-performance query engine written in Rust
+- **Multiple Database Support**: PostgreSQL, MySQL, SQLite, SQL Server, MongoDB
+- **Relation Queries**: Intuitive API for complex relationships
+
+##### Usage Example
+
+```prisma
+// schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id    Int     @id @default(autoincrement())
+  email String  @unique
+  name  String?
+  posts Post[]
+}
+
+model Post {
+  id        Int      @id @default(autoincrement())
+  title     String
+  content   String?
+  published Boolean  @default(false)
+  author    User     @relation(fields: [authorId], references: [id])
+  authorId  Int
+  createdAt DateTime @default(now())
+}
+```
+
+```typescript
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
+
+// Create user with posts
+const user = await prisma.user.create({
+  data: {
+    name: "Alice",
+    email: "alice@example.com",
+    posts: {
+      create: [
+        { title: "Hello World", content: "This is my first post" },
+        { title: "My Second Post", content: "This is my second post" },
+      ],
+    },
+  },
+  include: {
+    posts: true,
+  },
+});
+
+// Find users with their posts
+const usersWithPosts = await prisma.user.findMany({
+  include: {
+    posts: {
+      where: {
+        published: true,
+      },
+    },
+  },
+});
+
+// Complex filtering and sorting
+const posts = await prisma.post.findMany({
+  where: {
+    OR: [
+      { title: { contains: "Hello" } },
+      { content: { contains: "tutorial" } },
+    ],
+    published: true,
+  },
+  orderBy: {
+    createdAt: "desc",
+  },
+  take: 10,
+  skip: 20,
+});
+```
+
+##### Documentation
+
+- [Prisma Documentation](https://www.prisma.io/docs/)
+- [Prisma GitHub Repository](https://github.com/prisma/prisma)
+- [Prisma Examples](https://github.com/prisma/prisma-examples)
+
+#### TypeORM
+
+TypeORM is a feature-rich ORM for TypeScript and JavaScript that supports the Active Record and Data Mapper patterns, and works with TypeScript decorators.
+
+##### Key Features
+
+- **Decorator-Based**: Uses TypeScript decorators for entity definition
+- **Multiple Patterns**: Supports both Active Record and Data Mapper patterns
+- **Database Support**: MySQL, PostgreSQL, MariaDB, SQLite, MS SQL Server, Oracle, MongoDB
+- **Migration System**: Automatic and manual migrations
+- **Connection Management**: Connection pooling and multiple connections
+- **Query Builder**: Powerful query builder with raw SQL support
+- **Entity Relations**: One-to-one, one-to-many, many-to-many relationships
+
+##### Usage Example
+
+```typescript
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  OneToMany,
+  ManyToOne,
+  CreateDateColumn,
+} from "typeorm";
+
+@Entity()
+export class User {
+  @PrimaryGeneratedColumn()
+  id: number;
+
+  @Column()
+  firstName: string;
+
+  @Column()
+  lastName: string;
+
+  @Column({ unique: true })
+  email: string;
+
+  @OneToMany(() => Post, (post) => post.author)
+  posts: Post[];
+}
+
+@Entity()
+export class Post {
+  @PrimaryGeneratedColumn()
+  id: number;
+
+  @Column()
+  title: string;
+
+  @Column("text")
+  content: string;
+
+  @Column({ default: false })
+  published: boolean;
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @ManyToOne(() => User, (user) => user.posts)
+  author: User;
+}
+
+// Usage
+import { AppDataSource } from "./data-source";
+import { User } from "./entity/User";
+import { Post } from "./entity/Post";
+
+// Initialize the database connection
+await AppDataSource.initialize();
+
+// Create user
+const user = new User();
+user.firstName = "John";
+user.lastName = "Doe";
+user.email = "john@example.com";
+await AppDataSource.manager.save(user);
+
+// Find users with posts
+const users = await AppDataSource.manager.find(User, {
+  relations: ["posts"],
+});
+
+// Query builder example
+const posts = await AppDataSource.createQueryBuilder(Post, "post")
+  .leftJoinAndSelect("post.author", "author")
+  .where("post.published = :published", { published: true })
+  .orderBy("post.createdAt", "DESC")
+  .take(10)
+  .getMany();
+```
+
+##### Documentation
+
+- [TypeORM Documentation](https://typeorm.io/)
+- [TypeORM GitHub Repository](https://github.com/typeorm/typeorm)
+
+#### Sequelize
+
+Sequelize is a mature, promise-based ORM for Node.js that supports PostgreSQL, MySQL, MariaDB, SQLite, and Microsoft SQL Server.
+
+##### Key Features
+
+- **Promise-Based**: Built on JavaScript promises and async/await
+- **Validation**: Built-in validation with custom validators
+- **Associations**: Complex associations with through tables
+- **Transactions**: Support for database transactions
+- **Connection Pooling**: Built-in connection pooling
+- **Raw Queries**: Execute raw SQL when needed
+- **Eager Loading**: Optimize database queries with includes
+
+##### Usage Example
+
+```javascript
+const { Sequelize, DataTypes } = require("sequelize");
+
+// Database connection
+const sequelize = new Sequelize("database", "username", "password", {
+  host: "localhost",
+  dialect: "postgres",
+});
+
+// Define models
+const User = sequelize.define("User", {
+  firstName: DataTypes.STRING,
+  lastName: DataTypes.STRING,
+  email: {
+    type: DataTypes.STRING,
+    unique: true,
+    validate: {
+      isEmail: true,
+    },
+  },
+});
+
+const Post = sequelize.define("Post", {
+  title: DataTypes.STRING,
+  content: DataTypes.TEXT,
+  published: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
+});
+
+// Define associations
+User.hasMany(Post, { as: "posts" });
+Post.belongsTo(User, { as: "author" });
+
+// Usage
+async function examples() {
+  // Sync database
+  await sequelize.sync();
+
+  // Create user
+  const user = await User.create({
+    firstName: "Jane",
+    lastName: "Smith",
+    email: "jane@example.com",
+  });
+
+  // Create post
+  const post = await Post.create({
+    title: "My First Post",
+    content: "Hello, world!",
+    authorId: user.id,
+  });
+
+  // Find with associations
+  const usersWithPosts = await User.findAll({
+    include: [
+      {
+        model: Post,
+        as: "posts",
+        where: { published: true },
+        required: false,
+      },
+    ],
+  });
+
+  // Complex queries
+  const posts = await Post.findAll({
+    where: {
+      [Op.or]: [
+        { title: { [Op.like]: "%tutorial%" } },
+        { content: { [Op.like]: "%guide%" } },
+      ],
+      published: true,
+    },
+    include: [{ model: User, as: "author" }],
+    order: [["createdAt", "DESC"]],
+    limit: 10,
+    offset: 20,
+  });
+}
+```
+
+##### Documentation
+
+- [Sequelize Documentation](https://sequelize.org/docs/v6/)
+- [Sequelize GitHub Repository](https://github.com/sequelize/sequelize)
+
+### Python ORMs
+
+#### Django ORM
+
+Django's built-in ORM is tightly integrated with the Django web framework, providing a high-level abstraction for database operations.
+
+##### Key Features
+
+- **Model-Based**: Define database schema using Python classes
+- **Query API**: Powerful QuerySet API for database operations
+- **Migrations**: Automatic schema migrations
+- **Admin Interface**: Auto-generated admin interface
+- **Database Support**: PostgreSQL, MySQL, SQLite, Oracle
+- **Relationships**: Foreign keys, many-to-many, one-to-one relationships
+- **Aggregation**: Built-in aggregation and annotation support
+
+##### Usage Example
+
+```python
+from django.db import models
+from django.contrib.auth.models import User
+
+class Category(models.Model):
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+
+class Post(models.Model):
+    title = models.CharField(max_length=200)
+    content = models.TextField()
+    published = models.BooleanField(default=False)
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='posts')
+    categories = models.ManyToManyField(Category, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.title
+
+# Usage examples
+from django.contrib.auth.models import User
+from myapp.models import Post, Category
+
+# Create objects
+user = User.objects.create_user('john', 'john@example.com', 'password')
+category = Category.objects.create(name='Technology', description='Tech posts')
+
+post = Post.objects.create(
+    title='Django ORM Tutorial',
+    content='Learn Django ORM...',
+    author=user,
+    published=True
+)
+post.categories.add(category)
+
+# Query examples
+# Get all published posts
+published_posts = Post.objects.filter(published=True)
+
+# Complex queries with joins
+posts_with_authors = Post.objects.select_related('author').filter(
+    categories__name='Technology',
+    published=True
+).order_by('-created_at')
+
+# Aggregation
+from django.db.models import Count, Avg
+user_stats = User.objects.annotate(
+    post_count=Count('posts'),
+    avg_posts_per_category=Avg('posts__categories')
+).filter(post_count__gt=5)
+
+# Raw SQL when needed
+posts = Post.objects.raw(
+    'SELECT * FROM myapp_post WHERE published = %s ORDER BY created_at DESC',
+    [True]
+)
+```
+
+##### Documentation
+
+- [Django ORM Documentation](https://docs.djangoproject.com/en/stable/topics/db/)
+- [Django Models Reference](https://docs.djangoproject.com/en/stable/ref/models/)
+
+#### SQLAlchemy
+
+SQLAlchemy is a powerful and flexible Python SQL toolkit and ORM that provides both high-level ORM capabilities and low-level database access.
+
+##### Key Features
+
+- **Core and ORM**: Dual-layer architecture with Core (expression language) and ORM
+- **Database Support**: Extensive database support including PostgreSQL, MySQL, SQLite, Oracle
+- **Connection Pooling**: Advanced connection pooling and engine management
+- **Raw SQL**: Easy integration of raw SQL with ORM queries
+- **Reflection**: Database schema reflection and introspection
+- **Migrations**: Alembic integration for database migrations
+- **Performance**: Lazy loading, eager loading, and query optimization
+
+##### Usage Example
+
+```python
+from sqlalchemy import create_engine, Column, Integer, String, Text, Boolean, DateTime, ForeignKey, Table
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker, relationship
+from datetime import datetime
+
+Base = declarative_base()
+
+# Many-to-many association table
+post_categories = Table('post_categories', Base.metadata,
+    Column('post_id', Integer, ForeignKey('posts.id')),
+    Column('category_id', Integer, ForeignKey('categories.id'))
+)
+
+class User(Base):
+    __tablename__ = 'users'
+
+    id = Column(Integer, primary_key=True)
+    username = Column(String(50), unique=True, nullable=False)
+    email = Column(String(100), unique=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    posts = relationship("Post", back_populates="author")
+
+class Category(Base):
+    __tablename__ = 'categories'
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100), nullable=False)
+    description = Column(Text)
+
+    posts = relationship("Post", secondary=post_categories, back_populates="categories")
+
+class Post(Base):
+    __tablename__ = 'posts'
+
+    id = Column(Integer, primary_key=True)
+    title = Column(String(200), nullable=False)
+    content = Column(Text)
+    published = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    author_id = Column(Integer, ForeignKey('users.id'))
+
+    author = relationship("User", back_populates="posts")
+    categories = relationship("Category", secondary=post_categories, back_populates="posts")
+
+# Database setup
+engine = create_engine('postgresql://user:password@localhost/dbname')
+Base.metadata.create_all(engine)
+Session = sessionmaker(bind=engine)
+session = Session()
+
+# Usage examples
+# Create objects
+user = User(username='john_doe', email='john@example.com')
+category = Category(name='Technology', description='Tech-related posts')
+session.add_all([user, category])
+session.commit()
+
+post = Post(
+    title='SQLAlchemy Tutorial',
+    content='Learning SQLAlchemy...',
+    author=user,
+    published=True
+)
+post.categories.append(category)
+session.add(post)
+session.commit()
+
+# Query examples
+# Simple queries
+published_posts = session.query(Post).filter(Post.published == True).all()
+
+# Joins and relationships
+posts_with_authors = session.query(Post).join(User).filter(
+    User.username.like('%john%')
+).all()
+
+# Complex queries with multiple conditions
+from sqlalchemy import and_, or_
+complex_query = session.query(Post).filter(
+    and_(
+        Post.published == True,
+        or_(
+            Post.title.contains('tutorial'),
+            Post.content.contains('guide')
+        )
+    )
+).order_by(Post.created_at.desc()).limit(10).all()
+
+# Aggregation queries
+from sqlalchemy import func
+user_post_counts = session.query(
+    User.username,
+    func.count(Post.id).label('post_count')
+).join(Post).group_by(User.username).all()
+
+# Raw SQL
+result = session.execute(
+    "SELECT * FROM posts WHERE published = :published ORDER BY created_at DESC",
+    {"published": True}
+).fetchall()
+
+session.close()
+```
+
+##### Documentation
+
+- [SQLAlchemy Documentation](https://docs.sqlalchemy.org/)
+- [SQLAlchemy ORM Tutorial](https://docs.sqlalchemy.org/en/14/orm/tutorial.html)
+
+### Java ORMs
+
+#### Hibernate
+
+Hibernate is the most popular ORM framework for Java, providing a robust and mature solution for object-relational mapping.
+
+##### Key Features
+
+- **JPA Implementation**: Full Java Persistence API (JPA) implementation
+- **HQL**: Hibernate Query Language for database-independent queries
+- **Caching**: First-level and second-level caching support
+- **Lazy Loading**: Efficient lazy loading of associations
+- **Database Support**: Extensive database dialect support
+- **Schema Generation**: Automatic schema generation and validation
+- **Criteria API**: Type-safe query construction
+
+##### Usage Example
+
+```java
+// Entity classes
+@Entity
+@Table(name = "users")
+public class User {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(unique = true, nullable = false)
+    private String username;
+
+    @Column(unique = true, nullable = false)
+    private String email;
+
+    @OneToMany(mappedBy = "author", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Post> posts = new ArrayList<>();
+
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "created_at")
+    private Date createdAt;
+
+    @PrePersist
+    protected void onCreate() {
+        createdAt = new Date();
+    }
+
+    // Constructors, getters, setters...
+}
+
+@Entity
+@Table(name = "posts")
+public class Post {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false)
+    private String title;
+
+    @Column(columnDefinition = "TEXT")
+    private String content;
+
+    @Column(name = "published")
+    private Boolean published = false;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "author_id")
+    private User author;
+
+    @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    @JoinTable(
+        name = "post_categories",
+        joinColumns = @JoinColumn(name = "post_id"),
+        inverseJoinColumns = @JoinColumn(name = "category_id")
+    )
+    private Set<Category> categories = new HashSet<>();
+
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "created_at")
+    private Date createdAt;
+
+    // Constructors, getters, setters...
+}
+
+// Usage with Spring Data JPA
+@Repository
+public interface UserRepository extends JpaRepository<User, Long> {
+    Optional<User> findByUsername(String username);
+
+    @Query("SELECT u FROM User u JOIN u.posts p WHERE p.published = true")
+    List<User> findUsersWithPublishedPosts();
+
+    @Query(value = "SELECT * FROM users u WHERE u.created_at > :date", nativeQuery = true)
+    List<User> findUsersCreatedAfter(@Param("date") Date date);
+}
+
+@Service
+public class PostService {
+    @Autowired
+    private PostRepository postRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Transactional
+    public Post createPost(String title, String content, String username) {
+        User author = userRepository.findByUsername(username)
+            .orElseThrow(() -> new UserNotFoundException("User not found"));
+
+        Post post = new Post();
+        post.setTitle(title);
+        post.setContent(content);
+        post.setAuthor(author);
+        post.setPublished(true);
+
+        return postRepository.save(post);
+    }
+
+    public List<Post> findPublishedPosts(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        return postRepository.findByPublishedTrue(pageable).getContent();
+    }
+
+    // Criteria API example
+    public List<Post> findPostsByCriteria(String titleKeyword, Boolean published) {
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaQuery<Post> query = cb.createQuery(Post.class);
+        Root<Post> post = query.from(Post.class);
+
+        List<Predicate> predicates = new ArrayList<>();
+
+        if (titleKeyword != null) {
+            predicates.add(cb.like(post.get("title"), "%" + titleKeyword + "%"));
+        }
+
+        if (published != null) {
+            predicates.add(cb.equal(post.get("published"), published));
+        }
+
+        query.where(predicates.toArray(new Predicate[0]));
+        query.orderBy(cb.desc(post.get("createdAt")));
+
+        return entityManager.createQuery(query).getResultList();
+    }
+}
+```
+
+##### Documentation
+
+- [Hibernate Documentation](https://hibernate.org/orm/documentation/)
+- [Hibernate User Guide](https://docs.jboss.org/hibernate/orm/6.0/userguide/html_single/Hibernate_User_Guide.html)
+
+### C# ORMs
+
+#### Entity Framework Core
+
+Entity Framework Core is Microsoft's modern object-database mapper for .NET, supporting LINQ queries, change tracking, and schema migrations.
+
+##### Key Features
+
+- **Code First**: Define database schema using C# classes
+- **Database First**: Generate models from existing database
+- **LINQ Support**: Write queries using LINQ syntax
+- **Change Tracking**: Automatic change detection and saving
+- **Migrations**: Code-based database migrations
+- **Database Providers**: SQL Server, SQLite, PostgreSQL, MySQL, and more
+- **Performance**: Compiled queries and connection pooling
+
+##### Usage Example
+
+```csharp
+using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
+
+// Entity classes
+public class User
+{
+    public int Id { get; set; }
+
+    [Required]
+    [MaxLength(50)]
+    public string Username { get; set; }
+
+    [Required]
+    [EmailAddress]
+    public string Email { get; set; }
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    public virtual ICollection<Post> Posts { get; set; } = new List<Post>();
+}
+
+public class Post
+{
+    public int Id { get; set; }
+
+    [Required]
+    [MaxLength(200)]
+    public string Title { get; set; }
+
+    public string Content { get; set; }
+
+    public bool Published { get; set; } = false;
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    public int AuthorId { get; set; }
+    public virtual User Author { get; set; }
+
+    public virtual ICollection<Category> Categories { get; set; } = new List<Category>();
+}
+
+public class Category
+{
+    public int Id { get; set; }
+
+    [Required]
+    [MaxLength(100)]
+    public string Name { get; set; }
+
+    public string Description { get; set; }
+
+    public virtual ICollection<Post> Posts { get; set; } = new List<Post>();
+}
+
+// DbContext
+public class BlogContext : DbContext
+{
+    public DbSet<User> Users { get; set; }
+    public DbSet<Post> Posts { get; set; }
+    public DbSet<Category> Categories { get; set; }
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        optionsBuilder.UseSqlServer("Server=(localdb)\\mssqllocaldb;Database=BlogDb;Trusted_Connection=true;");
+    }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        // Configure relationships
+        modelBuilder.Entity<Post>()
+            .HasOne(p => p.Author)
+            .WithMany(u => u.Posts)
+            .HasForeignKey(p => p.AuthorId);
+
+        modelBuilder.Entity<Post>()
+            .HasMany(p => p.Categories)
+            .WithMany(c => c.Posts)
+            .UsingEntity(j => j.ToTable("PostCategories"));
+
+        // Configure indexes
+        modelBuilder.Entity<User>()
+            .HasIndex(u => u.Username)
+            .IsUnique();
+
+        modelBuilder.Entity<User>()
+            .HasIndex(u => u.Email)
+            .IsUnique();
+    }
+}
+
+// Usage examples
+public class BlogService
+{
+    private readonly BlogContext _context;
+
+    public BlogService(BlogContext context)
+    {
+        _context = context;
+    }
+
+    public async Task<User> CreateUserAsync(string username, string email)
+    {
+        var user = new User { Username = username, Email = email };
+        _context.Users.Add(user);
+        await _context.SaveChangesAsync();
+        return user;
+    }
+
+    public async Task<Post> CreatePostAsync(string title, string content, int authorId)
+    {
+        var post = new Post
+        {
+            Title = title,
+            Content = content,
+            AuthorId = authorId,
+            Published = true
+        };
+
+        _context.Posts.Add(post);
+        await _context.SaveChangesAsync();
+        return post;
+    }
+
+    public async Task<List<Post>> GetPublishedPostsAsync(int page = 0, int pageSize = 10)
+    {
+        return await _context.Posts
+            .Where(p => p.Published)
+            .Include(p => p.Author)
+            .Include(p => p.Categories)
+            .OrderByDescending(p => p.CreatedAt)
+            .Skip(page * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+    }
+
+    public async Task<List<Post>> SearchPostsAsync(string searchTerm)
+    {
+        return await _context.Posts
+            .Where(p => p.Published &&
+                       (p.Title.Contains(searchTerm) || p.Content.Contains(searchTerm)))
+            .Include(p => p.Author)
+            .OrderByDescending(p => p.CreatedAt)
+            .ToListAsync();
+    }
+
+    // Raw SQL example
+    public async Task<List<User>> GetActiveUsersAsync()
+    {
+        return await _context.Users
+            .FromSqlRaw(@"
+                SELECT u.* FROM Users u
+                INNER JOIN Posts p ON u.Id = p.AuthorId
+                WHERE p.Published = 1
+                GROUP BY u.Id, u.Username, u.Email, u.CreatedAt
+                HAVING COUNT(p.Id) > 5")
+            .ToListAsync();
+    }
+}
+```
+
+##### Documentation
+
+- [Entity Framework Core Documentation](https://docs.microsoft.com/en-us/ef/core/)
+- [EF Core GitHub Repository](https://github.com/dotnet/efcore)
+
+## Query Builders
+
+### Knex.js
+
+Knex.js is a flexible SQL query builder for Node.js that supports multiple database systems and provides a fluent API for building queries.
+
+#### Key Features
+
+- **Database Agnostic**: Supports PostgreSQL, MySQL, SQLite, and others
+- **Fluent API**: Chainable query building interface
+- **Migration System**: Schema migrations and versioning
+- **Connection Pooling**: Built-in connection management
+- **Raw SQL Support**: Mix raw SQL with query builder methods
+- **Transaction Support**: Database transaction management
+- **Schema Building**: DDL operations for schema management
+
+#### Usage Example
+
+```javascript
+const knex = require("knex")({
+  client: "postgresql",
+  connection: {
+    host: "127.0.0.1",
+    port: 5432,
+    user: "your_database_user",
+    password: "your_database_password",
+    database: "myapp_test",
+  },
+});
+
+// Schema creation
+await knex.schema.createTable("users", (table) => {
+  table.increments("id").primary();
+  table.string("username", 50).unique().notNullable();
+  table.string("email", 100).unique().notNullable();
+  table.timestamps(true, true);
+});
+
+await knex.schema.createTable("posts", (table) => {
+  table.increments("id").primary();
+  table.string("title", 200).notNullable();
+  table.text("content");
+  table.boolean("published").defaultTo(false);
+  table.integer("author_id").unsigned().references("id").inTable("users");
+  table.timestamps(true, true);
+});
+
+// Insert data
+const userId = await knex("users")
+  .insert({
+    username: "john_doe",
+    email: "john@example.com",
+  })
+  .returning("id");
+
+await knex("posts").insert({
+  title: "My First Post",
+  content: "Hello, world!",
+  author_id: userId[0],
+  published: true,
+});
+
+// Query examples
+// Simple select
+const users = await knex("users").select("*");
+
+// Select with conditions
+const publishedPosts = await knex("posts")
+  .select("title", "content", "created_at")
+  .where("published", true)
+  .orderBy("created_at", "desc")
+  .limit(10);
+
+// Joins
+const postsWithAuthors = await knex("posts")
+  .select("posts.title", "posts.content", "users.username")
+  .join("users", "posts.author_id", "users.id")
+  .where("posts.published", true);
+
+// Complex queries
+const searchResults = await knex("posts")
+  .select("posts.*", "users.username as author")
+  .join("users", "posts.author_id", "users.id")
+  .where(function () {
+    this.where("posts.title", "like", "%tutorial%").orWhere(
+      "posts.content",
+      "like",
+      "%guide%"
+    );
+  })
+  .andWhere("posts.published", true)
+  .orderBy("posts.created_at", "desc")
+  .offset(20)
+  .limit(10);
+
+// Aggregation
+const userStats = await knex("users")
+  .select("users.username")
+  .count("posts.id as post_count")
+  .leftJoin("posts", "users.id", "posts.author_id")
+  .groupBy("users.id", "users.username")
+  .having("post_count", ">", 5);
+
+// Transactions
+await knex.transaction(async (trx) => {
+  const user = await trx("users")
+    .insert({
+      username: "jane_doe",
+      email: "jane@example.com",
+    })
+    .returning("*");
+
+  await trx("posts").insert({
+    title: "Transaction Test",
+    content: "This post was created in a transaction",
+    author_id: user[0].id,
+    published: true,
+  });
+});
+
+// Raw SQL
+const customQuery = await knex.raw(`
+  SELECT u.username, COUNT(p.id) as post_count
+  FROM users u
+  LEFT JOIN posts p ON u.id = p.author_id AND p.published = true
+  GROUP BY u.id, u.username
+  ORDER BY post_count DESC
+`);
+```
+
+#### Documentation
+
+- [Knex.js Documentation](https://knexjs.org/)
+- [Knex.js GitHub Repository](https://github.com/knex/knex)
+
+### Jooq (Java)
+
+Jooq (Java Object Oriented Querying) is a type-safe SQL query builder that generates Java code from your database schema.
+
+#### Key Features
+
+- **Type Safety**: Compile-time type checking for SQL queries
+- **Code Generation**: Generate Java classes from database schema
+- **SQL-First**: Embrace SQL rather than hide it
+- **Database Support**: Extensive database dialect support
+- **Active Records**: Optional Active Record pattern
+- **Stored Procedures**: Support for stored procedures and functions
+
+#### Usage Example
+
+```java
+// Generated classes from database schema
+import static org.jooq.generated.Tables.*;
+import static org.jooq.generated.tables.Users.USERS;
+import static org.jooq.generated.tables.Posts.POSTS;
+
+// Configuration
+DSLContext create = DSL.using(connection, SQLDialect.POSTGRES);
+
+// Simple queries
+List<UsersRecord> users = create
+    .selectFrom(USERS)
+    .fetch();
+
+// Complex queries with joins
+Result<Record> result = create
+    .select(POSTS.TITLE, POSTS.CONTENT, USERS.USERNAME)
+    .from(POSTS)
+    .join(USERS).on(POSTS.AUTHOR_ID.eq(USERS.ID))
+    .where(POSTS.PUBLISHED.eq(true))
+    .orderBy(POSTS.CREATED_AT.desc())
+    .limit(10)
+    .fetch();
+
+// Type-safe operations
+Integer userId = create
+    .insertInto(USERS)
+    .set(USERS.USERNAME, "john_doe")
+    .set(USERS.EMAIL, "john@example.com")
+    .returning(USERS.ID)
+    .fetchOne()
+    .getId();
+
+// Complex aggregations
+Result<Record2<String, Integer>> userStats = create
+    .select(USERS.USERNAME, DSL.count(POSTS.ID))
+    .from(USERS)
+    .leftJoin(POSTS).on(USERS.ID.eq(POSTS.AUTHOR_ID))
+    .groupBy(USERS.USERNAME)
+    .having(DSL.count(POSTS.ID).gt(5))
+    .fetch();
+```
+
+#### Documentation
+
+- [Jooq Documentation](https://www.jooq.org/doc/latest/manual/)
+- [Jooq GitHub Repository](https://github.com/jOOQ/jOOQ)
+
+## Database-Agnostic Solutions
+
+### Prisma (Multi-language)
+
+Prisma provides database access across multiple programming languages with a consistent API and powerful tooling.
+
+#### Supported Languages
+
+- TypeScript/JavaScript
+- Go
+- Rust
+- Python (coming soon)
+
+### Hasura GraphQL Engine
+
+Hasura automatically generates a GraphQL API from your database schema, providing real-time subscriptions and fine-grained access control.
+
+#### Key Features
+
+- **Auto-generated GraphQL**: Instant GraphQL API from database
+- **Real-time Subscriptions**: Live queries with GraphQL subscriptions
+- **Authentication Integration**: JWT and webhook-based auth
+- **Authorization**: Row-level security and role-based access
+- **Remote Schemas**: Combine multiple GraphQL services
+- **Actions**: Custom business logic integration
+
+#### Usage Example
+
+```graphql
+# Auto-generated queries
+query GetPublishedPosts {
+  posts(
+    where: { published: { _eq: true } }
+    order_by: { created_at: desc }
+    limit: 10
+  ) {
+    id
+    title
+    content
+    created_at
+    author {
+      username
+      email
+    }
+    categories {
+      name
+    }
+  }
+}
+
+# Mutations
+mutation CreatePost($title: String!, $content: String!, $authorId: Int!) {
+  insert_posts_one(
+    object: {
+      title: $title
+      content: $content
+      author_id: $authorId
+      published: true
+    }
+  ) {
+    id
+    title
+    created_at
+  }
+}
+
+# Subscriptions for real-time updates
+subscription PostUpdates {
+  posts(where: { published: { _eq: true } }) {
+    id
+    title
+    content
+    updated_at
+    author {
+      username
+    }
+  }
+}
+
+# Aggregations
+query PostStatistics {
+  posts_aggregate {
+    aggregate {
+      count
+      avg {
+        author_id
+      }
+    }
+    nodes {
+      title
+      author {
+        username
+      }
+    }
+  }
+}
+```
+
+#### Documentation
+
+- [Hasura Documentation](https://hasura.io/docs/latest/graphql/core/index.html)
+- [Hasura GitHub Repository](https://github.com/hasura/graphql-engine)
+
+## ORM vs Query Builder vs Raw SQL
+
+### When to Use ORMs
+
+**Advantages:**
+
+- Rapid development and prototyping
+- Type safety and intellisense
+- Database abstraction
+- Relationship handling
+- Built-in validation
+- Migration management
+- Security (SQL injection protection)
+
+**Best for:**
+
+- CRUD-heavy applications
+- Rapid prototyping
+- Teams with varying SQL expertise
+- Applications requiring database portability
+
+**Example Use Cases:**
+
+```javascript
+// ORM - Great for simple CRUD operations
+const user = await User.findByPk(1, {
+  include: ["posts", "profile"],
+});
+
+await user.update({ lastLoginAt: new Date() });
+```
+
+### When to Use Query Builders
+
+**Advantages:**
+
+- More control over generated SQL
+- Better performance optimization
+- Flexible query construction
+- Raw SQL integration
+- Lighter weight than full ORMs
+
+**Best for:**
+
+- Performance-critical applications
+- Complex reporting queries
+- Gradual migration from raw SQL
+- Fine-tuned query optimization
+
+**Example Use Cases:**
+
+```javascript
+// Query Builder - Better for complex queries
+const results = await knex("orders")
+  .select([
+    "products.name",
+    knex.raw("SUM(order_items.quantity * order_items.price) as revenue"),
+  ])
+  .join("order_items", "orders.id", "order_items.order_id")
+  .join("products", "order_items.product_id", "products.id")
+  .where("orders.created_at", ">=", startDate)
+  .groupBy("products.id", "products.name")
+  .orderBy("revenue", "desc")
+  .limit(10);
+```
+
+### When to Use Raw SQL
+
+**Advantages:**
+
+- Maximum performance
+- Full SQL feature access
+- Database-specific optimizations
+- Complex analytical queries
+- Stored procedures and functions
+
+**Best for:**
+
+- Performance-critical operations
+- Complex business logic
+- Database-specific features
+- Data analysis and reporting
+- Legacy system integration
+
+**Example Use Cases:**
+
+```sql
+-- Raw SQL - Best for complex analytics
+WITH monthly_revenue AS (
+  SELECT
+    DATE_TRUNC('month', created_at) as month,
+    SUM(total_amount) as revenue,
+    COUNT(*) as order_count
+  FROM orders
+  WHERE created_at >= CURRENT_DATE - INTERVAL '12 months'
+  GROUP BY DATE_TRUNC('month', created_at)
+),
+revenue_growth AS (
+  SELECT
+    month,
+    revenue,
+    LAG(revenue) OVER (ORDER BY month) as prev_revenue,
+    (revenue - LAG(revenue) OVER (ORDER BY month)) /
+    LAG(revenue) OVER (ORDER BY month) * 100 as growth_rate
+  FROM monthly_revenue
+)
+SELECT * FROM revenue_growth ORDER BY month;
+```
+
+## Performance Considerations
+
+### N+1 Query Problem
+
+The N+1 query problem occurs when an ORM executes one query to fetch a list of records, then executes additional queries for each record to fetch related data.
+
+#### Problem Example:
+
+```javascript
+// This creates N+1 queries (1 + number of users)
+const users = await User.findAll(); // 1 query
+for (const user of users) {
+  console.log(user.posts); // N additional queries
+}
+```
+
+#### Solutions:
+
+**Eager Loading:**
+
+```javascript
+// Single query with JOIN
+const users = await User.findAll({
+  include: ["posts"], // Loads posts in same query
+});
+```
+
+**Batch Loading:**
+
+```javascript
+// Load all posts for all users in one query
+const users = await User.findAll();
+const userIds = users.map((u) => u.id);
+const posts = await Post.findAll({
+  where: { authorId: { in: userIds } },
+});
+```
+
+### Query Optimization
+
+#### 1. Use Indexes Effectively
+
+```sql
+-- Create indexes for frequently queried columns
+CREATE INDEX idx_posts_published_created ON posts(published, created_at DESC);
+CREATE INDEX idx_posts_author_id ON posts(author_id);
+```
+
+#### 2. Select Only Needed Columns
+
+```javascript
+// Instead of SELECT *
+const users = await User.findAll({
+  attributes: ["id", "username", "email"], // Only select needed columns
+});
+```
+
+#### 3. Use Pagination
+
+```javascript
+// Implement cursor-based pagination for large datasets
+const posts = await Post.findAll({
+  where: { id: { gt: lastPostId } },
+  limit: 20,
+  order: [["id", "ASC"]],
+});
+```
+
+#### 4. Connection Pooling
+
+```javascript
+// Configure connection pools appropriately
+const sequelize = new Sequelize("database", "username", "password", {
+  pool: {
+    max: 20, // Maximum connections
+    min: 5, // Minimum connections
+    idle: 30000, // Idle timeout
+    acquire: 60000, // Acquire timeout
+  },
+});
+```
+
+### Caching Strategies
+
+#### 1. Query Result Caching
+
+```javascript
+// Cache frequently accessed data
+const Redis = require("redis");
+const redis = Redis.createClient();
+
+async function getUser(id) {
+  const cacheKey = `user:${id}`;
+  const cached = await redis.get(cacheKey);
+
+  if (cached) {
+    return JSON.parse(cached);
+  }
+
+  const user = await User.findByPk(id);
+  await redis.setex(cacheKey, 3600, JSON.stringify(user)); // Cache for 1 hour
+  return user;
+}
+```
+
+#### 2. Second-Level Caching
+
+```javascript
+// Configure ORM-level caching
+const sequelize = new Sequelize("database", "username", "password", {
+  benchmark: true,
+  logging: (sql, timing) => {
+    console.log(`${sql} - Executed in ${timing}ms`);
+  },
+});
+```
+
+## Best Practices
+
+### Schema Design
+
+#### 1. Use Appropriate Data Types
+
+```sql
+-- Use specific data types
+CREATE TABLE users (
+  id SERIAL PRIMARY KEY,
+  username VARCHAR(50) NOT NULL UNIQUE,
+  email VARCHAR(255) NOT NULL UNIQUE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  is_active BOOLEAN DEFAULT true
+);
+```
+
+#### 2. Define Proper Relationships
+
+```javascript
+// Clear relationship definitions
+class User extends Model {
+  static associate(models) {
+    User.hasMany(models.Post, {
+      foreignKey: "authorId",
+      as: "posts",
+    });
+    User.hasOne(models.Profile, {
+      foreignKey: "userId",
+      as: "profile",
+    });
+  }
+}
+```
+
+### Migration Management
+
+#### 1. Version Control Migrations
+
+```javascript
+// migrations/20231201000001-create-users.js
+module.exports = {
+  up: async (queryInterface, Sequelize) => {
+    await queryInterface.createTable("users", {
+      id: {
+        type: Sequelize.INTEGER,
+        primaryKey: true,
+        autoIncrement: true,
+      },
+      username: {
+        type: Sequelize.STRING(50),
+        allowNull: false,
+        unique: true,
+      },
+      email: {
+        type: Sequelize.STRING(255),
+        allowNull: false,
+        unique: true,
+        validate: {
+          isEmail: true,
+        },
+      },
+      createdAt: {
+        type: Sequelize.DATE,
+        allowNull: false,
+      },
+      updatedAt: {
+        type: Sequelize.DATE,
+        allowNull: false,
+      },
+    });
+  },
+  down: async (queryInterface, Sequelize) => {
+    await queryInterface.dropTable("users");
+  },
+};
+```
+
+#### 2. Safe Migration Practices
+
+```javascript
+// Always provide rollback mechanisms
+// Test migrations on development/staging first
+// Use transactions for complex migrations
+module.exports = {
+  up: async (queryInterface, Sequelize) => {
+    const transaction = await queryInterface.sequelize.transaction();
+    try {
+      await queryInterface.addColumn(
+        "users",
+        "phone",
+        {
+          type: Sequelize.STRING(20),
+          allowNull: true,
+        },
+        { transaction }
+      );
+
+      await queryInterface.addIndex("users", ["phone"], {
+        name: "idx_users_phone",
+        transaction,
+      });
+
+      await transaction.commit();
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  },
+};
+```
+
+### Testing Strategies
+
+#### 1. Unit Testing with Test Databases
+
+```javascript
+// test/models/user.test.js
+const { User } = require("../models");
+const { sequelize } = require("../models");
+
+describe("User Model", () => {
+  beforeEach(async () => {
+    await sequelize.sync({ force: true }); // Reset test database
+  });
+
+  afterAll(async () => {
+    await sequelize.close();
+  });
+
+  test("should create a user with valid data", async () => {
+    const userData = {
+      username: "testuser",
+      email: "test@example.com",
+    };
+
+    const user = await User.create(userData);
+
+    expect(user.username).toBe(userData.username);
+    expect(user.email).toBe(userData.email);
+    expect(user.id).toBeDefined();
+  });
+
+  test("should not create user with duplicate email", async () => {
+    const userData = {
+      username: "testuser1",
+      email: "test@example.com",
+    };
+
+    await User.create(userData);
+
+    await expect(
+      User.create({ ...userData, username: "testuser2" })
+    ).rejects.toThrow();
+  });
+});
+```
+
+#### 2. Integration Testing
+
+```javascript
+// test/integration/posts.test.js
+const request = require("supertest");
+const app = require("../app");
+
+describe("Posts API", () => {
+  test("GET /api/posts should return published posts", async () => {
+    const response = await request(app).get("/api/posts").expect(200);
+
+    expect(response.body).toHaveProperty("posts");
+    expect(Array.isArray(response.body.posts)).toBe(true);
+  });
+
+  test("POST /api/posts should create a new post", async () => {
+    const postData = {
+      title: "Test Post",
+      content: "This is a test post",
+      authorId: 1,
+    };
+
+    const response = await request(app)
+      .post("/api/posts")
+      .send(postData)
+      .expect(201);
+
+    expect(response.body).toHaveProperty("id");
+    expect(response.body.title).toBe(postData.title);
+  });
+});
+```
+
+### Security Best Practices
+
+#### 1. Input Validation
+
+```javascript
+// Use validation libraries
+const Joi = require("joi");
+
+const userSchema = Joi.object({
+  username: Joi.string().alphanum().min(3).max(30).required(),
+  email: Joi.string().email().required(),
+  password: Joi.string()
+    .min(8)
+    .pattern(
+      new RegExp("^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#\$%\^&\*])")
+    )
+    .required(),
+});
+
+// Model-level validation
+class User extends Model {
+  static init(sequelize) {
+    super.init(
+      {
+        username: {
+          type: DataTypes.STRING,
+          validate: {
+            len: [3, 30],
+            isAlphanumeric: true,
+          },
+        },
+        email: {
+          type: DataTypes.STRING,
+          validate: {
+            isEmail: true,
+          },
+        },
+      },
+      { sequelize }
+    );
+  }
+}
+```
+
+#### 2. Parameterized Queries
+
+```javascript
+// Always use parameterized queries
+// Good - ORM handles parameterization
+const users = await User.findAll({
+  where: { username: userInput },
+});
+
+// Good - Manual parameterization
+const users = await sequelize.query(
+  "SELECT * FROM users WHERE username = :username",
+  {
+    replacements: { username: userInput },
+    type: QueryTypes.SELECT,
+  }
+);
+
+// Bad - SQL injection vulnerability
+// const users = await sequelize.query(`SELECT * FROM users WHERE username = '${userInput}'`);
+```
+
+#### 3. Access Control
+
+```javascript
+// Implement proper authorization
+class PostService {
+  async updatePost(postId, userId, updateData) {
+    const post = await Post.findByPk(postId);
+
+    if (!post) {
+      throw new Error("Post not found");
+    }
+
+    // Check ownership
+    if (post.authorId !== userId) {
+      throw new Error("Unauthorized: You can only edit your own posts");
+    }
+
+    return await post.update(updateData);
+  }
+}
+```
+
+<BackToTop />
