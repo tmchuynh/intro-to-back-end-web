@@ -4,17 +4,6 @@ import BackToTop from "@/components/BackToTop";
 
 ## Table of Contents
 
-- [Overview of Caching Concepts](#overview-of-caching-concepts)
-- [Why Caching Matters](#why-caching-matters)
-- [Cache Hierarchy](#cache-hierarchy)
-- [Common Caching Strategies](#common-caching-strategies)
-- [Cache Implementation Patterns](#cache-implementation-patterns)
-- [Important Considerations](#important-considerations)
-- [Performance Optimization](#performance-optimization)
-- [Best Practices](#best-practices)
-- [Common Pitfalls and How to Avoid Them](#common-pitfalls-and-how-to-avoid-them)
-- [Next Steps](#next-steps)
-
 ## Overview of Caching Concepts
 
 Caching is a fundamental technique in computer science that involves storing frequently accessed data in a temporary storage area (the cache) to enable faster retrieval and reduce the load on the primary data source. At its core, caching exploits the principle of locality - the observation that programs tend to access the same data repeatedly over short periods of time (temporal locality) and tend to access data that is close to previously accessed data (spatial locality).
@@ -97,7 +86,7 @@ How it works:
 
 Detailed Implementation Flow:
 
-```
+```bash
 Application Request → Check Cache
                    ↓
             Cache Hit? → Yes → Return Cached Data
@@ -139,7 +128,7 @@ How it works:
 
 Detailed Implementation Flow:
 
-```
+```bash
 Application → Cache Layer → Database (only on miss)
            ← Cache Layer ← (data flows back through cache)
 ```
@@ -178,7 +167,7 @@ How it works:
 
 Detailed Implementation Flow:
 
-```
+```bash
 Application Write → Cache (write) + Database (write) → Success/Failure
 ```
 
@@ -216,7 +205,7 @@ How it works:
 
 Detailed Implementation Flow:
 
-```
+```bash
 Application Write → Cache (immediate) → Return Success
                     ↓
             Background Process → Database (delayed)
@@ -247,35 +236,35 @@ Disadvantages:
 
 Write-around caching bypasses the cache during write operations, writing directly to the primary data source. The cache is only populated during read operations.
 
-How it works:
+#### How it works:
 
 1. Write operations go directly to the database, bypassing cache
 2. Read operations check cache first
 3. On cache miss, data is loaded from database and cached
 4. Cache may contain stale data until next read
 
-Detailed Implementation Flow:
+#### Detailed Implementation Flow:
 
-```
+```bash
 Write: Application → Database (cache bypassed)
 Read:  Application → Cache → Database (on miss) → Cache → Application
 ```
 
-Use Cases:
+#### Use Cases:
 
 - Applications with infrequent reads after writes
 - Systems where write and read patterns are very different
 - When cache space is limited and write data might not be read soon
 - One-time data processing or ETL operations
 
-Advantages:
+#### Advantages:
 
 - Prevents cache pollution from write-only data
 - Simple write path (no cache management overhead)
 - Good cache utilization (only frequently read data is cached)
 - No write performance penalty
 
-Disadvantages:
+#### Disadvantages:
 
 - Immediate reads after writes result in cache misses
 - Potential for serving stale data
@@ -288,21 +277,21 @@ Disadvantages:
 
 Cache partitioning involves distributing cache data across multiple cache instances based on a partitioning strategy. This approach helps scale cache capacity and throughput beyond what a single cache instance can provide.
 
-Common Partitioning Strategies:
+#### Common Partitioning Strategies:
 
-Hash-based Partitioning:
+##### Hash-based Partitioning:
 
 - Use a hash function on the cache key to determine which cache instance to use
 - Provides even distribution but makes range queries difficult
 - Example: `cache_instance = hash(key) % number_of_instances`
 
-Range-based Partitioning:
+##### Range-based Partitioning:
 
 - Partition data based on key ranges
 - Enables efficient range queries
 - May lead to uneven distribution if data is not uniformly distributed
 
-Directory-based Partitioning:
+##### Directory-based Partitioning:
 
 - Maintain a lookup service that maps keys to cache instances
 - Provides flexibility but adds complexity and potential bottleneck
@@ -311,13 +300,13 @@ Directory-based Partitioning:
 
 Cache replication involves maintaining multiple copies of cache data across different instances to improve availability and fault tolerance.
 
-Master-Slave Replication:
+#### Master-Slave Replication:
 
 - One master cache handles all writes
 - Multiple slave caches handle read requests
 - Provides read scalability and failover capability
 
-Multi-Master Replication:
+#### Multi-Master Replication:
 
 - Multiple cache instances can handle both reads and writes
 - Requires conflict resolution strategies
@@ -340,37 +329,38 @@ Key Characteristics:
 
 Cache invalidation is one of the most challenging aspects of caching, often cited as one of the "two hard things in computer science" along with naming things and off-by-one errors. The goal is to ensure that stale or incorrect data is removed from the cache while maintaining optimal performance.
 
-Invalidation Strategies:
 
-Time-based Expiration (TTL - Time To Live):
+#### Invalidation Strategies:
+
+##### Time-based Expiration (TTL - Time To Live):
 
 - Set an expiration time when data is cached
 - Data is automatically removed after the specified duration
 - Simple to implement but may serve stale data before expiration
 - Best for data with predictable change patterns
 
-Event-based Invalidation:
+##### Event-based Invalidation:
 
 - Cache is updated or cleared in response to specific events
 - Examples: database triggers, message queue events, API callbacks
 - More accurate but requires additional infrastructure
 - Best for data with unpredictable change patterns
 
-Manual Invalidation:
+##### Manual Invalidation:
 
 - Application explicitly removes or updates cache entries
 - Provides fine-grained control but increases code complexity
 - Risk of forgetting to invalidate when updating data
 - Best for critical data that requires precise control
 
-Tag-based Invalidation:
+##### Tag-based Invalidation:
 
 - Associate cache entries with tags or categories
 - Invalidate all entries with specific tags when related data changes
 - Useful for complex data relationships
 - Supported by advanced caching systems like Redis
 
-Cache Invalidation Challenges:
+##### Cache Invalidation Challenges:
 
 The Thundering Herd Problem:
 When a popular cache entry expires, multiple requests may simultaneously try to regenerate it, overwhelming the database. Solutions include:
@@ -379,7 +369,7 @@ When a popular cache entry expires, multiple requests may simultaneously try to 
 - Distributed locking (only one request regenerates the cache)
 - Probabilistic early expiration (randomly expire entries before actual TTL)
 
-Cascading Invalidation:
+##### Cascading Invalidation:
 When invalidating one cache entry requires invalidating related entries. This can be managed through:
 
 - Dependency tracking between cache entries
@@ -390,58 +380,58 @@ When invalidating one cache entry requires invalidating related entries. This ca
 
 Cache size management is crucial for optimal performance. Caches have finite memory, so when they reach capacity, they must decide which data to remove to make room for new data.
 
-Common Eviction Policies:
+#### Common Eviction Policies:
 
-Least Recently Used (LRU):
+##### Least Recently Used (LRU):
 
 - Removes the data that hasn't been accessed for the longest time
 - Good for applications with temporal locality
 - Implementation: Doubly-linked list + hashmap
 - Time complexity: O(1) for get/put operations
 
-Least Frequently Used (LFU):
+##### Least Frequently Used (LFU):
 
 - Removes data with the lowest access frequency
 - Better for applications with consistent access patterns
 - Implementation: Hash table + min-heap or counter-based approach
 - May suffer from aging problems (old frequent data vs new data)
 
-First In First Out (FIFO):
+##### First In First Out (FIFO):
 
 - Removes the oldest data regardless of access patterns
 - Simple to implement but ignores data popularity
 - Implementation: Queue data structure
 - Not optimal for most caching scenarios
 
-Random Replacement:
+##### Random Replacement:
 
 - Randomly selects data for eviction
 - Simple and surprisingly effective in some scenarios
 - No overhead for tracking access patterns
 - Good baseline for comparison with other policies
 
-Adaptive Replacement Cache (ARC):
+##### Adaptive Replacement Cache (ARC):
 
 - Combines LRU and LFU strategies
 - Adapts to changing access patterns
 - More complex but provides better hit rates
 - Used in some enterprise caching solutions
 
-Time-Aware Least Recently Used (TLRU):
+##### Time-Aware Least Recently Used (TLRU):
 
 - Considers both recency and a time-to-live value
 - Useful when cache entries have different importance levels
 - Balances between temporal locality and data freshness
 
-Cache Size Considerations:
+#### Cache Size Considerations:
 
-Memory vs Performance Trade-off:
+##### Memory vs Performance Trade-off:
 
 - Larger caches generally provide better hit rates
 - But consume more memory and may have higher management overhead
 - Need to balance cache size with available system memory
 
-Working Set Size:
+##### Working Set Size:
 
 - The amount of data your application actively uses
 - Cache should ideally hold the entire working set
@@ -982,6 +972,15 @@ Caching is a powerful technique that can dramatically improve application perfor
 
 Explore more advanced caching techniques, such as distributed caching, cache partitioning, and hybrid caching strategies. Consider implementing a caching layer in your application architecture to improve performance and scalability.
 
-Now that you have a solid understanding of caching strategies, you can apply these concepts to optimize your application's performance and scalability. Now you can explore more advanced topics in back-end development, such as [API design](/foundation/API-design), to further enhance your skills and knowledge.
+Now that you have a solid understanding of caching strategies, you can apply these concepts to optimize your application's performance and scalability. Now you can explore more advanced topics in back-end development, such as [API design](/fund-foundation/API-design), to further enhance your skills and knowledge.
+
+### Immediate Actions
+
+| Priority   | Action                                                | Purpose                             |
+| ---------- | ----------------------------------------------------- | ----------------------------------- |
+| **High**   | [API Design](/fund-foundation/API-design)             | Understanding API design principles |
+| **Medium** | [RESTful Services](/fund-foundation/RESTful-services) | Understanding RESTful principles    |
+| **Medium** | [Web Servers](/fund-foundation/web-server-basics)     | Understanding web server concepts   |
+| **Low**    | [HTTP Protocol](/fund-foundation/HTTP-protocol)       | Understanding HTTP fundamentals     |
 
 <BackToTop />
