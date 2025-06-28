@@ -1,0 +1,164 @@
+import BackToTop from "@/components/BackToTop";
+
+# Back-End Vocabulary
+
+## Table of Contents
+
+## Core Concepts
+
+| Terminology    | Explanation                                                                                                                                                |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Client         | A software application that requests services or resources from a server.                                                                                  |
+| Server         | A software application that provides services or resources to clients.                                                                                     |
+| Protocol       | A set of rules that define how data is transmitted over a network.                                                                                         |
+| Session        | A temporary interaction between a client and a server, often used to maintain state in web applications.                                                   |
+| Middleware     | Software that acts as an intermediary between different applications or services, facilitating communication and data exchange.                            |
+| CRUD           | Create, Read, Update, Delete, the four basic operations for managing data in a database.                                                                   |
+| Idempotency    | The property that allows an operation to be performed multiple times with the same result.                                                                 |
+
+## Database Terminology
+
+| Terminology          | Explanation                                                                                                                                     |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| SQL                  | Structured Query Language, a standard language for managing and manipulating relational databases.                                             |
+| NoSQL                | A class of databases that do not use the traditional relational model, often designed for scalability and flexibility.                         |
+| ORM                  | Object-Relational Mapping, a programming technique for converting data between incompatible type systems in object-oriented programming languages. |
+| Database Index       | A data structure that improves the speed of data retrieval operations on a database table.                                                     |
+| Primary Key          | A unique identifier for each record in a database table.                                                                                       |
+| Foreign Key          | A field in a database table that refers to the primary key of another table, establishing a relationship between tables.                       |
+| Normalization        | The process of organizing data in a database to reduce redundancy and improve data integrity.                                                  |
+| Denormalization      | The process of adding redundancy to a database to improve read performance at the cost of write performance and storage.                       |
+| Transaction          | A sequence of database operations that are treated as a single unit of work.                                                                   |
+| Rollback             | The process of undoing changes made during a database transaction.                                                                             |
+| Commit               | The process of permanently saving changes made during a database transaction.                                                                  |
+| Database Migration   | The process of moving data from one database to another or updating database schema.                                                           |
+| Connection Pool      | A cache of database connections maintained so connections can be reused across multiple requests.                                              |
+| Query Optimization   | The process of improving database query performance through various techniques and strategies.                                                  |
+| Stored Procedure     | A prepared SQL code that can be saved and reused, executed on the database server.                                                            |
+| Trigger              | A special type of stored procedure that automatically executes in response to certain events in a database.                                   |
+| View                 | A virtual table based on the result of an SQL statement, containing rows and columns just like a real table.                                  |
+| Database Sharding    | A method of horizontally partitioning data across multiple databases to improve performance and scalability.                                   |
+| Database Replication | The process of copying and maintaining database objects in multiple databases to ensure redundancy and improve availability.                    |
+| ACID Properties      | Atomicity, Consistency, Isolation, Durability - fundamental properties that guarantee database transactions are processed reliably.           |
+| BASE Properties      | Basically Available, Soft state, Eventual consistency - properties of NoSQL databases that prioritize availability over strict consistency.   |
+
+## System Architecture
+
+| Terminology               | Explanation                                                                                                                                                                             |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Microservices             | An architectural style that structures an application as a collection of loosely coupled services, each responsible for a specific business capability.                                 |
+| Service Mesh              | A dedicated infrastructure layer that manages service-to-service communication in microservices architectures, providing features like traffic management, security, and observability. |
+| Event-Driven Architecture | An architectural pattern that uses events to trigger and communicate between decoupled services, enabling real-time processing and responsiveness.                                      |
+| Load Balancer             | A device or software that distributes network or application traffic across multiple servers to ensure reliability and performance.                                                     |
+| Reverse Proxy             | A server that sits in front of web servers and forwards client requests to those servers, often used for load balancing and caching.                                                   |
+| Forward Proxy             | A server that sits between client devices and the internet, forwarding requests on behalf of clients.                                                                                  |
+| API Gateway               | A server that acts as an entry point for clients to access multiple backend services, often providing features like authentication, routing, and load balancing.                        |
+| Caching                   | The process of storing frequently accessed data in a temporary storage area to improve performance and reduce latency.                                                                  |
+| CDN                       | Content Delivery Network, a geographically distributed network of servers that cache and deliver content to users from the nearest location.                                          |
+| Scalability               | The ability of a system to handle increased load or traffic by adding resources, such as servers or databases.                                                                          |
+| Horizontal Scaling        | Adding more servers or instances to handle increased load, also known as scaling out.                                                                                                  |
+| Vertical Scaling          | Adding more power (CPU, RAM) to existing servers to handle increased load, also known as scaling up.                                                                                   |
+| High Availability         | A design approach that ensures a system remains operational and accessible even in the event of failures or maintenance.                                                                |
+| Fault Tolerance           | The ability of a system to continue operating properly in the event of a failure of some of its components.                                                                             |
+| Circuit Breaker           | A design pattern that prevents cascading failures by temporarily blocking requests to a failing service.                                                                               |
+| Distributed System        | A system whose components are located on different networked computers and communicate by passing messages.                                                                             |
+| Consensus Algorithm       | Algorithms used in distributed systems to achieve agreement on a single data value among distributed processes.                                                                        |
+| Byzantine Fault Tolerance | The ability of a distributed system to continue operating correctly even when some components fail or act maliciously.                                                                 |
+| CAP Theorem               | A theoretical principle stating that a distributed system can only guarantee two of three properties: Consistency, Availability, and Partition tolerance.                              |
+| Eventual Consistency      | A consistency model where the system will become consistent over time, but may be inconsistent temporarily.                                                                            |
+| Strong Consistency        | A consistency model where all nodes see the same data at the same time.                                                                                                                |
+
+## Security & Authentication
+
+| Terminology    | Explanation                                                                                                                      |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Authentication | The process of verifying the identity of a user or system before granting access to resources.                                   |
+| Authorization  | The process of determining whether a user or system has permission to access a resource or perform an action.                    |
+| Encryption     | The process of converting data into a coded format to prevent unauthorized access.                                               |
+| Decryption     | The process of converting encrypted data back into its original format.                                                          |
+| SSL/TLS        | Secure Sockets Layer/Transport Layer Security, cryptographic protocols that provide secure communication over networks.         |
+| JWT            | JSON Web Token, a compact way to securely transmit information between parties as a JSON object.                                |
+| OAuth          | An open standard for access delegation, commonly used for token-based authentication and authorization.                          |
+| CORS           | Cross-Origin Resource Sharing, a mechanism that allows restricted resources on a web page to be requested from another domain.  |
+| Rate Limiting  | A technique used to control the amount of incoming or outgoing traffic to or from a network resource, preventing abuse and ensuring fair usage. |
+| Throttling     | The process of limiting the rate at which requests are processed, often used to prevent overload or abuse of resources.         |
+
+## APIs & Communication
+
+| Terminology     | Explanation                                                                                                                                                           |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| API             | Application Programming Interface, a set of rules that allows different software applications to communicate with each other.                                         |
+| REST            | Representational State Transfer, an architectural style for designing networked applications that uses HTTP requests to access and manipulate resources.             |
+| GraphQL         | A query language for APIs that allows clients to request specific data and receive only the requested information, reducing over-fetching and under-fetching.        |
+| gRPC            | A high-performance, open-source RPC framework that can run in any environment.                                                                                       |
+| HTTP            | Hypertext Transfer Protocol, the protocol used for transmitting web pages over the internet.                                                                         |
+| HTTPS           | HTTP Secure, a secure version of HTTP that uses encryption to protect data in transit.                                                                               |
+| WebSocket       | A protocol that enables real-time, two-way communication between a client and a server over a single, long-lived connection.                                         |
+| WebRTC          | Web Real-Time Communication, a technology that enables real-time peer-to-peer communication in web applications.                                                     |
+| Webhooks        | User-defined HTTP callbacks that are triggered by specific events in a web application, allowing real-time updates and notifications.                                |
+| JSON            | JavaScript Object Notation, a lightweight data interchange format that is easy for humans to read and write, and easy for machines to parse and generate.           |
+| XML             | eXtensible Markup Language, a markup language that defines a set of rules for encoding documents in a format that is both human-readable and machine-readable.      |
+| API Versioning  | The practice of managing changes to APIs while maintaining backward compatibility.                                                                                    |
+| Swagger/OpenAPI | A specification for describing REST APIs, often used for documentation and client code generation.                                                                   |
+| Message Queue   | A communication method that allows applications to communicate asynchronously by sending messages through a queue system.                                            |
+| Pub/Sub         | Publish/Subscribe pattern where publishers send messages to topics and subscribers receive messages from topics they're interested in.                               |
+
+## Data Processing & Management
+
+| Terminology      | Explanation                                                                                                                                       |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ETL              | Extract, Transform, Load - the process of extracting data from sources, transforming it, and loading it into a destination system.               |
+| Data Pipeline    | A series of data processing steps that automate the movement and transformation of data from source to destination.                               |
+| Batch Processing | Processing data in large chunks or batches at scheduled intervals, typically used for non-time-sensitive operations.                             |
+| Stream Processing| Real-time processing of data as it flows through a system, enabling immediate responses to events.                                               |
+| OLTP             | Online Transaction Processing, systems designed for managing transaction-oriented applications.                                                   |
+| OLAP             | Online Analytical Processing, systems designed for complex analytical and ad hoc queries on large datasets.                                      |
+| Data Warehouse   | A centralized repository that stores integrated data from multiple sources for analytical reporting and business intelligence.                    |
+| Data Lake        | A storage repository that holds vast amounts of raw data in its native format until needed.                                                      |
+| Backup           | The process of creating copies of data to protect against data loss.                                                                             |
+| Data Retention   | Policies and practices for how long data should be stored before deletion or archival.                                                           |
+
+## Cloud & Infrastructure
+
+| Terminology           | Explanation                                                                                                                                         |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Containerization      | The practice of packaging an application and its dependencies into a container, allowing it to run consistently across different environments.      |
+| Virtualization        | The creation of virtual versions of physical resources, such as servers or storage devices, to improve resource utilization and flexibility.       |
+| Docker                | A platform that uses containerization to package applications and their dependencies into portable containers.                                     |
+| Kubernetes            | An open-source container orchestration platform for automating deployment, scaling, and management of containerized applications.                  |
+| Serverless            | A cloud computing model where the cloud provider manages the infrastructure and automatically allocates resources as needed.                       |
+| Lambda Function       | A serverless computing service that runs code in response to events without provisioning or managing servers.                                      |
+| Edge Computing        | Processing data closer to where it's generated rather than in a centralized data-processing warehouse.                                             |
+| Infrastructure as Code| The practice of managing and provisioning infrastructure through machine-readable definition files.                                                 |
+
+## DevOps & Deployment
+
+| Terminology           | Explanation                                                                                                                           |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| DevOps                | A set of practices that combines software development and IT operations to shorten the development lifecycle.                         |
+| CI/CD                 | Continuous Integration/Continuous Deployment, practices that enable frequent code integration and automated deployment.               |
+| Blue-Green Deployment | A deployment strategy that uses two identical production environments to enable zero-downtime deployments.                           |
+| Canary Deployment     | A deployment strategy that gradually rolls out changes to a small subset of users before full deployment.                            |
+| Disaster Recovery     | The process of preparing for and recovering from catastrophic events that could disrupt business operations.                         |
+
+## Monitoring & Operations
+
+| Terminology | Explanation                                                                                                                |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Monitoring  | The process of collecting, analyzing, and using information to track system performance and health.                        |
+| Logging     | The practice of recording events and activities in a system for debugging, auditing, and monitoring purposes.             |
+| Metrics     | Quantitative measurements used to assess system performance, usage, and health.                                           |
+| Alerting    | Automated notifications triggered when system metrics exceed predefined thresholds or when errors occur.                  |
+| SLA         | Service Level Agreement, a contract that defines the expected level of service between a provider and customer.           |
+| SLO         | Service Level Objective, specific measurable targets for service performance.                                             |
+| SLI         | Service Level Indicator, specific metrics used to measure service performance.                                            |
+
+## Compliance & Governance
+
+| Terminology | Explanation                                                                                                                                              |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Compliance  | Adherence to regulations, standards, and policies relevant to data handling and system operations.                                                       |
+| GDPR        | General Data Protection Regulation, a European Union regulation on data protection and privacy.                                                         |
+| HIPAA       | Health Insurance Portability and Accountability Act, US legislation that provides data privacy and security provisions for medical information.         |
+
+<BackToTop />
