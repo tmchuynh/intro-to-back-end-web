@@ -15,11 +15,19 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { navigation, loading } = useNavigation();
   const pathname = usePathname();
   const [openSection, setOpenSection] = useState<string | null>(null);
+  const [initialPathname, setInitialPathname] = useState<string | null>(null);
 
-  // Close sidebar when pathname changes (new page loads)
+  // Track initial pathname and close sidebar on subsequent navigation
   useEffect(() => {
-    onClose();
-  }, [pathname, onClose]);
+    if (initialPathname === null) {
+      // First load - just set the initial pathname
+      setInitialPathname(pathname);
+    } else if (pathname !== initialPathname) {
+      // Pathname changed after initial load - close sidebar
+      onClose();
+      setInitialPathname(pathname);
+    }
+  }, [pathname, initialPathname, onClose]);
 
   // Recursive function to check if any item or its children contain the path
   const checkItemContainsPath = useCallback(
