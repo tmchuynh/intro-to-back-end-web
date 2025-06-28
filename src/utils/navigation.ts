@@ -24,7 +24,6 @@ const CATEGORY_PREFIXES = [
   "adv", // advanced
   "util", // utilities
   "db", // database
-  "api",
   "sec", // security
   "perf", // performance
   "dep", // deployment
@@ -200,8 +199,6 @@ function categorizeNavigationItems(
           case "nosql":
             return "nosql";
           case "db":
-            return "databases";
-          case "api":
             return "databases";
           case "fund":
             return "fundamentals";
