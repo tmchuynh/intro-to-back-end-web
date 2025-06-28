@@ -519,6 +519,7 @@ function getPriority(title: string): number {
   if (
     normalizedTitle.includes("introduction") ||
     normalizedTitle.includes("foundation") ||
+    normalizedTitle.includes("general") ||
     normalizedTitle.includes("intro")
   )
     return 4;
