@@ -379,22 +379,21 @@ function categorizeNavigationItems(
       title.includes("environment") ||
       title.includes("dom") ||
       title.includes("forms") ||
-      title.includes("jquery") ||
-      title.includes("documentation") ||
-      title.includes("learning platforms")
+      title.includes("jquery")
     ) {
       return "databases";
     } else if (
-      path.includes("utilities-tools") ||
-      path.includes("resources-utilities") ||
-      path.includes("helper-functions") ||
+      path.includes("utilities") ||
+      path.includes("utility") ||
+      path.includes("management") ||
+      path.includes("tools") ||
+      path.includes("testing") ||
+      (path.includes("documentation") && path.includes("tools")) ||
+      path.includes("helper") ||
       path.includes("development-tools") ||
-      path.includes("utility-libraries") ||
       title.includes("utilities") ||
       title.includes("utility") ||
-      title.includes("helper") ||
-      title.includes("tools") ||
-      title.includes("platforms")
+      title.includes("tools")
     ) {
       return "utilities";
     } else {
