@@ -4,12 +4,104 @@ import BackToTop from "@/components/BackToTop";
 
 ## Table of Contents
 
+## Introduction
+
+Object Relational Mappers (ORMs) are tools that facilitate the interaction between object-oriented programming languages and relational databases. They allow developers to work with database records as if they were regular objects in their code, abstracting away the complexities of SQL queries and database interactions. This can significantly speed up development time and reduce the amount of boilerplate code needed to perform database operations.
+
+## Key Concepts
+
+### Abstraction
+
+ORMs provide a high-level abstraction over database interactions, allowing developers to work with objects instead of writing raw SQL queries. This abstraction simplifies the code and makes it more maintainable. This abstraction layer allows developers to focus on the business logic rather than the intricacies of database management.
+
+### Object Mapping
+
+ORMs map database tables to classes and rows to objects. This means that each table in the database corresponds to a class in the programming language, and each row in the table corresponds to an instance of that class. This mapping allows developers to interact with the database using familiar object-oriented programming paradigms.
+
+### Query Generation
+
+ORMs automatically generate SQL queries based on the operations performed on the objects. This means that developers do not need to write SQL queries manually; instead, they can use methods provided by the ORM to perform operations like creating, reading, updating, and deleting records. The ORM translates these method calls into the appropriate SQL queries, which can help prevent SQL injection attacks and other common database vulnerabilities.
+
+### Relationships
+
+ORMs handle relationships between objects, such as one-to-one, one-to-many, and many-to-many relationships. This allows developers to define how objects relate to each other in the code, and the ORM takes care of managing these relationships in the database. For example, if a class has a one-to-many relationship with another class, the ORM will automatically create the necessary foreign keys and manage the associated records in the database.
+
+### Lazy Loading
+
+ORMs often support lazy loading, which means that related objects are not loaded from the database until they are explicitly accessed. This can improve performance by reducing the amount of data loaded into memory at any given time. For example, if a developer retrieves a list of users, the ORM may not load the associated posts for each user until the developer accesses the posts property of a user object. This can help optimize database queries and reduce unnecessary data retrieval.
+
+### Caching
+
+Many ORMs implement caching mechanisms to improve performance by storing frequently accessed data in memory. This reduces the number of database queries needed, as the ORM can retrieve data from the cache instead of querying the database each time. Caching can significantly speed up application performance, especially for read-heavy applications where the same data is accessed multiple times.
+
+### Migration Management
+
+ORMs often include tools for managing database schema migrations. This allows developers to version control their database schema changes and apply them incrementally. When a developer makes changes to the object model, the ORM can generate the necessary SQL commands to update the database schema accordingly. This helps ensure that the database schema remains in sync with the application code and reduces the risk of schema-related errors.
+
+### Transaction Management
+
+ORMs typically provide built-in support for transaction management, allowing developers to group multiple database operations into a single transaction. This ensures that either all operations succeed or none do, maintaining data integrity. For example, if a developer needs to update multiple records in the database, they can wrap those operations in a transaction. If any operation fails, the ORM can roll back the entire transaction, preventing partial updates that could lead to data inconsistencies.
+
+### Performance Optimization
+
+ORMs often include features for optimizing database performance, such as query optimization, indexing, and connection pooling. These features help ensure that database operations are efficient and can handle high loads without degrading performance.
+
+## Popular ORM Frameworks by Language
+
+### JavaScript/TypeScript
+
+- **Sequelize**: A promise-based Node.js ORM for Postgres, MySQL, MariaDB, SQLite, and Microsoft SQL Server.
+- **TypeORM**: An ORM for TypeScript and JavaScript (ES7, ES6, ES5) that supports various databases like MySQL, PostgreSQL, MariaDB, SQLite, and more.
+- **Prisma**: A next-generation ORM that simplifies database access with an intuitive API and type safety.
+- **Objection.js**: A SQL-friendly ORM for Node.js that is built on top of the SQL query builder Knex.js, providing a powerful and flexible way to interact with databases.
+- **Waterline**: An ORM for Node.js that provides a simple data access layer, supporting multiple databases and data sources.
+- **MikroORM**: A TypeScript ORM for Node.js based on the Data Mapper pattern, supporting multiple databases like MySQL, PostgreSQL, SQLite, and MongoDB.
+- **Bookshelf.js**: A JavaScript ORM for Node.js, built on top of Knex.js, that provides a simple and elegant way to work with relational databases.
+- **LoopBack**: A highly extensible Node.js framework that includes an ORM for building APIs and connecting to databases, supporting various data sources.
+
+### Python
+
+- **SQLAlchemy**: A powerful and flexible ORM for Python that provides a full suite of tools for working with relational databases.
+- **Django ORM**: The built-in ORM for the Django web framework, which provides a high-level abstraction for database interactions.
+- **Peewee**: A small, expressive ORM for Python that provides a simple and intuitive API for working with databases.
+- **Tortoise-ORM**: An easy-to-use asyncio ORM inspired by Django, designed for Python 3.6+.
+- **Pony ORM**: An ORM that allows developers to write database queries using Python generators, providing a more Pythonic way to interact with databases.
+
+### Java
+
+- **Hibernate**: A widely used ORM framework for Java that provides a powerful and flexible way to map Java objects to database tables.
+- **JPA (Java Persistence API)**: A specification for ORM in Java that provides a standard way to manage relational data in Java applications. Hibernate is a popular implementation of JPA.
+- **MyBatis**: A persistence framework that offers mapping of SQL statements to Java objects, providing a more manual approach compared to traditional ORMs.
+- **Spring Data JPA**: A part of the Spring Framework that simplifies database access by providing a repository abstraction over JPA.
+- **EclipseLink**: The reference implementation of JPA, providing advanced features like caching and batch processing.
+- **Apache OpenJPA**: An open-source implementation of JPA that provides a flexible and powerful ORM solution for Java applications.
+
+### C#
+
+- **Entity Framework**: A popular ORM for .NET applications that allows developers to work with databases using C# objects.
+- **Dapper**: A lightweight ORM for .NET that provides a simple way to map database results to C# objects.
+- **NHibernate**: An ORM for .NET that is a port of the Java Hibernate framework, providing a powerful and flexible way to map C# objects to database tables.
+- **LINQ to SQL**: A simple ORM for .NET that allows developers to query SQL Server databases using LINQ (Language Integrated Query).
+- **LLBLGen Pro**: A commercial ORM for .NET that provides a powerful and flexible way to map C# objects to database tables, with support for multiple database providers.
+
+## Benefits of Using ORMs
+
+- **Increased Productivity**: ORMs reduce the amount of boilerplate code needed to interact with databases, allowing developers to focus on business logic rather than database management.
+- **Improved Maintainability**: By abstracting database interactions, ORMs make it easier to change the underlying database without affecting the application code. This can be particularly useful when switching between different database systems or when making schema changes.
+- **Enhanced Security**: ORMs can help prevent SQL injection attacks by automatically escaping user input and generating parameterized queries. This reduces the risk of security vulnerabilities in the application.
+- **Cross-Database Compatibility**: Many ORMs support multiple database systems, allowing developers to switch between different databases without significant code changes. This can be beneficial for applications that need to support multiple database backends or for projects that may change their database technology in the future.
+- **Faster Prototyping**: ORMs enable rapid application development by allowing developers to quickly create and manipulate database records without writing complex SQL queries. This can speed up the development process, especially during the early stages of a project when requirements may change frequently.
+
 ## Next Steps
 
 ### Immediate Actions
 
-| Priority | Action | Purpose |
-| -------- | ------ | ------- |
+| Priority | Action                                                                          | Purpose                                    |
+| -------- | ------------------------------------------------------------------------------- | ------------------------------------------ |
+| **High** | [Transaction Models: ACID and BASE](/db-object-relational-mappers-fundamentals) | Get introduced to ACID and BASE Properties |
+| **High** | [Consistency Models](/db-transaction-models/consistency-models) | Get introduced to ACID and BASE Properties |
+| **High** | [Transaction Management](/db-transaction-models/transaction-management) | Get introduced to ACID and BASE Properties |
+| **High** | [Concurrency Control](/db-transaction-models/concurrency-control) | Get introduced to ACID and BASE Properties |
 
 ### Optional Actions
 
