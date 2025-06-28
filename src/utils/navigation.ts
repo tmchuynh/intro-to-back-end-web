@@ -31,7 +31,19 @@ const CATEGORY_PREFIXES = [
   "orm", // object relational mapping
 ];
 
-// Extract category from filename prefix and return both category and clean name
+/**
+ * Extracts the category prefix and the cleaned name from a given path name.
+ *
+ * The function splits the input `pathName` by hyphens and checks if the first part
+ * matches any of the defined `CATEGORY_PREFIXES`. If a match is found, it returns
+ * the category and the rest of the path as the clean name. Otherwise, it returns
+ * `null` for the category and the original `pathName` as the clean name.
+ *
+ * @param pathName - The path string to extract the category from.
+ * @returns An object containing:
+ *   - `category`: The extracted category prefix if present, otherwise `null`.
+ *   - `cleanName`: The path name with the category prefix removed, or the original path name.
+ */
 export function extractCategoryFromPath(pathName: string): {
   category: string | null;
   cleanName: string;
@@ -57,6 +69,18 @@ export function extractCategoryFromPath(pathName: string): {
   };
 }
 
+/**
+ * Converts a given string to a "smart" title case, handling special cases such as minor words,
+ * hyphenated words, and specific exceptions (e.g., "jQuery" and "use*" hooks).
+ *
+ * - Minor words (articles, conjunctions, and short prepositions) are lowercased unless they are the first or last word.
+ * - Hyphenated words are capitalized on both sides of the hyphen.
+ * - If the cleaned name starts with "use" (but not "user"), the original cleaned name is returned.
+ * - The string "jQuery" is preserved as-is.
+ *
+ * @param str - The input string, typically a path or identifier, to be converted to smart title case.
+ * @returns The smart title-cased version of the input string.
+ */
 export function toSmartTitleCase(str: string): string {
   // Extract category and clean name first
   const { cleanName } = extractCategoryFromPath(str);
@@ -128,7 +152,17 @@ export function toSmartTitleCase(str: string): string {
     .join(" ");
 }
 
-// Function to read metadata from MDX files
+/**
+ * Reads the frontmatter metadata (title and order) from an MDX file at the specified path.
+ *
+ * This function is intended to be used server-side only. If called on the client-side,
+ * it returns an empty object. It attempts to extract the `title` and `order` fields from
+ * the YAML frontmatter of the MDX file. If the file does not exist or parsing fails,
+ * it returns an empty object.
+ *
+ * @param filePath - The absolute path to the MDX file.
+ * @returns A promise that resolves to an object containing optional `title` and `order` properties.
+ */
 export async function readMDXMetadata(
   filePath: string
 ): Promise<{ title?: string; order?: number }> {
@@ -163,7 +197,20 @@ export async function readMDXMetadata(
   }
 }
 
-// Function to categorize pages into logical sections
+/**
+ * Categorizes an array of navigation items into logical sections based on their path, title, and structure.
+ *
+ * This function analyzes each `NavigationItem`'s `href`, `title`, and optionally its children to determine
+ * which high-level category it belongs to. The categorization uses path segment prefixes, keyword matching,
+ * and special handling for items with children to map navigation items to their respective sections.
+ *
+ * The resulting sections include: "Fundamentals", "Databases", "SQL", "NoSQL", "Projects",
+ * "Object Relational Mapping Frameworks", "Utilities & Tools", and "Advanced Topics".
+ * Only sections containing at least one item are included in the returned array.
+ *
+ * @param items - An array of `NavigationItem` objects to be categorized.
+ * @returns An array of `NavigationSection` objects, each containing a title and the navigation items belonging to that section.
+ */
 function categorizeNavigationItems(
   items: NavigationItem[]
 ): NavigationSection[] {
@@ -178,7 +225,19 @@ function categorizeNavigationItems(
     advanced: [] as NavigationItem[],
   };
 
-  // Helper function to categorize an item and its children recursively
+  /**
+   * Categorizes a navigation item into a section name based on its path and title.
+   *
+   * The function analyzes the item's `href` and `title` properties, as well as its children,
+   * to determine which high-level category it belongs to. Categories include "sql", "nosql",
+   * "databases", "fundamentals", "projects", "advanced", "utilities", and "orm".
+   *
+   * The categorization logic uses path segment prefixes, keyword matching, and special handling
+   * for items with children to map navigation items to their respective sections.
+   *
+   * @param item - The navigation item to categorize.
+   * @returns The section name as a string, such as "sql", "nosql", "databases", "fundamentals", "projects", "advanced", "utilities", or "orm".
+   */
   function categorizeItem(item: NavigationItem): string {
     const path = item.href.toLowerCase();
     const title = item.title.toLowerCase();
@@ -466,7 +525,16 @@ function categorizeNavigationItems(
   return sections;
 }
 
-// Function to scan the app directory and build navigation structure
+/**
+ * Builds the navigation structure by scanning the file system for navigation items.
+ *
+ * - On the client side, returns a fallback navigation structure.
+ * - On the server side, scans the `src/app` directory, categorizes navigation items,
+ *   and returns them as structured navigation sections.
+ * - If an error occurs during scanning or categorization, returns the fallback navigation.
+ *
+ * @returns {Promise<NavigationSection[]>} A promise that resolves to an array of navigation sections.
+ */
 export async function buildNavigationFromFileSystem(): Promise<
   NavigationSection[]
 > {
@@ -488,7 +556,23 @@ export async function buildNavigationFromFileSystem(): Promise<
   }
 }
 
-// Helper function to determine priority for sorting navigation items
+/**
+ * Determines the priority of a navigation item based on its title.
+ *
+ * The function normalizes the input title to lowercase and checks for specific keywords
+ * to assign a priority value. Lower numbers indicate higher priority. The priorities are:
+ *
+ * - 1: Titles containing "abbreviations", "vocabulary", or "acronyms".
+ * - 2: Titles containing "setting up", "set up", "selection", "starter", "fundamentals", or "setup".
+ * - 3: Titles containing "getting started" or "project structure".
+ * - 4: Titles containing "introduction", "foundation", "general", or "intro".
+ * - 999: Titles containing "security" or "performance".
+ * - 9999: Titles containing "bonus", "libraries", "optional", or "frameworks" (always at the bottom).
+ * - 99: Default priority for other items.
+ *
+ * @param title - The title of the navigation item.
+ * @returns The priority number for the given title.
+ */
 function getPriority(title: string): number {
   const normalizedTitle = title.toLowerCase();
   if (
