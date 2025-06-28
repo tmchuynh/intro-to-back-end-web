@@ -61,6 +61,8 @@ Performance is a critical factor in database selection. It encompasses how quick
 | Mixed         | Balanced read/write        | MongoDB, MySQL            | Web applications     |
 | Real-time     | Low latency, in-memory     | Redis, Apache Ignite      | Gaming, trading      |
 
+<BackToTop />
+
 ### Consistency vs. Availability (CAP Theorem)
 
 The CAP theorem states that a distributed database can only guarantee two of the following three properties: Consistency, Availability, and Partition Tolerance. Understanding your application's requirements for these properties will guide your database choice.
@@ -104,6 +106,8 @@ Selecting a database that aligns with your team's expertise can significantly re
 | Learning Resources   | Documentation, tutorials, training        | Community engagement     |
 | Hiring Pool          | Availability of skilled developers        | Skills development       |
 | Time to Productivity | How quickly team members become effective | Mentoring, documentation |
+
+<BackToTop />
 
 ### Community and Ecosystem
 
@@ -165,6 +169,8 @@ Create a scoring matrix to evaluate options objectively:
 - Measure actual performance
 - Evaluate developer experience
 
+<BackToTop />
+
 ## Use Case Examples
 
 ### E-commerce Platform
@@ -184,6 +190,8 @@ Product catalogs, user accounts, order processing, inventory management
 
 Strong consistency for transactions, fast search capabilities, efficient caching strategy. This architecture allows for a robust e-commerce platform that can handle complex queries and high transaction volumes while providing a responsive user experience. It will also enable effective inventory management and user account handling, ensuring a seamless shopping experience. By using PostgreSQL for transactional data, Elasticsearch for search functionality, and Redis for caching, the system can achieve high performance and reliability. Because of the separation of OLTP and OLAP workloads, the architecture can scale effectively to handle both real-time transactions and complex reporting queries. At the same time, it allows for efficient data retrieval and analysis, making it suitable for large-scale e-commerce operations. It will also enable effective inventory management and user account handling, ensuring a seamless shopping experience. This is a common architecture for e-commerce platforms that require high availability, fast response times, and the ability to handle large volumes of transactions.
 
+<BackToTop />
+
 ### Social Media Application
 
 #### Requirements
@@ -200,6 +208,8 @@ User profiles, posts, relationships, real-time feeds
 #### Architecture Benefits
 
 Schema flexibility, relationship modeling, high write performance. This architecture allows for a dynamic social media platform that can handle diverse content types and complex user interactions. By using MongoDB as the primary database, the system can easily adapt to changing data structures, making it suitable for user-generated content. The integration of Neo4j enables efficient handling of relationships between users, such as friendships and follows, allowing for advanced features like recommendations and personalized feeds. Redis provides real-time caching for fast access to frequently updated data, enhancing user experience with quick feed generation and updates. Cassandra's high write throughput ensures that the platform can scale effectively to handle large volumes of user interactions and metrics collection.
+
+<BackToTop />
 
 ### IoT Data Platform
 
@@ -235,6 +245,8 @@ Articles, media files, user management, SEO
 
 Complex querying, powerful search, efficient content delivery. This architecture allows for a flexible content management system that can handle diverse content types and complex queries. By using PostgreSQL as the primary database, the system can efficiently manage structured content such as articles and user profiles. Elasticsearch provides powerful full-text search capabilities, enabling users to find content quickly and easily. Object storage (like Amazon S3) is used for media file management, allowing for scalable storage of images and videos. Redis is employed for caching rendered content, improving performance by reducing load times for frequently accessed pages. This architecture is suitable for content-heavy applications that require robust search functionality and efficient content delivery.
 
+<BackToTop />
+
 ## Database Categories
 
 ### Overview of Database Types
@@ -251,6 +263,8 @@ Relational databases use structured query language (SQL) to manage and manipulat
 | **MySQL**      | Performance, replication, wide adoption        | Web applications, read-heavy workloads | Limited advanced features |
 | **Oracle**     | Enterprise features, high performance, support | Mission-critical systems               | High cost, complexity     |
 | **SQL Server** | Integration with Microsoft stack, performance  | Enterprise Windows environments        | Licensing costs           |
+
+<BackToTop />
 
 ### NoSQL Databases
 
@@ -292,6 +306,8 @@ Graph databases are designed to handle complex relationships between data entiti
 | **Neo4j**          | Intuitive modeling, ACID compliance, Cypher query language | Social networks, recommendations | Specialized use cases |
 | **Amazon Neptune** | Managed service, multiple graph models                     | AWS applications                 | Vendor lock-in        |
 
+<BackToTop />
+
 ### Specialized Databases
 
 #### Time-Series Databases
@@ -322,6 +338,8 @@ Data warehouses are specialized databases designed for analytical processing and
 | **Redshift**  | Columnar storage, SQL support, AWS integration | Analytics, reporting  | Business intelligence   |
 | **BigQuery**  | Serverless, fast SQL queries, machine learning | Large-scale analytics | Data science, reporting |
 | **Snowflake** | Separation of storage/compute, multi-cloud     | Data warehousing      | Enterprise analytics    |
+
+<BackToTop />
 
 ## Performance Considerations
 
@@ -359,6 +377,8 @@ Caching is a technique used to store frequently accessed data in memory to reduc
 | **CDN Cache**         | Geographic distribution | Global performance     | Content updates, costs          |
 | **Connection Pool**   | Persistent connections  | Reduced overhead       | Connection management           |
 
+<BackToTop />
+
 ## Common Pitfalls
 
 ### Avoidable Mistakes in Database Selection
@@ -385,6 +405,8 @@ When evaluating database options, certain warning signs can indicate potential i
 | **Poor documentation**         | Maintenance difficulties | Consider support resources      |
 | **Small community**            | Limited help available   | Evaluate long-term viability    |
 | **Frequent breaking changes**  | Unstable platform        | Consider stability requirements |
+
+<BackToTop />
 
 ## Making the Final Decision
 
