@@ -568,9 +568,9 @@ cache=/home/user/.npm-cache
 
 ### Python Best Practices
 
-#### Requirements.txt Structure
+#### `requirements.txt` Structure
 
-```txt title="requirements.txt"
+```bash title="requirements.txt"
 # Production dependencies
 SQLAlchemy==1.4.41
 psycopg2-binary==2.9.3
@@ -584,7 +584,7 @@ flake8==5.0.4
 
 #### Poetry Configuration
 
-```toml title="pyproject.toml"
+```bash title="pyproject.toml"
 [tool.poetry]
 name = "database-project"
 version = "0.1.0"
@@ -727,7 +727,7 @@ pip install -r requirements.txt
 
 #### Testing Database Connections
 
-**JavaScript:**
+##### JavaScript Example
 
 ```javascript title="Test PostgreSQL connection"
 // Test PostgreSQL connection
@@ -743,7 +743,7 @@ client
   .finally(() => client.end());
 ```
 
-**Python:**
+##### Python Example
 
 ```python title="Test PostgreSQL connection"
 # Test PostgreSQL connection
