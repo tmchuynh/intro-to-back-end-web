@@ -16,6 +16,11 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const [openSection, setOpenSection] = useState<string | null>(null);
 
+  // Close sidebar when pathname changes (new page loads)
+  useEffect(() => {
+    onClose();
+  }, [pathname, onClose]);
+
   // Recursive function to check if any item or its children contain the path
   const checkItemContainsPath = useCallback(
     (items: NavigationItem[], path: string): boolean => {
