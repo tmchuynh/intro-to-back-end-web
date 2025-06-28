@@ -1,0 +1,706 @@
+import BackToTop from "@/components/BackToTop";
+
+# Relational Databases
+
+## Table of Contents
+
+## Introduction to Relational Databases
+
+Relational databases are a type of database that store data in structured formats using rows and columns. They are based on the relational model, which was first introduced by Edgar F. Codd in 1970. This model organizes data into tables that can be linked or related based on data common to each table, creating a comprehensive data management system that allows for complex queries and data manipulation.
+
+Think of a relational database like a collection of interconnected spreadsheets. Each spreadsheet (table) contains related information, and you can reference data from one table in another table. For example, you might have a "Customers" table and an "Orders" table, where each order references a specific customer.
+
+Developers use relational databases to manage large amounts of structured data efficiently. They provide powerful querying capabilities through SQL (Structured Query Language), which allows developers to perform operations like data retrieval, insertion, updating, and deletion. The relational model ensures data consistency and reduces redundancy through normalization processes.
+
+### Real-World Example
+
+Consider an e-commerce application where you need to store information about customers, products, and orders. In a relational database, you would create separate tables for each entity:
+
+```sql title="E-Commerce Database"
+-- Customers table
+CREATE TABLE customers (
+    customer_id INT PRIMARY KEY,
+    first_name VARCHAR(50),
+    last_name VARCHAR(50),
+    email VARCHAR(100),
+    phone VARCHAR(20)
+);
+
+-- Products table
+CREATE TABLE products (
+    product_id INT PRIMARY KEY,
+    product_name VARCHAR(100),
+    price DECIMAL(10,2),
+    category VARCHAR(50),
+    stock_quantity INT
+);
+
+-- Orders table
+CREATE TABLE orders (
+    order_id INT PRIMARY KEY,
+    customer_id INT,
+    order_date DATE,
+    total_amount DECIMAL(10,2),
+    FOREIGN KEY (customer_id) REFERENCES customers(customer_id)
+);
+```
+
+## Key Concepts
+
+Understanding the fundamental concepts of relational databases is essential for working with them effectively. These concepts form the foundation of how data is organized, stored, and retrieved in relational database systems.
+
+### Tables
+
+Tables are the basic structure of a relational database, consisting of rows and columns. Each table represents a specific entity or concept in your data model. A table is similar to a spreadsheet where each column represents an attribute and each row represents a record.
+
+They are defined by their structure, which includes the table name, columns, and data types for each column. The table structure is defined using SQL commands.
+
+```sql title="Simple Users Table"
+CREATE TABLE users (
+    id INT PRIMARY KEY,
+    username VARCHAR(50) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### Rows and Records
+
+Rows, also called records or tuples, represent individual instances of the entity that the table represents. Each row contains data for all the columns defined in the table structure.
+
+Each row in a table corresponds to a single record, and each record contains values for each column in that table. For example, in the "users" table, each row would represent a different user with their specific details.
+
+```sql title="Inserting Data into a Users Table"
+INSERT INTO users (id, username, email)
+VALUES (1, 'john_doe', 'john@example.com');
+
+INSERT INTO users (id, username, email)
+VALUES (2, 'jane_smith', 'jane@example.com');
+```
+
+### Columns and Attributes
+
+Columns, also called attributes or fields, represent the properties or characteristics of the entity. Each column has a specific data type that defines what kind of data can be stored in that column.
+
+```sql title="Defining Columns"
+CREATE TABLE products (
+    product_id INT PRIMARY KEY,
+    product_name VARCHAR(100) NOT NULL,
+    price DECIMAL(10,2) NOT NULL,
+    category VARCHAR(50),
+    stock_quantity INT
+);
+```
+
+### Primary Key and Composite Primary Key
+
+A primary key is a column or combination of columns that uniquely identifies each row in a table. No two rows can have the same primary key value, and primary key values cannot be null.
+
+A primary key is essential for maintaining data integrity and ensuring that each record can be uniquely identified. This is crucial for operations like updating or deleting specific records without ambiguity.
+
+```sql title="Defining a Primary Key"
+CREATE TABLE products (
+    product_id INT PRIMARY KEY,        -- Single column primary key
+    product_name VARCHAR(100) NOT NULL,
+    price DECIMAL(10,2)
+);
+
+-- Alternative syntax for composite primary key
+CREATE TABLE order_items (
+    order_id INT,
+    product_id INT,
+    quantity INT,
+    PRIMARY KEY (order_id, product_id)  -- Composite primary key using multiple columns
+);
+```
+
+#### Single Primary Key VS Composite Primary Key
+
+A single primary key consists of one column that uniquely identifies each record in a table. A composite primary key, on the other hand, is made up of two or more columns that together uniquely identify a record. Composite keys are useful when no single column can uniquely identify a record.
+
+##### Benefits of a Single Primary Key
+
+- Simplicity: Easier to manage and understand.
+- Performance: Generally faster for lookups and joins.
+
+##### Benefits of a Composite Primary Key
+
+- Flexibility: Allows for more complex relationships between tables.
+- Uniqueness: Ensures that the combination of multiple attributes is unique across records.
+
+## Benefits of Relational Databases
+
+Relational databases offer numerous advantages that make them the preferred choice for many applications, from small personal projects to large enterprise systems.
+
+### Structured Data Organization
+
+Relational databases provide a structured way to organize data into tables, making it easy to understand and manage. Each table represents a specific entity, and relationships between tables can be established through foreign keys.
+
+```sql title="Structured Data Organization"
+CREATE TABLE employees (
+    employee_id INT PRIMARY KEY,
+    first_name VARCHAR(50),
+    last_name VARCHAR(50),
+    department_id INT,
+    FOREIGN KEY (department_id) REFERENCES departments(department_id)
+);
+```
+
+### Data Integrity and Consistency
+
+Relational databases ensure accuracy and consistency of data through constraints, relationships, and validation rules. The system automatically enforces these rules to prevent invalid data from being stored.
+
+This is achieved through primary keys, foreign keys, unique constraints, and check constraints. These features help maintain data integrity and prevent anomalies.
+
+```sql title="Data Integrity Constraints"
+CREATE TABLE employees (
+    employee_id INT PRIMARY KEY,
+    email VARCHAR(100) UNIQUE NOT NULL,    -- Ensures unique emails
+    age INT CHECK (age >= 18 AND age <= 65), -- Age validation
+    department_id INT,
+    FOREIGN KEY (department_id) REFERENCES departments(id)
+);
+```
+
+### Flexibility and Complex Queries
+
+Relational databases allow for sophisticated data manipulation and querying capabilities through SQL. You can join multiple tables, filter data, aggregate results, and perform complex calculations.
+
+Because of this flexibility, relational databases are well-suited for applications that require complex data relationships and reporting.
+
+```sql title="Joining Multiple Tables"
+SELECT
+    c.customer_name,
+    COUNT(o.order_id) as total_orders,
+    SUM(o.total_amount) as total_spent
+FROM customers c
+LEFT JOIN orders o ON c.customer_id = o.customer_id
+WHERE o.order_date >= '2024-01-01'
+GROUP BY c.customer_id, c.customer_name
+HAVING total_spent > 1000
+ORDER BY total_spent DESC;
+```
+
+#### Advantages of Complex Queries
+
+Complex queries allow developers to extract meaningful insights from data by combining information from multiple tables. This is particularly useful for generating reports, analyzing trends, and making data-driven decisions.
+
+### Scalability
+
+Modern relational databases can handle large volumes of data and complex transactions efficiently through various optimization techniques including indexing, partitioning, and caching. This scalability makes them suitable for applications ranging from small websites to large enterprise systems.
+
+### Transaction Management
+
+Transaction management is a critical aspect of relational databases, allowing developers to group multiple operations into a single unit of work. This ensures that either all operations succeed or none do, maintaining data integrity.
+
+```sql title="Transaction Management"
+BEGIN TRANSACTION;
+UPDATE accounts SET balance = balance - 100 WHERE account_id = 1;
+UPDATE accounts SET balance = balance + 100 WHERE account_id = 2;
+-- Either both updates succeed or both fail
+COMMIT;
+```
+
+### ACID Compliance
+
+ACID properties ensure reliable transactions through Atomicity, Consistency, Isolation, and Durability. This guarantees that database transactions are processed reliably. It ensures that all operations within a transaction are completed successfully or none at all, maintaining data integrity.
+
+```sql title="a transaction demonstrating ACID properties"
+BEGIN TRANSACTION;
+
+UPDATE accounts SET balance = balance - 100 WHERE account_id = 1;
+UPDATE accounts SET balance = balance + 100 WHERE account_id = 2;
+
+-- Either both updates succeed or both fail (Atomicity)
+COMMIT;
+```
+
+### Additional Benefits
+
+#### Data Redundancy Reduction
+
+Normalization helps eliminate duplicate data, saving storage space and improving performance while ensuring data consistency across the database. There is no need to store the same information in multiple places, which reduces the risk of data anomalies. This also simplifies data management and makes updates easier, as changes need to be made in only one place. Developers can focus on maintaining a single source of truth for each piece of data.
+
+#### Security Features
+
+Relational databases provide robust security mechanisms including user authentication, role-based access control, and data encryption. These features help protect sensitive data and ensure that only authorized users can access or modify the data. They also allow for fine-grained access control, enabling developers to define who can read, write, or modify specific tables or columns.
+
+```sql title="security implementation"
+-- Creating users with specific permissions
+CREATE USER 'app_user'@'localhost' IDENTIFIED BY 'secure_password';
+GRANT SELECT, INSERT, UPDATE ON orders TO 'app_user'@'localhost';
+GRANT SELECT ON customers TO 'app_user'@'localhost';
+```
+
+#### Industry Standard and Portability
+
+Relational databases are widely used across various industries, and SQL is the de facto standard for interacting with these databases. This means that developers can easily switch between different relational database management systems (RDBMS) without having to learn a new query language.
+
+## Common Relational Database Management Systems (RDBMS)
+
+The database management system you choose can significantly impact your application's performance, scalability, and development experience. Here are the most popular RDBMS options available today.
+
+Relational Database Management Systems (RDBMS) are software systems that manage relational databases. They provide the tools and interfaces for creating, querying, updating, and managing data stored in relational tables. RDBMSs implement the relational model and support SQL as the standard query language.
+
+### Popular RDBMS Options
+
+- MySQL
+- PostgreSQL
+- Microsoft SQL Server
+- Oracle Database
+- SQLite
+
+### Choosing the Right RDBMS
+
+For beginners, MySQL and PostgreSQL are excellent starting points due to their open-source nature, extensive documentation, and strong community support. They provide a solid foundation for learning relational database concepts and SQL.
+
+MySQL and SQLite are often recommended for new developers due to their ease of use and wide adoption in web development. PostgreSQL is an excellent choice for those looking for advanced features and strict compliance with SQL standards.
+
+```sql title="Similar Syntax across Different RDBMS"
+-- This basic query works similarly across most RDBMS
+SELECT customer_name, email
+FROM customers
+WHERE created_date > '2024-01-01'
+ORDER BY customer_name;
+```
+
+<BackToTop />
+### MySQL
+
+MySQL is an open-source relational database management system (RDBMS) that uses SQL to manage data. Originally developed by MySQL AB and now owned by Oracle Corporation, it has become one of the most widely used databases for web applications. MySQL is known for its reliability, performance, and ease of use, making it a popular choice for everything from small websites to large-scale enterprise applications.
+
+MySQL is particularly well-suited for web applications due to its speed and efficiency in handling read-heavy workloads. It supports a wide range of programming languages and frameworks, making it easy to integrate into various development environments.
+
+MySQL supports various storage engines, allowing users to choose the best one for their specific needs. The most common storage engines include InnoDB (default, supports transactions) and MyISAM (faster for read-heavy operations).
+
+#### Key Features of MySQL
+
+MySQL offers a comprehensive set of features that make it suitable for various applications:
+
+- Open-source and free to use with optional commercial licensing for enterprise features
+- Cross-platform support for Windows, Linux, macOS, and other operating systems
+- Robust data management features including ACID-compliant transactions, indexing, and replication
+- User-friendly interface through tools like MySQL Workbench for database design and administration
+- Extensive language integration with PHP, Python, Java, Node.js, and many other programming languages
+- High availability features including master-slave replication and clustering
+- Support for stored procedures, triggers, and views for advanced data manipulation
+
+```sql title="MySQL Database"
+-- Creating a database in MySQL
+CREATE DATABASE ecommerce_store;
+USE ecommerce_store;
+
+-- Creating a table with MySQL-specific features
+CREATE TABLE products (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    price DECIMAL(10,2) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+-- Inserting sample data
+INSERT INTO products (name, price) VALUES
+('Laptop', 999.99),
+('Mouse', 29.99),
+('Keyboard', 79.99);
+```
+
+#### Benefits of Using MySQL
+
+- High performance and scalability for handling large datasets and concurrent users
+- Strong community support with extensive documentation, tutorials, and forums
+- Regular updates and improvements from Oracle's MySQL development team
+- Excellent compatibility with popular web frameworks like Laravel, Django, and Express.js
+- Cost-effective solution for businesses of all sizes
+- Proven track record with major companies like Facebook, Twitter, and YouTube
+- Easy to set up and manage, making it suitable for both beginners and experienced developers
+
+#### Disadvantages of MySQL
+
+- Limited support for advanced data types compared to PostgreSQL (no native JSON support in older versions)
+- Some advanced features may require additional configuration or third-party tools
+- Oracle's dual licensing model may require commercial licensing for some use cases
+- Less strict about SQL standards compliance compared to PostgreSQL
+  <BackToTop />
+
+### PostgreSQL
+
+PostgreSQL, often called "Postgres," is a powerful, open-source object-relational database system that emphasizes extensibility and strict SQL compliance. Developed at the University of California, Berkeley, PostgreSQL has evolved into one of the most advanced open-source databases available today. It supports both relational (SQL) and non-relational (JSON) querying, making it highly versatile for modern applications.
+
+PostgreSQL is known for its robustness, scalability, and support for complex queries. It offers advanced features like full-text search, JSON support, custom data types, and extensive indexing options. The database is ACID-compliant and provides excellent data integrity features.
+
+#### Key Features of PostgreSQL
+
+PostgreSQL offers a rich set of features that make it suitable for complex applications:
+
+- Advanced data types including JSON, JSONB, XML, arrays, and user-defined types
+- Full-text search capabilities with advanced text indexing and ranking
+- Extensible architecture allowing custom functions, operators, and data types
+- Strong ACID compliance ensuring reliable transaction processing
+- Built-in support for geographic information systems (GIS) through the PostGIS extension
+- Advanced indexing options including B-tree, Hash, GiST, SP-GiST, GIN, and BRIN
+- Window functions and common table expressions (CTEs) for complex analytical queries
+
+```sql title="PostgreSQL Features"
+-- Creating a table with PostgreSQL-specific features
+CREATE TABLE user_profiles (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(50) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    preferences JSONB,  -- Native JSON support
+    tags TEXT[],        -- Array data type
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Inserting data with JSON and array types
+INSERT INTO user_profiles (username, email, preferences, tags) VALUES
+('john_doe', 'john@example.com',
+ '{"theme": "dark", "notifications": true, "language": "en"}',
+ ARRAY['developer', 'javascript', 'react']);
+
+-- Querying JSON data
+SELECT username, preferences->>'theme' as theme
+FROM user_profiles
+WHERE preferences->>'notifications' = 'true';
+```
+
+#### Benefits of Using PostgreSQL
+
+- High level of data integrity and reliability with strict adherence to SQL standards
+- Excellent support for complex queries and advanced data manipulation
+- Active community and comprehensive documentation with regular updates
+- Superior handling of concurrent users and transactions
+- Extensible architecture allows for custom solutions and third-party extensions
+- Excellent performance for both read and write operations
+- Strong support for data analytics and reporting
+
+#### Disadvantages of PostgreSQL
+
+- Slightly steeper learning curve for beginners compared to MySQL
+- Some advanced features may require deeper understanding of PostgreSQL's architecture
+- Higher memory usage compared to lighter databases like MySQL or SQLite
+- May be overkill for simple applications that don't need advanced features
+  <BackToTop />
+
+### Microsoft SQL Server
+
+Microsoft SQL Server is a comprehensive relational database management system developed by Microsoft for enterprise-level applications. It provides a complete set of tools for data management, including advanced analytics, reporting, and business intelligence capabilities. SQL Server is designed to handle mission-critical applications and large-scale data processing requirements.
+
+SQL Server is widely used in enterprise environments due to its robust features, scalability, and integration with other Microsoft products. It supports a variety of data types, complex queries, and advanced security features, making it suitable for applications ranging from small business solutions to large-scale data warehouses.
+
+SQL Server integrates seamlessly with other Microsoft products and services, making it a popular choice for organizations already invested in the Microsoft ecosystem. It supports various programming languages and offers both on-premises and cloud-based deployment options through Azure SQL Database.
+
+#### Key Features of Microsoft SQL Server
+
+Microsoft SQL Server offers enterprise-grade features designed for large-scale applications:
+
+- Advanced analytics and machine learning capabilities through SQL Server Machine Learning Services
+- Seamless integration with Microsoft Azure for hybrid cloud solutions
+- Comprehensive security features including Always Encrypted, Row-Level Security, and Transparent Data Encryption
+- In-memory processing through In-Memory OLTP for improved performance
+- Built-in reporting and business intelligence tools (SQL Server Reporting Services, Analysis Services)
+- High availability options including Always On Availability Groups and Failover Clustering
+- Integration with Power BI for advanced data visualization and analytics
+
+```sql title="SQL Server Features"
+-- Creating a table with SQL Server-specific features
+CREATE TABLE sensitive_data (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    customer_name NVARCHAR(100),
+    ssn NVARCHAR(11) ENCRYPTED WITH (
+        COLUMN_ENCRYPTION_KEY = CEK1,
+        ENCRYPTION_TYPE = DETERMINISTIC,
+        ALGORITHM = 'AEAD_AES_256_CBC_HMAC_SHA_256'
+    ), -- Always Encrypted for sensitive data
+    created_date DATETIME2 DEFAULT GETDATE()
+);
+
+-- Using window functions (advanced in SQL Server)
+SELECT
+    customer_name,
+    order_amount,
+    ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY order_date) as order_sequence,
+    LAG(order_amount) OVER (PARTITION BY customer_id ORDER BY order_date) as previous_order
+FROM orders;
+```
+
+#### Benefits of Using Microsoft SQL Server
+
+- Strong support for enterprise applications with excellent scalability and performance
+- Seamless integration with Microsoft ecosystem including Azure, Power BI, and Office 365
+- Robust security features meeting enterprise compliance requirements
+- Comprehensive tooling including SQL Server Management Studio (SSMS) and Azure Data Studio
+- Excellent support and documentation from Microsoft
+- High availability and disaster recovery options for mission-critical applications
+- Advanced features for data warehousing and business intelligence
+
+#### Disadvantages of Microsoft SQL Server
+
+- Licensing costs can be significant, especially for enterprise editions and multiple cores
+- Primarily optimized for Windows environments, though Linux versions are available
+- Complexity in setup and administration for advanced features
+- Vendor lock-in with Microsoft technologies and services
+  <BackToTop />
+
+### Oracle Database
+
+Oracle Database is a enterprise-grade, multi-model database management system produced by Oracle Corporation. It is renowned for its scalability, reliability, and comprehensive feature set for handling large volumes of data in mission-critical environments. Oracle Database supports various data models including relational, document, key-value, and graph data, making it one of the most versatile database platforms available.
+
+Oracle Database has been a leader in the enterprise database market for decades, powering many of the world's largest organizations. It offers advanced features for high availability, disaster recovery, security, and performance optimization that are essential for enterprise applications.
+
+#### Key Features of Oracle Database
+
+Oracle Database provides enterprise-level features designed for the most demanding applications:
+
+- Multi-model support allowing relational, document, key-value, and graph data in a single database
+- Advanced security features including Data Vault, Label Security, and Advanced Security Option
+- High availability solutions such as Real Application Clusters (RAC) and Data Guard
+- Comprehensive management tools including Oracle Enterprise Manager and Oracle Cloud Infrastructure
+- Advanced analytics and machine learning capabilities through Oracle Machine Learning
+- Automatic performance tuning and optimization features
+- Partitioning and compression options for handling very large databases
+
+```sql title="Oracle Database Features"
+-- Creating a partitioned table (Oracle-specific feature)
+CREATE TABLE sales_data (
+    sale_id NUMBER PRIMARY KEY,
+    sale_date DATE,
+    amount NUMBER(10,2),
+    customer_id NUMBER
+)
+PARTITION BY RANGE (sale_date) (
+    PARTITION sales_2023 VALUES LESS THAN (DATE '2024-01-01'),
+    PARTITION sales_2024 VALUES LESS THAN (DATE '2025-01-01'),
+    PARTITION sales_future VALUES LESS THAN (MAXVALUE)
+);
+
+-- Using Oracle PL/SQL for stored procedures
+CREATE OR REPLACE PROCEDURE calculate_customer_total(
+    p_customer_id IN NUMBER,
+    p_total OUT NUMBER
+) AS
+BEGIN
+    SELECT SUM(amount) INTO p_total
+    FROM sales_data
+    WHERE customer_id = p_customer_id;
+
+    IF p_total IS NULL THEN
+        p_total := 0;
+    END IF;
+END;
+```
+
+#### Benefits of Using Oracle Database
+
+- Exceptional scalability and performance for very large databases and high-concurrency applications
+- Comprehensive security features meeting the strictest compliance requirements
+- Extensive documentation, training, and enterprise support from Oracle Corporation
+- Advanced features for data warehousing, analytics, and business intelligence
+- Proven reliability in mission-critical environments across various industries
+- Strong disaster recovery and high availability options
+- Regular updates and improvements maintaining cutting-edge technology
+
+#### Disadvantages of Oracle Database
+
+- High licensing and maintenance costs, especially for enterprise editions and additional features
+- Complexity in setup, administration, and optimization requiring specialized expertise
+- Steep learning curve for developers and administrators
+- Potential vendor lock-in due to proprietary features and technologies
+- May be excessive for smaller applications that don't require enterprise-level features
+  <BackToTop />
+
+### SQLite
+
+SQLite is a self-contained, serverless, and zero-configuration relational database engine that stands apart from other database systems. Unlike traditional databases that require a separate server process, SQLite is embedded directly into applications as a library. This makes it incredibly lightweight and easy to deploy, as the entire database consists of a single file that can be easily copied, backed up, or transferred.
+
+SQLite is designed for simplicity and efficiency, making it an ideal choice for applications that require a lightweight database solution without the overhead of a full-fledged database server. It is widely used in mobile applications, embedded systems, and desktop applications where simplicity and low resource usage are paramount.
+
+SQLite is widely used in mobile applications (both iOS and Android include SQLite), embedded systems, desktop applications, and small to medium-sized web applications. Despite its simplicity, SQLite supports most SQL features and maintains ACID compliance, making it a powerful tool for many use cases.
+
+#### Key Features of SQLite
+
+SQLite offers impressive functionality despite its compact design:
+
+- Serverless architecture eliminating the need for database server installation and configuration
+- Zero-configuration setup requiring no administrative tasks or user management
+- Self-contained single-file database that includes the entire database schema and data
+- Cross-platform compatibility working identically on Windows, macOS, Linux, and mobile platforms
+- ACID-compliant transactions ensuring data integrity and reliability
+- Support for most SQL features including joins, indexes, triggers, and views
+- Full-text search capabilities for text-based queries
+- Small footprint with the entire library being less than 1MB in size
+
+```sql title="SQLite Database Creation"
+-- SQLite automatically creates the database file when first accessed
+-- Creating tables with SQLite-specific features
+CREATE TABLE app_settings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,  -- SQLite's auto-increment
+    setting_name TEXT NOT NULL UNIQUE,
+    setting_value TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+-- SQLite supports JSON functions (version 3.38+)
+CREATE TABLE user_data (
+    id INTEGER PRIMARY KEY,
+    username TEXT NOT NULL,
+    metadata TEXT,  -- Store JSON as text
+    CHECK (json_valid(metadata))  -- Validate JSON format
+);
+
+-- Inserting and querying data
+INSERT INTO user_data (username, metadata) VALUES
+('john_doe', '{"theme": "dark", "language": "en", "notifications": true}');
+
+-- Extract JSON values
+SELECT username,
+       json_extract(metadata, '$.theme') as theme
+FROM user_data;
+```
+
+#### Benefits of Using SQLite
+
+- Extremely easy setup and deployment with no server configuration required
+- Perfect for mobile development, desktop applications, and prototyping
+- Excellent performance for read-heavy workloads and moderate write operations
+- Strong support for transactions and data integrity despite its lightweight nature
+- No licensing costs or restrictions for commercial or personal use
+- Minimal maintenance requirements with no user management or backup scheduling needed
+- Reliable and stable with extensive testing and wide adoption
+- Ideal for development and testing environments
+
+#### Disadvantages of SQLite
+
+- Limited scalability compared to server-based RDBMS, making it unsuitable for high-concurrency applications
+- No built-in user management or network access requiring application-level security
+- Write operations are serialized, limiting concurrent write performance
+- Lacks some advanced features found in larger database systems like stored procedures
+- Not suitable for applications requiring multiple simultaneous writers
+- Limited data types compared to other database systems (though sufficient for most uses)
+
+## Use Cases of Relational Databases
+
+Relational databases are versatile and can be applied across numerous industries and application types. Understanding where and how they are used helps illustrate their importance in modern software development.
+
+### Web Applications
+
+Relational databases are the backbone of most web applications, storing user data, product information, and transaction records. They handle user authentication, session management, and content delivery efficiently.
+
+Web applications often require complex data relationships, such as users, products, and orders. Relational databases excel at managing these relationships through foreign keys and joins, allowing developers to build dynamic and interactive web experiences.
+
+```sql title="Web Application Database Schema"
+-- User management for a web application
+CREATE TABLE users (
+    user_id INT PRIMARY KEY AUTO_INCREMENT,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_login TIMESTAMP
+);
+
+-- Blog posts with relationships
+CREATE TABLE posts (
+    post_id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT,
+    title VARCHAR(200) NOT NULL,
+    content TEXT,
+    published_at TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+);
+```
+
+### Enterprise Applications
+
+Large organizations rely on relational databases to manage complex business processes including Customer Relationship Management (CRM) systems, Enterprise Resource Planning (ERP) systems, and Human Resources Management (HRM) systems.
+
+Enterprise applications often require robust data management capabilities, including transaction processing, reporting, and analytics. Relational databases provide the necessary features to handle large volumes of data while ensuring data integrity and consistency.
+
+```sql title="Enterprise CRM Database Structure"
+-- Customer relationship management schema
+CREATE TABLE companies (
+    company_id INT PRIMARY KEY,
+    company_name VARCHAR(100) NOT NULL,
+    industry VARCHAR(50),
+    annual_revenue DECIMAL(15,2)
+);
+
+CREATE TABLE contacts (
+    contact_id INT PRIMARY KEY,
+    company_id INT,
+    first_name VARCHAR(50),
+    last_name VARCHAR(50),
+    email VARCHAR(100),
+    phone VARCHAR(20),
+    job_title VARCHAR(100),
+    FOREIGN KEY (company_id) REFERENCES companies(company_id)
+);
+
+CREATE TABLE sales_opportunities (
+    opportunity_id INT PRIMARY KEY,
+    contact_id INT,
+    deal_value DECIMAL(10,2),
+    stage VARCHAR(50),
+    expected_close_date DATE,
+    FOREIGN KEY (contact_id) REFERENCES contacts(contact_id)
+);
+```
+
+### Data Warehousing and Analytics
+
+Relational databases serve as the foundation for data warehousing solutions, storing large volumes of historical data for reporting and business intelligence analysis.
+
+Data warehousing involves aggregating data from multiple sources into a central repository for analysis and reporting. Relational databases provide the necessary structure and querying capabilities to perform complex analytics on this data.
+
+### Financial Systems
+
+Banks and financial institutions use relational databases to manage transactions, account information, and financial records where data integrity and ACID compliance are critical.
+
+Relational databases are essential for financial systems due to their ability to handle complex transactions, maintain data integrity, and ensure compliance with regulatory requirements. They provide robust features for managing accounts, processing transactions, and generating financial reports.
+
+```sql title="Banking Transaction System"
+-- Financial transaction management
+CREATE TABLE accounts (
+    account_id INT PRIMARY KEY,
+    account_number VARCHAR(20) UNIQUE,
+    customer_id INT,
+    account_type VARCHAR(20),
+    balance DECIMAL(15,2),
+    created_date DATE
+);
+
+CREATE TABLE transactions (
+    transaction_id INT PRIMARY KEY,
+    from_account_id INT,
+    to_account_id INT,
+    amount DECIMAL(15,2),
+    transaction_type VARCHAR(20),
+    transaction_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status VARCHAR(20),
+    FOREIGN KEY (from_account_id) REFERENCES accounts(account_id),
+    FOREIGN KEY (to_account_id) REFERENCES accounts(account_id)
+);
+```
+
+### Content Management Systems
+
+Websites and digital platforms use relational databases to store articles, user-generated content, and metadata, enabling dynamic content delivery and management.
+
+Content Management Systems (CMS) rely on relational databases to manage articles, pages, user comments, and other content types. They allow for efficient content retrieval, versioning, and user management, making it easy to build and maintain websites.
+
+<BackToTop />
+
+## Next Steps
+
+### Immediate Actions
+
+| Priority | Action | Purpose |
+| -------- | ------ | ------- |
+
+### Optional Actions
+
+| Action | Purpose |
+| ------ | ------- |
+
+<BackToTop />
