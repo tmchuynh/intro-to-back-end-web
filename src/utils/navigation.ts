@@ -74,6 +74,7 @@ export function toSmartTitleCase(str: string): string {
     "as",
     "at",
     "by",
+    "with",
     "for",
     "in",
     "of",
@@ -197,6 +198,7 @@ function categorizeNavigationItems(
           case "nosql":
             return "nosql";
           case "db":
+            return "databases";
           case "api":
             return "databases";
           case "fund":
@@ -204,8 +206,11 @@ function categorizeNavigationItems(
           case "proj":
             return "projects";
           case "adv":
+            return "advanced";
           case "sec":
+            return "advanced";
           case "perf":
+            return "advanced";
           case "dep":
             return "advanced";
           case "util":
@@ -456,29 +461,36 @@ export async function buildNavigationFromFileSystem(): Promise<
 // Helper function to determine priority for sorting navigation items
 function getPriority(title: string): number {
   const normalizedTitle = title.toLowerCase();
-  if (normalizedTitle.includes("overview")) return 1;
+  if (
+    normalizedTitle.includes("abbreviations") ||
+    normalizedTitle.includes("vocabulary") ||
+    normalizedTitle.includes("acronyms")
+  )
+    return 1;
+
   if (
     normalizedTitle.includes("setting up") ||
     normalizedTitle.includes("set up") ||
-    normalizedTitle.includes("getting started") ||
-    normalizedTitle.includes("main") ||
+    normalizedTitle.includes("selection") ||
+    normalizedTitle.includes("starter") ||
+    normalizedTitle.includes("fundamentals") ||
     normalizedTitle.includes("setup")
   )
     return 2;
-  if (
-    normalizedTitle.includes("introduction") ||
-    normalizedTitle.includes("project structure") ||
-    normalizedTitle.includes("intro")
-  )
-    return 3;
-  if (normalizedTitle.includes("home")) return 4;
 
   if (
-    normalizedTitle.includes("fundamentals") ||
-    normalizedTitle.includes("layouts")
+    normalizedTitle.includes("getting started") ||
+    normalizedTitle.includes("project structure")
   )
-    return 5;
-  if (normalizedTitle.includes("vocabulary")) return 6;
+    return 3;
+
+  if (
+    normalizedTitle.includes("introduction") ||
+    normalizedTitle.includes("foundation") ||
+    normalizedTitle.includes("intro")
+  )
+    return 4;
+
   if (
     normalizedTitle.includes("security") ||
     normalizedTitle.includes("performance")
@@ -487,6 +499,7 @@ function getPriority(title: string): number {
   if (
     normalizedTitle.includes("bonus") ||
     normalizedTitle.includes("libraries") ||
+    normalizedTitle.includes("optional") ||
     normalizedTitle.includes("frameworks")
   )
     return 9999; // Always at the bottom
