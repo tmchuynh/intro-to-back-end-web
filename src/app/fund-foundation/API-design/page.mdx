@@ -4,19 +4,6 @@ import BackToTop from "@/components/BackToTop";
 
 ## Table of Contents
 
-- [Overview of API Design Concepts](#overview-of-api-design-concepts)
-- [Fundamental API Design Principles](#fundamental-api-design-principles)
-- [Common API Design Patterns](#common-api-design-patterns)
-- [API Architecture Styles](#api-architecture-styles)
-- [Important Considerations](#important-considerations)
-- [Security and Authentication](#security-and-authentication)
-- [Performance and Scalability](#performance-and-scalability)
-- [API Documentation and Developer Experience](#api-documentation-and-developer-experience)
-- [Testing and Quality Assurance](#testing-and-quality-assurance)
-- [Best Practices](#best-practices)
-- [Common Pitfalls and Solutions](#common-pitfalls-and-solutions)
-- [Next Steps](#next-steps)
-
 ## Overview of API Design Concepts
 
 API design is the systematic process of defining the structure, behavior, and interactions of an application programming interface (API). It encompasses creating a comprehensive blueprint for how different software components will communicate with each other, ensuring that the API is intuitive, maintainable, scalable, and extensible over time.
@@ -70,6 +57,7 @@ The stateless nature of REST means that each request contains all the informatio
 Every HTTP request from client to server must contain all information necessary to understand and process the request. The server cannot store any client context between requests, which means each request is independent and self-contained.
 
 Example of stateless request structure:
+
 ```http
 GET /api/v1/users/123/orders?status=pending&page=2 HTTP/1.1
 Host: api.example.com
@@ -82,6 +70,7 @@ Accept: application/json
 Resources are the fundamental concept in REST. Each resource represents an entity or collection that can be accessed through a unique URL. URLs should be nouns, not verbs, and follow a hierarchical structure that reflects relationships between resources.
 
 Resource URL examples:
+
 ```
 GET /api/v1/users                    # Collection of users
 GET /api/v1/users/123                # Specific user
@@ -96,6 +85,7 @@ GET /api/v1/categories/electronics   # Specific category
 REST APIs use a uniform interface consisting of standard HTTP methods, each with well-defined semantics:
 
 HTTP method usage patterns:
+
 ```
 GET /api/v1/users          # Retrieve all users
 POST /api/v1/users         # Create new user
@@ -110,6 +100,7 @@ DELETE /api/v1/users/123   # Delete user
 Resources can have multiple representations (JSON, XML, HTML) and clients can request their preferred format through content negotiation using HTTP headers.
 
 Content negotiation example:
+
 ```http
 GET /api/v1/users/123 HTTP/1.1
 Accept: application/json, application/xml;q=0.9
@@ -132,6 +123,7 @@ Content-Type: application/json
 HATEOAS is a constraint of REST that requires responses to include links to related resources and available actions. This makes the API self-describing and allows clients to discover functionality dynamically.
 
 HATEOAS response example:
+
 ```json
 {
   "id": 123,
@@ -164,6 +156,7 @@ HATEOAS response example:
 REST APIs should use appropriate HTTP status codes and provide detailed error information in response bodies to help clients understand and handle errors effectively.
 
 Standardized error response format:
+
 ```json
 {
   "error": {
@@ -199,6 +192,7 @@ GraphQL is strongly typed, meaning the API schema defines exactly what data is a
 GraphQL uses a Schema Definition Language (SDL) to define the structure of the API, including types, fields, and operations.
 
 Example GraphQL schema:
+
 ```graphql
 type User {
   id: ID!
@@ -242,6 +236,7 @@ type Mutation {
 Clients use GraphQL's query language to specify exactly what data they need, including nested relationships and conditional fields.
 
 Example GraphQL query:
+
 ```graphql
 query GetUserWithPosts($userId: ID!) {
   user(id: $userId) {
@@ -263,6 +258,7 @@ query GetUserWithPosts($userId: ID!) {
 ```
 
 Query response:
+
 ```json
 {
   "data": {
@@ -292,6 +288,7 @@ Query response:
 GraphQL supports mutations for modifying data and subscriptions for real-time updates.
 
 Mutation example:
+
 ```graphql
 mutation CreatePost($input: CreatePostInput!) {
   createPost(input: $input) {
@@ -307,6 +304,7 @@ mutation CreatePost($input: CreatePostInput!) {
 ```
 
 Subscription example:
+
 ```graphql
 subscription PostUpdates($authorId: ID!) {
   postUpdated(authorId: $authorId) {
@@ -347,6 +345,7 @@ Unlike REST and GraphQL, which are primarily designed for client-server communic
 gRPC uses Protocol Buffers to define service interfaces and message structures. This provides strong typing, efficient serialization, and automatic code generation for multiple programming languages.
 
 Example .proto file definition:
+
 ```protobuf
 syntax = "proto3";
 
@@ -475,6 +474,7 @@ Effective versioning strategies allow API providers to introduce improvements wh
 URL path versioning embeds the version number directly in the API endpoint path. This approach is explicit and easy to understand, making it popular for public APIs.
 
 URL versioning examples:
+
 ```
 https://api.example.com/v1/users
 https://api.example.com/v2/users
@@ -488,6 +488,7 @@ Advantages include clear version identification in URLs and simple routing logic
 Header versioning uses custom HTTP headers to specify the desired API version, keeping URLs clean and version-agnostic.
 
 Header versioning examples:
+
 ```http
 GET /api/users HTTP/1.1
 Host: api.example.com
@@ -507,6 +508,7 @@ This approach maintains clean URLs but may be less discoverable and requires car
 Query parameter versioning adds version information as URL parameters, providing flexibility while maintaining some URL visibility.
 
 Query parameter examples:
+
 ```
 https://api.example.com/users?version=2.0
 https://api.example.com/users?v=2
@@ -531,6 +533,7 @@ Authentication verifies the identity of clients making API requests. Modern APIs
 API keys provide a simple authentication mechanism suitable for server-to-server communication and development scenarios. Keys are typically included in request headers or query parameters.
 
 API key implementation:
+
 ```http
 GET /api/v1/users HTTP/1.1
 Host: api.example.com
@@ -544,6 +547,7 @@ While simple to implement, API keys have limitations including difficulty in rot
 OAuth 2.0 provides a robust framework for delegated authorization, allowing applications to access resources on behalf of users without sharing credentials. It supports multiple flows for different client types and security requirements.
 
 OAuth 2.0 authorization code flow:
+
 ```http
 # Step 1: Authorization request
 GET /oauth/authorize?response_type=code&client_id=CLIENT_ID&redirect_uri=REDIRECT_URI&scope=read:users HTTP/1.1
@@ -566,6 +570,7 @@ OAuth 2.0 provides fine-grained scope control, token refresh capabilities, and s
 JWT tokens provide a stateless authentication mechanism that encodes user information and claims in a cryptographically signed token format. This enables distributed authentication without requiring server-side session storage.
 
 JWT token structure and usage:
+
 ```http
 GET /api/v1/users/profile HTTP/1.1
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE1MTYyNDI2MjJ9.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
@@ -580,13 +585,14 @@ JWT tokens support claims-based authorization, cross-domain authentication, and 
 RBAC assigns permissions to roles and associates users with roles, simplifying permission management for large user bases. This model scales well and aligns with organizational structures.
 
 RBAC implementation example:
+
 ```json
 {
   "user_id": "123",
   "roles": ["user", "moderator"],
   "permissions": [
     "read:own_profile",
-    "update:own_profile", 
+    "update:own_profile",
     "read:posts",
     "moderate:comments"
   ]
@@ -598,6 +604,7 @@ RBAC implementation example:
 ABAC uses attributes of users, resources, and environment to make authorization decisions. This provides fine-grained control but requires more complex policy management.
 
 ABAC policy example:
+
 ```json
 {
   "policy": "Allow user to read document if user.department == document.department AND user.clearance >= document.classification"
@@ -611,6 +618,7 @@ ABAC policy example:
 Consistent error handling improves developer experience by providing predictable error formats and meaningful information for troubleshooting. Standardized errors should include error codes, human-readable messages, and relevant context.
 
 Comprehensive error response structure:
+
 ```json
 {
   "error": {
@@ -636,6 +644,7 @@ Comprehensive error response structure:
 Proper HTTP status code usage helps clients understand response types and implement appropriate error handling logic. Status codes should accurately reflect the nature of the response.
 
 Status code categories and usage:
+
 ```
 2xx Success:
 - 200 OK: Standard success response
@@ -660,6 +669,7 @@ Status code categories and usage:
 APIs should provide guidance for error recovery through appropriate status codes, retry headers, and documentation. Transient errors should be distinguishable from permanent failures.
 
 Retry guidance in responses:
+
 ```http
 HTTP/1.1 429 Too Many Requests
 Retry-After: 60
@@ -689,6 +699,7 @@ Validation should occur at multiple levels including format validation, business
 Schema-based validation uses formal schemas to define expected input structure and constraints. This approach provides consistent validation rules and clear error messages.
 
 JSON Schema validation example:
+
 ```json
 {
   "type": "object",
@@ -720,6 +731,7 @@ JSON Schema validation example:
 Parameterized queries prevent SQL injection attacks by separating SQL code from user data. All database queries should use parameterized statements rather than string concatenation.
 
 Secure query examples:
+
 ```sql
 -- Secure: Parameterized query
 SELECT * FROM users WHERE email = $1 AND status = $2;
@@ -739,6 +751,7 @@ Rate limiting protects APIs from abuse, ensures fair resource usage, and maintai
 The token bucket algorithm allows burst traffic while maintaining average rate limits. Tokens are added to a bucket at a steady rate, and requests consume tokens.
 
 Token bucket implementation concept:
+
 ```
 Bucket capacity: 100 tokens
 Refill rate: 10 tokens per second
@@ -764,6 +777,7 @@ Fixed window rate limiting resets counters at fixed intervals, providing simple 
 Rate limiting responses should include headers that inform clients about their usage status and limits.
 
 Rate limiting headers:
+
 ```http
 HTTP/1.1 200 OK
 X-RateLimit-Limit: 1000
@@ -789,6 +803,7 @@ Caching improves API performance by storing frequently accessed data in faster s
 HTTP caching leverages browser and proxy caches using standard HTTP headers. This approach requires careful cache control configuration and validation strategies.
 
 HTTP caching headers:
+
 ```http
 HTTP/1.1 200 OK
 Cache-Control: public, max-age=3600, must-revalidate
@@ -804,6 +819,7 @@ Vary: Accept, Authorization
 ```
 
 Conditional requests using ETags:
+
 ```http
 GET /api/v1/users/123 HTTP/1.1
 If-None-Match: "user-123-v5"
@@ -818,6 +834,7 @@ ETag: "user-123-v5"
 Application-level caching stores computed results, database query results, or expensive operations in memory or distributed cache systems.
 
 Redis caching implementation:
+
 ```bash
 # Cache user data with expiration
 SET user:123 '{"id":123,"name":"John Doe","email":"john.doe@example.com"}' EX 3600
@@ -838,9 +855,10 @@ Database performance directly impacts API response times. Optimization strategie
 Efficient database queries minimize resource usage and improve response times. This includes proper indexing, query structure optimization, and avoiding N+1 query problems.
 
 Optimized query patterns:
+
 ```sql
 -- Efficient: Single query with joins
-SELECT u.id, u.name, u.email, 
+SELECT u.id, u.name, u.email,
        COUNT(o.id) as order_count,
        SUM(o.total) as total_spent
 FROM users u
@@ -851,8 +869,8 @@ ORDER BY u.created_at DESC
 LIMIT 20;
 
 -- Supporting index for performance
-CREATE INDEX CONCURRENTLY idx_users_status_created 
-ON users (status, created_at DESC) 
+CREATE INDEX CONCURRENTLY idx_users_status_created
+ON users (status, created_at DESC)
 WHERE status = 'active';
 ```
 
@@ -861,6 +879,7 @@ WHERE status = 'active';
 Connection pooling manages database connections efficiently by reusing existing connections rather than creating new ones for each request.
 
 Connection pool configuration considerations:
+
 ```
 Pool size: Balance between resource usage and concurrency
 Connection lifetime: Prevent stale connections
@@ -877,6 +896,7 @@ Load balancing distributes API traffic across multiple server instances to impro
 Horizontal scaling adds more server instances to handle increased load. This approach provides better fault tolerance and theoretically unlimited scaling capacity.
 
 Load balancing algorithms:
+
 ```
 Round Robin: Requests distributed equally across servers
 Least Connections: Route to server with fewest active connections
@@ -889,6 +909,7 @@ Health Checks: Exclude unhealthy servers from rotation
 Auto-scaling automatically adjusts the number of server instances based on demand metrics such as CPU usage, memory consumption, or request queue length.
 
 Auto-scaling metrics and thresholds:
+
 ```
 CPU utilization > 70% for 5 minutes: Scale up
 Memory usage > 80% for 3 minutes: Scale up
@@ -907,6 +928,7 @@ Interactive API documentation enables developers to explore and test API endpoin
 OpenAPI (formerly Swagger) provides a standardized format for describing REST APIs. It enables automatic documentation generation, client SDK creation, and interactive testing interfaces.
 
 OpenAPI specification example:
+
 ```yaml
 openapi: 3.0.3
 info:
@@ -957,7 +979,7 @@ paths:
             type: string
             enum: [active, inactive, pending]
       responses:
-        '200':
+        "200":
           description: Successful response
           content:
             application/json:
@@ -967,15 +989,15 @@ paths:
                   users:
                     type: array
                     items:
-                      $ref: '#/components/schemas/User'
+                      $ref: "#/components/schemas/User"
                   pagination:
-                    $ref: '#/components/schemas/Pagination'
-        '400':
+                    $ref: "#/components/schemas/Pagination"
+        "400":
           description: Invalid request parameters
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
       security:
         - ApiKeyAuth: []
 
@@ -1017,6 +1039,7 @@ components:
 Modern documentation platforms provide rich, interactive experiences that go beyond static documentation. Tools like Swagger UI, Redoc, and Postman enable live API testing and exploration.
 
 Documentation platform features:
+
 ```
 Interactive testing: Execute API calls directly from documentation
 Code examples: Generated client code in multiple languages
@@ -1034,13 +1057,14 @@ Comprehensive code examples and software development kits (SDKs) accelerate deve
 Code examples should cover popular programming languages and demonstrate real-world usage scenarios rather than trivial examples.
 
 JavaScript/Node.js example:
+
 ```javascript
-const apiClient = require('./api-client');
+const apiClient = require("./api-client");
 
 // Initialize client with authentication
 const client = new apiClient({
-  baseURL: 'https://api.example.com/v2',
-  apiKey: process.env.API_KEY
+  baseURL: "https://api.example.com/v2",
+  apiKey: process.env.API_KEY,
 });
 
 // Create a new user
@@ -1049,19 +1073,20 @@ async function createUser(userData) {
     const response = await client.users.create({
       name: userData.name,
       email: userData.email,
-      password: userData.password
+      password: userData.password,
     });
-    
-    console.log('User created:', response.data);
+
+    console.log("User created:", response.data);
     return response.data;
   } catch (error) {
-    console.error('Failed to create user:', error.response.data);
+    console.error("Failed to create user:", error.response.data);
     throw error;
   }
 }
 ```
 
 Python example:
+
 ```python
 import requests
 from typing import Optional, Dict, Any
@@ -1074,7 +1099,7 @@ class UserAPIClient:
             'X-API-Key': api_key,
             'Content-Type': 'application/json'
         })
-    
+
     def create_user(self, name: str, email: str, password: str) -> Dict[str, Any]:
         """Create a new user account"""
         payload = {
@@ -1082,7 +1107,7 @@ class UserAPIClient:
             'email': email,
             'password': password
         }
-        
+
         response = self.session.post(
             f'{self.base_url}/users',
             json=payload
@@ -1100,26 +1125,32 @@ Comprehensive changelogs and migration guides help developers understand API cha
 Changelogs should follow consistent formatting and categorize changes by impact and type.
 
 Changelog example format:
+
 ```markdown
 # API Changelog
 
 ## Version 2.1.0 - 2023-12-07
 
 ### Added
+
 - **New endpoint**: `GET /users/{id}/preferences` for user preference management
 - **Query parameter**: Added `include_inactive` parameter to `GET /users` endpoint
 
 ### Changed
+
 - **Performance**: Improved response times for `GET /users` endpoint by 40%
 - **Rate limiting**: Increased default rate limit from 1000 to 2000 requests per hour
 
 ### Deprecated
+
 - **Field**: `user.legacy_id` field is deprecated, use `user.id` instead
 
 ### Fixed
+
 - **Bug**: Fixed incorrect pagination in `GET /orders` endpoint
 
 ### Breaking Changes
+
 None in this release.
 ```
 
@@ -1134,45 +1165,46 @@ Comprehensive testing ensures API reliability, correctness, and performance unde
 Unit tests verify individual API components in isolation, including business logic, data validation, and utility functions.
 
 Unit test example (JavaScript with Jest):
+
 ```javascript
 // tests/validation.test.js
-const { validateUserInput } = require('../src/validation');
+const { validateUserInput } = require("../src/validation");
 
-describe('User Input Validation', () => {
-  test('should accept valid user data', () => {
+describe("User Input Validation", () => {
+  test("should accept valid user data", () => {
     const validUser = {
-      name: 'John Doe',
-      email: 'john.doe@example.com',
-      age: 25
+      name: "John Doe",
+      email: "john.doe@example.com",
+      age: 25,
     };
-    
+
     const result = validateUserInput(validUser);
     expect(result.isValid).toBe(true);
     expect(result.errors).toHaveLength(0);
   });
-  
-  test('should reject invalid email format', () => {
+
+  test("should reject invalid email format", () => {
     const invalidUser = {
-      name: 'John Doe',
-      email: 'invalid-email',
-      age: 25
+      name: "John Doe",
+      email: "invalid-email",
+      age: 25,
     };
-    
+
     const result = validateUserInput(invalidUser);
     expect(result.isValid).toBe(false);
-    expect(result.errors).toContain('Invalid email format');
+    expect(result.errors).toContain("Invalid email format");
   });
-  
-  test('should reject age below minimum', () => {
+
+  test("should reject age below minimum", () => {
     const underage = {
-      name: 'Young User',
-      email: 'young@example.com',
-      age: 12
+      name: "Young User",
+      email: "young@example.com",
+      age: 12,
     };
-    
+
     const result = validateUserInput(underage);
     expect(result.isValid).toBe(false);
-    expect(result.errors).toContain('Age must be at least 13');
+    expect(result.errors).toContain("Age must be at least 13");
   });
 });
 ```
@@ -1182,6 +1214,7 @@ describe('User Input Validation', () => {
 Integration tests verify that API endpoints work correctly with real dependencies including databases, external services, and authentication systems.
 
 Integration test example (Python with pytest):
+
 ```python
 # tests/test_user_api.py
 import pytest
@@ -1195,7 +1228,7 @@ class TestUserAPI:
             'X-API-Key': 'test-api-key',
             'Content-Type': 'application/json'
         }
-    
+
     def test_create_user_success(self):
         """Test successful user creation"""
         user_data = {
@@ -1203,20 +1236,20 @@ class TestUserAPI:
             'email': 'test@example.com',
             'password': 'SecurePass123!'
         }
-        
+
         response = requests.post(
             f'{self.base_url}/users',
             json=user_data,
             headers=self.headers
         )
-        
+
         assert response.status_code == 201
         data = response.json()
         assert data['name'] == user_data['name']
         assert data['email'] == user_data['email']
         assert 'password' not in data  # Ensure password not returned
         assert 'id' in data
-    
+
     def test_create_user_duplicate_email(self):
         """Test user creation with duplicate email"""
         user_data = {
@@ -1224,17 +1257,17 @@ class TestUserAPI:
             'email': 'existing@example.com',  # Assuming this exists
             'password': 'SecurePass123!'
         }
-        
+
         response = requests.post(
             f'{self.base_url}/users',
             json=user_data,
             headers=self.headers
         )
-        
+
         assert response.status_code == 400
         error_data = response.json()
         assert error_data['error']['code'] == 'EMAIL_ALREADY_EXISTS'
-    
+
     def test_list_users_pagination(self):
         """Test user listing with pagination"""
         response = requests.get(
@@ -1242,7 +1275,7 @@ class TestUserAPI:
             params={'page': 1, 'limit': 5},
             headers=self.headers
         )
-        
+
         assert response.status_code == 200
         data = response.json()
         assert 'users' in data
@@ -1257,19 +1290,20 @@ class TestUserAPI:
 Load testing evaluates API performance under expected and peak traffic conditions. This helps identify bottlenecks and capacity limits.
 
 Load test example using Artillery:
+
 ```yaml
 # load-test.yml
 config:
-  target: 'https://api.example.com/v2'
+  target: "https://api.example.com/v2"
   phases:
     - duration: 60
-      arrivalRate: 10  # 10 requests per second
+      arrivalRate: 10 # 10 requests per second
       name: "Warm up"
     - duration: 300
-      arrivalRate: 50  # 50 requests per second
+      arrivalRate: 50 # 50 requests per second
       name: "Normal load"
     - duration: 120
-      arrivalRate: 100  # 100 requests per second
+      arrivalRate: 100 # 100 requests per second
       name: "Peak load"
   defaults:
     headers:
@@ -1317,41 +1351,44 @@ Modern API testing tools provide comprehensive testing capabilities including fu
 Postman enables comprehensive API testing with automated test scripts, environment management, and collection sharing.
 
 Postman test script example:
+
 ```javascript
 // Test script for user creation endpoint
 pm.test("Status code is 201", function () {
-    pm.response.to.have.status(201);
+  pm.response.to.have.status(201);
 });
 
 pm.test("Response time is less than 500ms", function () {
-    pm.expect(pm.response.responseTime).to.be.below(500);
+  pm.expect(pm.response.responseTime).to.be.below(500);
 });
 
 pm.test("User created successfully", function () {
-    const responseJson = pm.response.json();
-    
-    pm.expect(responseJson).to.have.property('id');
-    pm.expect(responseJson).to.have.property('name');
-    pm.expect(responseJson).to.have.property('email');
-    pm.expect(responseJson).to.have.property('created_at');
-    
-    // Verify name matches request
-    const requestData = JSON.parse(pm.request.body.raw);
-    pm.expect(responseJson.name).to.eql(requestData.name);
-    pm.expect(responseJson.email).to.eql(requestData.email);
-    
-    // Ensure password is not returned
-    pm.expect(responseJson).to.not.have.property('password');
+  const responseJson = pm.response.json();
+
+  pm.expect(responseJson).to.have.property("id");
+  pm.expect(responseJson).to.have.property("name");
+  pm.expect(responseJson).to.have.property("email");
+  pm.expect(responseJson).to.have.property("created_at");
+
+  // Verify name matches request
+  const requestData = JSON.parse(pm.request.body.raw);
+  pm.expect(responseJson.name).to.eql(requestData.name);
+  pm.expect(responseJson.email).to.eql(requestData.email);
+
+  // Ensure password is not returned
+  pm.expect(responseJson).to.not.have.property("password");
 });
 
 pm.test("Response has correct content type", function () {
-    pm.expect(pm.response.headers.get("Content-Type")).to.include("application/json");
+  pm.expect(pm.response.headers.get("Content-Type")).to.include(
+    "application/json"
+  );
 });
 
 // Set user ID for subsequent requests
 pm.test("Set user ID variable", function () {
-    const responseJson = pm.response.json();
-    pm.environment.set("user_id", responseJson.id);
+  const responseJson = pm.response.json();
+  pm.environment.set("user_id", responseJson.id);
 });
 ```
 
@@ -1360,69 +1397,70 @@ pm.test("Set user ID variable", function () {
 Contract testing ensures API compatibility between services by defining and validating API contracts.
 
 Pact contract testing example:
+
 ```javascript
 // consumer-contract.test.js
-const { Pact } = require('@pact-foundation/pact');
-const { getUserById } = require('../src/userService');
+const { Pact } = require("@pact-foundation/pact");
+const { getUserById } = require("../src/userService");
 
 const provider = new Pact({
-  consumer: 'UserWebApp',
-  provider: 'UserAPI',
+  consumer: "UserWebApp",
+  provider: "UserAPI",
   port: 1234,
-  log: path.resolve(process.cwd(), 'logs', 'pact.log'),
-  logLevel: 'INFO'
+  log: path.resolve(process.cwd(), "logs", "pact.log"),
+  logLevel: "INFO",
 });
 
-describe('User API Contract', () => {
+describe("User API Contract", () => {
   beforeAll(() => provider.setup());
   afterAll(() => provider.finalize());
 
-  describe('GET /users/:id', () => {
+  describe("GET /users/:id", () => {
     beforeEach(() => {
       const userInteraction = {
-        state: 'user exists',
-        uponReceiving: 'a request for user with ID 123',
+        state: "user exists",
+        uponReceiving: "a request for user with ID 123",
         withRequest: {
-          method: 'GET',
-          path: '/users/123',
+          method: "GET",
+          path: "/users/123",
           headers: {
-            'Accept': 'application/json',
-            'X-API-Key': Pact.Matchers.term({
-              generate: 'valid-api-key',
-              matcher: '.*'
-            })
-          }
+            Accept: "application/json",
+            "X-API-Key": Pact.Matchers.term({
+              generate: "valid-api-key",
+              matcher: ".*",
+            }),
+          },
         },
         willRespondWith: {
           status: 200,
           headers: {
-            'Content-Type': 'application/json'
+            "Content-Type": "application/json",
           },
           body: {
             id: 123,
-            name: Pact.Matchers.somethingLike('John Doe'),
+            name: Pact.Matchers.somethingLike("John Doe"),
             email: Pact.Matchers.term({
-              generate: 'john.doe@example.com',
-              matcher: '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$'
+              generate: "john.doe@example.com",
+              matcher: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$",
             }),
             status: Pact.Matchers.term({
-              generate: 'active',
-              matcher: '^(active|inactive|pending)$'
-            })
-          }
-        }
+              generate: "active",
+              matcher: "^(active|inactive|pending)$",
+            }),
+          },
+        },
       };
 
       return provider.addInteraction(userInteraction);
     });
 
-    it('should return user data', async () => {
+    it("should return user data", async () => {
       const user = await getUserById(123);
-      
+
       expect(user.id).toBe(123);
-      expect(user.name).toBe('John Doe');
-      expect(user.email).toBe('john.doe@example.com');
-      expect(user.status).toBe('active');
+      expect(user.name).toBe("John Doe");
+      expect(user.email).toBe("john.doe@example.com");
+      expect(user.status).toBe("active");
     });
   });
 });
@@ -1439,6 +1477,7 @@ Consistency across API design creates predictable experiences for developers and
 Consistent naming conventions improve API usability and reduce confusion. Resource names should be clear, descriptive, and follow established patterns.
 
 Resource naming guidelines:
+
 ```
 Resources: Use nouns, not verbs
   Good: /users, /orders, /products
@@ -1458,6 +1497,7 @@ Case convention: Use kebab-case for URLs
 ```
 
 Field naming conventions:
+
 ```json
 {
   "user_id": 12345,
@@ -1478,6 +1518,7 @@ Field naming conventions:
 Proper HTTP method usage ensures semantic clarity and enables appropriate client-side and infrastructure-level optimizations.
 
 HTTP method guidelines:
+
 ```
 GET: Retrieve data, idempotent, cacheable
   Example: GET /users/123
@@ -1507,6 +1548,7 @@ API performance directly impacts user experience and system scalability. Perform
 Optimizing API responses reduces bandwidth usage and improves client performance through techniques like field selection, response compression, and efficient data formats.
 
 Field selection implementation:
+
 ```
 # Request specific fields only
 GET /users/123?fields=id,name,email
@@ -1533,6 +1575,7 @@ GET /users/123?fields=id,name,profile(avatar_url,bio)
 ```
 
 Response compression configuration:
+
 ```http
 # Client request with compression support
 GET /users HTTP/1.1
@@ -1550,6 +1593,7 @@ Vary: Accept-Encoding
 Efficient pagination enables handling large datasets without overwhelming clients or servers. Different pagination strategies suit different use cases and data access patterns.
 
 Cursor-based pagination for large datasets:
+
 ```
 # Request first page
 GET /users?limit=20
@@ -1569,6 +1613,7 @@ GET /users?limit=20&cursor=eyJpZCI6MTAwLCJjcmVhdGVkX2F0IjoiMjAyMy0xMi0wN1QxMDozM
 ```
 
 Offset-based pagination for smaller datasets:
+
 ```
 # Request specific page
 GET /users?page=3&limit=20
@@ -1596,6 +1641,7 @@ APIs must evolve while maintaining backward compatibility and code quality. Main
 Modular API design enables independent development, testing, and deployment of different API components.
 
 Domain-driven design organization:
+
 ```
 /api/v2/
 ├── users/           # User management domain
@@ -1613,6 +1659,7 @@ Domain-driven design organization:
 ```
 
 Microservices API boundaries:
+
 ```
 User Service API:
 - GET /users
@@ -1637,6 +1684,7 @@ Product Service API:
 Graceful deprecation strategies allow API evolution without breaking existing integrations. Deprecation should be communicated clearly with adequate transition periods.
 
 Deprecation workflow:
+
 ```
 1. Announce deprecation with timeline
 2. Add deprecation warnings to responses
@@ -1647,6 +1695,7 @@ Deprecation workflow:
 ```
 
 Deprecation header implementation:
+
 ```http
 HTTP/1.1 200 OK
 Sunset: Wed, 31 Mar 2024 23:59:59 GMT
@@ -1692,10 +1741,28 @@ Rate limiting is an important aspect of API design that helps maintain the stabi
 
 ## Next Steps
 
-Now that you have a solid understanding of API design concepts and patterns, you can apply these principles to create robust and efficient APIs for your applications. Consider exploring more advanced topics such as [API security](/advanced-APIs/API-security), performance optimization, and [API management](/advanced-APIs/API-management) to further enhance your skills.
-
 The knowledge gained from this section will serve as a foundation for building scalable and maintainable APIs that meet the needs of your applications and users.
 
-Next, you can explore [HTTP Protocol](/foundation/HTTP-protocol) to understand how APIs communicate over the web, or dive into [Web Server Basics](/foundation/web-server-basics) to learn about the role of web servers in serving API requests. If that doesn't sound too interesting, there is always [RESTful Services](/foundation/RESTful-services) to learn about the principles of RESTful API design.
+Next, you can explore [HTTP Protocol](/fund-foundation/HTTP-protocol) to understand how APIs communicate over the web, or dive into [Web Server Basics](/fund-foundation/web-server-basics) to learn about the role of web servers in serving API requests. If that doesn't sound too interesting, there is always [RESTful Services](/fund-foundation/RESTful-services) to learn about the principles of RESTful API design.
+
+### Immediate Actions
+
+| Priority | Action                                                  | Purpose                         |
+| -------- | ------------------------------------------------------- | ------------------------------- |
+| High     | [HTTP Protocol](/fund-foundation/HTTP-protocol)         | Understanding API communication |
+| High     | [Web Server Basics](/fund-foundation/web-server-basics) | Learning about web server roles |
+| Medium   | [RESTful Services](/fund-foundation/RESTful-services)   | Exploring RESTful API design    |
+
+Now that you have a solid understanding of API design concepts and patterns, you can apply these principles to create robust and efficient APIs for your applications. Consider exploring more advanced topics such as [API security](/adv-advanced-APIs/API-security), performance optimization, and [API management](/adv-advanced-APIs/API-management) to further enhance your skills.
+
+### Optional Actions
+
+| Action                                                   | Purpose                            |
+| -------------------------------------------------------- | ---------------------------------- |
+| [API Security](/adv-advanced-APIs/API-security)          | Enhancing API security practices   |
+| [API Management](/adv-advanced-APIs/API-management)      | Managing APIs effectively          |
+| [API Versioning](/adv-advanced-APIs/API-versioning)      | Managing API changes and versions  |
+| [Essential Vocabulary](/fund-vocabulary)                 | Understanding terminology          |
+| [Learn the Abbreviations](/fund-essential-abbreviations) | Understanding common abbreviations |
 
 <BackToTop />
