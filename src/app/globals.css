@@ -571,7 +571,7 @@ pre code.hljs {
   }
 
   blockquote {
-    @apply mb-14 mt-3 px-6 border-border shadow-sm border-l-6 bg-card text-card-foreground rounded-2xl italic pt-5 pb-2;
+    @apply mb-14 mt-3 px-6 border-border shadow-sm border-l-6 bg-card text-card-foreground rounded-2xl pt-5 pb-2;
   }
 
   .expressive-code {

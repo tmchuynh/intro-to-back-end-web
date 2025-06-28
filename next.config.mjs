@@ -46,7 +46,11 @@ const rehypeExpressiveCodeOptions = {
     wrap: true,
     // Disable wrapped line indentation for terminal languages
     overridesByLang: {
-      "bash,ps,sh": { preserveIndent: false, frame: "none" },
+      "bash,ps,sh": {
+        preserveIndent: false,
+        frame: "none",
+        showLineNumbers: false,
+      },
     },
     // Allows re-collapsing sections
     collapseStyle: "collapsible-start",
