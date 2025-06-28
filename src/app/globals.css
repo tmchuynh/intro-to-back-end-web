@@ -574,6 +574,10 @@ pre code.hljs {
     @apply mb-14 mt-3 px-6 border-border shadow-sm border-l-6 bg-card text-card-foreground rounded-2xl pt-5 pb-2;
   }
 
+  figcaption {
+    @apply text-sm text-muted-foreground my-2;
+  }
+
   .expressive-code {
     @apply my-10;
   }

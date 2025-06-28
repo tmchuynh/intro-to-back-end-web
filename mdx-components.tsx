@@ -4,24 +4,6 @@ import Button from "./src/components/Button";
 import Guides from "./src/components/Guides";
 import Resources from "./src/components/Resources";
 
-// Utility function to extract text content from React children
-function extractTextContent(children: React.ReactNode): string {
-  if (typeof children === "string") {
-    return children;
-  }
-  if (typeof children === "number") {
-    return children.toString();
-  }
-  if (Array.isArray(children)) {
-    return children.map(extractTextContent).join("");
-  }
-  if (children && typeof children === "object" && "props" in children) {
-    const element = children as { props: { children?: React.ReactNode } };
-    return extractTextContent(element.props.children);
-  }
-  return "";
-}
-
 interface Props {
   children: React.ReactNode;
   level: number;
@@ -167,11 +149,7 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
     img: ({ src, alt, ...props }) => (
       <img src={src} alt={alt} className="mx-auto my-6 rounded-lg" {...props} />
     ),
-    blockquote: ({ children }) => (
-      <>
-        <blockquote>{children}</blockquote>
-      </>
-    ),
+    blockquote: ({ children }) => <blockquote>{children}</blockquote>,
     // Custom components
     Button,
     Guides,
