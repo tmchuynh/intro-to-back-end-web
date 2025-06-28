@@ -329,7 +329,6 @@ Key Characteristics:
 
 Cache invalidation is one of the most challenging aspects of caching, often cited as one of the "two hard things in computer science" along with naming things and off-by-one errors. The goal is to ensure that stale or incorrect data is removed from the cache while maintaining optimal performance.
 
-
 #### Invalidation Strategies:
 
 ##### Time-based Expiration (TTL - Time To Live):
@@ -370,6 +369,7 @@ When a popular cache entry expires, multiple requests may simultaneously try to 
 - Probabilistic early expiration (randomly expire entries before actual TTL)
 
 ##### Cascading Invalidation:
+
 When invalidating one cache entry requires invalidating related entries. This can be managed through:
 
 - Dependency tracking between cache entries
