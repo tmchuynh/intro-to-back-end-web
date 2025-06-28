@@ -4,4 +4,2714 @@ import BackToTop from "@/components/BackToTop";
 
 ## Table of Contents
 
+## Overview
+
+General development resources and tools form the backbone of modern back-end development workflows. These tools enhance productivity, improve code quality, and streamline the development process from initial coding to deployment and maintenance. Unlike database-specific tools, these resources support the broader development ecosystem.
+
+This comprehensive guide covers essential development tools that every back-end developer should know, including code editors, version control systems, API testing tools, containerization platforms, monitoring solutions, and more. These tools integrate seamlessly with database technologies and help create robust, scalable, and maintainable back-end applications.
+
+The right combination of development tools can significantly improve development velocity, reduce errors, and enhance collaboration among team members. Modern development environments rely heavily on automation, continuous integration, and cloud-native technologies to deliver high-quality software efficiently.
+
+## Code Editors and IDEs
+
+### Visual Studio Code
+
+Visual Studio Code is a lightweight, extensible code editor that has become the de facto standard for many developers. It offers excellent support for back-end development with extensive language support and a rich ecosystem of extensions.
+
+#### Key Features
+
+- **IntelliSense**: Advanced code completion, parameter info, and quick info
+- **Debugging**: Built-in debugging support for multiple languages
+- **Git Integration**: Native Git support with visual diff and merge tools
+- **Extensions**: Vast marketplace with thousands of extensions
+- **Remote Development**: Support for remote containers, SSH, and WSL
+- **Integrated Terminal**: Built-in terminal with multiple shell support
+
+#### Essential Extensions for Back-End Development
+
+```json
+{
+  "recommendations": [
+    "ms-python.python",
+    "ms-vscode.vscode-typescript-next",
+    "redhat.java",
+    "ms-dotnettools.csharp",
+    "golang.go",
+    "rust-lang.rust-analyzer",
+    "ms-vscode.vscode-json",
+    "bradlc.vscode-tailwindcss",
+    "esbenp.prettier-vscode",
+    "ms-vscode.vscode-eslint",
+    "formulahendry.auto-rename-tag",
+    "christian-kohler.path-intellisense",
+    "ms-vscode-remote.remote-containers",
+    "ms-vscode-remote.remote-ssh",
+    "ms-kubernetes-tools.vscode-kubernetes-tools",
+    "ms-vscode.docker"
+  ]
+}
+```
+
+#### Configuration Example
+
+```json
+// settings.json
+{
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.organizeImports": true,
+    "source.fixAll.eslint": true
+  },
+  "python.defaultInterpreterPath": "/usr/bin/python3",
+  "go.useLanguageServer": true,
+  "typescript.preferences.importModuleSpecifier": "relative",
+  "files.associations": {
+    "*.env.*": "dotenv"
+  },
+  "terminal.integrated.defaultProfile.linux": "bash"
+}
+```
+
+#### Documentation
+
+- [Visual Studio Code Documentation](https://code.visualstudio.com/docs)
+- [VSCode Extension Marketplace](https://marketplace.visualstudio.com/)
+
+### IntelliJ IDEA
+
+IntelliJ IDEA is a powerful IDE particularly popular for Java development but also supports many other languages through plugins.
+
+#### Key Features
+
+- **Smart Code Completion**: Context-aware code completion
+- **Advanced Refactoring**: Comprehensive refactoring tools
+- **Built-in Developer Tools**: Database tools, HTTP client, profiler
+- **Version Control Integration**: Advanced Git, SVN, Mercurial support
+- **Framework Support**: Spring, Hibernate, JPA, and more
+- **Debugging and Testing**: Advanced debugging and testing capabilities
+
+#### Usage Example
+
+```java
+// Example Spring Boot application setup in IntelliJ IDEA
+@SpringBootApplication
+public class BackendApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(BackendApplication.class, args);
+    }
+}
+
+@RestController
+@RequestMapping("/api/users")
+public class UserController {
+
+    @Autowired
+    private UserService userService;
+
+    @GetMapping
+    public ResponseEntity<List<User>> getAllUsers() {
+        List<User> users = userService.findAll();
+        return ResponseEntity.ok(users);
+    }
+
+    @PostMapping
+    public ResponseEntity<User> createUser(@RequestBody @Valid User user) {
+        User createdUser = userService.save(user);
+        return ResponseEntity.status(HttpStatus.CREATED).body(createdUser);
+    }
+}
+```
+
+#### Documentation
+
+- [IntelliJ IDEA Documentation](https://www.jetbrains.com/help/idea/)
+- [IntelliJ IDEA Features](https://www.jetbrains.com/idea/features/)
+
+### Vim/Neovim
+
+Vim and Neovim are highly configurable text editors favored by many developers for their efficiency and keyboard-centric workflow.
+
+#### Key Features
+
+- **Modal Editing**: Efficient text manipulation through modes
+- **Extensibility**: Vast plugin ecosystem
+- **Lightweight**: Fast startup and low resource usage
+- **Customization**: Highly configurable through vimrc/init.vim
+- **Remote Development**: Excellent for server-side development
+- **Language Support**: Plugins for every programming language
+
+#### Configuration Example
+
+```vim
+" ~/.vimrc or ~/.config/nvim/init.vim
+set number
+set relativenumber
+set autoindent
+set tabstop=4
+set shiftwidth=4
+set expandtab
+set smarttab
+set softtabstop=4
+set mouse=a
+
+" Plugin management with vim-plug
+call plug#begin('~/.vim/plugged')
+Plug 'preservim/nerdtree'
+Plug 'vim-airline/vim-airline'
+Plug 'tpope/vim-fugitive'
+Plug 'airblade/vim-gitgutter'
+Plug 'dense-analysis/ale'
+Plug 'ycm-core/YouCompleteMe'
+Plug 'fatih/vim-go'
+Plug 'rust-lang/rust.vim'
+call plug#end()
+
+" Key mappings
+map <C-n> :NERDTreeToggle<CR>
+map <C-f> :Files<CR>
+map <C-g> :Rg<CR>
+```
+
+#### Documentation
+
+- [Vim Documentation](https://www.vim.org/docs.php)
+- [Neovim Documentation](https://neovim.io/doc/)
+
+## Version Control and Collaboration
+
+### Git
+
+Git is the most widely used distributed version control system, essential for modern software development and collaboration.
+
+#### Key Features
+
+- **Distributed**: Every clone is a full backup
+- **Branching**: Lightweight branching and merging
+- **Speed**: Fast performance for most operations
+- **Data Integrity**: Cryptographic integrity of version history
+- **Staging Area**: Prepare commits with precision
+- **Flexible Workflows**: Support for various development workflows
+
+#### Common Workflow Example
+
+```bash
+# Initialize repository
+git init
+git remote add origin https://github.com/username/repo.git
+
+# Basic workflow
+git add .
+git commit -m "Initial commit"
+git push -u origin main
+
+# Feature branch workflow
+git checkout -b feature/user-authentication
+git add src/auth/
+git commit -m "Add user authentication"
+git push origin feature/user-authentication
+
+# Create pull request (on GitHub/GitLab)
+# After review and approval:
+git checkout main
+git pull origin main
+git merge feature/user-authentication
+git push origin main
+git branch -d feature/user-authentication
+
+# Advanced operations
+git rebase -i HEAD~3  # Interactive rebase
+git cherry-pick abc123  # Apply specific commit
+git bisect start  # Binary search for bugs
+git reflog  # Recovery operations
+```
+
+#### Git Configuration
+
+```bash
+# Global configuration
+git config --global user.name "Your Name"
+git config --global user.email "your.email@example.com"
+git config --global init.defaultBranch main
+git config --global core.editor "code --wait"
+git config --global merge.tool vscode
+git config --global diff.tool vscode
+
+# Useful aliases
+git config --global alias.st status
+git config --global alias.co checkout
+git config --global alias.br branch
+git config --global alias.ci commit
+git config --global alias.unstage 'reset HEAD --'
+git config --global alias.last 'log -1 HEAD'
+git config --global alias.visual '!gitk'
+```
+
+#### Documentation
+
+- [Git Documentation](https://git-scm.com/doc)
+- [Pro Git Book](https://git-scm.com/book)
+- [Git Cheat Sheet](https://education.github.com/git-cheat-sheet-education.pdf)
+
+### GitHub
+
+GitHub is a web-based hosting service for Git repositories with powerful collaboration features.
+
+#### Key Features
+
+- **Repository Hosting**: Free public and private repositories
+- **Pull Requests**: Code review and collaboration workflow
+- **Issues and Project Management**: Bug tracking and project planning
+- **Actions**: CI/CD automation platform
+- **Security**: Security advisories and dependency scanning
+- **Community**: Large developer community and open source projects
+
+#### GitHub Actions Example
+
+```yaml
+# .github/workflows/backend-ci.yml
+name: Backend CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
+
+      - name: Run linting
+        run: npm run lint
+
+      - name: Build application
+        run: npm run build
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Deploy to production
+        run: |
+          echo "Deploying to production..."
+          # Add deployment scripts here
+```
+
+#### Documentation
+
+- [GitHub Documentation](https://docs.github.com/)
+- [GitHub Actions Documentation](https://docs.github.com/en/actions)
+
+## API Development and Testing
+
+### Postman
+
+Postman is a comprehensive API development and testing platform that simplifies the process of working with APIs.
+
+#### Key Features
+
+- **Request Building**: Intuitive interface for creating HTTP requests
+- **Collections**: Organize and share API requests
+- **Environment Variables**: Manage different environments (dev, staging, prod)
+- **Automated Testing**: Write and run API tests
+- **Monitoring**: Monitor API performance and uptime
+- **Documentation**: Generate and share API documentation
+
+#### Usage Example
+
+```javascript
+// Postman Pre-request Script
+const timestamp = Date.now();
+const nonce = Math.random().toString(36).substring(7);
+
+pm.environment.set("timestamp", timestamp);
+pm.environment.set("nonce", nonce);
+
+// Generate API signature
+const signature = CryptoJS.HmacSHA256(
+  `${timestamp}${nonce}${pm.request.method}${pm.request.url}`,
+  pm.environment.get("api_secret")
+).toString();
+
+pm.environment.set("signature", signature);
+```
+
+```javascript
+// Postman Test Script
+pm.test("Status code is 200", function () {
+  pm.response.to.have.status(200);
+});
+
+pm.test("Response time is less than 200ms", function () {
+  pm.expect(pm.response.responseTime).to.be.below(200);
+});
+
+pm.test("Response has user data", function () {
+  const jsonData = pm.response.json();
+  pm.expect(jsonData).to.have.property("user");
+  pm.expect(jsonData.user).to.have.property("id");
+  pm.expect(jsonData.user.email).to.match(
+    /^[\w\-\.]+@([\w\-]+\.)+[\w\-]{2,4}$/
+  );
+});
+
+// Set variables for next request
+if (pm.response.code === 200) {
+  const responseJson = pm.response.json();
+  pm.environment.set("user_id", responseJson.user.id);
+}
+```
+
+#### Documentation
+
+- [Postman Documentation](https://learning.postman.com/docs/)
+- [Postman API Testing Guide](https://learning.postman.com/docs/writing-scripts/test-scripts/)
+
+### Insomnia
+
+Insomnia is a powerful REST and GraphQL client with a clean interface and advanced features.
+
+#### Key Features
+
+- **REST and GraphQL**: Support for both REST and GraphQL APIs
+- **Code Generation**: Generate client code in multiple languages
+- **Environment Management**: Flexible environment and variable system
+- **Plugin System**: Extensible through plugins
+- **Design Documents**: API design and documentation features
+- **Team Collaboration**: Share workspaces and collaborate
+
+#### Configuration Example
+
+```json
+// Insomnia Environment Configuration
+{
+  "base_url": "{{ _.env_name === 'production' ? 'https://api.prod.com' : 'https://api.dev.com' }}",
+  "api_key": "{{ _.env_name === 'production' ? _.prod_api_key : _.dev_api_key }}",
+  "timeout": 5000
+}
+```
+
+#### Documentation
+
+- [Insomnia Documentation](https://docs.insomnia.rest/)
+
+### cURL
+
+cURL is a command-line tool for transferring data with URLs, essential for API testing and automation.
+
+#### Key Features
+
+- **Protocol Support**: HTTP, HTTPS, FTP, SFTP, and more
+- **Authentication**: Various authentication methods
+- **Data Transfer**: Upload and download files
+- **Scriptable**: Easy to integrate into scripts and automation
+- **Cross-Platform**: Available on all major platforms
+- **Debugging**: Verbose output for troubleshooting
+
+#### Usage Examples
+
+```bash
+# Basic GET request
+curl https://api.example.com/users
+
+# POST with JSON data
+curl -X POST https://api.example.com/users \
+  -H "Content-Type: application/json" \
+  -d '{"name": "John Doe", "email": "john@example.com"}'
+
+# Authentication with API key
+curl -H "Authorization: Bearer YOUR_API_KEY" \
+  https://api.example.com/protected
+
+# Upload file
+curl -X POST -F "file=@document.pdf" \
+  https://api.example.com/upload
+
+# Save response to file
+curl https://api.example.com/data -o response.json
+
+# Follow redirects and show headers
+curl -L -I https://api.example.com/redirect
+
+# Advanced debugging
+curl -v --trace-ascii trace.txt \
+  https://api.example.com/debug
+
+# Custom headers and cookies
+curl -H "X-Custom-Header: value" \
+  -b "session=abc123" \
+  https://api.example.com/data
+```
+
+#### Documentation
+
+- [cURL Documentation](https://curl.se/docs/)
+- [cURL Manual](https://curl.se/docs/manual.html)
+
+### HTTPie
+
+HTTPie is a modern, user-friendly command-line HTTP client designed for testing APIs.
+
+#### Key Features
+
+- **Intuitive Syntax**: Simple and readable command syntax
+- **JSON Support**: Built-in JSON support
+- **Session Support**: Persistent sessions
+- **Plugin System**: Extensible through plugins
+- **Output Formatting**: Beautiful, colored output
+- **File Uploads**: Easy file upload support
+
+#### Usage Examples
+
+```bash
+# Install HTTPie
+pip install httpie
+
+# Basic GET request
+http GET https://api.example.com/users
+
+# POST with JSON (automatic)
+http POST https://api.example.com/users name="John Doe" email="john@example.com"
+
+# Custom headers
+http GET https://api.example.com/users Authorization:"Bearer token"
+
+# Query parameters
+http GET https://api.example.com/users page==1 limit==10
+
+# Upload file
+http --form POST https://api.example.com/upload file@document.pdf
+
+# Download and save
+http --download https://api.example.com/file.zip
+
+# Sessions
+http --session=user POST https://api.example.com/login username=john password=secret
+http --session=user GET https://api.example.com/profile
+```
+
+#### Documentation
+
+- [HTTPie Documentation](https://httpie.io/docs)
+
+## Containerization and Orchestration
+
+### Docker
+
+Docker is a containerization platform that packages applications and their dependencies into lightweight, portable containers.
+
+#### Key Features
+
+- **Containerization**: Package applications with all dependencies
+- **Portability**: Run anywhere Docker is supported
+- **Isolation**: Process and filesystem isolation
+- **Efficiency**: Lightweight compared to virtual machines
+- **Orchestration**: Integration with orchestration platforms
+- **Registry**: Docker Hub for sharing container images
+
+#### Docker Examples
+
+```dockerfile
+# Dockerfile for Node.js application
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm ci --only=production
+
+# Copy application code
+COPY . .
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S nextjs -u 1001
+
+# Change ownership
+RUN chown -R nextjs:nodejs /app
+USER nextjs
+
+# Expose port
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:3000/health || exit 1
+
+# Start application
+CMD ["npm", "start"]
+```
+
+```yaml
+# docker-compose.yml
+version: "3.8"
+
+services:
+  backend:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://user:password@db:5432/myapp
+    depends_on:
+      - db
+      - redis
+    networks:
+      - app-network
+    volumes:
+      - ./logs:/app/logs
+    restart: unless-stopped
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=myapp
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./ssl:/etc/nginx/ssl
+    depends_on:
+      - backend
+    networks:
+      - app-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  app-network:
+    driver: bridge
+```
+
+#### Docker Commands
+
+```bash
+# Build image
+docker build -t myapp:latest .
+
+# Run container
+docker run -d -p 3000:3000 --name myapp myapp:latest
+
+# View logs
+docker logs -f myapp
+
+# Execute commands in container
+docker exec -it myapp /bin/sh
+
+# Docker Compose
+docker-compose up -d
+docker-compose down
+docker-compose logs -f
+
+# Clean up
+docker system prune -a
+docker volume prune
+```
+
+#### Documentation
+
+- [Docker Documentation](https://docs.docker.com/)
+- [Docker Compose Documentation](https://docs.docker.com/compose/)
+
+### Kubernetes
+
+Kubernetes is an open-source container orchestration platform for automating deployment, scaling, and management of containerized applications.
+
+#### Key Features
+
+- **Container Orchestration**: Automated deployment and scaling
+- **Service Discovery**: Built-in service discovery and load balancing
+- **Self-Healing**: Automatic restart and replacement of failed containers
+- **Rolling Updates**: Zero-downtime deployments
+- **Secret Management**: Secure storage of sensitive information
+- **Storage Orchestration**: Automatic mounting of storage systems
+
+#### Kubernetes Configuration Examples
+
+```yaml
+# deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-deployment
+  labels:
+    app: backend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+        - name: backend
+          image: myapp:latest
+          ports:
+            - containerPort: 3000
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: database-url
+            - name: REDIS_URL
+              value: "redis://redis-service:6379"
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+```
+
+```yaml
+# service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+spec:
+  selector:
+    app: backend
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 3000
+  type: LoadBalancer
+```
+
+```yaml
+# configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+data:
+  NODE_ENV: "production"
+  LOG_LEVEL: "info"
+  API_VERSION: "v1"
+```
+
+#### Kubernetes Commands
+
+```bash
+# Apply configurations
+kubectl apply -f deployment.yaml
+kubectl apply -f service.yaml
+
+# Get resources
+kubectl get pods
+kubectl get services
+kubectl get deployments
+
+# View logs
+kubectl logs -f deployment/backend-deployment
+
+# Scale deployment
+kubectl scale deployment backend-deployment --replicas=5
+
+# Update deployment
+kubectl set image deployment/backend-deployment backend=myapp:v2
+
+# Port forwarding
+kubectl port-forward service/backend-service 8080:80
+
+# Execute commands in pod
+kubectl exec -it pod-name -- /bin/sh
+```
+
+#### Documentation
+
+- [Kubernetes Documentation](https://kubernetes.io/docs/)
+- [Kubectl Cheat Sheet](https://kubernetes.io/docs/reference/kubectl/cheatsheet/)
+
+## Monitoring and Logging
+
+### Prometheus
+
+Prometheus is an open-source monitoring and alerting system designed for reliability and scalability.
+
+#### Key Features
+
+- **Time Series Database**: Efficient storage of metrics data
+- **Pull Model**: Scrapes metrics from applications
+- **Query Language**: Powerful PromQL query language
+- **Alerting**: Integration with Alertmanager for notifications
+- **Service Discovery**: Automatic target discovery
+- **Grafana Integration**: Beautiful dashboards and visualizations
+
+#### Configuration Example
+
+```yaml
+# prometheus.yml
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "rules/*.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093
+
+scrape_configs:
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  - job_name: "backend-app"
+    static_configs:
+      - targets: ["backend:3000"]
+    metrics_path: "/metrics"
+    scrape_interval: 5s
+
+  - job_name: "postgres"
+    static_configs:
+      - targets: ["postgres-exporter:9187"]
+
+  - job_name: "redis"
+    static_configs:
+      - targets: ["redis-exporter:9121"]
+```
+
+#### Application Metrics Example
+
+```javascript
+// Node.js with prometheus client
+const client = require("prom-client");
+const express = require("express");
+const app = express();
+
+// Create metrics
+const httpRequestDuration = new client.Histogram({
+  name: "http_request_duration_seconds",
+  help: "Duration of HTTP requests in seconds",
+  labelNames: ["method", "route", "status"],
+  buckets: [0.1, 0.5, 1, 2, 5],
+});
+
+const httpRequestCounter = new client.Counter({
+  name: "http_requests_total",
+  help: "Total number of HTTP requests",
+  labelNames: ["method", "route", "status"],
+});
+
+const activeConnections = new client.Gauge({
+  name: "active_connections",
+  help: "Number of active connections",
+});
+
+// Middleware to collect metrics
+app.use((req, res, next) => {
+  const start = Date.now();
+
+  res.on("finish", () => {
+    const duration = (Date.now() - start) / 1000;
+    const labels = {
+      method: req.method,
+      route: req.route?.path || req.path,
+      status: res.statusCode,
+    };
+
+    httpRequestDuration.observe(labels, duration);
+    httpRequestCounter.inc(labels);
+  });
+
+  next();
+});
+
+// Metrics endpoint
+app.get("/metrics", async (req, res) => {
+  res.set("Content-Type", client.register.contentType);
+  res.end(await client.register.metrics());
+});
+```
+
+#### Documentation
+
+- [Prometheus Documentation](https://prometheus.io/docs/)
+- [PromQL Documentation](https://prometheus.io/docs/prometheus/latest/querying/)
+
+### Grafana
+
+Grafana is an open-source analytics and monitoring platform that creates beautiful dashboards and visualizations.
+
+#### Key Features
+
+- **Dashboard Creation**: Interactive and customizable dashboards
+- **Data Source Integration**: Supports multiple data sources
+- **Alerting**: Advanced alerting capabilities
+- **User Management**: Role-based access control
+- **Plugin System**: Extensible through plugins
+- **API**: RESTful API for automation
+
+#### Dashboard Configuration Example
+
+```json
+{
+  "dashboard": {
+    "id": null,
+    "title": "Backend Application Metrics",
+    "tags": ["backend", "api"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Request Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total[5m])",
+            "legendFormat": "{{method}} {{route}}"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Requests per second"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Response Time",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "95th percentile"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(http_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "50th percentile"
+          }
+        ]
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "refresh": "5s"
+  }
+}
+```
+
+#### Documentation
+
+- [Grafana Documentation](https://grafana.com/docs/)
+- [Grafana Dashboard Examples](https://grafana.com/grafana/dashboards/)
+
+### ELK Stack (Elasticsearch, Logstash, Kibana)
+
+The ELK Stack is a powerful combination of tools for log management, search, and analytics.
+
+#### Key Features
+
+- **Elasticsearch**: Distributed search and analytics engine
+- **Logstash**: Data processing pipeline
+- **Kibana**: Data visualization and dashboard platform
+- **Beats**: Lightweight data shippers
+- **X-Pack**: Additional enterprise features
+
+#### Configuration Example
+
+```yaml
+# docker-compose.yml for ELK Stack
+version: "3.8"
+
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.6.0
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.security.enabled=false
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.6.0
+    ports:
+      - "5044:5044"
+      - "5000:5000/tcp"
+      - "5000:5000/udp"
+      - "9600:9600"
+    volumes:
+      - ./logstash/config:/usr/share/logstash/pipeline
+    depends_on:
+      - elasticsearch
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.6.0
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+
+volumes:
+  elasticsearch_data:
+```
+
+```ruby
+# logstash/config/logstash.conf
+input {
+  beats {
+    port => 5044
+  }
+
+  tcp {
+    port => 5000
+    codec => json
+  }
+}
+
+filter {
+  if [type] == "backend-logs" {
+    grok {
+      match => { "message" => "%{TIMESTAMP_ISO8601:timestamp} %{LOGLEVEL:level} %{DATA:logger} - %{GREEDYDATA:message}" }
+    }
+
+    date {
+      match => [ "timestamp", "ISO8601" ]
+    }
+
+    if [level] == "ERROR" {
+      mutate {
+        add_tag => [ "error" ]
+      }
+    }
+  }
+}
+
+output {
+  elasticsearch {
+    hosts => ["elasticsearch:9200"]
+    index => "backend-logs-%{+YYYY.MM.dd}"
+  }
+
+  stdout {
+    codec => rubydebug
+  }
+}
+```
+
+#### Application Logging Example
+
+```javascript
+// Winston logger configuration
+const winston = require("winston");
+require("winston-elasticsearch");
+
+const logger = winston.createLogger({
+  level: "info",
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.json()
+  ),
+  transports: [
+    new winston.transports.File({ filename: "logs/error.log", level: "error" }),
+    new winston.transports.File({ filename: "logs/combined.log" }),
+    new winston.transports.Elasticsearch({
+      level: "info",
+      clientOpts: { node: "http://localhost:9200" },
+      index: "backend-logs",
+    }),
+  ],
+});
+
+// Usage in application
+app.use((req, res, next) => {
+  logger.info("HTTP Request", {
+    method: req.method,
+    url: req.url,
+    userAgent: req.get("User-Agent"),
+    ip: req.ip,
+  });
+  next();
+});
+
+app.use((err, req, res, next) => {
+  logger.error("Application Error", {
+    error: err.message,
+    stack: err.stack,
+    url: req.url,
+    method: req.method,
+  });
+  res.status(500).json({ error: "Internal Server Error" });
+});
+```
+
+#### Documentation
+
+- [Elasticsearch Documentation](https://www.elastic.co/guide/en/elasticsearch/reference/current/index.html)
+- [Logstash Documentation](https://www.elastic.co/guide/en/logstash/current/index.html)
+- [Kibana Documentation](https://www.elastic.co/guide/en/kibana/current/index.html)
+
+## Package Management
+
+### npm (Node Package Manager)
+
+npm is the default package manager for Node.js and the world's largest software registry.
+
+#### Key Features
+
+- **Package Installation**: Install packages locally or globally
+- **Dependency Management**: Automatic dependency resolution
+- **Version Management**: Semantic versioning support
+- **Scripts**: Run custom scripts defined in package.json
+- **Publishing**: Publish your own packages
+- **Security**: Security audit and vulnerability scanning
+
+#### Usage Examples
+
+```bash
+# Initialize new project
+npm init -y
+
+# Install dependencies
+npm install express mongoose dotenv
+npm install --save-dev nodemon jest eslint
+
+# Install specific version
+npm install lodash@4.17.21
+
+# Global installation
+npm install -g pm2 nodemon typescript
+
+# Update packages
+npm update
+npm outdated
+
+# Security audit
+npm audit
+npm audit fix
+
+# Run scripts
+npm start
+npm test
+npm run dev
+
+# Publishing
+npm login
+npm publish
+```
+
+#### package.json Example
+
+```json
+{
+  "name": "backend-api",
+  "version": "1.0.0",
+  "description": "Backend API for web application",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "build": "babel src -d dist",
+    "docker:build": "docker build -t backend-api .",
+    "docker:run": "docker run -p 3000:3000 backend-api"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "mongoose": "^6.8.0",
+    "dotenv": "^16.0.3",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^8.5.1",
+    "cors": "^2.8.5",
+    "helmet": "^6.0.1",
+    "morgan": "^1.10.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.20",
+    "jest": "^29.3.1",
+    "supertest": "^6.3.3",
+    "eslint": "^8.30.0",
+    "@babel/cli": "^7.20.7",
+    "@babel/core": "^7.20.7",
+    "@babel/preset-env": "^7.20.2"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  },
+  "keywords": ["api", "backend", "express", "mongodb"],
+  "author": "Your Name",
+  "license": "MIT"
+}
+```
+
+#### Documentation
+
+- [npm Documentation](https://docs.npmjs.com/)
+- [package.json Documentation](https://docs.npmjs.com/cli/v8/configuring-npm/package-json)
+
+### Yarn
+
+Yarn is a fast, reliable, and secure dependency management system for JavaScript.
+
+#### Key Features
+
+- **Fast**: Parallel installation and caching
+- **Reliable**: Deterministic dependency resolution
+- **Secure**: Checksum verification for packages
+- **Workspaces**: Monorepo support
+- **Plug'n'Play**: Alternative node_modules structure
+- **Zero-Installs**: Install-free development
+
+#### Usage Examples
+
+```bash
+# Initialize project
+yarn init -y
+
+# Install dependencies
+yarn add express mongoose dotenv
+yarn add --dev nodemon jest eslint
+
+# Install from lock file
+yarn install --frozen-lockfile
+
+# Update dependencies
+yarn upgrade
+yarn upgrade-interactive
+
+# Run scripts
+yarn start
+yarn test
+yarn dev
+
+# Workspaces (monorepo)
+yarn workspace backend add express
+yarn workspaces run test
+```
+
+#### Documentation
+
+- [Yarn Documentation](https://yarnpkg.com/getting-started)
+
+### pip (Python Package Installer)
+
+pip is the standard package manager for Python, used to install and manage packages from the Python Package Index (PyPI).
+
+#### Key Features
+
+- **Package Installation**: Install packages from PyPI or other sources
+- **Virtual Environments**: Integration with venv and virtualenv
+- **Requirements Files**: Manage dependencies with requirements.txt
+- **Editable Installs**: Install packages in development mode
+- **Wheel Support**: Binary package format support
+- **Cache Management**: Local package caching
+
+#### Usage Examples
+
+```bash
+# Install packages
+pip install django flask requests
+
+# Install from requirements file
+pip install -r requirements.txt
+
+# Install specific version
+pip install django==4.1.0
+
+# Install from Git repository
+pip install git+https://github.com/user/repo.git
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+venv\Scripts\activate     # Windows
+
+# Generate requirements file
+pip freeze > requirements.txt
+
+# Upgrade packages
+pip install --upgrade django
+pip list --outdated
+
+# Uninstall packages
+pip uninstall django
+```
+
+#### requirements.txt Example
+
+```txt
+# Production dependencies
+Django==4.1.4
+djangorestframework==3.14.0
+psycopg2-binary==2.9.5
+redis==4.4.0
+celery==5.2.2
+gunicorn==20.1.0
+django-cors-headers==3.13.0
+django-environ==0.9.0
+Pillow==9.3.0
+
+# Development dependencies (in dev-requirements.txt)
+pytest==7.2.0
+pytest-django==4.5.2
+black==22.10.0
+flake8==6.0.0
+isort==5.11.4
+mypy==0.991
+coverage==7.0.1
+```
+
+#### Documentation
+
+- [pip Documentation](https://pip.pypa.io/en/stable/)
+- [Python Packaging User Guide](https://packaging.python.org/)
+
+## Build Tools and Task Runners
+
+### Webpack
+
+Webpack is a static module bundler for modern JavaScript applications.
+
+#### Key Features
+
+- **Module Bundling**: Bundle JavaScript modules
+- **Code Splitting**: Split code into smaller chunks
+- **Asset Management**: Handle various file types
+- **Hot Module Replacement**: Live editing for development
+- **Plugin System**: Extensive plugin ecosystem
+- **Tree Shaking**: Remove unused code
+
+#### Configuration Example
+
+```javascript
+// webpack.config.js
+const path = require("path");
+const HtmlWebpackPlugin = require("html-webpack-plugin");
+const MiniCssExtractPlugin = require("mini-css-extract-plugin");
+
+module.exports = {
+  entry: "./src/index.js",
+  output: {
+    path: path.resolve(__dirname, "dist"),
+    filename: "[name].[contenthash].js",
+    clean: true,
+  },
+  module: {
+    rules: [
+      {
+        test: /\.js$/,
+        exclude: /node_modules/,
+        use: {
+          loader: "babel-loader",
+          options: {
+            presets: ["@babel/preset-env"],
+          },
+        },
+      },
+      {
+        test: /\.css$/,
+        use: [MiniCssExtractPlugin.loader, "css-loader"],
+      },
+      {
+        test: /\.(png|svg|jpg|jpeg|gif)$/i,
+        type: "asset/resource",
+      },
+    ],
+  },
+  plugins: [
+    new HtmlWebpackPlugin({
+      template: "./src/index.html",
+    }),
+    new MiniCssExtractPlugin({
+      filename: "[name].[contenthash].css",
+    }),
+  ],
+  optimization: {
+    splitChunks: {
+      chunks: "all",
+    },
+  },
+  devServer: {
+    contentBase: path.join(__dirname, "dist"),
+    compress: true,
+    port: 9000,
+    hot: true,
+  },
+};
+```
+
+#### Documentation
+
+- [Webpack Documentation](https://webpack.js.org/)
+- [Webpack Guides](https://webpack.js.org/guides/)
+
+### Gulp
+
+Gulp is a task runner that automates common development tasks.
+
+#### Key Features
+
+- **Streaming Build System**: Fast builds using Node.js streams
+- **Code over Configuration**: Define tasks in code
+- **Plugin Ecosystem**: Thousands of plugins available
+- **Simple API**: Easy to learn and use
+- **Watch Mode**: Automatic task execution on file changes
+- **Task Composition**: Compose complex workflows
+
+#### Configuration Example
+
+```javascript
+// gulpfile.js
+const gulp = require("gulp");
+const babel = require("gulp-babel");
+const uglify = require("gulp-uglify");
+const sass = require("gulp-sass")(require("sass"));
+const cleanCSS = require("gulp-clean-css");
+const concat = require("gulp-concat");
+const sourcemaps = require("gulp-sourcemaps");
+const browserSync = require("browser-sync").create();
+
+// Paths
+const paths = {
+  scripts: {
+    src: "src/js/**/*.js",
+    dest: "dist/js/",
+  },
+  styles: {
+    src: "src/scss/**/*.scss",
+    dest: "dist/css/",
+  },
+  html: {
+    src: "src/**/*.html",
+    dest: "dist/",
+  },
+};
+
+// JavaScript task
+function scripts() {
+  return gulp
+    .src(paths.scripts.src)
+    .pipe(sourcemaps.init())
+    .pipe(
+      babel({
+        presets: ["@babel/preset-env"],
+      })
+    )
+    .pipe(concat("main.js"))
+    .pipe(uglify())
+    .pipe(sourcemaps.write("."))
+    .pipe(gulp.dest(paths.scripts.dest))
+    .pipe(browserSync.stream());
+}
+
+// CSS task
+function styles() {
+  return gulp
+    .src(paths.styles.src)
+    .pipe(sourcemaps.init())
+    .pipe(sass().on("error", sass.logError))
+    .pipe(cleanCSS())
+    .pipe(sourcemaps.write("."))
+    .pipe(gulp.dest(paths.styles.dest))
+    .pipe(browserSync.stream());
+}
+
+// HTML task
+function html() {
+  return gulp
+    .src(paths.html.src)
+    .pipe(gulp.dest(paths.html.dest))
+    .pipe(browserSync.stream());
+}
+
+// Watch task
+function watch() {
+  browserSync.init({
+    server: {
+      baseDir: "./dist",
+    },
+  });
+
+  gulp.watch(paths.scripts.src, scripts);
+  gulp.watch(paths.styles.src, styles);
+  gulp.watch(paths.html.src, html);
+}
+
+// Define complex tasks
+const build = gulp.series(gulp.parallel(scripts, styles, html));
+const dev = gulp.series(build, watch);
+
+// Export tasks
+exports.scripts = scripts;
+exports.styles = styles;
+exports.html = html;
+exports.watch = watch;
+exports.build = build;
+exports.dev = dev;
+exports.default = dev;
+```
+
+#### Documentation
+
+- [Gulp Documentation](https://gulpjs.com/docs/en/getting-started/quick-start)
+
+### Make
+
+Make is a build automation tool that manages the build process through Makefiles.
+
+#### Key Features
+
+- **Dependency Management**: Track file dependencies
+- **Incremental Builds**: Only rebuild what's changed
+- **Cross-Platform**: Available on most systems
+- **Simple Syntax**: Easy to learn and understand
+- **Variable Support**: Use variables and functions
+- **Parallel Execution**: Run tasks in parallel
+
+#### Makefile Example
+
+```makefile
+# Variables
+APP_NAME := backend-api
+DOCKER_IMAGE := $(APP_NAME):latest
+GO_FILES := $(shell find . -name '*.go' -type f)
+
+# Default target
+.PHONY: all
+all: build
+
+# Build the application
+.PHONY: build
+build: $(APP_NAME)
+
+$(APP_NAME): $(GO_FILES)
+	go build -o $(APP_NAME) ./cmd/server
+
+# Run tests
+.PHONY: test
+test:
+	go test -v ./...
+
+# Run with coverage
+.PHONY: test-coverage
+test-coverage:
+	go test -v -coverprofile=coverage.out ./...
+	go tool cover -html=coverage.out -o coverage.html
+
+# Format code
+.PHONY: fmt
+fmt:
+	go fmt ./...
+	goimports -w .
+
+# Lint code
+.PHONY: lint
+lint:
+	golangci-lint run
+
+# Clean build artifacts
+.PHONY: clean
+clean:
+	rm -f $(APP_NAME)
+	rm -f coverage.out coverage.html
+
+# Docker targets
+.PHONY: docker-build
+docker-build:
+	docker build -t $(DOCKER_IMAGE) .
+
+.PHONY: docker-run
+docker-run:
+	docker run -p 8080:8080 $(DOCKER_IMAGE)
+
+# Development setup
+.PHONY: dev-setup
+dev-setup:
+	go mod download
+	go install github.com/air-verse/air@latest
+	go install golang.org/x/tools/cmd/goimports@latest
+
+# Development server with hot reload
+.PHONY: dev
+dev:
+	air
+
+# Database operations
+.PHONY: migrate-up
+migrate-up:
+	migrate -path ./migrations -database $(DATABASE_URL) up
+
+.PHONY: migrate-down
+migrate-down:
+	migrate -path ./migrations -database $(DATABASE_URL) down
+
+# Help
+.PHONY: help
+help:
+	@echo "Available targets:"
+	@echo "  build         Build the application"
+	@echo "  test          Run tests"
+	@echo "  test-coverage Run tests with coverage"
+	@echo "  fmt           Format code"
+	@echo "  lint          Lint code"
+	@echo "  clean         Clean build artifacts"
+	@echo "  docker-build  Build Docker image"
+	@echo "  docker-run    Run Docker container"
+	@echo "  dev-setup     Set up development environment"
+	@echo "  dev           Run development server"
+	@echo "  migrate-up    Run database migrations"
+	@echo "  migrate-down  Rollback database migrations"
+```
+
+#### Documentation
+
+- [GNU Make Manual](https://www.gnu.org/software/make/manual/)
+
+## Documentation Tools
+
+### Swagger/OpenAPI
+
+Swagger (now OpenAPI Specification) is a standard for describing REST APIs, providing interactive documentation and code generation capabilities.
+
+#### Key Features
+
+- **API Documentation**: Interactive API documentation
+- **Code Generation**: Generate client libraries and server stubs
+- **Validation**: Request/response validation
+- **Testing**: Built-in API testing capabilities
+- **Standards Compliance**: Industry-standard specification
+- **Tool Ecosystem**: Rich ecosystem of tools and integrations
+
+#### OpenAPI Specification Example
+
+```yaml
+# openapi.yaml
+openapi: 3.0.0
+info:
+  title: Backend API
+  description: REST API for web application
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@example.com
+
+servers:
+  - url: https://api.example.com/v1
+    description: Production server
+  - url: https://staging-api.example.com/v1
+    description: Staging server
+
+paths:
+  /users:
+    get:
+      summary: Get all users
+      tags:
+        - Users
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+            maximum: 100
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/User"
+                  pagination:
+                    $ref: "#/components/schemas/Pagination"
+
+    post:
+      summary: Create a new user
+      tags:
+        - Users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUser"
+      responses:
+        "201":
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /users/{id}:
+    get:
+      summary: Get user by ID
+      tags:
+        - Users
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: User found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "404":
+          description: User not found
+
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        username:
+          type: string
+          example: johndoe
+        email:
+          type: string
+          format: email
+          example: john@example.com
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - username
+        - email
+
+    CreateUser:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 50
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+      required:
+        - username
+        - email
+        - password
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        totalPages:
+          type: integer
+
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+        code:
+          type: string
+        details:
+          type: object
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+security:
+  - bearerAuth: []
+```
+
+#### Express.js Integration
+
+```javascript
+// swagger.js
+const swaggerJsdoc = require("swagger-jsdoc");
+const swaggerUi = require("swagger-ui-express");
+
+const options = {
+  definition: {
+    openapi: "3.0.0",
+    info: {
+      title: "Backend API",
+      version: "1.0.0",
+      description: "REST API for web application",
+    },
+    servers: [
+      {
+        url: "http://localhost:3000/api/v1",
+        description: "Development server",
+      },
+    ],
+  },
+  apis: ["./routes/*.js"], // paths to files containing OpenAPI definitions
+};
+
+const specs = swaggerJsdoc(options);
+
+module.exports = { specs, swaggerUi };
+
+// app.js
+const express = require("express");
+const { specs, swaggerUi } = require("./swagger");
+const app = express();
+
+// Swagger documentation
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(specs));
+
+/**
+ * @swagger
+ * /api/v1/users:
+ *   get:
+ *     summary: Get all users
+ *     tags: [Users]
+ *     responses:
+ *       200:
+ *         description: List of users
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/User'
+ */
+app.get("/api/v1/users", (req, res) => {
+  // Implementation
+});
+```
+
+#### Documentation
+
+- [OpenAPI Specification](https://swagger.io/specification/)
+- [Swagger Documentation](https://swagger.io/docs/)
+
+### GitBook
+
+GitBook is a modern documentation platform that turns your team's knowledge into powerful documentation.
+
+#### Key Features
+
+- **Git Integration**: Sync with Git repositories
+- **Collaborative Editing**: Real-time collaboration
+- **Multiple Formats**: Web, PDF, ePub output
+- **Search**: Powerful search capabilities
+- **API Documentation**: Support for API docs
+- **Custom Domains**: Host on custom domains
+
+#### GitBook Configuration
+
+```yaml
+# .gitbook.yaml
+root: ./docs
+
+structure:
+  readme: README.md
+  summary: SUMMARY.md
+
+plugins:
+  - search
+  - sharing
+  - fontsettings
+  - theme-api
+
+pluginsConfig:
+  theme-api:
+    languages:
+      - key: javascript
+        name: JavaScript
+      - key: python
+        name: Python
+      - key: curl
+        name: cURL
+```
+
+#### Documentation
+
+- [GitBook Documentation](https://docs.gitbook.com/)
+
+### MkDocs
+
+MkDocs is a fast, simple static site generator for building project documentation.
+
+#### Key Features
+
+- **Markdown**: Write docs in Markdown
+- **Themes**: Beautiful themes available
+- **Live Reload**: Preview changes instantly
+- **Plugin System**: Extensible through plugins
+- **Static Output**: Generate static websites
+- **Search**: Built-in search functionality
+
+#### Configuration Example
+
+```yaml
+# mkdocs.yml
+site_name: Backend API Documentation
+site_description: Comprehensive guide for our backend API
+site_author: Development Team
+site_url: https://docs.example.com
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: blue
+      accent: blue
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: blue
+      accent: blue
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - search.highlight
+
+plugins:
+  - search
+  - awesome-pages
+  - macros
+
+markdown_extensions:
+  - admonition
+  - codehilite
+  - toc:
+      permalink: true
+  - pymdownx.superfences
+  - pymdownx.tabbed
+
+nav:
+  - Home: index.md
+  - Getting Started:
+      - Installation: getting-started/installation.md
+      - Configuration: getting-started/configuration.md
+  - API Reference:
+      - Authentication: api/authentication.md
+      - Users: api/users.md
+      - Posts: api/posts.md
+  - Deployment:
+      - Docker: deployment/docker.md
+      - Kubernetes: deployment/kubernetes.md
+```
+
+#### Documentation
+
+- [MkDocs Documentation](https://www.mkdocs.org/)
+- [Material for MkDocs](https://squidfunk.github.io/mkdocs-material/)
+
+## Security Tools
+
+### Snyk
+
+Snyk is a security platform that finds and fixes vulnerabilities in dependencies, code, containers, and infrastructure.
+
+#### Key Features
+
+- **Vulnerability Scanning**: Find known vulnerabilities
+- **Dependency Management**: Monitor open source dependencies
+- **Container Security**: Scan container images
+- **Infrastructure as Code**: Scan IaC configurations
+- **License Compliance**: Track license issues
+- **Developer Integration**: IDE and CI/CD integrations
+
+#### Usage Examples
+
+```bash
+# Install Snyk CLI
+npm install -g snyk
+
+# Authenticate
+snyk auth
+
+# Test for vulnerabilities
+snyk test
+
+# Test specific package file
+snyk test --file=package.json
+
+# Monitor project
+snyk monitor
+
+# Fix vulnerabilities
+snyk fix
+
+# Test Docker image
+snyk container test node:16
+
+# Test Kubernetes manifests
+snyk iac test deployment.yaml
+```
+
+#### CI/CD Integration
+
+```yaml
+# .github/workflows/security.yml
+name: Security Scan
+
+on: [push, pull_request]
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Run Snyk to check for vulnerabilities
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high
+```
+
+#### Documentation
+
+- [Snyk Documentation](https://docs.snyk.io/)
+
+### OWASP ZAP
+
+OWASP ZAP (Zed Attack Proxy) is a free security testing proxy for finding vulnerabilities in web applications.
+
+#### Key Features
+
+- **Automated Scanning**: Automated security testing
+- **Manual Testing**: Intercept and modify requests
+- **Passive Scanning**: Background vulnerability detection
+- **Active Scanning**: Aggressive security testing
+- **API Testing**: REST and GraphQL API testing
+- **Reporting**: Comprehensive security reports
+
+#### Usage Examples
+
+```bash
+# Download and run ZAP
+wget https://github.com/zaproxy/zaproxy/releases/download/v2.12.0/ZAP_2_12_0_unix.sh
+sh ZAP_2_12_0_unix.sh
+
+# Command line usage
+zap.sh -cmd -quickurl https://api.example.com -quickout report.html
+
+# Baseline scan
+docker run -t owasp/zap2docker-stable zap-baseline.py -t https://api.example.com
+
+# Full scan
+docker run -t owasp/zap2docker-stable zap-full-scan.py -t https://api.example.com
+```
+
+#### Documentation
+
+- [OWASP ZAP Documentation](https://www.zaproxy.org/docs/)
+
+### HashiCorp Vault
+
+Vault is a tool for securely accessing secrets, providing a unified interface to secret management.
+
+#### Key Features
+
+- **Secret Management**: Store and manage secrets
+- **Dynamic Secrets**: Generate secrets on-demand
+- **Encryption as a Service**: Encrypt/decrypt data
+- **Identity-based Access**: Fine-grained access control
+- **Audit Logging**: Detailed audit logs
+- **High Availability**: Clustering and replication
+
+#### Configuration Example
+
+```hcl
+# vault.hcl
+storage "consul" {
+  address = "127.0.0.1:8500"
+  path = "vault/"
+}
+
+listener "tcp" {
+  address = "127.0.0.1:8200"
+  tls_disable = 1
+}
+
+ui = true
+api_addr = "http://127.0.0.1:8200"
+cluster_addr = "https://127.0.0.1:8201"
+```
+
+#### Usage Examples
+
+```bash
+# Start Vault server
+vault server -config=vault.hcl
+
+# Initialize Vault
+vault operator init
+
+# Unseal Vault
+vault operator unseal
+
+# Login
+vault auth -method=userpass username=admin
+
+# Store secret
+vault kv put secret/myapp/db username=admin password=secret
+
+# Retrieve secret
+vault kv get secret/myapp/db
+
+# Enable database secrets engine
+vault secrets enable database
+
+# Configure database connection
+vault write database/config/my-postgresql-database \
+    plugin_name=postgresql-database-plugin \
+    connection_url="postgresql://{{username}}:{{password}}@localhost:5432/postgres" \
+    allowed_roles="my-role" \
+    username="root" \
+    password="mypassword"
+```
+
+#### Application Integration
+
+```javascript
+// Node.js Vault integration
+const vault = require("node-vault")({
+  endpoint: "http://localhost:8200",
+  token: process.env.VAULT_TOKEN,
+});
+
+async function getDBCredentials() {
+  try {
+    const result = await vault.read("database/creds/my-role");
+    return {
+      username: result.data.username,
+      password: result.data.password,
+    };
+  } catch (error) {
+    console.error("Failed to get DB credentials:", error);
+    throw error;
+  }
+}
+
+// Use dynamic credentials
+async function connectToDatabase() {
+  const credentials = await getDBCredentials();
+  const connectionString = `postgresql://${credentials.username}:${credentials.password}@localhost:5432/myapp`;
+  // Use connection string to connect to database
+}
+```
+
+#### Documentation
+
+- [HashiCorp Vault Documentation](https://www.vaultproject.io/docs)
+
+## Performance Profiling
+
+### Node.js Profiling
+
+#### clinic.js
+
+clinic.js is a performance profiling suite for Node.js applications.
+
+```bash
+# Install clinic.js
+npm install -g clinic
+
+# CPU profiling
+clinic doctor -- node app.js
+
+# Memory profiling
+clinic heapprofiler -- node app.js
+
+# Event loop profiling
+clinic bubbleprof -- node app.js
+```
+
+#### Built-in Profiler
+
+```javascript
+// CPU profiling
+const fs = require("fs");
+const { Session } = require("inspector");
+
+const session = new Session();
+session.connect();
+
+session.post("Profiler.enable", () => {
+  session.post("Profiler.start", () => {
+    // Your application code here
+
+    setTimeout(() => {
+      session.post("Profiler.stop", (err, { profile }) => {
+        if (!err) {
+          fs.writeFileSync("./profile.cpuprofile", JSON.stringify(profile));
+        }
+      });
+    }, 5000);
+  });
+});
+```
+
+### Python Profiling
+
+#### cProfile
+
+```python
+import cProfile
+import pstats
+
+# Profile your application
+def main():
+    # Your application code here
+    pass
+
+if __name__ == '__main__':
+    cProfile.run('main()', 'profile_stats')
+
+    # Analyze results
+    stats = pstats.Stats('profile_stats')
+    stats.sort_stats('cumulative')
+    stats.print_stats(10)
+```
+
+#### py-spy
+
+```bash
+# Install py-spy
+pip install py-spy
+
+# Profile running Python process
+py-spy record -o profile.svg --pid 1234
+
+# Profile command
+py-spy record -o profile.svg -- python app.py
+```
+
+### Go Profiling
+
+```go
+// pprof integration
+package main
+
+import (
+    "log"
+    "net/http"
+    _ "net/http/pprof"
+)
+
+func main() {
+    go func() {
+        log.Println(http.ListenAndServe("localhost:6060", nil))
+    }()
+
+    // Your application code here
+}
+```
+
+```bash
+# Collect CPU profile
+go tool pprof http://localhost:6060/debug/pprof/profile
+
+# Collect memory profile
+go tool pprof http://localhost:6060/debug/pprof/heap
+
+# Analyze profile
+go tool pprof -http=:8080 profile.pb.gz
+```
+
+## Project Management and Productivity
+
+### Jira
+
+Jira is a project management tool for agile teams to plan, track, and manage work.
+
+#### Key Features
+
+- **Issue Tracking**: Track bugs, features, and tasks
+- **Agile Boards**: Scrum and Kanban boards
+- **Reporting**: Comprehensive project reports
+- **Workflow Management**: Customizable workflows
+- **Integration**: Integrates with development tools
+- **Time Tracking**: Built-in time tracking
+
+#### Jira Integration Example
+
+```javascript
+// Jira API integration
+const axios = require("axios");
+
+class JiraAPI {
+  constructor(baseURL, email, apiToken) {
+    this.client = axios.create({
+      baseURL,
+      auth: {
+        username: email,
+        password: apiToken,
+      },
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+  }
+
+  async createIssue(projectKey, summary, description, issueType = "Task") {
+    const issue = {
+      fields: {
+        project: { key: projectKey },
+        summary,
+        description,
+        issuetype: { name: issueType },
+      },
+    };
+
+    const response = await this.client.post("/rest/api/3/issue", issue);
+    return response.data;
+  }
+
+  async getIssue(issueKey) {
+    const response = await this.client.get(`/rest/api/3/issue/${issueKey}`);
+    return response.data;
+  }
+
+  async transitionIssue(issueKey, transitionId) {
+    const transition = {
+      transition: { id: transitionId },
+    };
+
+    await this.client.post(
+      `/rest/api/3/issue/${issueKey}/transitions`,
+      transition
+    );
+  }
+}
+
+// Usage
+const jira = new JiraAPI(
+  "https://yourcompany.atlassian.net",
+  "your.email@company.com",
+  "your-api-token"
+);
+
+// Create issue from code
+async function createBugReport(error, context) {
+  await jira.createIssue(
+    "PROJ",
+    `Bug: ${error.message}`,
+    `Error occurred in ${context.module}\n\nStack trace:\n${error.stack}`,
+    "Bug"
+  );
+}
+```
+
+#### Documentation
+
+- [Jira Documentation](https://confluence.atlassian.com/jira)
+- [Jira REST API](https://developer.atlassian.com/cloud/jira/platform/rest/v3/)
+
+### Slack
+
+Slack is a collaboration platform that connects teams and integrates with development workflows.
+
+#### Key Features
+
+- **Team Communication**: Channels and direct messaging
+- **File Sharing**: Share and collaborate on files
+- **App Integration**: Thousands of app integrations
+- **Workflow Automation**: Automate routine tasks
+- **Video Calls**: Built-in voice and video calls
+- **Search**: Powerful search across all content
+
+#### Slack Bot Integration
+
+```javascript
+// Slack bot for deployment notifications
+const { WebClient } = require("@slack/web-api");
+
+class SlackNotifier {
+  constructor(token) {
+    this.client = new WebClient(token);
+  }
+
+  async sendDeploymentNotification(channel, environment, version, status) {
+    const color = status === "success" ? "good" : "danger";
+    const emoji = status === "success" ? ":white_check_mark:" : ":x:";
+
+    await this.client.chat.postMessage({
+      channel,
+      attachments: [
+        {
+          color,
+          fields: [
+            {
+              title: "Environment",
+              value: environment,
+              short: true,
+            },
+            {
+              title: "Version",
+              value: version,
+              short: true,
+            },
+            {
+              title: "Status",
+              value: `${emoji} ${status.toUpperCase()}`,
+              short: true,
+            },
+          ],
+          footer: "Deployment Bot",
+          ts: Math.floor(Date.now() / 1000),
+        },
+      ],
+    });
+  }
+
+  async sendErrorAlert(channel, error, context) {
+    await this.client.chat.postMessage({
+      channel,
+      text: `:warning: Error Alert`,
+      attachments: [
+        {
+          color: "danger",
+          title: error.message,
+          text: `\`\`\`${error.stack}\`\`\``,
+          fields: [
+            {
+              title: "Service",
+              value: context.service,
+              short: true,
+            },
+            {
+              title: "Environment",
+              value: context.environment,
+              short: true,
+            },
+          ],
+        },
+      ],
+    });
+  }
+}
+
+// Usage in application
+const slack = new SlackNotifier(process.env.SLACK_BOT_TOKEN);
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err);
+
+  // Send error to Slack in production
+  if (process.env.NODE_ENV === "production") {
+    slack.sendErrorAlert("#alerts", err, {
+      service: "backend-api",
+      environment: "production",
+    });
+  }
+
+  res.status(500).json({ error: "Internal Server Error" });
+});
+```
+
+#### Documentation
+
+- [Slack API Documentation](https://api.slack.com/)
+- [Slack Bot Framework](https://slack.dev/bolt-js/tutorial/getting-started)
+
+## Learning Resources
+
+### Online Platforms
+
+#### Coursera
+
+- **Database Systems**: Comprehensive database courses
+- **Cloud Computing**: AWS, GCP, Azure certifications
+- **Software Engineering**: Best practices and methodologies
+- **Data Science**: Analytics and machine learning
+
+#### Udemy
+
+- **Practical Courses**: Hands-on project-based learning
+- **Technology Specific**: Deep dives into specific technologies
+- **Certification Prep**: Prepare for industry certifications
+- **Regular Updates**: Courses updated with latest technologies
+
+#### Pluralsight
+
+- **Skill Assessments**: Evaluate your current skill level
+- **Learning Paths**: Structured learning journeys
+- **Hands-on Labs**: Practice in real environments
+- **Expert Content**: Industry expert instructors
+
+### Documentation and References
+
+#### MDN Web Docs
+
+- **JavaScript**: Comprehensive JavaScript documentation
+- **Web APIs**: Browser and web platform APIs
+- **Best Practices**: Web development best practices
+- **Tutorials**: Step-by-step tutorials
+
+#### Official Technology Documentation
+
+```bash
+# Keep documentation bookmarked
+# Node.js: https://nodejs.org/docs/
+# Python: https://docs.python.org/
+# Go: https://golang.org/doc/
+# Rust: https://doc.rust-lang.org/
+# PostgreSQL: https://www.postgresql.org/docs/
+# MongoDB: https://docs.mongodb.com/
+# Redis: https://redis.io/documentation
+# Docker: https://docs.docker.com/
+# Kubernetes: https://kubernetes.io/docs/
+```
+
+### Blogs and News
+
+#### Recommended Blogs
+
+- **High Scalability**: System design and architecture
+- **Martin Fowler**: Software design patterns and practices
+- **AWS Blog**: Cloud computing insights
+- **Google Cloud Blog**: Cloud and infrastructure
+- **Netflix Tech Blog**: Large-scale system design
+- **Uber Engineering**: Engineering challenges and solutions
+
+#### News Aggregators
+
+- **Hacker News**: Technology news and discussions
+- **Reddit r/programming**: Programming discussions
+- **Dev.to**: Developer community and articles
+- **Medium**: Technology articles and tutorials
+
+## Community and Forums
+
+### Stack Overflow
+
+Stack Overflow is the largest programming Q&A platform where developers help each other solve coding problems.
+
+#### Best Practices
+
+- **Search First**: Check if your question has been asked
+- **Minimal Reproducible Example**: Provide minimal code that reproduces the issue
+- **Clear Description**: Explain what you expect vs. what you get
+- **Relevant Tags**: Use appropriate tags for better visibility
+- **Accept Answers**: Mark helpful answers as accepted
+
+### GitHub Community
+
+#### Contributing to Open Source
+
+```bash
+# Fork a repository
+# 1. Fork on GitHub
+# 2. Clone your fork
+git clone https://github.com/yourusername/project.git
+
+# 3. Create feature branch
+git checkout -b feature/new-feature
+
+# 4. Make changes and commit
+git commit -m "Add new feature"
+
+# 5. Push to your fork
+git push origin feature/new-feature
+
+# 6. Create pull request on GitHub
+```
+
+#### Issue Reporting
+
+```markdown
+# Bug Report Template
+
+## Description
+
+Brief description of the bug
+
+## Steps to Reproduce
+
+1. Step one
+2. Step two
+3. Step three
+
+## Expected Behavior
+
+What you expected to happen
+
+## Actual Behavior
+
+What actually happened
+
+## Environment
+
+- OS: [e.g., Ubuntu 20.04]
+- Node.js version: [e.g., 16.14.0]
+- Package version: [e.g., 1.2.3]
+
+## Additional Context
+
+Any additional information about the problem
+```
+
+### Discord Communities
+
+- **Programming Discord Servers**: Real-time chat with developers
+- **Technology-Specific**: Join servers for specific technologies
+- **Mentorship**: Find mentors and help others
+- **Code Reviews**: Get feedback on your code
+
+### Local Meetups
+
+#### Finding Meetups
+
+- **Meetup.com**: Find local technology meetups
+- **Facebook Groups**: Local developer groups
+- **University Groups**: Academic programming groups
+- **Company Meetups**: Attend company-sponsored events
+
+#### Organizing Events
+
+```markdown
+# Meetup Planning Checklist
+
+## Before the Event
+
+- [ ] Book venue
+- [ ] Plan agenda and speakers
+- [ ] Set up registration
+- [ ] Promote on social media
+- [ ] Prepare materials
+
+## During the Event
+
+- [ ] Welcome attendees
+- [ ] Facilitate networking
+- [ ] Record presentations (if permitted)
+- [ ] Collect feedback
+
+## After the Event
+
+- [ ] Share presentation materials
+- [ ] Send thank you notes
+- [ ] Plan next event
+- [ ] Update community resources
+```
+
 <BackToTop />
