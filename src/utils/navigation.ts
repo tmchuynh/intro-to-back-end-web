@@ -28,7 +28,7 @@ const CATEGORY_PREFIXES = [
   "perf", // performance
   "dep", // deployment
   "proj", // projects
-  "spec", // specialized databases
+  "orm", // object relational mapping
 ];
 
 // Extract category from filename prefix and return both category and clean name
@@ -172,7 +172,7 @@ function categorizeNavigationItems(
     sql: [] as NavigationItem[],
     nosql: [] as NavigationItem[],
     databases: [] as NavigationItem[],
-    specialized: [] as NavigationItem[],
+    orm: [] as NavigationItem[],
     projects: [] as NavigationItem[],
     utilities: [] as NavigationItem[],
     advanced: [] as NavigationItem[],
@@ -214,8 +214,8 @@ function categorizeNavigationItems(
             return "advanced";
           case "util":
             return "utilities";
-          case "spec": // specialized databases
-            return "specialized";
+          case "orm": // object relational mapping
+            return "orm";
         }
       }
     }
@@ -264,18 +264,17 @@ function categorizeNavigationItems(
         return "nosql";
       }
 
-      // Check for specialized database sections
+      // Check for ORM and specialized database sections
       if (
-        path.includes("warehouses") ||
-        path.includes("time-series") ||
-        path.includes("graph") ||
-        path.includes("neo4j") ||
-        title.includes("warehouses") ||
-        title.includes("time-series") ||
-        title.includes("graph") ||
-        title.includes("neo4j")
+        path.includes("orm") ||
+        path.includes("mappers") ||
+        path.includes("object-relational") ||
+        title.includes("neo4j") ||
+        title.includes("orm") ||
+        title.includes("mappers") ||
+        title.includes("object-relational")
       ) {
-        return "specialized";
+        return "orm";
       }
 
       // Check for core technology sections
@@ -325,16 +324,15 @@ function categorizeNavigationItems(
     ) {
       return "sql";
     } else if (
-      path.includes("warehouses") ||
-      path.includes("time-series") ||
-      path.includes("graph") ||
-      path.includes("neo4j") ||
-      title.includes("warehouses") ||
-      title.includes("time-series") ||
-      title.includes("graph") ||
-      title.includes("neo4j")
+      path.includes("orm") ||
+      path.includes("mappers") ||
+      path.includes("object-relational") ||
+      title.includes("neo4j") ||
+      title.includes("orm") ||
+      title.includes("mappers") ||
+      title.includes("object-relational")
     ) {
-      return "specialized";
+      return "orm";
     } else if (
       path.includes("mongodb") ||
       path.includes("redis") ||
@@ -444,10 +442,10 @@ function categorizeNavigationItems(
     });
   }
 
-  if (categories.specialized.length > 0) {
+  if (categories.orm.length > 0) {
     sections.push({
-      title: "Specialized Databases",
-      items: categories.specialized,
+      title: "Object Relational Mapping Frameworks",
+      items: categories.orm,
     });
   }
 
