@@ -36,6 +36,12 @@ Understanding and applying these principles is essential for building robust, sc
 
 - **Schema Design**: Schema design is the process of creating the blueprint for the database structure. It specifies the tables, fields, data types, indexes, and constraints that govern how data is stored, accessed, and maintained. A well-designed schema supports application requirements, enforces data integrity, and enables efficient data retrieval and updates.
 
+First we'll explore data modeling, which is the process of defining and organizing the data elements and their relationships within a system. This foundational step is crucial for creating a robust and efficient database structure that meets application requirements.
+
+Afterwards, we'll delve into normalization and relationships, which are essential for organizing data efficiently and ensuring that the database accurately reflects real-world interactions. Normalization helps eliminate redundancy and maintain data integrity, while understanding relationships allows for complex queries and operations.
+
+Finally, we'll cover schema design and migration, which involves creating the blueprint for the database structure and adapting it to changing application needs. Schema design specifies how data is stored, accessed, and maintained, while migration ensures that the database evolves alongside the application.
+
 ## Data Modeling
 
 Data modeling is a foundational step in the database design process, focused on defining and organizing the data elements and their relationships within a system. It involves translating real-world requirements into a structured format that can be implemented in a database. The primary goal of data modeling is to ensure that all necessary data is captured accurately, relationships are clearly defined, and the resulting structure supports both current and future application needs.
@@ -59,48 +65,6 @@ Data modeling is typically visualized using diagrams, most commonly Entity-Relat
 
 In summary, data modeling provides a clear and organized framework for database design. It helps ensure that the database will be robust, scalable, and aligned with business requirements, while also making future modifications and maintenance more manageable.
 
-## Entity-Relationship Diagrams (ERDs)
-
-Entity-Relationship Diagrams (ERDs) are a graphical representation of the entities in a database and their relationships. They are used to visualize the structure of the database and to communicate the design to stakeholders. ERDs consist of:
-
-- **Entities**: Represented as rectangles, entities are objects or concepts that have data stored about them. For example, in a library database, entities could include `Books`, `Authors`, and `Members`.
-- **Attributes**: Represented as ovals, attributes are the properties or characteristics of an entity. For example, a `Book` entity might have attributes like `Title`, `Author`, and `Publication Year`.
-- **Relationships**: Represented as diamonds, relationships show how entities are related to each other. For example, a `Book` entity might have a relationship with an `Author` entity, indicating that a book is written by an author.
-- **Cardinality**: Indicates the number of instances of one entity that can or must be associated with each instance of another entity. Common cardinalities include one-to-one, one-to-many, and many-to-many.
-
-### Example
-
-For instance, in a simple library database, an ERD might include:
-
-```txt
-[Book] --< [Author]
-[Member] --< [Loan]
-```
-
-In this example:
-
-- The `Book` entity has a one-to-many relationship with the `Author` entity, indicating that a book can have one author, but an author can write multiple books.
-- The `Member` entity has a one-to-many relationship with the `Loan` entity, indicating that a member can borrow multiple books, but each loan is associated with one member.
-
-There are various notations for ERDs, including [Chen notation](https://vertabelo.com/blog/chen-erd-notation/), [Crow's Foot notation](https://vertabelo.com/blog/crow-s-foot-notation/), and [UML notation](https://vertabelo.com/blog/uml-notation/). Each notation has its own conventions for representing entities, attributes, and relationships, but the core concepts remain consistent across them.
-
-In the context of database design, ERDs serve as a blueprint for the database structure. They help designers and developers visualize the data model, identify potential issues, and ensure that all necessary entities and relationships are captured before implementation begins. ERDs can also be used to generate database schemas in various database management systems, streamlining the transition from design to implementation.
-
-##### NOTE 
-> Linked in the optional actions table at the bottom of the page, there is a section for [documentation and schema visualization tools](/util-documentation-and-schema-visualization-tools) that can help you create ERDs. These tools often provide features for collaboration, version control, and integration with database management systems, making it easier to maintain and update the data model as requirements evolve.
-
-ERDs are a powerful tool for database design, as they provide a clear and concise way to visualize the structure of the database. They help identify the main data components and their interactions, which is essential for building an effective database structure. ERDs also serve as a communication tool among stakeholders, ensuring a shared understanding of the data model.
-
-![Example ERD](https://images.wondershare.com/edrawmax/article2023/er-diagram-for-library-management-system/college-library-management-system-er-1.jpg)
-
-##### NOTE
-
-> The image is for illustrative purposes and may not represent an actual ERD.
-
-ERDs can be created using various diagramming tools, such as Lucidchart, Draw.io, or dedicated database modeling software. These tools often provide templates and features to help users create and modify ERDs easily. Once created, ERDs can be shared with team members and stakeholders to gather feedback and make necessary adjustments before proceeding with the database implementation.
-
-ERDs play a vital role in database design by offering a clear visual representation of entities and their relationships. They help identify the main data components and how they interact, which is essential for building an effective database structure. ERDs are typically developed during the conceptual design phase and serve as a communication tool among stakeholders, ensuring a shared understanding of the data model. These diagrams also guide the transition from conceptual to logical and physical database design. ERDs can be created using diagramming tools such as Lucidchart, Draw.io, or dedicated database modeling software, and they remain a valuable reference throughout the development and implementation process.
-
 ## Next Steps
 
 ### Immediate Actions
@@ -116,6 +80,5 @@ ERDs play a vital role in database design by offering a clear visual representat
 | ------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- |
 | [General Development Resources and Tools for Back-End Development](/util-general-development-resources-and-tools-for-back-end-development) | Learn the basics of SQL for relational databases                  |
 | [Database Management Tools](/util-database-management-tools)                                                                               | Get hands-on experience with MySQL, a popular relational database |
-| [Documentation and Schema Visualization Tools](/util-documentation-and-schema-visualization-tools)                                         | Get hands-on experience with MySQL, a popular relational database |
 
 <BackToTop />
