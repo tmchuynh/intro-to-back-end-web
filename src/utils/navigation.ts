@@ -614,7 +614,7 @@ async function scanDirectory(
           if (children.length > 0) {
             items.push({
               title: toSmartTitleCase(entry.name),
-              href: routePath, // Use the actual route path instead of "#" for categorization
+              href: "#", // Use "#" for folders without pages so they're excluded from search
               children: sortNavigationItems(children),
             });
           }

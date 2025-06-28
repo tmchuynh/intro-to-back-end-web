@@ -27,6 +27,7 @@ export function flattenNavigationForSearch(
       .toLowerCase();
 
     // Add this item if it has a real href (not just "#")
+    // This will now properly exclude folder-only containers
     if (item.href && item.href !== "#") {
       results.push({
         title: item.title,
@@ -40,7 +41,7 @@ export function flattenNavigationForSearch(
     // Recursively process children
     if (item.children) {
       item.children.forEach((child) =>
-        flattenItem(child, section, currentBreadcrumb),
+        flattenItem(child, section, currentBreadcrumb)
       );
     }
   }
