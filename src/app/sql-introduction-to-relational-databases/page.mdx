@@ -16,7 +16,7 @@ Developers use relational databases to manage large amounts of structured data e
 
 Consider an e-commerce application where you need to store information about customers, products, and orders. In a relational database, you would create separate tables for each entity:
 
-```sql title="Example table structure for an e-commerce database"
+```sql title="E-Commerce Database"
 -- Customers table
 CREATE TABLE customers (
     customer_id INT PRIMARY KEY,
@@ -55,7 +55,7 @@ Tables are the basic structure of a relational database, consisting of rows and 
 
 They are defined by their structure, which includes the table name, columns, and data types for each column. The table structure is defined using SQL commands.
 
-```sql title="Example of creating a simple users table"
+```sql title="Simple Users Table"
 CREATE TABLE users (
     id INT PRIMARY KEY,
     username VARCHAR(50) NOT NULL,
@@ -70,7 +70,7 @@ Rows, also called records or tuples, represent individual instances of the entit
 
 Each row in a table corresponds to a single record, and each record contains values for each column in that table. For example, in the "users" table, each row would represent a different user with their specific details.
 
-```sql title="Example of inserting data into a users table"
+```sql title="Inserting Data into a Users Table"
 INSERT INTO users (id, username, email)
 VALUES (1, 'john_doe', 'john@example.com');
 
@@ -82,7 +82,7 @@ VALUES (2, 'jane_smith', 'jane@example.com');
 
 Columns, also called attributes or fields, represent the properties or characteristics of the entity. Each column has a specific data type that defines what kind of data can be stored in that column.
 
-```sql title="Example of defining columns with data types"
+```sql title="Defining Columns"
 CREATE TABLE products (
     product_id INT PRIMARY KEY,
     product_name VARCHAR(100) NOT NULL,
@@ -92,13 +92,13 @@ CREATE TABLE products (
 );
 ```
 
-### Primary Key
+### Primary Key and Composite Primary Key
 
 A primary key is a column or combination of columns that uniquely identifies each row in a table. No two rows can have the same primary key value, and primary key values cannot be null.
 
 A primary key is essential for maintaining data integrity and ensuring that each record can be uniquely identified. This is crucial for operations like updating or deleting specific records without ambiguity.
 
-```sql title="Example of defining a primary key"
+```sql title="Defining a Primary Key"
 CREATE TABLE products (
     product_id INT PRIMARY KEY,        -- Single column primary key
     product_name VARCHAR(100) NOT NULL,
@@ -110,61 +110,23 @@ CREATE TABLE order_items (
     order_id INT,
     product_id INT,
     quantity INT,
-    PRIMARY KEY (order_id, product_id)  -- Composite primary key
+    PRIMARY KEY (order_id, product_id)  -- Composite primary key using multiple columns
 );
 ```
 
-### Foreign Key
+#### Single Primary Key VS Composite Primary Key
 
-A foreign key is a field in one table that uniquely identifies a row of another table. It establishes and enforces a link between the data in two tables, maintaining referential integrity.
+A single primary key consists of one column that uniquely identifies each record in a table. A composite primary key, on the other hand, is made up of two or more columns that together uniquely identify a record. Composite keys are useful when no single column can uniquely identify a record.
 
-Be aware that a foreign key in one table points to a primary key in another table, creating a relationship between the two tables. This relationship allows you to join data from multiple tables based on the foreign key.
+##### Benefits of a Single Primary Key
 
-Also, be careful to ensure that the foreign key values in the referencing table match existing primary key values in the referenced table. This prevents orphaned records and maintains data integrity.
+- Simplicity: Easier to manage and understand.
+- Performance: Generally faster for lookups and joins.
 
-```sql title="Example of foreign key relationships"
-CREATE TABLE orders (
-    order_id INT PRIMARY KEY,
-    customer_id INT,
-    order_date DATE,
-    FOREIGN KEY (customer_id) REFERENCES customers(customer_id)
-);
+##### Benefits of a Composite Primary Key
 
--- This ensures that every order must belong to an existing customer
-```
-
-### Normalization
-
-Normalization is the process of organizing data to reduce redundancy and improve data integrity. It involves breaking down larger tables into smaller, related tables and defining relationships between them.
-
-Normalization helps eliminate duplicate data, ensuring that each piece of information is stored only once. This not only saves storage space but also makes it easier to maintain and update data.
-
-```sql title="Example of normalization - Before and After"
--- Before normalization (redundant data)
-CREATE TABLE orders_denormalized (
-    order_id INT,
-    customer_name VARCHAR(100),
-    customer_email VARCHAR(100),
-    customer_phone VARCHAR(20),
-    product_name VARCHAR(100),
-    product_price DECIMAL(10,2)
-);
-
--- After normalization (separate tables)
-CREATE TABLE customers (
-    customer_id INT PRIMARY KEY,
-    customer_name VARCHAR(100),
-    customer_email VARCHAR(100),
-    customer_phone VARCHAR(20)
-);
-
-CREATE TABLE orders (
-    order_id INT PRIMARY KEY,
-    customer_id INT,
-    order_date DATE,
-    FOREIGN KEY (customer_id) REFERENCES customers(customer_id)
-);
-```
+- Flexibility: Allows for more complex relationships between tables.
+- Uniqueness: Ensures that the combination of multiple attributes is unique across records.
 
 ## Benefits of Relational Databases
 
@@ -174,7 +136,7 @@ Relational databases offer numerous advantages that make them the preferred choi
 
 Relational databases provide a structured way to organize data into tables, making it easy to understand and manage. Each table represents a specific entity, and relationships between tables can be established through foreign keys.
 
-```sql title="Example of structured data organization"
+```sql title="Structured Data Organization"
 CREATE TABLE employees (
     employee_id INT PRIMARY KEY,
     first_name VARCHAR(50),
@@ -190,7 +152,7 @@ Relational databases ensure accuracy and consistency of data through constraints
 
 This is achieved through primary keys, foreign keys, unique constraints, and check constraints. These features help maintain data integrity and prevent anomalies.
 
-```sql title="Example of data integrity constraints"
+```sql title="Data Integrity Constraints"
 CREATE TABLE employees (
     employee_id INT PRIMARY KEY,
     email VARCHAR(100) UNIQUE NOT NULL,    -- Ensures unique emails
@@ -206,7 +168,7 @@ Relational databases allow for sophisticated data manipulation and querying capa
 
 Because of this flexibility, relational databases are well-suited for applications that require complex data relationships and reporting.
 
-```sql title="Example of a complex query joining multiple tables"
+```sql title="Joining Multiple Tables"
 SELECT
     c.customer_name,
     COUNT(o.order_id) as total_orders,
@@ -219,15 +181,31 @@ HAVING total_spent > 1000
 ORDER BY total_spent DESC;
 ```
 
+#### Advantages of Complex Queries
+
+Complex queries allow developers to extract meaningful insights from data by combining information from multiple tables. This is particularly useful for generating reports, analyzing trends, and making data-driven decisions.
+
 ### Scalability
 
 Modern relational databases can handle large volumes of data and complex transactions efficiently through various optimization techniques including indexing, partitioning, and caching. This scalability makes them suitable for applications ranging from small websites to large enterprise systems.
+
+### Transaction Management
+
+Transaction management is a critical aspect of relational databases, allowing developers to group multiple operations into a single unit of work. This ensures that either all operations succeed or none do, maintaining data integrity.
+
+```sql title="Transaction Management"
+BEGIN TRANSACTION;
+UPDATE accounts SET balance = balance - 100 WHERE account_id = 1;
+UPDATE accounts SET balance = balance + 100 WHERE account_id = 2;
+-- Either both updates succeed or both fail
+COMMIT;
+```
 
 ### ACID Compliance
 
 ACID properties ensure reliable transactions through Atomicity, Consistency, Isolation, and Durability. This guarantees that database transactions are processed reliably. It ensures that all operations within a transaction are completed successfully or none at all, maintaining data integrity.
 
-```sql title="Example of a transaction demonstrating ACID properties"
+```sql title="a transaction demonstrating ACID properties"
 BEGIN TRANSACTION;
 
 UPDATE accounts SET balance = balance - 100 WHERE account_id = 1;
@@ -247,7 +225,7 @@ Normalization helps eliminate duplicate data, saving storage space and improving
 
 Relational databases provide robust security mechanisms including user authentication, role-based access control, and data encryption. These features help protect sensitive data and ensure that only authorized users can access or modify the data. They also allow for fine-grained access control, enabling developers to define who can read, write, or modify specific tables or columns.
 
-```sql title="Example of security implementation"
+```sql title="security implementation"
 -- Creating users with specific permissions
 CREATE USER 'app_user'@'localhost' IDENTIFIED BY 'secure_password';
 GRANT SELECT, INSERT, UPDATE ON orders TO 'app_user'@'localhost';
@@ -261,6 +239,8 @@ Relational databases are widely used across various industries, and SQL is the d
 ## Common Relational Database Management Systems (RDBMS)
 
 The database management system you choose can significantly impact your application's performance, scalability, and development experience. Here are the most popular RDBMS options available today.
+
+Relational Database Management Systems (RDBMS) are software systems that manage relational databases. They provide the tools and interfaces for creating, querying, updating, and managing data stored in relational tables. RDBMSs implement the relational model and support SQL as the standard query language.
 
 ### Popular RDBMS Options
 
@@ -276,7 +256,7 @@ For beginners, MySQL and PostgreSQL are excellent starting points due to their o
 
 MySQL and SQLite are often recommended for new developers due to their ease of use and wide adoption in web development. PostgreSQL is an excellent choice for those looking for advanced features and strict compliance with SQL standards.
 
-```sql title="Example of similar syntax across different RDBMS"
+```sql title="Similar Syntax across Different RDBMS"
 -- This basic query works similarly across most RDBMS
 SELECT customer_name, email
 FROM customers
@@ -305,7 +285,7 @@ MySQL offers a comprehensive set of features that make it suitable for various a
 - High availability features including master-slave replication and clustering
 - Support for stored procedures, triggers, and views for advanced data manipulation
 
-```sql title="Example MySQL database creation and basic operations"
+```sql title="MySQL Database"
 -- Creating a database in MySQL
 CREATE DATABASE ecommerce_store;
 USE ecommerce_store;
@@ -362,7 +342,7 @@ PostgreSQL offers a rich set of features that make it suitable for complex appli
 - Advanced indexing options including B-tree, Hash, GiST, SP-GiST, GIN, and BRIN
 - Window functions and common table expressions (CTEs) for complex analytical queries
 
-```sql title="Example PostgreSQL features - JSON support and advanced data types"
+```sql title="PostgreSQL Features"
 -- Creating a table with PostgreSQL-specific features
 CREATE TABLE user_profiles (
     id SERIAL PRIMARY KEY,
@@ -423,7 +403,7 @@ Microsoft SQL Server offers enterprise-grade features designed for large-scale a
 - High availability options including Always On Availability Groups and Failover Clustering
 - Integration with Power BI for advanced data visualization and analytics
 
-```sql title="Example SQL Server features - advanced analytics and security"
+```sql title="SQL Server Features"
 -- Creating a table with SQL Server-specific features
 CREATE TABLE sensitive_data (
     id INT IDENTITY(1,1) PRIMARY KEY,
@@ -481,7 +461,7 @@ Oracle Database provides enterprise-level features designed for the most demandi
 - Automatic performance tuning and optimization features
 - Partitioning and compression options for handling very large databases
 
-```sql title="Example Oracle Database features - advanced SQL and PL/SQL"
+```sql title="Oracle Database Features"
 -- Creating a partitioned table (Oracle-specific feature)
 CREATE TABLE sales_data (
     sale_id NUMBER PRIMARY KEY,
@@ -551,7 +531,7 @@ SQLite offers impressive functionality despite its compact design:
 - Full-text search capabilities for text-based queries
 - Small footprint with the entire library being less than 1MB in size
 
-```sql title="Example SQLite database creation and operations"
+```sql title="SQLite Database Creation"
 -- SQLite automatically creates the database file when first accessed
 -- Creating tables with SQLite-specific features
 CREATE TABLE app_settings (
@@ -609,7 +589,7 @@ Relational databases are the backbone of most web applications, storing user dat
 
 Web applications often require complex data relationships, such as users, products, and orders. Relational databases excel at managing these relationships through foreign keys and joins, allowing developers to build dynamic and interactive web experiences.
 
-```sql title="Example web application database schema"
+```sql title="Web Application Database Schema"
 -- User management for a web application
 CREATE TABLE users (
     user_id INT PRIMARY KEY AUTO_INCREMENT,
@@ -637,7 +617,7 @@ Large organizations rely on relational databases to manage complex business proc
 
 Enterprise applications often require robust data management capabilities, including transaction processing, reporting, and analytics. Relational databases provide the necessary features to handle large volumes of data while ensuring data integrity and consistency.
 
-```sql title="Example enterprise CRM database structure"
+```sql title="Enterprise CRM Database Structure"
 -- Customer relationship management schema
 CREATE TABLE companies (
     company_id INT PRIMARY KEY,
@@ -679,7 +659,7 @@ Banks and financial institutions use relational databases to manage transactions
 
 Relational databases are essential for financial systems due to their ability to handle complex transactions, maintain data integrity, and ensure compliance with regulatory requirements. They provide robust features for managing accounts, processing transactions, and generating financial reports.
 
-```sql title="Example banking transaction system"
+```sql title="Banking Transaction System"
 -- Financial transaction management
 CREATE TABLE accounts (
     account_id INT PRIMARY KEY,
@@ -732,7 +712,7 @@ If you're ready to continue with relational databases, head over to [SQL (Struct
 - Implementing complex business logic
 - Performing data analysis and reporting
 
-```sql title="Preview of SQL concepts you'll learn next"
+```sql title="Preview of SQL Concepts"
 -- Basic query structure
 SELECT column1, column2
 FROM table_name
