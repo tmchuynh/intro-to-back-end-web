@@ -1,0 +1,1224 @@
+import BackToTop from "@/components/BackToTop";
+
+# Documentation and Schema Visualization Tools
+
+## Table of Contents
+
+## Overview
+
+Documentation and schema visualization tools are essential for maintaining clear, up-to-date records of database structures, relationships, and business logic. These tools help teams understand complex database designs, facilitate onboarding of new developers, and ensure consistency across development and production environments.
+
+Effective database documentation includes entity-relationship diagrams (ERDs), data dictionaries, constraint definitions, and API specifications. Schema visualization tools provide graphical representations of database structures, making it easier to understand relationships between tables, identify potential issues, and plan modifications.
+
+Modern documentation tools often integrate with version control systems, automatically generate documentation from code comments, and provide collaborative features for team-based documentation efforts. The right combination of tools can significantly improve code maintainability, reduce onboarding time, and enhance overall project quality.
+
+## Schema Visualization Tools
+
+### SchemaSpy
+
+SchemaSpy is a Java-based tool that analyzes the metadata of a schema in a database and generates a visual representation of it in a browser-displayable format. It creates detailed HTML documentation with interactive diagrams and relationship maps.
+
+#### Key Features
+
+- **Multi-Database Support**: Works with MySQL, PostgreSQL, Oracle, SQL Server, and more.
+- **Interactive HTML Output**: Generates browsable HTML documentation with clickable diagrams.
+- **Relationship Analysis**: Automatically detects and visualizes foreign key relationships.
+- **Constraint Documentation**: Documents check constraints, indexes, and triggers.
+- **Anomaly Detection**: Identifies potential schema design issues.
+- **Customizable Output**: Configurable templates and styling options.
+- **Command Line Interface**: Easy integration into build processes.
+- **Orphan Detection**: Finds tables with no relationships to other tables.
+
+#### Usage Example
+
+```bash
+# Download SchemaSpy
+wget https://github.com/schemaspy/schemaspy/releases/download/v6.1.0/schemaspy-6.1.0.jar
+
+# Generate documentation for PostgreSQL
+java -jar schemaspy-6.1.0.jar \
+  -t pgsql \
+  -host localhost \
+  -port 5432 \
+  -db mydb \
+  -u username \
+  -p password \
+  -o output_directory
+
+# Generate documentation for MySQL
+java -jar schemaspy-6.1.0.jar \
+  -t mysql \
+  -host localhost \
+  -db mydb \
+  -u username \
+  -p password \
+  -o docs/schema
+
+# Include specific schemas only
+java -jar schemaspy-6.1.0.jar \
+  -t pgsql \
+  -host localhost \
+  -db mydb \
+  -u username \
+  -p password \
+  -s public \
+  -o output_directory
+```
+
+#### Documentation
+
+- [SchemaSpy Documentation](http://schemaspy.org/)
+- [GitHub Repository](https://github.com/schemaspy/schemaspy)
+
+### DbSchema
+
+DbSchema is a visual database design tool that can reverse engineer existing databases into visual schemas and generate comprehensive documentation. It supports collaborative design and provides advanced visualization features.
+
+#### Key Features
+
+- **Visual Database Designer**: Drag-and-drop interface for schema design.
+- **Reverse Engineering**: Generate diagrams from existing databases.
+- **Interactive Layouts**: Multiple layout algorithms for optimal diagram organization.
+- **Documentation Generation**: Comprehensive HTML and PDF reports.
+- **Team Collaboration**: Real-time collaboration features.
+- **Version Control Integration**: Track schema changes over time.
+- **Query Builder**: Visual query construction interface.
+- **Data Generator**: Generate test data based on schema definitions.
+
+#### Usage Example
+
+```bash
+# Download DbSchema
+# Visit https://dbschema.com/download.html
+
+# Connect to database and reverse engineer
+# 1. Open DbSchema
+# 2. File -> New Model
+# 3. Choose database type
+# 4. Enter connection details
+# 5. Select tables to reverse engineer
+# 6. Generate diagram
+
+# Export documentation
+# 1. Tools -> Generate Documentation
+# 2. Choose format (HTML/PDF)
+# 3. Select sections to include
+# 4. Generate and save
+```
+
+#### Documentation
+
+- [DbSchema Documentation](https://dbschema.com/documentation/)
+- [User Manual](https://dbschema.com/documentation/DbSchema-User-Manual.pdf)
+
+### MySQL Workbench
+
+MySQL Workbench provides comprehensive schema visualization and documentation capabilities specifically for MySQL databases, including ER diagram generation and forward/reverse engineering.
+
+#### Key Features
+
+- **ER Diagram Designer**: Visual entity-relationship diagram creation.
+- **Reverse Engineering**: Generate models from existing MySQL databases.
+- **Forward Engineering**: Create SQL scripts from visual models.
+- **Documentation Export**: Generate comprehensive schema documentation.
+- **Model Validation**: Validate model consistency and relationships.
+- **Synchronization**: Compare and synchronize models with live databases.
+- **Custom Templates**: Customizable documentation templates.
+- **Print and Export**: Multiple export formats including PNG, SVG, PDF.
+
+#### Usage Example
+
+```bash
+# Open MySQL Workbench
+# Database -> Reverse Engineer...
+# 1. Choose connection
+# 2. Select schemas to reverse engineer
+# 3. Select objects to include
+# 4. Generate ER diagram
+
+# Generate documentation
+# File -> Export -> Forward Engineer SQL CREATE Script...
+# Choose documentation options
+# Generate comprehensive schema documentation
+```
+
+#### Documentation
+
+- [MySQL Workbench Manual](https://dev.mysql.com/doc/workbench/en/)
+- [Data Modeling Tutorial](https://dev.mysql.com/doc/workbench/en/wb-data-modeling.html)
+
+### pgModeler
+
+pgModeler is a PostgreSQL-specific database modeling tool that provides visual schema design and comprehensive documentation generation capabilities.
+
+#### Key Features
+
+- **PostgreSQL Focus**: Specialized features for PostgreSQL databases.
+- **Visual Modeling**: Comprehensive ER diagram creation and editing.
+- **Code Generation**: Generate PostgreSQL-specific SQL scripts.
+- **Reverse Engineering**: Import existing PostgreSQL schemas.
+- **Model Validation**: Built-in validation for PostgreSQL constraints.
+- **Custom Types**: Support for PostgreSQL custom data types.
+- **Extension Support**: Handle PostgreSQL extensions and functions.
+- **Documentation Export**: Generate detailed model documentation.
+
+#### Usage Example
+
+```bash
+# Install pgModeler
+sudo apt-get install pgmodeler
+
+# Or download from official website
+wget https://pgmodeler.io/downloads
+# Follow installation instructions
+
+# Create new model
+# File -> New Model
+# Add tables, relationships, and constraints
+# Tools -> Model Validation
+# File -> Export -> PNG/SVG for diagrams
+```
+
+#### Documentation
+
+- [pgModeler Documentation](https://pgmodeler.io/documentation)
+- [User Guide](https://pgmodeler.io/support/documentation)
+
+### ERDPlus
+
+ERDPlus is a web-based database modeling tool that provides ER diagram creation and schema visualization capabilities without requiring software installation.
+
+#### Key Features
+
+- **Web-Based**: No software installation required.
+- **ER Diagram Creation**: Intuitive drag-and-drop interface.
+- **Relational Schema**: Convert ER diagrams to relational schemas.
+- **SQL Generation**: Generate CREATE TABLE statements.
+- **Cloud Storage**: Save models in the cloud.
+- **Collaboration**: Share models with team members.
+- **Export Options**: Export diagrams as images or PDF.
+- **Free to Use**: No cost for basic features.
+
+#### Usage Example
+
+```bash
+# Access ERDPlus
+# Visit https://erdplus.com/
+# Create account or use as guest
+# Start -> ER Diagram
+# Add entities, attributes, and relationships
+# Convert -> Relational Schema
+# Export diagram or SQL code
+```
+
+#### Documentation
+
+- [ERDPlus Help](https://erdplus.com/help)
+- [Tutorial Videos](https://erdplus.com/videos)
+
+### Lucidchart
+
+Lucidchart is a cloud-based diagramming tool that includes specialized features for database schema visualization and documentation.
+
+#### Key Features
+
+- **Cloud-Based Collaboration**: Real-time collaborative editing.
+- **Database Import**: Import existing database schemas.
+- **Professional Templates**: Pre-built ER diagram templates.
+- **Integration**: Connects with popular development tools.
+- **Advanced Styling**: Professional diagram styling options.
+- **Version History**: Track changes and revert to previous versions.
+- **Sharing and Publishing**: Easy sharing and presentation options.
+- **Multiple Export Formats**: PDF, PNG, SVG, and more.
+
+#### Usage Example
+
+```bash
+# Access Lucidchart
+# Visit https://lucid.app/
+# Create account
+# New Document -> Database ER Diagram
+# Import existing schema or create new
+# Add entities and relationships
+# Style and organize diagram
+# Share with team members
+```
+
+#### Documentation
+
+- [Lucidchart Help Center](https://help.lucid.co/)
+- [Database Diagram Guide](https://help.lucid.co/hc/en-us/sections/360003555411-Database-Diagrams)
+
+### Draw.io
+
+Draw.io (now diagrams.net) is a free, open-source diagramming tool that supports database schema visualization with extensive customization options.
+
+#### Key Features
+
+- **Free and Open Source**: No cost and open-source codebase.
+- **Web and Desktop Versions**: Use online or install locally.
+- **Extensive Shape Libraries**: Comprehensive database modeling shapes.
+- **Integration**: Works with Google Drive, OneDrive, GitHub, and more.
+- **Custom Templates**: Create and share custom templates.
+- **Export Options**: Multiple formats including SVG, PNG, PDF.
+- **Offline Capability**: Works without internet connection.
+- **Plugin Support**: Extend functionality with plugins.
+
+#### Usage Example
+
+```bash
+# Access Draw.io online
+# Visit https://app.diagrams.net/
+
+# Install desktop version
+# Download from https://github.com/jgraph/drawio-desktop/releases
+
+# Create ER diagram
+# New Diagram -> Software -> Entity Relationship
+# Add entities from shape library
+# Connect with relationships
+# Style and organize
+# Export or save to cloud storage
+```
+
+#### Documentation
+
+- [Draw.io Support](https://www.diagrams.net/doc/)
+- [Getting Started Guide](https://www.diagrams.net/doc/getting-started-editor)
+
+## Database Documentation Tools
+
+### SchemaCrawler
+
+SchemaCrawler is a comprehensive database schema discovery and comprehension tool that generates detailed documentation and analysis of database schemas.
+
+#### Key Features
+
+- **Schema Discovery**: Automatic discovery of database metadata.
+- **Lint Analysis**: Identify schema design issues and anomalies.
+- **Documentation Generation**: HTML, text, and custom format output.
+- **Scripting Support**: JavaScript and Python scripting for custom analysis.
+- **Grep Functionality**: Search through database metadata.
+- **Diagram Generation**: Integration with Graphviz for ER diagrams.
+- **Multi-Database Support**: Works with most popular databases.
+- **Command Line and API**: Flexible usage options.
+
+#### Usage Example
+
+```bash
+# Download SchemaCrawler
+wget https://github.com/schemacrawler/SchemaCrawler/releases/download/v16.19.6/schemacrawler-16.19.6-distribution.zip
+unzip schemacrawler-16.19.6-distribution.zip
+
+# Generate schema documentation
+./schemacrawler.sh \
+  --server=postgresql \
+  --host=localhost \
+  --port=5432 \
+  --database=mydb \
+  --user=username \
+  --password=password \
+  --info-level=standard \
+  --command=schema \
+  --output-format=html \
+  --output-file=schema-docs.html
+
+# Generate ER diagram
+./schemacrawler.sh \
+  --server=postgresql \
+  --host=localhost \
+  --database=mydb \
+  --user=username \
+  --password=password \
+  --command=schema \
+  --output-format=png \
+  --output-file=schema-diagram.png
+```
+
+#### Documentation
+
+- [SchemaCrawler Documentation](https://www.schemacrawler.com/)
+- [Command Line Tutorial](https://www.schemacrawler.com/how-to.html)
+
+### DbDocs
+
+DbDocs is a modern documentation platform specifically designed for database schemas, providing collaborative documentation with version control integration.
+
+#### Key Features
+
+- **Schema-as-Code**: Define schemas using DBML (Database Markup Language).
+- **Version Control Integration**: Sync with Git repositories.
+- **Interactive Documentation**: Browsable, searchable documentation.
+- **Team Collaboration**: Comment and discuss schema changes.
+- **Change Tracking**: Track schema evolution over time.
+- **Multiple Export Formats**: Generate SQL, documentation, and diagrams.
+- **CI/CD Integration**: Automate documentation updates.
+- **Public and Private Docs**: Control documentation visibility.
+
+#### Usage Example
+
+```bash
+# Install dbdocs CLI
+npm install -g @dbml/cli
+
+# Create DBML file (schema.dbml)
+echo 'Table users {
+  id integer [primary key]
+  username varchar
+  email varchar
+  created_at timestamp
+}
+
+Table posts {
+  id integer [primary key]
+  title varchar
+  content text
+  author_id integer [ref: > users.id]
+  created_at timestamp
+}' > schema.dbml
+
+# Generate documentation
+dbdocs build schema.dbml
+
+# Deploy to dbdocs.io
+dbdocs login
+dbdocs build schema.dbml --project="my-project"
+```
+
+#### Documentation
+
+- [DbDocs Documentation](https://dbdocs.io/docs)
+- [DBML Language Reference](https://www.dbml.org/docs/)
+
+### DataGrip Documentation
+
+DataGrip provides built-in documentation generation features that create comprehensive database documentation with diagrams and metadata.
+
+#### Key Features
+
+- **Integrated Documentation**: Generate docs directly from DataGrip.
+- **Multiple Output Formats**: HTML, PDF, and custom formats.
+- **Schema Diagrams**: Include ER diagrams in documentation.
+- **Customizable Templates**: Modify documentation templates.
+- **Live Database Connection**: Always up-to-date documentation.
+- **Multi-Database Support**: Document various database types.
+- **Relationship Analysis**: Detailed foreign key documentation.
+- **Index and Constraint Info**: Complete schema metadata.
+
+#### Usage Example
+
+```bash
+# In DataGrip:
+# 1. Right-click on database/schema
+# 2. Choose "Documentation" -> "Generate Documentation"
+# 3. Select output format and options
+# 4. Choose destination folder
+# 5. Generate comprehensive documentation
+
+# Customize documentation:
+# File -> Settings -> Tools -> Database -> Documentation
+# Modify templates and styling options
+```
+
+#### Documentation
+
+- [DataGrip Documentation Features](https://www.jetbrains.com/help/datagrip/creating-diagrams.html)
+- [Generate Documentation Guide](https://www.jetbrains.com/help/datagrip/generate-documentation.html)
+
+### DBeaver Documentation
+
+DBeaver includes documentation generation capabilities that create detailed schema reports with diagrams and metadata analysis.
+
+#### Key Features
+
+- **Schema Documentation**: Generate comprehensive schema reports.
+- **ER Diagram Export**: Create visual relationship diagrams.
+- **Multiple Formats**: HTML, PDF, and text output.
+- **Metadata Analysis**: Detailed table and column information.
+- **Custom Templates**: Modify documentation templates.
+- **Batch Processing**: Document multiple schemas at once.
+- **Integration**: Works with version control systems.
+- **Free and Open Source**: No licensing costs.
+
+#### Usage Example
+
+```bash
+# In DBeaver:
+# 1. Right-click on database/schema
+# 2. Choose "Generate SQL" -> "Documentation"
+# 3. Select documentation type and format
+# 4. Configure output options
+# 5. Generate and save documentation
+
+# Create ER diagram:
+# 1. Select tables in database navigator
+# 2. Right-click -> "View Diagram"
+# 3. Arrange and style diagram
+# 4. Export as PNG, SVG, or PDF
+```
+
+#### Documentation
+
+- [DBeaver Documentation](https://dbeaver.io/docs/)
+- [ER Diagrams Guide](https://dbeaver.io/docs/wiki/ER-Diagrams/)
+
+## API Documentation Tools
+
+### Swagger/OpenAPI
+
+Swagger (now OpenAPI) is the most popular framework for API documentation, providing interactive documentation with testing capabilities.
+
+#### Key Features
+
+- **Interactive Documentation**: Test APIs directly from documentation.
+- **Code Generation**: Generate client libraries and server stubs.
+- **Specification Standard**: Industry-standard API description format.
+- **Visual Editor**: Swagger Editor for creating specifications.
+- **Integration**: Works with most development frameworks.
+- **Validation**: Automatic validation of API specifications.
+- **Hosting Options**: Swagger UI and Swagger Hub for hosting docs.
+- **Mock Servers**: Generate mock APIs for testing.
+
+#### Usage Example
+
+```yaml
+# swagger.yaml
+openapi: 3.0.0
+info:
+  title: Database API
+  version: 1.0.0
+  description: API for database operations
+
+paths:
+  /users:
+    get:
+      summary: Get all users
+      responses:
+        "200":
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        email:
+          type: string
+```
+
+```bash
+# Install Swagger UI
+npm install -g swagger-ui-serve
+
+# Serve documentation
+swagger-ui-serve swagger.yaml
+
+# Generate client code
+npx @openapitools/openapi-generator-cli generate \
+  -i swagger.yaml \
+  -g javascript \
+  -o ./generated-client
+```
+
+#### Documentation
+
+- [OpenAPI Specification](https://swagger.io/specification/)
+- [Swagger Documentation](https://swagger.io/docs/)
+
+### Postman
+
+Postman provides comprehensive API documentation features with automated testing and collaboration capabilities.
+
+#### Key Features
+
+- **API Documentation**: Automatically generate docs from collections.
+- **Interactive Testing**: Test APIs directly from documentation.
+- **Team Collaboration**: Share collections and documentation.
+- **Mock Servers**: Create mock APIs for development.
+- **Automated Testing**: Set up automated API tests.
+- **Environment Management**: Manage different API environments.
+- **Version Control**: Track API changes over time.
+- **Public Documentation**: Publish public API documentation.
+
+#### Usage Example
+
+```bash
+# Install Postman
+# Download from https://www.postman.com/downloads/
+
+# Create API documentation:
+# 1. Create collection with API requests
+# 2. Add descriptions to requests and folders
+# 3. Generate documentation from collection
+# 4. Publish or share documentation
+
+# Use Newman for command line testing
+npm install -g newman
+
+# Run collection tests
+newman run collection.json --environment env.json
+```
+
+#### Documentation
+
+- [Postman Documentation](https://learning.postman.com/docs/)
+- [API Documentation Guide](https://learning.postman.com/docs/publishing-your-api/documenting-your-api/)
+
+### Insomnia
+
+Insomnia is an API client and documentation tool that provides a clean interface for API testing and documentation creation.
+
+#### Key Features
+
+- **Clean Interface**: Intuitive API testing and documentation interface.
+- **GraphQL Support**: Native GraphQL query support.
+- **Environment Variables**: Manage different API environments.
+- **Code Generation**: Generate code snippets in multiple languages.
+- **Team Collaboration**: Share workspaces and collections.
+- **Plugin System**: Extend functionality with plugins.
+- **Git Sync**: Synchronize with Git repositories.
+- **Documentation Export**: Export documentation in various formats.
+
+#### Usage Example
+
+```bash
+# Install Insomnia
+# Download from https://insomnia.rest/download
+
+# Create API documentation:
+# 1. Create requests in workspace
+# 2. Organize into folders
+# 3. Add descriptions and examples
+# 4. Export or share workspace
+# 5. Generate documentation
+```
+
+#### Documentation
+
+- [Insomnia Documentation](https://docs.insomnia.rest/)
+- [Getting Started Guide](https://docs.insomnia.rest/insomnia/get-started)
+
+### APIary
+
+APIary provides API documentation and mock server capabilities with a focus on API design and collaboration.
+
+#### Key Features
+
+- **API Blueprint**: Use API Blueprint markdown for documentation.
+- **Mock Servers**: Automatic mock server generation.
+- **Interactive Documentation**: Test APIs from documentation.
+- **Collaboration Tools**: Team collaboration and review features.
+- **Traffic Inspector**: Monitor and debug API calls.
+- **Integration**: GitHub integration for version control.
+- **Custom Domains**: Host documentation on custom domains.
+- **Analytics**: Track API usage and performance.
+
+#### Usage Example
+
+```markdown
+# API Blueprint format
+
+FORMAT: 1A
+
+# Database API
+
+API for managing database resources
+
+## Users [/users]
+
+### List Users [GET]
+
+- Response 200 (application/json)
+  - Body
+    [
+    {
+    "id": 1,
+    "username": "john_doe",
+    "email": "john@example.com"
+    }
+    ]
+
+### Create User [POST]
+
+- Request (application/json)
+  - Body
+    {
+    "username": "jane_doe",
+    "email": "jane@example.com"
+    }
+
+- Response 201 (application/json)
+  - Body
+    {
+    "id": 2,
+    "username": "jane_doe",
+    "email": "jane@example.com"
+    }
+```
+
+#### Documentation
+
+- [APIary Documentation](https://help.apiary.io/)
+- [API Blueprint Tutorial](https://apiblueprint.org/documentation/tutorial.html)
+
+## Code Documentation Tools
+
+### JSDoc
+
+JSDoc is a documentation generator for JavaScript that creates comprehensive API documentation from code comments.
+
+#### Key Features
+
+- **Comment-Based Documentation**: Generate docs from JSDoc comments.
+- **Type Information**: Document parameter and return types.
+- **Custom Tags**: Use custom tags for additional metadata.
+- **Multiple Output Formats**: HTML, JSON, and custom formats.
+- **Plugin System**: Extend functionality with plugins.
+- **Template Customization**: Customize documentation appearance.
+- **CLI Integration**: Command-line documentation generation.
+- **IDE Integration**: Works with popular JavaScript IDEs.
+
+#### Usage Example
+
+```javascript
+/**
+ * Database connection manager
+ * @class DatabaseManager
+ */
+class DatabaseManager {
+  /**
+   * Creates a new database connection
+   * @param {Object} config - Database configuration
+   * @param {string} config.host - Database host
+   * @param {number} config.port - Database port
+   * @param {string} config.database - Database name
+   * @returns {Promise<Connection>} Database connection
+   * @example
+   * const db = new DatabaseManager({
+   *   host: 'localhost',
+   *   port: 5432,
+   *   database: 'mydb'
+   * });
+   */
+  async connect(config) {
+    // Implementation
+  }
+}
+```
+
+```bash
+# Install JSDoc
+npm install -g jsdoc
+
+# Generate documentation
+jsdoc src/ -d docs/
+
+# Custom configuration
+jsdoc -c jsdoc.json src/
+```
+
+#### Documentation
+
+- [JSDoc Documentation](https://jsdoc.app/)
+- [Getting Started Guide](https://jsdoc.app/about-getting-started.html)
+
+### Sphinx
+
+Sphinx is a powerful documentation generator primarily used for Python projects but supports multiple programming languages.
+
+#### Key Features
+
+- **reStructuredText**: Use reStructuredText markup for documentation.
+- **Multiple Output Formats**: HTML, PDF, ePub, and more.
+- **Cross-References**: Automatic cross-referencing and linking.
+- **Code Documentation**: Extract documentation from code docstrings.
+- **Extensions**: Rich ecosystem of extensions.
+- **Theming**: Customizable themes and styling.
+- **Internationalization**: Multi-language documentation support.
+- **Search Integration**: Built-in search functionality.
+
+#### Usage Example
+
+```python
+"""
+Database utility functions.
+
+This module provides utility functions for database operations
+including connection management and query execution.
+
+Example:
+    Basic usage of the database utilities::
+
+        from myproject.database import connect, execute_query
+
+        conn = connect('postgresql://localhost/mydb')
+        result = execute_query(conn, 'SELECT * FROM users')
+"""
+
+def connect(connection_string):
+    """
+    Create a database connection.
+
+    Args:
+        connection_string (str): Database connection string
+
+    Returns:
+        Connection: Database connection object
+
+    Raises:
+        ConnectionError: If connection fails
+    """
+    pass
+```
+
+```bash
+# Install Sphinx
+pip install sphinx
+
+# Initialize Sphinx project
+sphinx-quickstart docs
+
+# Build documentation
+cd docs
+make html
+
+# Auto-generate API documentation
+sphinx-apidoc -o source/ ../myproject/
+```
+
+#### Documentation
+
+- [Sphinx Documentation](https://www.sphinx-doc.org/)
+- [Getting Started](https://www.sphinx-doc.org/en/master/usage/quickstart.html)
+
+### GitBook
+
+GitBook is a modern documentation platform that provides collaborative editing and publishing capabilities.
+
+#### Key Features
+
+- **Collaborative Editing**: Real-time collaborative documentation.
+- **Git Integration**: Sync with Git repositories.
+- **Rich Content**: Support for diagrams, code blocks, and multimedia.
+- **Custom Domains**: Host documentation on custom domains.
+- **Team Spaces**: Organize documentation by teams and projects.
+- **Analytics**: Track documentation usage and engagement.
+- **API Integration**: Integrate with external APIs and services.
+- **Version Control**: Track changes and maintain version history.
+
+#### Usage Example
+
+```bash
+# Install GitBook CLI
+npm install -g gitbook-cli
+
+# Initialize GitBook
+gitbook init ./my-docs
+
+# Serve locally
+cd my-docs
+gitbook serve
+
+# Build static site
+gitbook build
+
+# Create book.json for configuration
+echo '{
+  "title": "Database Documentation",
+  "description": "Comprehensive database guide",
+  "plugins": ["highlight", "search", "sharing"]
+}' > book.json
+```
+
+#### Documentation
+
+- [GitBook Documentation](https://docs.gitbook.com/)
+- [Getting Started Guide](https://docs.gitbook.com/getting-started/overview)
+
+### Notion
+
+Notion is an all-in-one workspace that provides powerful documentation capabilities with database integration.
+
+#### Key Features
+
+- **All-in-One Platform**: Combine notes, tasks, databases, and docs.
+- **Rich Content Blocks**: Support for various content types.
+- **Database Integration**: Create and link documentation to databases.
+- **Team Collaboration**: Real-time editing and commenting.
+- **Template System**: Use and create custom templates.
+- **API Integration**: Connect with external services via API.
+- **Publishing**: Publish documentation publicly or privately.
+- **Mobile Access**: Full-featured mobile applications.
+
+#### Usage Example
+
+```bash
+# Access Notion
+# Visit https://notion.so
+# Create account and workspace
+
+# Create documentation structure:
+# 1. Create new page for project documentation
+# 2. Add database for tracking documentation tasks
+# 3. Create template pages for consistent structure
+# 4. Use blocks for code, diagrams, and multimedia
+# 5. Share with team members
+# 6. Publish publicly if needed
+```
+
+#### Documentation
+
+- [Notion Help Center](https://www.notion.so/help)
+- [Getting Started Guide](https://www.notion.so/help/guides)
+
+## Database Migration Documentation
+
+### Flyway
+
+Flyway provides database migration documentation and versioning capabilities with comprehensive change tracking.
+
+#### Key Features
+
+- **Version Control for Database**: Track database schema changes.
+- **Migration Scripts**: SQL-based migration management.
+- **Documentation Generation**: Automatic migration documentation.
+- **Rollback Support**: Undo migrations when necessary.
+- **Team Collaboration**: Coordinate database changes across teams.
+- **CI/CD Integration**: Integrate with deployment pipelines.
+- **Multiple Database Support**: Works with various database systems.
+- **Change Validation**: Validate migration scripts before execution.
+
+#### Usage Example
+
+```bash
+# Install Flyway
+wget https://repo1.maven.org/maven2/org/flywaydb/flyway-commandline/9.5.1/flyway-commandline-9.5.1.tar.gz
+tar -xzf flyway-commandline-9.5.1.tar.gz
+
+# Configure Flyway
+echo 'flyway.url=jdbc:postgresql://localhost:5432/mydb
+flyway.user=username
+flyway.password=password
+flyway.locations=filesystem:sql' > flyway.conf
+
+# Create migration
+echo 'CREATE TABLE users (
+  id SERIAL PRIMARY KEY,
+  username VARCHAR(255) NOT NULL,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);' > sql/V1__Create_users_table.sql
+
+# Run migration
+./flyway migrate
+
+# Generate migration info
+./flyway info
+```
+
+#### Documentation
+
+- [Flyway Documentation](https://flywaydb.org/documentation/)
+- [Migration Guide](https://flywaydb.org/documentation/getstarted/firststeps/maven)
+
+### Liquibase
+
+Liquibase provides database change management with comprehensive documentation and rollback capabilities.
+
+#### Key Features
+
+- **Database Change Management**: Track and deploy database changes.
+- **Multiple Format Support**: XML, YAML, JSON, and SQL formats.
+- **Change Documentation**: Automatic change log documentation.
+- **Rollback Capabilities**: Roll back changes when needed.
+- **Diff and Sync**: Compare and synchronize database schemas.
+- **Multi-Database Support**: Works with various database platforms.
+- **Enterprise Features**: Advanced features for enterprise environments.
+- **Integration**: CI/CD and IDE integration support.
+
+#### Usage Example
+
+```yaml
+# changelog.yaml
+databaseChangeLog:
+  - changeSet:
+      id: 1
+      author: developer
+      comment: Create users table
+      changes:
+        - createTable:
+            tableName: users
+            columns:
+              - column:
+                  name: id
+                  type: int
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+              - column:
+                  name: username
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: email
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+                    unique: true
+```
+
+```bash
+# Install Liquibase
+wget https://github.com/liquibase/liquibase/releases/download/v4.25.1/liquibase-4.25.1.tar.gz
+tar -xzf liquibase-4.25.1.tar.gz
+
+# Run migration
+./liquibase --changeLogFile=changelog.yaml update
+
+# Generate documentation
+./liquibase --changeLogFile=changelog.yaml dbDoc docs/
+
+# Generate diff
+./liquibase --changeLogFile=changelog.yaml diff
+```
+
+#### Documentation
+
+- [Liquibase Documentation](https://docs.liquibase.com/)
+- [Getting Started Guide](https://docs.liquibase.com/start/tutorials/postgresql.html)
+
+### Alembic
+
+Alembic is a database migration tool for SQLAlchemy that provides comprehensive migration documentation and version control.
+
+#### Key Features
+
+- **SQLAlchemy Integration**: Tight integration with SQLAlchemy ORM.
+- **Auto-Generation**: Generate migrations from model changes.
+- **Version Control**: Track migration history and dependencies.
+- **Branching and Merging**: Handle complex migration scenarios.
+- **Custom Operations**: Define custom migration operations.
+- **Documentation**: Generate migration documentation.
+- **Testing Support**: Test migrations before applying.
+- **Python-Based**: Use Python for complex migration logic.
+
+#### Usage Example
+
+```python
+# alembic/env.py configuration
+from sqlalchemy import engine_from_config, pool
+from alembic import context
+from myapp.models import Base
+
+target_metadata = Base.metadata
+
+def run_migrations_online():
+    """Run migrations in 'online' mode."""
+    connectable = engine_from_config(
+        config.get_section(config.config_ini_section),
+        prefix="sqlalchemy.",
+        poolclass=pool.NullPool,
+    )
+
+    with connectable.connect() as connection:
+        context.configure(
+            connection=connection, target_metadata=target_metadata
+        )
+
+        with context.begin_transaction():
+            context.run_migrations()
+```
+
+```bash
+# Install Alembic
+pip install alembic
+
+# Initialize Alembic
+alembic init alembic
+
+# Generate migration
+alembic revision --autogenerate -m "Create users table"
+
+# Apply migration
+alembic upgrade head
+
+# View migration history
+alembic history
+
+# Generate documentation
+alembic history --verbose > migration-docs.txt
+```
+
+#### Documentation
+
+- [Alembic Documentation](https://alembic.sqlalchemy.org/)
+- [Tutorial](https://alembic.sqlalchemy.org/en/latest/tutorial.html)
+
+## Collaborative Documentation Platforms
+
+### Confluence
+
+Confluence is an enterprise collaboration platform that provides comprehensive documentation capabilities with advanced organization and sharing features.
+
+#### Key Features
+
+- **Enterprise Collaboration**: Team-based documentation and knowledge sharing.
+- **Rich Content Editing**: WYSIWYG editor with multimedia support.
+- **Template System**: Pre-built and custom templates.
+- **Page Organization**: Hierarchical page structure with spaces.
+- **Integration**: Connects with Jira, Slack, and other tools.
+- **Permission Management**: Granular access control.
+- **Search and Discovery**: Powerful search across all content.
+- **Analytics**: Track page views and engagement.
+
+#### Usage Example
+
+```bash
+# Access Confluence
+# Visit your organization's Confluence instance
+# or https://www.atlassian.com/software/confluence
+
+# Create documentation structure:
+# 1. Create space for database documentation
+# 2. Set up page hierarchy (Overview, Schemas, APIs, etc.)
+# 3. Create templates for consistent documentation
+# 4. Add database diagrams and code samples
+# 5. Set permissions for team access
+# 6. Link to related Jira tickets
+```
+
+#### Documentation
+
+- [Confluence Documentation](https://confluence.atlassian.com/doc/)
+- [Getting Started Guide](https://confluence.atlassian.com/doc/get-started-with-confluence-847060893.html)
+
+### Slab
+
+Slab is a modern team knowledge base that provides collaborative documentation with a focus on simplicity and organization.
+
+#### Key Features
+
+- **Modern Interface**: Clean, intuitive documentation interface.
+- **Team Collaboration**: Real-time editing and commenting.
+- **Organization Tools**: Topics, tags, and search for content discovery.
+- **Integration**: Connects with Slack, GitHub, and other tools.
+- **Analytics**: Track content performance and engagement.
+- **Permission Management**: Control access to sensitive documentation.
+- **API Access**: Programmatic access to content.
+- **Mobile Support**: Full-featured mobile applications.
+
+#### Usage Example
+
+```bash
+# Access Slab
+# Visit https://slab.com
+# Create team workspace
+
+# Organize database documentation:
+# 1. Create topics for different database systems
+# 2. Use tags for categorization (schema, API, migration)
+# 3. Create templates for consistent structure
+# 4. Add code blocks and diagrams
+# 5. Set up team permissions
+# 6. Integrate with development workflow
+```
+
+#### Documentation
+
+- [Slab Help Center](https://help.slab.com/)
+- [Getting Started Guide](https://help.slab.com/getting-started)
+
+### BookStack
+
+BookStack is a self-hosted documentation platform that provides hierarchical organization with books, chapters, and pages.
+
+#### Key Features
+
+- **Self-Hosted**: Complete control over data and hosting.
+- **Hierarchical Organization**: Books, chapters, and pages structure.
+- **WYSIWYG Editor**: User-friendly content editing.
+- **Search Functionality**: Full-text search across all content.
+- **User Management**: Role-based access control.
+- **API Integration**: RESTful API for content management.
+- **Customization**: Themes and custom CSS support.
+- **Open Source**: Free and open-source software.
+
+#### Usage Example
+
+```bash
+# Install BookStack using Docker
+docker run -d \
+  --name bookstack \
+  -e PUID=1000 \
+  -e PGID=1000 \
+  -e APP_URL=http://localhost:6875 \
+  -e DB_HOST=bookstack_db \
+  -e DB_USER=bookstack \
+  -e DB_PASS=yourpassword \
+  -e DB_DATABASE=bookstackapp \
+  -p 6875:80 \
+  --restart unless-stopped \
+  linuxserver/bookstack
+
+# Install manually
+git clone https://github.com/BookStackApp/BookStack.git
+cd BookStack
+composer install --no-dev
+php artisan key:generate
+php artisan migrate
+
+# Access BookStack
+# Open browser and navigate to http://localhost:6875
+```
+
+#### Documentation
+
+- [BookStack Documentation](https://www.bookstackapp.com/docs/)
+- [Installation Guide](https://www.bookstackapp.com/docs/admin/installation/)
+
+## Best Practices
+
+### Documentation Strategy
+
+1. **Establish Documentation Standards**: Create consistent formatting and structure guidelines.
+2. **Automate Where Possible**: Use tools that generate documentation from code and schemas.
+3. **Keep Documentation Current**: Integrate documentation updates into development workflow.
+4. **Version Control**: Track documentation changes alongside code changes.
+5. **Accessibility**: Ensure documentation is accessible to all team members.
+
+### Schema Visualization
+
+- **Choose Appropriate Tools**: Select tools that match your database systems and workflow.
+- **Maintain Diagram Currency**: Keep diagrams updated with schema changes.
+- **Use Consistent Notation**: Establish standard symbols and conventions.
+- **Include Metadata**: Document constraints, indexes, and business rules.
+- **Organize Large Schemas**: Break complex schemas into logical subsections.
+
+### Collaboration
+
+- **Central Repository**: Maintain documentation in a central, accessible location.
+- **Review Process**: Implement review processes for documentation changes.
+- **Stakeholder Access**: Ensure appropriate access for different stakeholders.
+- **Feedback Mechanisms**: Provide ways for users to suggest improvements.
+- **Training**: Train team members on documentation tools and processes.
+
+### Maintenance
+
+- **Regular Reviews**: Schedule periodic reviews of documentation accuracy.
+- **Deprecation Notices**: Clearly mark outdated or deprecated information.
+- **Change Tracking**: Document when and why changes were made.
+- **Backup and Recovery**: Implement backup strategies for documentation.
+- **Performance Monitoring**: Monitor documentation platform performance and usage.
+
+<BackToTop />
