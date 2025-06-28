@@ -90,22 +90,40 @@ For example, if a company is migrating from an on-premises SQL Server database t
 - Executing the migration by transferring data using the chosen tool.
 - Validating the data in the PostgreSQL database to ensure accuracy and completeness.
 
+### Types of Database Migration
+
+- **Migration-Based Migration**: This type of migration involves moving data from one database to another, often between different database management systems (DBMS). It typically includes transferring data, schema, and relationships while ensuring data integrity and compatibility with the new system.
+- **State-Based Migration**: This type of migration focuses on modifying the structure of an existing database without changing the underlying data. It involves altering tables, adding or removing columns, and updating relationships to accommodate new application requirements or optimize performance.
+- **Schema Migration**: This type of migration specifically deals with changes to the database schema, such as adding new tables, modifying existing ones, or changing relationships between tables. Schema migrations are often used to adapt the database structure to evolving application needs.
+
+#### Migration-Based Migration
+
+Migration-based migration is a process that involves transferring data from one database to another, often between different database management systems (DBMS). This type of migration is essential when organizations need to upgrade their systems, consolidate databases, or transition to new technologies. It typically includes transferring data, schema, and relationships while ensuring data integrity and compatibility with the new system.
+
+#### State-Based Migration
+
+State-based migration is a process that focuses on modifying the structure of an existing database without changing the underlying data. It involves altering tables, adding or removing columns, and updating relationships to accommodate new application requirements or optimize performance. This type of migration is essential for adapting the database structure to evolving application needs and ensuring that the database remains efficient and effective in supporting application functionality.
+
+#### Schema Migration
+
+Schema migration is a process that specifically deals with changes to the database schema, such as adding new tables, modifying existing ones, or changing relationships between tables. Schema migrations are often used to adapt the database structure to evolving application needs. They can involve creating new tables, altering existing tables, or modifying relationships between tables to ensure that the database can support new features or improve performance.
+
 ## Next Steps
 
 ### Immediate Actions
 
-| Priority   | Action                                                                                                         | Purpose                                                      |
-| ---------- | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| Priority   | Action                                                                                                         | Purpose                                                                            |
+| ---------- | -------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
 | **High**   | [Relational Database Concepts](/db-different-databases-and-their-foundational-concepts/relational-databases)   | Build foundational knowledge of relational database principles and ACID properties |
-| **High**   | [Non-Relational Database Concepts](/db-different-databases-and-their-foundational-concepts/db-noSQL-databases) | Explore NoSQL database types and their specific use cases |
-| **Medium** | [Introduction to Object Relational Mappers (ORMs)](/db-object-relational-mappers-fundamentals)                 | Learn how ORMs bridge the gap between code and databases |
+| **High**   | [Non-Relational Database Concepts](/db-different-databases-and-their-foundational-concepts/db-noSQL-databases) | Explore NoSQL database types and their specific use cases                          |
+| **Medium** | [Introduction to Object Relational Mappers (ORMs)](/db-object-relational-mappers-fundamentals)                 | Learn how ORMs bridge the gap between code and databases                           |
 
 ### Optional Actions
 
-| Action                                                                                                        | Purpose                                             |
-| ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
-| [Documentation and Schema Visualization Tools](/util-documentation-and-schema-visualization-tools)            | Discover tools for creating ERDs and documenting database schemas |
-| [Schema Migration and Version Control Tools](/util-schema-migration-and-version-control)                      | Learn tools for managing database schema changes over time |
+| Action                                                                                                        | Purpose                                                             |
+| ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| [Documentation and Schema Visualization Tools](/util-documentation-and-schema-visualization-tools)            | Discover tools for creating ERDs and documenting database schemas   |
+| [Schema Migration and Version Control Tools](/util-schema-migration-and-version-control)                      | Learn tools for managing database schema changes over time          |
 | [Object Relational Mapping (ORM) and Query Builder Tools](/util-object-relational-mapping-and-query-builders) | Explore practical tools for database interaction and query building |
 
 <BackToTop />
