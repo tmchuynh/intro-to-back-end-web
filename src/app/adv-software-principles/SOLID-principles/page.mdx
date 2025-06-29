@@ -1,0 +1,44 @@
+import BackToTop from "@/components/BackToTop";
+
+# SOLID Principles
+
+## Table of Contents
+
+## Introduction to SOLID Principles
+
+SOLID is an acronym that represents five key principles of object-oriented programming and design. These principles aim to make software designs more understandable, flexible, and maintainable. By adhering to SOLID principles, developers can create systems that are easier to manage and extend over time.
+
+## The Five SOLID Principles
+
+### Single Responsibility Principle (SRP)
+
+The Single Responsibility Principle states that a class should have only one reason to change, meaning it should have only one job or responsibility. This principle helps to reduce the complexity of classes and makes them easier to understand and maintain. When a class has multiple responsibilities, it becomes harder to modify or extend without affecting other parts of the system.
+
+For example, if a class handles both user authentication and data storage, it violates SRP.
+Instead, these responsibilities should be separated into different classes, such as `UserAuthenticator` and `DataStorage`. This way, each class has a single responsibility, making the codebase cleaner and easier to manage.
+
+### Open/Closed Principle (OCP)
+
+The Open/Closed Principle states that software entities (classes, modules, functions, etc.) should be open for extension but closed for modification. This means that you should be able to add new functionality to a system without changing existing code. This principle encourages the use of interfaces and abstract classes, allowing developers to extend functionality by creating new classes that implement or inherit from existing ones.
+
+For example, if you have a class that calculates the area of different shapes, you can create a base class `Shape` and then extend it with subclasses like `Circle`, `Square`, and `Triangle`. Each subclass can implement its own area calculation method without modifying the base class. This way, you can add new shapes in the future without changing the existing code, adhering to the Open/Closed Principle.
+
+### Liskov Substitution Principle (LSP)
+
+The Liskov Substitution Principle states that objects of a superclass should be replaceable with objects of a subclass without affecting the correctness of the program. In other words, if a class is a subclass of another class, it should be able to stand in for its superclass without causing errors or unexpected behavior. This principle ensures that subclasses maintain the behavior expected by the superclass.
+
+For example, if you have a class `Bird` with a method `fly()`, and you create a subclass `Penguin` that cannot fly, it violates LSP. Instead of inheriting from `Bird`, you should create a separate class hierarchy for flightless birds. This way, the `Penguin` class does not inherit the `fly()` method, and it can be used interchangeably with other bird classes without causing issues.
+
+### Interface Segregation Principle (ISP)
+
+The Interface Segregation Principle states that no client should be forced to depend on methods it does not use. This principle encourages the creation of small, specific interfaces rather than large, general-purpose ones. By doing so, you can avoid forcing classes to implement methods that are irrelevant to their functionality, leading to cleaner and more maintainable code.
+
+For example, if you have a large interface `Vehicle` with methods like `drive()`, `fly()`, and `sail()`, a class `Car` that implements this interface would be forced to implement the `fly()` and `sail()` methods, which are not applicable. Instead, you should create smaller interfaces like `Drivable`, `Flyable`, and `Sailable`. The `Car` class can then implement only the `Drivable` interface, while other classes like `Airplane` and `Boat` can implement the `Flyable` and `Sailable` interfaces, respectively. This way, each class only depends on the methods it actually uses, adhering to the Interface Segregation Principle.
+
+### Dependency Inversion Principle (DIP)
+
+The Dependency Inversion Principle states that high-level modules should not depend on low-level modules; both should depend on abstractions. Additionally, abstractions should not depend on details; details should depend on abstractions. This principle encourages the use of interfaces or abstract classes to decouple high-level and low-level components, making the system more flexible and easier to test.
+
+For example, if you have a class `OrderProcessor` that directly depends on a class `PaymentService`, it violates DIP. Instead, you should create an interface `PaymentServiceInterface` that defines the methods for processing payments. The `OrderProcessor` can then depend on this interface rather than the concrete `PaymentService` class. This way, you can easily swap out different payment services without changing the `OrderProcessor` class, adhering to the Dependency Inversion Principle.
+
+<BackToTop />
