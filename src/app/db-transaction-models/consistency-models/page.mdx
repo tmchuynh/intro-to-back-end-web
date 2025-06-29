@@ -1,0 +1,167 @@
+import BackToTop from "@/components/BackToTop";
+
+# Consistency Models
+
+## Table of Contents
+
+## Overview
+
+Consistency models define the guarantees provided by a database system regarding the visibility of changes made by transactions. They are crucial for ensuring that all users see a consistent view of the data, especially in distributed systems. They help manage how and when changes made by one transaction become visible to others, which is essential for maintaining data integrity and correctness in applications. Different consistency models offer varying trade-offs between performance, availability, and the strictness of consistency.
+
+## Key Concepts
+
+- **Consistency**: Ensures that a database remains in a valid state after transactions, adhering to predefined rules and constraints.
+- **Visibility**: Refers to when changes made by one transaction become visible to others.
+- **Trade-offs**: Different models balance consistency, availability, and performance in various ways.
+
+## Types of Consistency Models
+
+- **Strong Consistency**: Guarantees that all transactions see the same data at the same time, ensuring immediate visibility of changes.
+- **Weak Consistency**: Allows for temporary inconsistencies, where changes may not be immediately visible to all transactions, but will eventually become consistent.
+- **Eventual Consistency**: A form of weak consistency where the system guarantees that if no new updates are made, eventually all accesses will return the last updated value. This model is often used in distributed systems to improve availability and performance.
+
+## Common Consistency Models
+
+- **Linearizability**: A strong consistency model that ensures operations appear to occur instantaneously at some point between their start and end times.
+- **Sequential Consistency**: Ensures that the result of execution is the same as if all operations were executed in some sequential order, but does not require that this order be the same for all users.
+- **Causal Consistency**: Ensures that operations that are causally related are seen by all users in the same order, while allowing concurrent operations to be seen in different orders by different users.
+- **Read Your Writes**: Guarantees that a transaction will always see its own writes, ensuring that once a transaction has written data, it can read that data in subsequent operations.
+- **Monotonic Reads**: Ensures that if a transaction reads a value, any subsequent reads will return that value or a more recent one, preventing "stale" reads.
+- **Monotonic Writes**: Guarantees that writes by a transaction will be seen in the order they were issued, preventing out-of-order writes.
+
+### Linearizability
+
+Linearizability is a strong consistency model that provides the illusion that all operations on a data structure occur instantaneously at some point between their start and end times. This means that once a write operation completes, all subsequent read operations will see that write, ensuring a consistent view of the data across all transactions.
+
+#### Example
+
+```sql title="Linearizability in a Distributed System"
+BEGIN TRANSACTION;
+UPDATE accounts SET balance = balance - 100 WHERE account_id = 1;
+UPDATE accounts SET balance = balance + 100 WHERE account_id = 2;
+COMMIT TRANSACTION;
+```
+
+In this example, once the transaction is committed, any subsequent read operation on either account will reflect the updated balances, ensuring that all users see a consistent view of the data.
+
+### Sequential Consistency
+
+Sequential consistency is a consistency model that ensures the result of execution is the same as if all operations were executed in some sequential order. However, this model does not require that this order be the same for all users. It allows for concurrent operations to be seen in different orders by different users, as long as the overall result is consistent with some sequential order.
+
+#### Example
+
+```sql title="Sequential Consistency in a Distributed System"
+BEGIN TRANSACTION;
+UPDATE accounts SET balance = balance - 50 WHERE account_id = 1;
+UPDATE accounts SET balance = balance + 50 WHERE account_id = 2;
+COMMIT TRANSACTION;
+```
+
+In this example, the updates to the accounts can be seen in different orders by different users, but the overall effect is that the total balance remains consistent. If one user sees the first update before the second, another user might see the second update before the first, but both will agree on the final balances after the transaction is committed.
+
+### Causal Consistency
+
+Causal consistency is a consistency model that ensures operations that are causally related are seen by all users in the same order, while allowing concurrent operations to be seen in different orders by different users.
+This model is particularly useful in distributed systems where operations may occur independently but still have causal relationships.
+
+#### Example
+
+```sql title="Causal Consistency in a Distributed System"
+BEGIN TRANSACTION;
+UPDATE accounts SET balance = balance - 30 WHERE account_id = 1; -- Operation A
+UPDATE accounts SET balance = balance + 30 WHERE account_id = 2; -- Operation B
+COMMIT TRANSACTION;
+```
+
+In this example, if Operation A causally precedes Operation B, all users will see Operation A before Operation B. However, if there are concurrent operations that do not have a causal relationship, different users may see these operations in different orders. For instance, one user might see Operation A before Operation B, while another user might see Operation B before Operation A, as long as the causal relationship is maintained.
+
+### Read Your Writes
+
+Read Your Writes is a consistency model that guarantees that a transaction will always see its own writes. This means that once a transaction has written data, it can read that data in subsequent operations, ensuring that the transaction has a consistent view of its own changes.
+
+#### Example
+
+```sql title="Read Your Writes in a Transaction"
+BEGIN TRANSACTION;
+UPDATE accounts SET balance = balance - 20 WHERE account_id = 1; -- Write Operation
+SELECT balance FROM accounts WHERE account_id = 1; -- Read Operation
+COMMIT TRANSACTION;
+```
+
+In this example, after the write operation that updates the balance of account 1, the subsequent read operation will always return the updated balance. This ensures that the transaction has a consistent view of its own changes, preventing scenarios where a transaction reads stale data that it has just written.
+
+### Monotonic Reads
+
+Monotonic Reads is a consistency model that ensures if a transaction reads a value, any subsequent reads will return that value or a more recent one. This prevents "stale" reads, where a transaction might read an older version of the data after having read a newer version.
+
+#### Example
+
+```sql title="Monotonic Reads in a Transaction"
+BEGIN TRANSACTION;
+SELECT balance FROM accounts WHERE account_id = 1; -- Initial Read
+UPDATE accounts SET balance = balance + 10 WHERE account_id = 1; -- Update Operation
+SELECT balance FROM accounts WHERE account_id = 1; -- Subsequent Read
+COMMIT TRANSACTION;
+```
+
+In this example, the first read operation retrieves the initial balance of account 1. After the update operation, the subsequent read operation will either return the same balance or a more recent one, ensuring that the transaction does not read stale data. This guarantees that once a transaction has read a value, any future reads will not return an older version of that value, maintaining a consistent view of the data.
+
+### Monotonic Writes
+
+Monotonic Writes is a consistency model that guarantees that writes by a transaction will be seen in the order they were issued. This prevents out-of-order writes, ensuring that if a transaction issues multiple writes, they will be applied in the same order to all users.
+
+#### Example
+
+```sql title="Monotonic Writes in a Transaction"
+BEGIN TRANSACTION;
+UPDATE accounts SET balance = balance - 10 WHERE account_id = 1; -- First Write
+UPDATE accounts SET balance = balance + 10 WHERE account_id = 2; -- Second Write
+COMMIT TRANSACTION;
+```
+
+In this example, the first write operation updates the balance of account 1, and the second write operation updates the balance of account 2. The monotonic writes model ensures that all users will see these writes in the same order: first the update to account 1, then the update to account 2. This prevents scenarios where one user might see the second write before the first, maintaining a consistent order of operations across all users.
+
+## Practical Implications
+
+- **Application Design**: Understanding consistency models helps developers design applications that can handle data correctly under different conditions, especially in distributed systems.
+- **Performance Considerations**: Different models can impact the performance of applications, as stronger consistency models often require more coordination and can lead to increased latency.
+- **Trade-offs**: Choosing the right consistency model involves trade-offs between consistency, availability, and performance, depending on the specific requirements of the application.
+
+### Application
+
+```sql title="Example of Consistency Model in a Distributed System"
+BEGIN TRANSACTION;
+UPDATE accounts SET balance = balance - 50 WHERE account_id = 1; -- Write Operation
+UPDATE accounts SET balance = balance + 50 WHERE account_id = 2; -- Write Operation
+SELECT balance FROM accounts WHERE account_id = 1; -- Read Operation
+SELECT balance FROM accounts WHERE account_id = 2; -- Read Operation
+COMMIT TRANSACTION;
+```
+
+In this example, the transaction updates the balances of two accounts and then reads their values. Depending on the consistency model in use, the visibility of these changes may vary. For instance, if using linearizability, all users will see the updated balances immediately after the transaction commits. In contrast, if using eventual consistency, some users may see the old balances until the system converges to a consistent state.
+
+## Choosing a Consistency Model
+
+When selecting a consistency model, consider the following factors:
+
+- **Application Requirements**: Determine the level of consistency needed for your application. For example, financial applications may require strong consistency, while social media applications may tolerate eventual consistency.
+- **Performance Needs**: Assess the performance implications of different models. Strong consistency models may introduce latency due to the need for coordination, while weaker models may allow for higher throughput and lower latency.
+- **Data Distribution**: In distributed systems, consider how data is partitioned and replicated.
+- **User Experience**: Understand how different consistency models affect user experience, especially in applications where users expect real-time updates or immediate feedback on their actions.
+
+## Next Steps
+
+### Immediate Actions
+
+| Priority | Action                                                                  | Purpose                                               |
+| -------- | ----------------------------------------------------------------------- | ----------------------------------------------------- |
+| **High** | [Transaction Management](/db-transaction-models/transaction-management) | Master transaction handling within ORM frameworks     |
+| **High** | [Concurrency Control](/db-transaction-models/concurrency-control)       | Prevent data conflicts in multi-user ORM applications |
+
+### Optional Actions
+
+| Action                                                                                                                             | Purpose                                                        |
+| ---------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| [Development Resources and Tools for Back-End Development](/util-general-development-resources-and-tools-for-back-end-development) | Explore essential tools and frameworks for backend development |
+
+<BackToTop />
