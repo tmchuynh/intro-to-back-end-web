@@ -38,6 +38,8 @@ Resource-oriented design treats API functionality as operations on resources rat
 
 Resources represent entities or collections that clients can interact with through standard operations. Each resource has a unique identifier, a defined set of properties, and supported operations that map to HTTP methods. This design pattern promotes consistency and leverages existing HTTP infrastructure and tooling.
 
+<BackToTop />
+
 ## Common API Design Patterns
 
 ### RESTful APIs
@@ -58,7 +60,7 @@ Every HTTP request from client to server must contain all information necessary 
 
 Example of stateless request structure:
 
-```http
+```http title="Stateless HTTP Request Example"
 GET /api/v1/users/123/orders?status=pending&page=2 HTTP/1.1
 Host: api.example.com
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
@@ -71,7 +73,7 @@ Resources are the fundamental concept in REST. Each resource represents an entit
 
 Resource URL examples:
 
-```
+```txt title="RESTful Resource URL Patterns"
 GET /api/v1/users                    # Collection of users
 GET /api/v1/users/123                # Specific user
 GET /api/v1/users/123/orders         # User's orders
@@ -86,7 +88,7 @@ REST APIs use a uniform interface consisting of standard HTTP methods, each with
 
 HTTP method usage patterns:
 
-```
+```txt title="HTTP Methods and Their Usage"
 GET /api/v1/users          # Retrieve all users
 POST /api/v1/users         # Create new user
 GET /api/v1/users/123      # Retrieve specific user
@@ -101,7 +103,7 @@ Resources can have multiple representations (JSON, XML, HTML) and clients can re
 
 Content negotiation example:
 
-```http
+```http title="Content Negotiation with Accept Headers"
 GET /api/v1/users/123 HTTP/1.1
 Accept: application/json, application/xml;q=0.9
 
@@ -124,7 +126,7 @@ HATEOAS is a constraint of REST that requires responses to include links to rela
 
 HATEOAS response example:
 
-```json
+```json title="HATEOAS Response with Hypermedia Links"
 {
   "id": 123,
   "name": "John Doe",
@@ -157,7 +159,7 @@ REST APIs should use appropriate HTTP status codes and provide detailed error in
 
 Standardized error response format:
 
-```json
+```json title="Standardized REST API Error Response"
 {
   "error": {
     "code": "VALIDATION_ERROR",
@@ -174,6 +176,8 @@ Standardized error response format:
   }
 }
 ```
+
+<BackToTop />
 
 ### GraphQL
 
@@ -193,7 +197,7 @@ GraphQL uses a Schema Definition Language (SDL) to define the structure of the A
 
 Example GraphQL schema:
 
-```graphql
+```graphql title="GraphQL Schema Definition Example"
 type User {
   id: ID!
   name: String!
@@ -237,7 +241,7 @@ Clients use GraphQL's query language to specify exactly what data they need, inc
 
 Example GraphQL query:
 
-```graphql
+```graphql title="GraphQL Query with Nested Data Selection"
 query GetUserWithPosts($userId: ID!) {
   user(id: $userId) {
     id
@@ -259,7 +263,7 @@ query GetUserWithPosts($userId: ID!) {
 
 Query response:
 
-```json
+```json title="GraphQL Query Response"
 {
   "data": {
     "user": {
@@ -289,7 +293,7 @@ GraphQL supports mutations for modifying data and subscriptions for real-time up
 
 Mutation example:
 
-```graphql
+```graphql title="GraphQL Mutation for Creating Posts"
 mutation CreatePost($input: CreatePostInput!) {
   createPost(input: $input) {
     id
@@ -305,7 +309,7 @@ mutation CreatePost($input: CreatePostInput!) {
 
 Subscription example:
 
-```graphql
+```graphql title="GraphQL Subscription for Real-time Updates"
 subscription PostUpdates($authorId: ID!) {
   postUpdated(authorId: $authorId) {
     id
@@ -330,6 +334,8 @@ GraphQL queries can become complex and may be difficult to cache compared to RES
 
 Security considerations include query complexity analysis and depth limiting to prevent malicious queries from overwhelming the server. Additionally, file uploads and caching strategies require special handling in GraphQL compared to REST.
 
+<BackToTop />
+
 ### gRPC
 
 #### Overview and Use Cases
@@ -346,7 +352,7 @@ gRPC uses Protocol Buffers to define service interfaces and message structures. 
 
 Example .proto file definition:
 
-```protobuf
+```protobuf title="gRPC Service Definition with Protocol Buffers"
 syntax = "proto3";
 
 package user.v1;
@@ -385,13 +391,15 @@ message CreateUserRequest {
 }
 ```
 
+<BackToTop />
+
 #### gRPC Communication Patterns
 
 ##### Unary RPC
 
 Simple request-response pattern similar to function calls.
 
-```protobuf
+```protobuf title="gRPC Unary RPC Pattern"
 rpc GetUser(GetUserRequest) returns (User);
 ```
 
@@ -399,7 +407,7 @@ rpc GetUser(GetUserRequest) returns (User);
 
 Server sends multiple responses for a single client request.
 
-```protobuf
+```protobuf title="gRPC Server Streaming Pattern"
 rpc ListUsers(ListUsersRequest) returns (stream User);
 ```
 
@@ -407,7 +415,7 @@ rpc ListUsers(ListUsersRequest) returns (stream User);
 
 Client sends multiple requests and server responds with a single response.
 
-```protobuf
+```protobuf title="gRPC Client Streaming Pattern"
 rpc CreateMultipleUsers(stream CreateUserRequest) returns (CreateUsersResponse);
 ```
 
@@ -415,7 +423,7 @@ rpc CreateMultipleUsers(stream CreateUserRequest) returns (CreateUsersResponse);
 
 Both client and server can send multiple messages asynchronously.
 
-```protobuf
+```protobuf title="gRPC Bidirectional Streaming Pattern"
 rpc ChatService(stream ChatMessage) returns (stream ChatMessage);
 ```
 
@@ -424,6 +432,8 @@ rpc ChatService(stream ChatMessage) returns (stream ChatMessage);
 gRPC's use of Protocol Buffers provides significant performance advantages over JSON-based APIs. Protocol Buffers generate compact binary representations that are faster to serialize and deserialize compared to text-based formats.
 
 The HTTP/2 foundation enables features like multiplexing, header compression, and efficient connection reuse. This results in lower latency and better resource utilization, especially in high-throughput scenarios with many concurrent requests.
+
+<BackToTop />
 
 ## API Architecture Styles
 
@@ -457,6 +467,8 @@ Many real-world systems combine multiple API styles to balance simplicity and fl
 
 Hybrid approaches allow teams to choose the most appropriate technology for each use case while maintaining consistency where needed. API gateways can provide unified interfaces and handle protocol translation between different API styles.
 
+<BackToTop />
+
 ## Important Considerations
 
 ### API Versioning
@@ -475,7 +487,7 @@ URL path versioning embeds the version number directly in the API endpoint path.
 
 URL versioning examples:
 
-```
+```txt title="API URL Path Versioning Examples"
 https://api.example.com/v1/users
 https://api.example.com/v2/users
 https://api.example.com/v3/users
@@ -489,7 +501,7 @@ Header versioning uses custom HTTP headers to specify the desired API version, k
 
 Header versioning examples:
 
-```http
+```http title="API Header-based Versioning Examples"
 GET /api/users HTTP/1.1
 Host: api.example.com
 API-Version: 2.0
@@ -509,7 +521,7 @@ Query parameter versioning adds version information as URL parameters, providing
 
 Query parameter examples:
 
-```
+```txt title="API Query Parameter Versioning Examples"
 https://api.example.com/users?version=2.0
 https://api.example.com/users?v=2
 ```
@@ -521,6 +533,8 @@ This method is simple to implement but can clutter URLs and may interfere with c
 Successful API versioning requires clear policies for version introduction, deprecation, and retirement. Version lifecycle management includes communication strategies, migration timelines, and support commitments.
 
 Deprecation policies should provide adequate notice periods, clear migration guides, and monitoring of version usage to inform retirement decisions. Semantic versioning principles can help communicate the nature and impact of changes.
+
+<BackToTop />
 
 ### Authentication and Authorization
 
@@ -534,7 +548,7 @@ API keys provide a simple authentication mechanism suitable for server-to-server
 
 API key implementation:
 
-```http
+```http title="API Key Authentication Example"
 GET /api/v1/users HTTP/1.1
 Host: api.example.com
 X-API-Key: sk_live_51234567890abcdef
@@ -548,7 +562,7 @@ OAuth 2.0 provides a robust framework for delegated authorization, allowing appl
 
 OAuth 2.0 authorization code flow:
 
-```http
+```http title="OAuth 2.0 Authorization Code Flow"
 # Step 1: Authorization request
 GET /oauth/authorize?response_type=code&client_id=CLIENT_ID&redirect_uri=REDIRECT_URI&scope=read:users HTTP/1.1
 
@@ -571,12 +585,14 @@ JWT tokens provide a stateless authentication mechanism that encodes user inform
 
 JWT token structure and usage:
 
-```http
+```http title="JWT Token Authentication Example"
 GET /api/v1/users/profile HTTP/1.1
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE1MTYyNDI2MjJ9.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
 ```
 
 JWT tokens support claims-based authorization, cross-domain authentication, and mobile-friendly stateless operation. However, they require careful key management and have limited revocation capabilities.
+
+<BackToTop />
 
 #### Authorization Models
 
@@ -586,7 +602,7 @@ RBAC assigns permissions to roles and associates users with roles, simplifying p
 
 RBAC implementation example:
 
-```json
+```json title="Role-Based Access Control (RBAC) Token"
 {
   "user_id": "123",
   "roles": ["user", "moderator"],
@@ -605,11 +621,13 @@ ABAC uses attributes of users, resources, and environment to make authorization 
 
 ABAC policy example:
 
-```json
+```json title="Attribute-Based Access Control (ABAC) Policy"
 {
   "policy": "Allow user to read document if user.department == document.department AND user.clearance >= document.classification"
 }
 ```
+
+<BackToTop />
 
 ### Error Handling
 
@@ -619,7 +637,7 @@ Consistent error handling improves developer experience by providing predictable
 
 Comprehensive error response structure:
 
-```json
+```json title="Comprehensive Error Response Structure"
 {
   "error": {
     "code": "VALIDATION_ERROR",
@@ -645,7 +663,7 @@ Proper HTTP status code usage helps clients understand response types and implem
 
 Status code categories and usage:
 
-```
+```txt title="HTTP Status Code Categories and Usage"
 2xx Success:
 - 200 OK: Standard success response
 - 201 Created: Resource successfully created
@@ -670,7 +688,7 @@ APIs should provide guidance for error recovery through appropriate status codes
 
 Retry guidance in responses:
 
-```http
+```http title="Rate Limiting Response with Retry Headers"
 HTTP/1.1 429 Too Many Requests
 Retry-After: 60
 X-RateLimit-Limit: 1000
@@ -686,6 +704,8 @@ X-RateLimit-Reset: 1701944400
 }
 ```
 
+<BackToTop />
+
 ## Security and Authentication
 
 ### Input Validation and Sanitization
@@ -700,7 +720,7 @@ Schema-based validation uses formal schemas to define expected input structure a
 
 JSON Schema validation example:
 
-```json
+```json title="JSON Schema Validation Example"
 {
   "type": "object",
   "properties": {
@@ -732,7 +752,7 @@ Parameterized queries prevent SQL injection attacks by separating SQL code from 
 
 Secure query examples:
 
-```sql
+```sql title="Secure vs Insecure Database Query Examples"
 -- Secure: Parameterized query
 SELECT * FROM users WHERE email = $1 AND status = $2;
 
@@ -752,7 +772,7 @@ The token bucket algorithm allows burst traffic while maintaining average rate l
 
 Token bucket implementation concept:
 
-```
+```txt title="Token Bucket Rate Limiting Algorithm"
 Bucket capacity: 100 tokens
 Refill rate: 10 tokens per second
 Request cost: 1 token per request
@@ -778,7 +798,7 @@ Rate limiting responses should include headers that inform clients about their u
 
 Rate limiting headers:
 
-```http
+```http title="Rate Limiting Response Headers"
 HTTP/1.1 200 OK
 X-RateLimit-Limit: 1000
 X-RateLimit-Remaining: 999
@@ -792,6 +812,8 @@ APIs handling personal data must comply with privacy regulations such as GDPR, C
 
 Privacy considerations include data collection transparency, purpose limitation, retention policies, and cross-border data transfer restrictions. APIs should implement privacy by design principles from the development phase.
 
+<BackToTop />
+
 ## Performance and Scalability
 
 ### Caching Strategies
@@ -804,7 +826,7 @@ HTTP caching leverages browser and proxy caches using standard HTTP headers. Thi
 
 HTTP caching headers:
 
-```http
+```http title="HTTP Caching Headers Example"
 HTTP/1.1 200 OK
 Cache-Control: public, max-age=3600, must-revalidate
 ETag: "user-123-v5"
@@ -820,7 +842,7 @@ Vary: Accept, Authorization
 
 Conditional requests using ETags:
 
-```http
+```http title="HTTP Conditional Requests with ETags"
 GET /api/v1/users/123 HTTP/1.1
 If-None-Match: "user-123-v5"
 
@@ -835,7 +857,7 @@ Application-level caching stores computed results, database query results, or ex
 
 Redis caching implementation:
 
-```bash
+```bash title="Redis Application-Level Caching Commands"
 # Cache user data with expiration
 SET user:123 '{"id":123,"name":"John Doe","email":"john.doe@example.com"}' EX 3600
 
@@ -845,6 +867,8 @@ SET query:users:active:page:1 '[{"id":1,"name":"User 1"},{"id":2,"name":"User 2"
 # Cache with tags for invalidation
 SADD cache:tags:user:123 "user:123" "user:123:profile" "user:123:orders"
 ```
+
+<BackToTop />
 
 ### Database Optimization
 
@@ -856,7 +880,7 @@ Efficient database queries minimize resource usage and improve response times. T
 
 Optimized query patterns:
 
-```sql
+```sql title="Optimized Database Query Patterns"
 -- Efficient: Single query with joins
 SELECT u.id, u.name, u.email,
        COUNT(o.id) as order_count,
@@ -880,7 +904,7 @@ Connection pooling manages database connections efficiently by reusing existing 
 
 Connection pool configuration considerations:
 
-```
+```txt title="Database Connection Pool Configuration"
 Pool size: Balance between resource usage and concurrency
 Connection lifetime: Prevent stale connections
 Connection validation: Ensure connection health
@@ -897,7 +921,7 @@ Horizontal scaling adds more server instances to handle increased load. This app
 
 Load balancing algorithms:
 
-```
+```txt title="Load Balancing Algorithm Types"
 Round Robin: Requests distributed equally across servers
 Least Connections: Route to server with fewest active connections
 Weighted Round Robin: Account for server capacity differences
@@ -910,12 +934,14 @@ Auto-scaling automatically adjusts the number of server instances based on deman
 
 Auto-scaling metrics and thresholds:
 
-```
+```txt title="Auto-scaling Configuration Metrics"
 CPU utilization > 70% for 5 minutes: Scale up
 Memory usage > 80% for 3 minutes: Scale up
 Request queue length > 100: Scale up
 CPU utilization < 30% for 10 minutes: Scale down
 ```
+
+<BackToTop />
 
 ## API Documentation and Developer Experience
 
@@ -929,7 +955,7 @@ OpenAPI (formerly Swagger) provides a standardized format for describing REST AP
 
 OpenAPI specification example:
 
-```yaml
+```yaml title="Complete OpenAPI 3.0 Specification Example"
 openapi: 3.0.3
 info:
   title: User Management API
@@ -1040,13 +1066,15 @@ Modern documentation platforms provide rich, interactive experiences that go bey
 
 Documentation platform features:
 
-```
+```txt title="Interactive Documentation Platform Features"
 Interactive testing: Execute API calls directly from documentation
 Code examples: Generated client code in multiple languages
 Authentication handling: Support for various auth methods
 Response visualization: Formatted response display
 Schema exploration: Interactive model browsing
 ```
+
+<BackToTop />
 
 ### Code Examples and SDKs
 
@@ -1058,7 +1086,7 @@ Code examples should cover popular programming languages and demonstrate real-wo
 
 JavaScript/Node.js example:
 
-```javascript
+```javascript title="JavaScript/Node.js API Client Implementation"
 const apiClient = require("./api-client");
 
 // Initialize client with authentication
@@ -1087,7 +1115,7 @@ async function createUser(userData) {
 
 Python example:
 
-```python
+```python title="Python API Client Implementation"
 import requests
 from typing import Optional, Dict, Any
 
@@ -1126,7 +1154,7 @@ Changelogs should follow consistent formatting and categorize changes by impact 
 
 Changelog example format:
 
-```markdown
+```markdown title="API Changelog Structure and Format"
 # API Changelog
 
 ## Version 2.1.0 - 2023-12-07
@@ -1154,6 +1182,8 @@ Changelog example format:
 None in this release.
 ```
 
+<BackToTop />
+
 ## Testing and Quality Assurance
 
 ### Automated Testing Strategies
@@ -1166,7 +1196,7 @@ Unit tests verify individual API components in isolation, including business log
 
 Unit test example (JavaScript with Jest):
 
-```javascript
+```javascript title="Jest Unit Tests for API Validation"
 // tests/validation.test.js
 const { validateUserInput } = require("../src/validation");
 
@@ -1209,13 +1239,15 @@ describe("User Input Validation", () => {
 });
 ```
 
+<BackToTop />
+
 #### Integration Testing
 
 Integration tests verify that API endpoints work correctly with real dependencies including databases, external services, and authentication systems.
 
 Integration test example (Python with pytest):
 
-```python
+```python title="Python Pytest Integration Tests for API"
 # tests/test_user_api.py
 import pytest
 import requests
@@ -1285,13 +1317,15 @@ class TestUserAPI:
         assert data['pagination']['limit'] == 5
 ```
 
+<BackToTop />
+
 #### Load Testing
 
 Load testing evaluates API performance under expected and peak traffic conditions. This helps identify bottlenecks and capacity limits.
 
 Load test example using Artillery:
 
-```yaml
+```yaml title="Artillery Load Testing Configuration"
 # load-test.yml
 config:
   target: "https://api.example.com/v2"
@@ -1342,6 +1376,8 @@ scenarios:
             page: "{{ $randomInt(1, 5) }}"
 ```
 
+<BackToTop />
+
 ### API Testing Tools
 
 Modern API testing tools provide comprehensive testing capabilities including functional testing, performance testing, and automated test generation.
@@ -1352,7 +1388,7 @@ Postman enables comprehensive API testing with automated test scripts, environme
 
 Postman test script example:
 
-```javascript
+```javascript title="Postman Test Script for User Creation Endpoint"
 // Test script for user creation endpoint
 pm.test("Status code is 201", function () {
   pm.response.to.have.status(201);
@@ -1392,13 +1428,15 @@ pm.test("Set user ID variable", function () {
 });
 ```
 
+<BackToTop />
+
 #### Contract Testing
 
 Contract testing ensures API compatibility between services by defining and validating API contracts.
 
 Pact contract testing example:
 
-```javascript
+```javascript title="Pact Contract Testing for Consumer-Provider API"
 // consumer-contract.test.js
 const { Pact } = require("@pact-foundation/pact");
 const { getUserById } = require("../src/userService");
@@ -1466,6 +1504,8 @@ describe("User API Contract", () => {
 });
 ```
 
+<BackToTop />
+
 ## Best Practices
 
 ### Consistency and Standards
@@ -1478,7 +1518,7 @@ Consistent naming conventions improve API usability and reduce confusion. Resour
 
 Resource naming guidelines:
 
-```
+```txt title="API Resource Naming Convention Guidelines"
 Resources: Use nouns, not verbs
   Good: /users, /orders, /products
   Bad: /getUsers, /createOrder, /deleteProduct
@@ -1498,7 +1538,7 @@ Case convention: Use kebab-case for URLs
 
 Field naming conventions:
 
-```json
+```json title="JSON Field Naming Convention Example"
 {
   "user_id": 12345,
   "first_name": "John",
@@ -1519,7 +1559,7 @@ Proper HTTP method usage ensures semantic clarity and enables appropriate client
 
 HTTP method guidelines:
 
-```
+```txt title="HTTP Method Usage Guidelines"
 GET: Retrieve data, idempotent, cacheable
   Example: GET /users/123
 
@@ -1539,6 +1579,8 @@ HEAD: Get headers only, idempotent
   Example: HEAD /users/123 (check if user exists)
 ```
 
+<BackToTop />
+
 ### Performance Optimization
 
 API performance directly impacts user experience and system scalability. Performance optimization requires attention to response times, resource usage, and scalability patterns.
@@ -1549,7 +1591,7 @@ Optimizing API responses reduces bandwidth usage and improves client performance
 
 Field selection implementation:
 
-```
+```txt title="API Field Selection Query Examples"
 # Request specific fields only
 GET /users/123?fields=id,name,email
 
@@ -1576,7 +1618,7 @@ GET /users/123?fields=id,name,profile(avatar_url,bio)
 
 Response compression configuration:
 
-```http
+```http title="HTTP Response Compression Configuration"
 # Client request with compression support
 GET /users HTTP/1.1
 Accept-Encoding: gzip, deflate, br
@@ -1594,7 +1636,7 @@ Efficient pagination enables handling large datasets without overwhelming client
 
 Cursor-based pagination for large datasets:
 
-```
+```txt title="Cursor-based Pagination Implementation"
 # Request first page
 GET /users?limit=20
 
@@ -1614,7 +1656,7 @@ GET /users?limit=20&cursor=eyJpZCI6MTAwLCJjcmVhdGVkX2F0IjoiMjAyMy0xMi0wN1QxMDozM
 
 Offset-based pagination for smaller datasets:
 
-```
+```txt title="Offset-based Pagination Implementation"
 # Request specific page
 GET /users?page=3&limit=20
 
@@ -1632,6 +1674,8 @@ GET /users?page=3&limit=20
 }
 ```
 
+<BackToTop />
+
 ### Maintainability and Evolution
 
 APIs must evolve while maintaining backward compatibility and code quality. Maintainable APIs follow clear architectural patterns and support gradual enhancement.
@@ -1642,7 +1686,7 @@ Modular API design enables independent development, testing, and deployment of d
 
 Domain-driven design organization:
 
-```
+```txt title="Domain-Driven API Organization Structure"
 /api/v2/
 ├── users/           # User management domain
 │   ├── profiles     # User profiles
@@ -1660,7 +1704,7 @@ Domain-driven design organization:
 
 Microservices API boundaries:
 
-```
+```txt title="Microservices API Boundary Examples"
 User Service API:
 - GET /users
 - POST /users
@@ -1685,7 +1729,7 @@ Graceful deprecation strategies allow API evolution without breaking existing in
 
 Deprecation workflow:
 
-```
+```txt title="API Deprecation Management Workflow"
 1. Announce deprecation with timeline
 2. Add deprecation warnings to responses
 3. Provide migration guides and tools
@@ -1696,7 +1740,7 @@ Deprecation workflow:
 
 Deprecation header implementation:
 
-```http
+```http title="API Deprecation Response Headers"
 HTTP/1.1 200 OK
 Sunset: Wed, 31 Mar 2024 23:59:59 GMT
 Deprecation: true
@@ -1726,6 +1770,8 @@ Rate limiting is a technique used to control the number of requests a client can
 
 Rate limiting is an important aspect of API design that helps maintain the stability and performance of the API. By controlling the number of requests a client can make within a specified time period, rate limiting prevents abuse and ensures fair usage among clients. It protects the API from being overwhelmed by too many requests, which can lead to performance degradation or service outages. Common rate limiting strategies include fixed window, sliding window, and token bucket algorithms. Each strategy has its own advantages and trade-offs, and the choice depends on the specific requirements of the API and its expected usage patterns. Rate limiting can be implemented using HTTP headers to inform clients about their current usage and remaining quota. This allows clients to adjust their request rates accordingly and helps prevent them from exceeding their limits. Properly implemented rate limiting enhances the reliability and availability of the API, ensuring that it can handle varying levels of traffic without compromising performance or user experience.
 
+<BackToTop />
+
 ## Best Practices
 
 - Use consistent naming conventions for endpoints and parameters to improve readability and maintainability.
@@ -1747,23 +1793,23 @@ Next, you can explore [HTTP Protocol](/fund-foundation/HTTP-protocol) to underst
 
 ### Immediate Actions
 
-| Priority | Action                                                  | Purpose                         |
-| -------- | ------------------------------------------------------- | ------------------------------- |
-| **High**     | [HTTP Protocol](/fund-foundation/HTTP-protocol)         | Master HTTP methods, status codes, and headers for robust API communication |
-| **High**     | [Web Server Basics](/fund-foundation/web-server-basics) | Understand server architecture, deployment, and request handling |
-| **Medium**   | [RESTful Services](/fund-foundation/RESTful-services)   | Learn REST constraints, resource modeling, and API best practices |
+| Priority   | Action                                                  | Purpose                                                                     |
+| ---------- | ------------------------------------------------------- | --------------------------------------------------------------------------- |
+| **High**   | [HTTP Protocol](/fund-foundation/HTTP-protocol)         | Master HTTP methods, status codes, and headers for robust API communication |
+| **High**   | [Web Server Basics](/fund-foundation/web-server-basics) | Understand server architecture, deployment, and request handling            |
+| **Medium** | [RESTful Services](/fund-foundation/RESTful-services)   | Learn REST constraints, resource modeling, and API best practices           |
 
-Now that you have a solid understanding of API design concepts and patterns, you can apply these principles to create robust and efficient APIs for your applications. Consider exploring more advanced topics such as [API security](/adv-advanced-APIs/API-security), performance optimization, and [API management](/adv-advanced-APIs/API-management) to further enhance your skills.
+Now that you have a solid understanding of API design concepts and patterns, you can apply these principles to create robust and efficient APIs for your applications. Consider exploring more advanced topics such as [API security](/adv-advanced-APIs/API-security) and performance optimization to further enhance your skills.
 
 ### Optional Actions
 
-| Action                                                   | Purpose                            |
-| -------------------------------------------------------- | ---------------------------------- |
-| [API Security](/adv-advanced-APIs/API-security)          | Implement authentication, authorization, and API protection strategies   |
-| [API Management](/adv-advanced-APIs/API-management)      | Learn API lifecycle management, monitoring, and governance          |
-| [API Versioning](/adv-advanced-APIs/API-versioning)      | Master backward compatibility and API evolution strategies  |
-| [SOLID Principles](/adv-software-principles/SOLID-principles) | Understanding software design principles |
-| [Essential Vocabulary](/fund-vocabulary)                 | Build comprehensive technical terminology knowledge          |
-| [Learn the Abbreviations](/fund-essential-abbreviations) | Decode common industry acronyms and abbreviations |
+| Action                                                        | Purpose                                                                |
+| ------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| [API Security](/adv-advanced-APIs/API-security)               | Implement authentication, authorization, and API protection strategies |
+| [API Management](/util-API-management)                        | Learn API lifecycle management, monitoring, and governance             |
+| [API Versioning](/adv-advanced-APIs/API-versioning)           | Master backward compatibility and API evolution strategies             |
+| [SOLID Principles](/adv-software-principles/SOLID-principles) | Understanding software design principles                               |
+| [Essential Vocabulary](/fund-vocabulary)                      | Build comprehensive technical terminology knowledge                    |
+| [Learn the Abbreviations](/fund-essential-abbreviations)      | Decode common industry acronyms and abbreviations                      |
 
 <BackToTop />
