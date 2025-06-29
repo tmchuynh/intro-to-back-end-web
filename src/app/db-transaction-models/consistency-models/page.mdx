@@ -29,6 +29,8 @@ Consistency models define the guarantees provided by a database system regarding
 - **Monotonic Reads**: Ensures that if a transaction reads a value, any subsequent reads will return that value or a more recent one, preventing "stale" reads.
 - **Monotonic Writes**: Guarantees that writes by a transaction will be seen in the order they were issued, preventing out-of-order writes.
 
+<BackToTop />
+
 ### Linearizability
 
 Linearizability is a strong consistency model that provides the illusion that all operations on a data structure occur instantaneously at some point between their start and end times. This means that once a write operation completes, all subsequent read operations will see that write, ensuring a consistent view of the data across all transactions.
@@ -76,6 +78,8 @@ COMMIT TRANSACTION;
 
 This ensures that security updates are immediately visible to all parts of the system.
 
+<BackToTop />
+
 ### Sequential Consistency
 
 Sequential consistency is a consistency model that ensures the result of execution is the same as if all operations were executed in some sequential order. However, this model does not require that this order be the same for all users. It allows for concurrent operations to be seen in different orders by different users, as long as the overall result is consistent with some sequential order.
@@ -114,6 +118,8 @@ COMMIT TRANSACTION;
 ```
 
 Different database replicas might process these insertions in different orders, but the final cart state will be consistent across all replicas.
+
+<BackToTop />
 
 ### Causal Consistency
 
@@ -171,6 +177,8 @@ COMMIT TRANSACTION;
 
 The causal chain (order → payment → shipping) is preserved for all users.
 
+<BackToTop />
+
 ### Read Your Writes
 
 Read Your Writes is a consistency model that guarantees that a transaction will always see its own writes. This means that once a transaction has written data, it can read that data in subsequent operations, ensuring that the transaction has a consistent view of its own changes.
@@ -221,6 +229,8 @@ COMMIT TRANSACTION;
 ```
 
 The editor immediately sees their own changes and the incremented version number.
+
+<BackToTop />
 
 ### Monotonic Reads
 
@@ -338,6 +348,8 @@ COMMIT TRANSACTION;
 ```
 
 File metadata updates occur in the correct order, maintaining data integrity.
+
+<BackToTop />
 
 ## Practical Implications
 
