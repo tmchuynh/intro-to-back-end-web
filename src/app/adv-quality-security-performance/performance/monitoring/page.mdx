@@ -140,7 +140,7 @@ Modern monitoring tools can be categorized by their primary function:
 
 Focuses on the underlying hardware and operating system metrics:
 
-```yaml
+```yaml title="config/infrastructure-metrics.yml"
 # Example infrastructure metrics
 system_metrics:
   cpu:
@@ -195,7 +195,7 @@ Focuses on application-level performance and user experience:
 
 Proactively tests application functionality from external locations:
 
-```javascript
+```javascript title="tests/synthetic-monitoring.js"
 // Example synthetic test
 const synthethicTest = {
   name: "User Login Flow",
@@ -221,7 +221,7 @@ const synthethicTest = {
 
 Collects performance data from actual user sessions:
 
-```javascript
+```javascript title="public/js/rum-implementation.js"
 // Example RUM implementation
 window.addEventListener('load', function() {
   const navigationTiming = performance.getEntriesByType('navigation')[0];
@@ -263,7 +263,7 @@ Google's Core Web Vitals focus on user experience:
 
 ### Backend Performance Metrics
 
-```yaml
+```yaml title="config/backend-metrics.yml"
 backend_metrics:
   response_time:
     - p50: "50th percentile response time"
@@ -291,7 +291,7 @@ backend_metrics:
 
 ### Database Performance Metrics
 
-```sql
+```sql title="scripts/database-performance-queries.sql"
 -- Example database performance queries
 -- Query execution time
 SELECT 
@@ -445,7 +445,7 @@ Prometheus is an open-source monitoring and alerting toolkit designed for reliab
 
 ###### Setting up a basic Prometheus configuration:
 
-```yaml
+```yaml title="config/prometheus.yml"
 # prometheus.yml
 global:
   scrape_interval: 15s     # How frequently to scrape targets
@@ -489,7 +489,7 @@ scrape_configs:
 
 ##### Application instrumentation example:
 
-```javascript
+```javascript title="src/monitoring/prometheus-instrumentation.js"
 // Node.js application with Prometheus metrics
 const express = require('express');
 const promClient = require('prom-client');
@@ -587,7 +587,7 @@ groups:
 
 ##### PromQL Examples
 
-```txt title="PromQL Examples"
+```txt title="promql-examples.md"
 # Basic metrics
 up{job="my-application"}                   # Check if application is up
 http_requests_total{job="my-application"}  # Total HTTP requests
@@ -654,7 +654,7 @@ Grafana is an open-source platform for monitoring and observability that provide
 ##### Dashboard Configuration Examples
 
 ###### Data Source Configuration:
-```yaml
+```yaml title="grafana/datasources.yml"
 # grafana/datasources.yml
 apiVersion: 1
 
@@ -688,7 +688,7 @@ datasources:
 ```
 
 ##### Dashboard JSON Configuration:
-```json
+```json title="grafana/dashboards/performance-dashboard.json"
 {
   "dashboard": {
     "title": "Application Performance Dashboard",
@@ -745,7 +745,7 @@ datasources:
 ```
 
 ##### Advanced Dashboard Features:
-```javascript
+```javascript title="grafana/plugins/custom-panel.js"
 // Custom panel plugin example
 import { PanelPlugin } from '@grafana/data';
 import { SimplePanel } from './SimplePanel';
@@ -769,7 +769,7 @@ export const plugin = new PanelPlugin(SimplePanel).setPanelOptions(builder => {
 ##### Best Practices for Grafana Dashboards
 
 1. **Dashboard Design Principles:**
-```yaml
+```yaml title="config/dashboard-design-principles.yml"
 dashboard_design:
   layout:
     - "Use consistent time ranges across panels"
@@ -789,7 +789,7 @@ dashboard_design:
 ```
 
 2. **Variable Usage:**
-```json
+```json title="grafana/templates/variable-usage.json"
 {
   "templating": {
     "list": [
@@ -864,7 +864,7 @@ The ELK Stack is a powerful combination of three open-source projects that toget
 - **Machine learning** for anomaly detection
 
 ###### Configuration Example:
-```yaml
+```yaml title="config/elasticsearch.yml"
 # elasticsearch.yml
 cluster.name: production-logs
 node.name: node-1
@@ -918,7 +918,7 @@ cluster.initial_master_nodes: ["node1", "node2", "node3"]
 **Logstash** is a data processing pipeline that ingests, transforms, and outputs data.
 
 ###### Pipeline Configuration:
-```ruby
+```ruby title="config/logstash.conf"
 # logstash.conf
 input {
   beats {
@@ -1023,7 +1023,7 @@ output {
 - **Machine Learning**: Anomaly detection and forecasting
 
 ###### Dashboard Configuration:
-```json
+```json title="kibana/dashboards/performance-dashboard.json"
 {
   "version": "7.15.0",
   "objects": [
@@ -1056,7 +1056,7 @@ output {
 ##### Advanced ELK Features
 
 ###### Index Lifecycle Management (ILM):
-```json
+```json title="elasticsearch/policies/ilm-policy.json"
 {
   "policy": {
     "phases": {
@@ -1149,7 +1149,7 @@ Fluentd is an open-source data collector that provides a unified logging layer b
 ##### Configuration Examples
 
 ###### Basic Fluentd Configuration:
-```ruby
+```ruby title="config/fluent.conf"
 # fluent.conf
 
 # Input plugins
@@ -1282,7 +1282,7 @@ Fluentd is an open-source data collector that provides a unified logging layer b
 ```
 
 ##### Docker Deployment:
-```yaml
+```yaml title="docker/docker-compose.fluentd.yml"
 # docker-compose.yml for Fluentd
 version: '3.8'
 services:
@@ -1308,7 +1308,7 @@ volumes:
 <BackToTop />
 
 ##### Application Integration:
-```javascript
+```javascript title="src/logging/fluentd-integration.js"
 // Node.js application with Fluentd logging
 const winston = require('winston');
 require('winston-fluentd').Fluentd;
@@ -1347,7 +1347,7 @@ logger.error('Database connection failed', {
 ##### Performance Tuning
 
 ###### High-Throughput Configuration:
-```ruby
+```ruby title="config/fluent-high-performance.conf"
 # High-performance configuration
 <system>
   workers 4
@@ -1444,8 +1444,7 @@ New Relic is a comprehensive observability platform that provides monitoring for
 ##### Implementation Examples
 
 ###### APM Agent Installation:
-```javascript
-// Node.js APM agent setup
+```javascript title="config/newrelic.js"
 // newrelic.js configuration file
 'use strict'
 
@@ -1524,7 +1523,7 @@ app.use((err, req, res, next) => {
 <BackToTop />
 
 ##### Infrastructure Agent Configuration:
-```yaml
+```yaml title="config/newrelic-infra.yml"
 # newrelic-infra.yml
 license_key: your-license-key
 display_name: production-server-01
@@ -1568,7 +1567,7 @@ integrations:
 <BackToTop />
 
 ##### Custom Dashboard Configuration:
-```json
+```json title="newrelic/dashboards/application-performance.json"
 {
   "dashboard": {
     "title": "Application Performance Overview",
@@ -1624,7 +1623,7 @@ integrations:
 ##### Advanced Features
 
 ###### Custom Instrumentation:
-```javascript
+```javascript title="src/monitoring/newrelic-custom-instrumentation.js"
 const newrelic = require('newrelic');
 
 // Custom transaction
@@ -1737,7 +1736,7 @@ Datadog is a comprehensive monitoring and analytics platform that provides obser
 ##### Implementation Examples
 
 ###### Agent Configuration:
-```yaml
+```yaml title="config/datadog.yaml"
 # datadog.yaml
 api_key: your-api-key
 site: datadoghq.com
@@ -1803,7 +1802,7 @@ class CustomCheck(AgentCheck):
 ```
 
 ###### Application Instrumentation:
-```javascript
+```javascript title="src/monitoring/datadog-instrumentation.js"
 // Node.js APM setup
 const tracer = require('dd-trace').init({
   service: 'web-application',
@@ -1880,7 +1879,7 @@ app.use((err, req, res, next) => {
 ```
 
 ###### Dashboard as Code:
-```json
+```json title="datadog/dashboards/application-performance.json"
 {
   "title": "Application Performance Dashboard",
   "description": "Monitor key application metrics",
@@ -1956,7 +1955,7 @@ app.use((err, req, res, next) => {
 ```
 
 ###### Monitor Configuration:
-```json
+```json title="datadog/monitors/error-rate-alert.json"
 {
   "name": "High Error Rate Alert",
   "type": "metric alert",
@@ -1982,7 +1981,7 @@ app.use((err, req, res, next) => {
 ##### Advanced Monitoring Patterns
 
 ###### Service Level Objectives (SLOs):
-```json
+```json title="datadog/slos/api-availability.json"
 {
   "name": "API Availability SLO",
   "description": "99.9% availability for critical API endpoints",
@@ -2056,7 +2055,7 @@ Monitoring Kubernetes clusters requires understanding of both the infrastructure
 ```
 
 ##### Monitoring Configuration:
-```yaml
+```yaml title="k8s/monitoring/prometheus-config.yaml"
 # Prometheus configuration for Kubernetes
 apiVersion: v1
 kind: ConfigMap
@@ -2191,7 +2190,7 @@ data:
 <BackToTop />
 
 ##### Application Monitoring in Kubernetes:
-```yaml
+```yaml title="k8s/apps/web-app-monitoring.yaml"
 # Service with monitoring annotations
 apiVersion: v1
 kind: Service
@@ -2297,7 +2296,7 @@ Service meshes like Istio provide additional observability capabilities for micr
 <BackToTop />
 
 ##### Istio Telemetry Configuration:
-```yaml
+```yaml title="istio/telemetry/istio-operator.yaml"
 # Telemetry v2 configuration
 apiVersion: install.istio.io/v1alpha1
 kind: IstioOperator
