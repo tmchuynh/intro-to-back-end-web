@@ -209,16 +209,320 @@ $$ LANGUAGE plpgsql;
 
 The Strategy pattern defines a family of algorithms, encapsulates each one, and makes them interchangeable. This pattern allows you to select an algorithm at runtime, promoting flexibility and enabling the client to choose the appropriate algorithm based on specific conditions or requirements. The Strategy pattern is useful when you have multiple algorithms that can be applied to a problem, and you want to decouple the algorithm selection from the client code.
 
+```sql title="Strategy Pattern Example in SQL"
+CREATE OR REPLACE FUNCTION execute_strategy(strategy_name VARCHAR, param1 VARCHAR, param2 VARCHAR)
+RETURNS VOID AS $$
+BEGIN
+    IF strategy_name = 'StrategyA' THEN
+        PERFORM strategy_a(param1, param2);
+    ELSIF strategy_name = 'StrategyB' THEN
+        PERFORM strategy_b(param1, param2);
+    ELSE
+        RAISE EXCEPTION 'Unknown strategy: %', strategy_name;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+CREATE OR REPLACE FUNCTION strategy_a(param1 VARCHAR, param2 VARCHAR)
+RETURNS VOID AS $$
+BEGIN
+    -- Implementation of Strategy A
+    RAISE NOTICE 'Executing Strategy A with parameters: %, %', param1, param2;
+END;
+$$ LANGUAGE plpgsql;
+CREATE OR REPLACE FUNCTION strategy_b(param1 VARCHAR, param2 VARCHAR)
+RETURNS VOID AS $$
+BEGIN
+    -- Implementation of Strategy B
+    RAISE NOTICE 'Executing Strategy B with parameters: %, %', param1, param2;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+### Chain of Responsibility Pattern
+
+The Chain of Responsibility pattern allows multiple objects to handle a request without the sender needing to know which object will handle it. This pattern promotes loose coupling by allowing the request to pass through a chain of handlers until one of them processes it. It is useful when you want to decouple the sender and receiver of a request, enabling more flexible and extensible designs.
+
+```sql title="Chain of Responsibility Pattern Example in SQL"
+CREATE TABLE Handler (
+    id INT PRIMARY KEY,
+    name VARCHAR(255),
+    next_handler_id INT REFERENCES Handler(id)
+);
+CREATE OR REPLACE FUNCTION handle_request(handler_id INT, request VARCHAR)
+RETURNS VOID AS $$
+DECLARE
+    current_handler Handler%ROWTYPE;
+BEGIN
+    SELECT * INTO current_handler FROM Handler WHERE id = handler_id;
+    IF current_handler IS NULL THEN
+        RAISE EXCEPTION 'Handler not found: %', handler_id;
+    END IF;
+    RAISE NOTICE 'Handler % processing request: %', current_handler.name, request;
+    IF current_handler.next_handler_id IS NOT NULL THEN
+        PERFORM handle_request(current_handler.next_handler_id, request);
+    ELSE
+        RAISE NOTICE 'End of chain reached. Request processed by %', current_handler.name;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+### State Pattern
+
+The State pattern allows an object to alter its behavior when its internal state changes. This pattern is useful when an object needs to exhibit different behaviors based on its current state, such as a traffic light that changes its color based on time or conditions. By using the State pattern, you can encapsulate state-specific behavior in separate classes, promoting cleaner and more maintainable code.
+
+```sql title="State Pattern Example in SQL"
+CREATE TABLE State (
+    id INT PRIMARY KEY,
+    name VARCHAR(255)
+);
+CREATE TABLE Context (
+    id INT PRIMARY KEY,
+    current_state_id INT REFERENCES State(id)
+);
+CREATE OR REPLACE FUNCTION change_state(context_id INT, new_state_id INT)
+RETURNS VOID AS $$
+BEGIN
+    UPDATE Context SET current_state_id = new_state_id WHERE id = context_id;
+    RAISE NOTICE 'Context % changed to state %', context_id, new_state_id;
+END;
+$$ LANGUAGE plpgsql;
+CREATE OR REPLACE FUNCTION perform_action(context_id INT)
+RETURNS VOID AS $$
+DECLARE
+    current_state State%ROWTYPE;
+BEGIN
+    SELECT * INTO current_state FROM Context JOIN State ON Context.current_state_id = State.id WHERE Context.id = context_id;
+    IF current_state IS NULL THEN
+        RAISE EXCEPTION 'Context not found or has no state: %', context_id;
+    END IF;
+    RAISE NOTICE 'Performing action in state %', current_state.name;
+    -- Add state-specific behavior here
+END;
+$$ LANGUAGE plpgsql;
+```
+
 ### Command Pattern
 
 The Command pattern encapsulates a request as an object, allowing you to parameterize clients with queues, requests, and operations. This pattern is useful for implementing undo/redo functionality, logging operations, or queuing requests for execution. By using the Command pattern, you can decouple the sender of a request from the receiver, enabling more flexible and extensible designs.
+
+```sql title="Command Pattern Example in SQL"
+CREATE TABLE Command (
+    id INT PRIMARY KEY,
+    name VARCHAR(255),
+    executed BOOLEAN DEFAULT FALSE
+);
+CREATE OR REPLACE FUNCTION execute_command(command_id INT)
+RETURNS VOID AS $$
+BEGIN
+    UPDATE Command SET executed = TRUE WHERE id = command_id;
+    RAISE NOTICE 'Command % executed', command_id;
+END;
+$$ LANGUAGE plpgsql;
+CREATE OR REPLACE FUNCTION undo_command(command_id INT)
+RETURNS VOID AS $$
+BEGIN
+    UPDATE Command SET executed = FALSE WHERE id = command_id;
+    RAISE NOTICE 'Command % undone', command_id;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+### Memento Pattern
+
+The Memento pattern allows you to capture and restore an object's internal state without exposing its implementation details. This pattern is useful when you want to implement undo/redo functionality or save the state of an object at a specific point in time. By using the Memento pattern, you can create a snapshot of an object's state and restore it later, promoting encapsulation and separation of concerns.
+
+```sql title="Memento Pattern Example in SQL"
+CREATE TABLE Memento (
+    id INT PRIMARY KEY,
+    state VARCHAR(255)
+);
+CREATE TABLE Originator (
+    id INT PRIMARY KEY,
+    current_state VARCHAR(255)
+);
+CREATE OR REPLACE FUNCTION create_memento(originator_id INT)
+RETURNS INT AS $$
+DECLARE
+    new_memento_id INT;
+BEGIN
+    INSERT INTO Memento (state) SELECT current_state FROM Originator WHERE id = originator_id RETURNING id INTO new_memento_id;
+    RAISE NOTICE 'Memento created with ID % for originator %', new_memento_id, originator_id;
+    RETURN new_memento_id;
+END;
+$$ LANGUAGE plpgsql;
+CREATE OR REPLACE FUNCTION restore_memento(originator_id INT, memento_id INT)
+RETURNS VOID AS $$
+BEGIN
+    UPDATE Originator SET current_state = (SELECT state FROM Memento WHERE id = memento_id) WHERE id = originator_id;
+    RAISE NOTICE 'Originator % restored to memento %', originator_id, memento_id;
+END;
+$$ LANGUAGE plpgsql;
+```
 
 ### Adapter Pattern
 
 The Adapter pattern allows incompatible interfaces to work together by converting the interface of one class into another that the client expects. This pattern is useful when you want to integrate existing classes with a new interface without modifying their code. By using an adapter, you can create a bridge between the incompatible interfaces, enabling them to collaborate seamlessly.
 
+```sql title="Adapter Pattern Example in SQL"
+CREATE TABLE Target (
+    id INT PRIMARY KEY,
+    name VARCHAR(255)
+);
+CREATE TABLE Adaptee (
+    id INT PRIMARY KEY,
+    description VARCHAR(255)
+);
+CREATE OR REPLACE FUNCTION adapt_adaptee(adaptee_id INT)
+RETURNS Target AS $$
+DECLARE
+    adapted_target Target%ROWTYPE;
+BEGIN
+    SELECT id, description INTO adapted_target FROM Adaptee WHERE id = adaptee_id;
+    IF adapted_target IS NULL THEN
+        RAISE EXCEPTION 'Adaptee not found: %', adaptee_id;
+    END IF;
+    adapted_target.name := adapted_target.description; -- Adapting the interface
+    RAISE NOTICE 'Adaptee % adapted to Target with name %', adaptee_id, adapted_target.name;
+    RETURN adapted_target;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+### Bridge Pattern
+
+The Bridge pattern separates an interface from its implementation, allowing them to vary independently. This pattern is useful when you want to decouple abstraction from implementation, enabling you to change either without affecting the other. By using the Bridge pattern, you can create a flexible architecture that allows for easy extension and modification of both the interface and its implementation.
+
+```sql title="Bridge Pattern Example in SQL"
+CREATE TABLE Abstraction (
+    id INT PRIMARY KEY,
+    name VARCHAR(255)
+);
+CREATE TABLE Implementation (
+    id INT PRIMARY KEY,
+    details VARCHAR(255)
+);
+CREATE OR REPLACE FUNCTION create_bridge(abstraction_name VARCHAR, implementation_details VARCHAR)
+RETURNS VOID AS $$
+BEGIN
+    INSERT INTO Abstraction (name) VALUES (abstraction_name);
+    INSERT INTO Implementation (details) VALUES (implementation_details);
+    RAISE NOTICE 'Bridge created with Abstraction % and Implementation %', abstraction_name, implementation_details;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+### Flyweight Pattern
+
+The Flyweight pattern is used to minimize memory usage by sharing common data among multiple objects. This pattern is useful when you have a large number of similar objects that share some state, allowing you to reduce memory overhead by storing shared data in a single location. By using the Flyweight pattern, you can create lightweight objects that can be reused, promoting efficiency and performance.
+
+```sql title="Flyweight Pattern Example in SQL"
+CREATE TABLE Flyweight (
+    id INT PRIMARY KEY,
+    shared_data VARCHAR(255)
+);
+CREATE TABLE Context (
+    id INT PRIMARY KEY,
+    flyweight_id INT REFERENCES Flyweight(id),
+    unique_data VARCHAR(255)
+);
+CREATE OR REPLACE FUNCTION create_flyweight(shared_data VARCHAR, unique_data VARCHAR)
+RETURNS VOID AS $$
+BEGIN
+    INSERT INTO Flyweight (shared_data) VALUES (shared_data);
+    INSERT INTO Context (flyweight_id, unique_data) VALUES (currval('Flyweight_id_seq'), unique_data);
+    RAISE NOTICE 'Flyweight created with shared data % and unique data %', shared_data, unique_data;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+### Interpreter Pattern
+
+The Interpreter pattern defines a representation for a language's grammar along with an interpreter that uses this representation to interpret sentences in the language. This pattern is useful when you want to evaluate expressions or parse input based on a defined grammar. By using the Interpreter pattern, you can create a flexible and extensible system for interpreting complex expressions or commands.
+
+```sql title="Interpreter Pattern Example in SQL"
+CREATE TABLE Expression (
+    id INT PRIMARY KEY,
+    expression VARCHAR(255)
+);
+CREATE OR REPLACE FUNCTION interpret_expression(expression_id INT)
+RETURNS VOID AS $$
+DECLARE
+    expr Expression%ROWTYPE;
+BEGIN
+    SELECT * INTO expr FROM Expression WHERE id = expression_id;
+    IF expr IS NULL THEN
+        RAISE EXCEPTION 'Expression not found: %', expression_id;
+    END IF;
+    RAISE NOTICE 'Interpreting expression: %', expr.expression;
+    -- Add logic to interpret the expression here
+END;
+$$ LANGUAGE plpgsql;
+```
+
+### Visitor Pattern
+
+The Visitor pattern allows you to define new operations on a set of objects without changing their classes. This pattern is useful when you want to perform operations on a collection of objects with different types, enabling you to add new functionality without modifying the existing code. By using the Visitor pattern, you can create a flexible and extensible design that allows for easy addition of new operations.
+
+```sql title="Visitor Pattern Example in SQL"
+CREATE TABLE Element (
+    id INT PRIMARY KEY,
+    name VARCHAR(255)
+);
+CREATE TABLE Visitor (
+    id INT PRIMARY KEY,
+    operation VARCHAR(255)
+);
+CREATE OR REPLACE FUNCTION visit_element(element_id INT, visitor_id INT)
+RETURNS VOID AS $$
+DECLARE
+    element Element%ROWTYPE;
+    visitor Visitor%ROWTYPE;
+BEGIN
+    SELECT * INTO element FROM Element WHERE id = element_id;
+    IF element IS NULL THEN
+        RAISE EXCEPTION 'Element not found: %', element_id;
+    END IF;
+    SELECT * INTO visitor FROM Visitor WHERE id = visitor_id;
+    IF visitor IS NULL THEN
+        RAISE EXCEPTION 'Visitor not found: %', visitor_id;
+    END IF;
+    RAISE NOTICE 'Visiting element % with visitor %: %', element.name, visitor.operation, visitor.operation;
+    -- Add logic to perform the visitor operation on the element here
+END;
+$$ LANGUAGE plpgsql;
+```
+
 ### Proxy Pattern
 
 The Proxy pattern provides a surrogate or placeholder for another object to control access to it. This pattern is useful when you want to add an additional layer of control or functionality to an existing object, such as lazy loading, access control, or logging. By using a proxy, you can intercept requests to the real object and provide additional behavior without modifying the original object's code.
+
+```sql title="Proxy Pattern Example in SQL"
+CREATE TABLE RealObject (
+    id INT PRIMARY KEY,
+    name VARCHAR(255)
+);
+CREATE TABLE ProxyObject (
+    id INT PRIMARY KEY,
+    real_object_id INT REFERENCES RealObject(id),
+    access_control BOOLEAN DEFAULT TRUE
+);
+CREATE OR REPLACE FUNCTION access_real_object(proxy_id INT)
+RETURNS VOID AS $$
+DECLARE
+    proxy ProxyObject%ROWTYPE;
+BEGIN
+    SELECT * INTO proxy FROM ProxyObject WHERE id = proxy_id;
+    IF proxy IS NULL THEN
+        RAISE EXCEPTION 'Proxy not found: %', proxy_id;
+    END IF;
+    IF NOT proxy.access_control THEN
+        RAISE EXCEPTION 'Access denied to real object through proxy %', proxy_id;
+    END IF;
+    RAISE NOTICE 'Accessing real object % through proxy %', proxy.real_object_id, proxy_id;
+    -- Add logic to access the real object here
+END;
+$$ LANGUAGE plpgsql;
+```
 
 <BackToTop />
