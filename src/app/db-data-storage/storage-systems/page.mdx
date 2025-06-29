@@ -8,27 +8,409 @@ import BackToTop from "@/components/BackToTop";
 
 A storage system is an organized method for storing, managing, and accessing data. It provides the foundation for applications to persist information, enabling efficient operations such as querying, updating, and deleting data as needed.
 
+Modern storage systems form the backbone of digital infrastructure, supporting everything from simple file storage to complex distributed databases that power global applications. They must balance competing requirements of performance, reliability, cost, and scalability while ensuring data remains accessible, secure, and consistent.
+
+### Storage System Components
+
+Every storage system consists of several key components:
+
+- **Storage Media**: Physical hardware that stores data (HDDs, SSDs, tape drives, optical storage)
+- **File System or Data Organization Layer**: Software that manages how data is organized and accessed
+- **Access Interfaces**: APIs, protocols, or interfaces that applications use to interact with the storage
+- **Management Layer**: Tools and processes for monitoring, maintenance, and administration
+- **Security Layer**: Encryption, access controls, and audit mechanisms
+
 ## Key Concepts
 
 ### Data Integrity
 
 Data integrity ensures that data remains accurate, consistent, and reliable throughout its lifecycle. It involves mechanisms to prevent unauthorized access, corruption, and loss of data.
 
+#### Types of Data Integrity
+
+- **Entity Integrity**: Ensures each row in a table has a unique primary key
+- **Referential Integrity**: Maintains consistent relationships between tables
+- **Domain Integrity**: Validates that data falls within acceptable ranges or formats
+- **User-Defined Integrity**: Custom business rules and constraints
+
+#### Implementation Examples
+
+```sql title="Database Constraints for Data Integrity"
+-- Entity integrity with primary key
+CREATE TABLE users (
+    user_id SERIAL PRIMARY KEY,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Referential integrity with foreign keys
+CREATE TABLE orders (
+    order_id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(user_id),
+    total_amount DECIMAL(10,2) CHECK (total_amount > 0),
+    status VARCHAR(20) CHECK (status IN ('pending', 'completed', 'cancelled'))
+);
+```
+
+#### Data Integrity Mechanisms
+
+- **Checksums**: Mathematical algorithms that detect data corruption
+- **RAID Systems**: Redundant Array of Independent Disks for fault tolerance
+- **Transaction Logs**: Record all changes for recovery purposes
+- **Backup Verification**: Regular testing of backup integrity
+
 ### Data Redundancy
 
 Data redundancy refers to the duplication of data across multiple storage locations. While it can enhance data availability and fault tolerance, it can also lead to increased storage costs and potential inconsistencies if not managed properly.
+
+#### Types of Redundancy
+
+- **Full Redundancy**: Complete copies of data across multiple locations
+- **Partial Redundancy**: Critical data duplicated, less important data stored once
+- **Parity-Based Redundancy**: Mathematical relationships allow reconstruction of lost data
+- **Geographically Distributed Redundancy**: Copies across different physical locations
+
+#### Redundancy Examples
+
+```bash title="RAID Configuration Examples"
+# RAID 1 - Mirroring (100% redundancy)
+mdadm --create /dev/md0 --level=1 --raid-devices=2 /dev/sda1 /dev/sdb1
+
+# RAID 5 - Distributed parity (can lose 1 drive)
+mdadm --create /dev/md1 --level=5 --raid-devices=3 /dev/sdc1 /dev/sdd1 /dev/sde1
+
+# RAID 6 - Double parity (can lose 2 drives)
+mdadm --create /dev/md2 --level=6 --raid-devices=4 /dev/sdf1 /dev/sdg1 /dev/sdh1 /dev/sdi1
+```
+
+#### Cloud Storage Redundancy
+
+```python title="AWS S3 Storage Classes with Different Redundancy Levels"
+import boto3
+
+s3 = boto3.client('s3')
+
+# Standard - Multiple AZ redundancy
+s3.put_object(
+    Bucket='my-bucket',
+    Key='important-data.json',
+    Body=data,
+    StorageClass='STANDARD'
+)
+
+# Reduced Redundancy - Lower cost, less durability
+s3.put_object(
+    Bucket='my-bucket',
+    Key='temporary-file.txt',
+    Body=data,
+    StorageClass='REDUCED_REDUNDANCY'
+)
+
+# Glacier - Long-term archival with high durability
+s3.put_object(
+    Bucket='my-bucket',
+    Key='archive-data.backup',
+    Body=data,
+    StorageClass='GLACIER'
+)
+```
+
+#### Managing Redundancy Trade-offs
+
+- **Cost vs. Availability**: More redundancy increases costs but improves availability
+- **Performance Impact**: Synchronous replication may slow write operations
+- **Consistency Challenges**: Keeping multiple copies synchronized
+- **Recovery Time**: Time to restore from redundant copies during failures
 
 ### Data Accessibility
 
 Data accessibility ensures that data can be retrieved and used by authorized users or applications when needed. It involves implementing appropriate access controls, data formats, and interfaces to facilitate efficient data retrieval and manipulation.
 
+#### Access Patterns
+
+- **Sequential Access**: Reading data in order (like tape drives)
+- **Random Access**: Accessing any data location directly (like hard drives)
+- **Indexed Access**: Using indexes for fast data location
+- **Cached Access**: Frequently used data stored in high-speed memory
+
+#### Access Control Models
+
+```sql title="Role-Based Access Control (RBAC)"
+-- Create roles with specific permissions
+CREATE ROLE read_only_user;
+CREATE ROLE data_analyst;
+CREATE ROLE admin_user;
+
+-- Grant permissions to roles
+GRANT SELECT ON sales_data TO read_only_user;
+GRANT SELECT, INSERT, UPDATE ON sales_data TO data_analyst;
+GRANT ALL PRIVILEGES ON sales_data TO admin_user;
+
+-- Assign users to roles
+GRANT read_only_user TO john_doe;
+GRANT data_analyst TO jane_smith;
+GRANT admin_user TO admin_account;
+```
+
+#### API Access Examples
+
+```python title="RESTful API for Data Access"
+from flask import Flask, jsonify, request
+from flask_sqlalchemy import SQLAlchemy
+
+app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://user:pass@localhost/db'
+db = SQLAlchemy(app)
+
+@app.route('/api/users/<int:user_id>', methods=['GET'])
+def get_user(user_id):
+    """Retrieve user data by ID"""
+    user = User.query.get_or_404(user_id)
+    return jsonify({
+        'id': user.id,
+        'name': user.name,
+        'email': user.email
+    })
+
+@app.route('/api/users', methods=['POST'])
+def create_user():
+    """Create new user"""
+    data = request.get_json()
+    user = User(name=data['name'], email=data['email'])
+    db.session.add(user)
+    db.session.commit()
+    return jsonify({'id': user.id}), 201
+```
+
+#### Performance Optimization
+
+- **Indexing Strategies**: B-trees, hash indexes, bitmap indexes
+- **Caching Layers**: Redis, Memcached, application-level caching
+- **Connection Pooling**: Reusing database connections
+- **Query Optimization**: Efficient SQL queries and execution plans
+
 ### Data Scalability
 
 Data scalability refers to the ability of a storage system to handle increasing amounts of data without compromising performance or reliability. It involves designing systems that can grow in capacity and performance as data volumes increase, often through techniques such as sharding, partitioning, or distributed storage architectures.
 
+#### Scaling Strategies
+
+- **Vertical Scaling (Scale Up)**: Adding more power to existing machines
+- **Horizontal Scaling (Scale Out)**: Adding more machines to the resource pool
+- **Elastic Scaling**: Automatically adjusting resources based on demand
+- **Geo-distributed Scaling**: Spreading data across geographic regions
+
+#### Partitioning Techniques
+
+```sql title="Database Partitioning Examples"
+-- Horizontal Partitioning (Sharding)
+CREATE TABLE sales_2023 (
+    sale_id SERIAL PRIMARY KEY,
+    sale_date DATE,
+    amount DECIMAL(10,2),
+    customer_id INTEGER
+) PARTITION BY RANGE (sale_date);
+
+-- Create partitions for each quarter
+CREATE TABLE sales_2023_q1 PARTITION OF sales_2023
+    FOR VALUES FROM ('2023-01-01') TO ('2023-04-01');
+
+CREATE TABLE sales_2023_q2 PARTITION OF sales_2023
+    FOR VALUES FROM ('2023-04-01') TO ('2023-07-01');
+
+-- Hash Partitioning for even distribution
+CREATE TABLE user_data (
+    user_id SERIAL PRIMARY KEY,
+    username VARCHAR(50),
+    email VARCHAR(100)
+) PARTITION BY HASH (user_id);
+
+CREATE TABLE user_data_p1 PARTITION OF user_data
+    FOR VALUES WITH (modulus 4, remainder 0);
+```
+
+#### Distributed Storage Architecture
+
+```python title="Consistent Hashing for Distribution"
+import hashlib
+
+class ConsistentHash:
+    def __init__(self, nodes=None, replicas=3):
+        self.replicas = replicas
+        self.ring = {}
+        self.sorted_keys = []
+        
+        if nodes:
+            for node in nodes:
+                self.add_node(node)
+    
+    def add_node(self, node):
+        """Add a node to the hash ring"""
+        for i in range(self.replicas):
+            key = self.hash(f"{node}:{i}")
+            self.ring[key] = node
+            self.sorted_keys.append(key)
+        self.sorted_keys.sort()
+    
+    def remove_node(self, node):
+        """Remove a node from the hash ring"""
+        for i in range(self.replicas):
+            key = self.hash(f"{node}:{i}")
+            del self.ring[key]
+            self.sorted_keys.remove(key)
+    
+    def get_node(self, data_key):
+        """Find the node responsible for storing the data"""
+        if not self.ring:
+            return None
+        
+        key = self.hash(data_key)
+        for ring_key in self.sorted_keys:
+            if key <= ring_key:
+                return self.ring[ring_key]
+        
+        # Wrap around to the first node
+        return self.ring[self.sorted_keys[0]]
+    
+    def hash(self, key):
+        return int(hashlib.md5(key.encode()).hexdigest(), 16)
+```
+
+#### Auto-Scaling Implementation
+
+```yaml title="Kubernetes Auto-scaling Configuration"
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: database-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: database-deployment
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+```
+
 ### Data Security
 
 Data security involves protecting data from unauthorized access, breaches, and other threats. It includes implementing encryption, access controls, and monitoring mechanisms to safeguard data integrity and confidentiality.
+
+#### Security Layers
+
+- **Encryption at Rest**: Protecting stored data with encryption
+- **Encryption in Transit**: Securing data during transmission
+- **Access Authentication**: Verifying user identities
+- **Authorization**: Controlling what authenticated users can do
+- **Audit Logging**: Tracking all data access and modifications
+
+#### Encryption Implementation
+
+```python title="Data Encryption Examples"
+from cryptography.fernet import Fernet
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+import base64
+import os
+
+class DataEncryption:
+    def __init__(self, password: str):
+        # Generate encryption key from password
+        salt = os.urandom(16)
+        kdf = PBKDF2HMAC(
+            algorithm=hashes.SHA256(),
+            length=32,
+            salt=salt,
+            iterations=100000,
+        )
+        key = base64.urlsafe_b64encode(kdf.derive(password.encode()))
+        self.cipher = Fernet(key)
+        self.salt = salt
+    
+    def encrypt_data(self, data: str) -> bytes:
+        """Encrypt sensitive data"""
+        return self.cipher.encrypt(data.encode())
+    
+    def decrypt_data(self, encrypted_data: bytes) -> str:
+        """Decrypt sensitive data"""
+        return self.cipher.decrypt(encrypted_data).decode()
+
+# Usage example
+encryptor = DataEncryption("secure_password_123")
+sensitive_data = "Credit Card: 1234-5678-9012-3456"
+encrypted = encryptor.encrypt_data(sensitive_data)
+decrypted = encryptor.decrypt_data(encrypted)
+```
+
+#### Database Security Configuration
+
+```sql title="Database Security Setup"
+-- Create SSL-only database connection
+ALTER SYSTEM SET ssl = on;
+ALTER SYSTEM SET ssl_cert_file = 'server.crt';
+ALTER SYSTEM SET ssl_key_file = 'server.key';
+
+-- Enable row-level security
+CREATE TABLE sensitive_data (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER,
+    data TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE sensitive_data ENABLE ROW LEVEL SECURITY;
+
+-- Create policy for row-level security
+CREATE POLICY user_data_policy ON sensitive_data
+    FOR ALL TO application_role
+    USING (user_id = current_setting('app.current_user_id')::INTEGER);
+
+-- Create audit log table
+CREATE TABLE audit_log (
+    log_id SERIAL PRIMARY KEY,
+    table_name VARCHAR(50),
+    operation VARCHAR(10),
+    user_name VARCHAR(50),
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    old_values JSONB,
+    new_values JSONB
+);
+```
+
+#### Network Security
+
+```bash title="Firewall and Network Security"
+# Configure iptables for database server
+iptables -A INPUT -p tcp --dport 5432 -s 192.168.1.0/24 -j ACCEPT
+iptables -A INPUT -p tcp --dport 5432 -j DROP
+
+# Setup VPN for remote access
+openvpn --config database-access.ovpn
+
+# Configure fail2ban for brute force protection
+cat > /etc/fail2ban/jail.local << EOF
+[postgresql]
+enabled = true
+port = 5432
+filter = postgresql
+logpath = /var/log/postgresql/postgresql.log
+maxretry = 3
+bantime = 3600
+EOF
+```
 
 ## Benefits of Storage Systems
 
@@ -42,41 +424,1863 @@ Storage systems offer several benefits, including:
 
 ## Use Cases
 
-Storage systems are used in various scenarios, including:
+Storage systems are used in various scenarios, each with specific requirements and challenges:
 
-1. **Backup and Recovery**: Storing copies of data to protect against loss or corruption.
-2. **Big Data Analytics**: Managing large volumes of data for analysis and insights.
-3. **Content Delivery**: Distributing media files, such as videos and images, to users efficiently.
-4. **Database Management**: Storing and managing structured data for applications.
-5. **File Sharing and Collaboration**: Enabling users to share and collaborate on files and documents.
+### 1. Backup and Recovery
+
+Storing copies of data to protect against loss or corruption, ensuring business continuity and disaster recovery.
+
+```bash title="Automated Backup Strategy"
+#!/bin/bash
+# Daily incremental backup script
+
+BACKUP_DIR="/backup/$(date +%Y/%m/%d)"
+SOURCE_DIR="/data"
+LOG_FILE="/var/log/backup.log"
+
+# Create backup directory
+mkdir -p "$BACKUP_DIR"
+
+# Perform incremental backup
+rsync -avz --link-dest=../../../$(date -d "1 day ago" +%Y/%m/%d) \
+      "$SOURCE_DIR/" "$BACKUP_DIR/" >> "$LOG_FILE" 2>&1
+
+# Database backup
+pg_dump -h localhost -U backup_user mydb | \
+    gzip > "$BACKUP_DIR/database_$(date +%H%M%S).sql.gz"
+
+# Verify backup integrity
+if [ $? -eq 0 ]; then
+    echo "$(date): Backup completed successfully" >> "$LOG_FILE"
+else
+    echo "$(date): Backup failed!" >> "$LOG_FILE"
+    # Send alert notification
+    mail -s "Backup Failed" admin@company.com < "$LOG_FILE"
+fi
+```
+
+### 2. Big Data Analytics
+
+Managing large volumes of data for analysis and insights, often requiring distributed processing capabilities.
+
+```python title="Big Data Processing Pipeline"
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import col, sum, avg, count
+
+# Initialize Spark session for big data processing
+spark = SparkSession.builder \
+    .appName("SalesAnalytics") \
+    .config("spark.sql.adaptive.enabled", "true") \
+    .getOrCreate()
+
+# Read large dataset from distributed storage
+sales_data = spark.read.parquet("hdfs://cluster/sales_data/")
+
+# Perform aggregation on large dataset
+monthly_sales = sales_data \
+    .groupBy("year", "month", "region") \
+    .agg(
+        sum("revenue").alias("total_revenue"),
+        avg("revenue").alias("avg_revenue"),
+        count("*").alias("transaction_count")
+    ) \
+    .orderBy("year", "month", "region")
+
+# Write results back to distributed storage
+monthly_sales.write \
+    .mode("overwrite") \
+    .partitionBy("year", "month") \
+    .parquet("hdfs://cluster/analytics/monthly_sales/")
+
+spark.stop()
+```
+
+### 3. Content Delivery
+
+Distributing media files, such as videos and images, to users efficiently across global networks.
+
+```python title="CDN Integration for Content Delivery"
+import boto3
+from flask import Flask, redirect, url_for
+
+app = Flask(__name__)
+s3_client = boto3.client('s3')
+cloudfront_url = "https://d123456789.cloudfront.net"
+
+@app.route('/media/<path:filename>')
+def serve_media(filename):
+    """Serve media files through CDN"""
+    try:
+        # Generate pre-signed URL for private content
+        if filename.startswith('private/'):
+            presigned_url = s3_client.generate_presigned_url(
+                'get_object',
+                Params={'Bucket': 'media-bucket', 'Key': filename},
+                ExpiresIn=3600  # 1 hour expiration
+            )
+            return redirect(presigned_url)
+        else:
+            # Redirect to CDN for public content
+            cdn_url = f"{cloudfront_url}/{filename}"
+            return redirect(cdn_url)
+    
+    except Exception as e:
+        return f"Error serving media: {str(e)}", 500
+
+# Upload content with appropriate caching headers
+def upload_to_cdn(file_path, content_type, cache_duration=86400):
+    """Upload content to S3 with CDN distribution"""
+    s3_client.upload_file(
+        file_path,
+        'media-bucket',
+        file_path,
+        ExtraArgs={
+            'ContentType': content_type,
+            'CacheControl': f'max-age={cache_duration}',
+            'ACL': 'public-read'
+        }
+    )
+```
+
+### 4. Database Management
+
+Storing and managing structured data for applications with ACID compliance and transaction support.
+
+```sql title="E-commerce Database Schema"
+-- Product catalog management
+CREATE TABLE products (
+    product_id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    price DECIMAL(10,2) NOT NULL,
+    stock_quantity INTEGER DEFAULT 0,
+    category_id INTEGER REFERENCES categories(category_id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Order management with transactions
+CREATE TABLE orders (
+    order_id SERIAL PRIMARY KEY,
+    customer_id INTEGER REFERENCES customers(customer_id),
+    order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status VARCHAR(20) DEFAULT 'pending',
+    total_amount DECIMAL(10,2),
+    shipping_address TEXT
+);
+
+-- Transactional order processing
+BEGIN;
+    -- Create order
+    INSERT INTO orders (customer_id, total_amount, shipping_address)
+    VALUES (123, 99.99, '123 Main St, City, State');
+    
+    -- Add order items
+    INSERT INTO order_items (order_id, product_id, quantity, price)
+    VALUES (currval('orders_order_id_seq'), 456, 2, 49.99);
+    
+    -- Update inventory
+    UPDATE products 
+    SET stock_quantity = stock_quantity - 2
+    WHERE product_id = 456 AND stock_quantity >= 2;
+    
+    -- Verify stock availability
+    IF NOT FOUND THEN
+        ROLLBACK;
+        RAISE EXCEPTION 'Insufficient inventory';
+    END IF;
+COMMIT;
+```
+
+### 5. File Sharing and Collaboration
+
+Enabling users to share and collaborate on files and documents with version control and access management.
+
+```python title="Collaborative File System"
+from datetime import datetime
+import hashlib
+
+class CollaborativeFileSystem:
+    def __init__(self):
+        self.files = {}
+        self.versions = {}
+        self.permissions = {}
+    
+    def upload_file(self, file_path, content, user_id):
+        """Upload or update a file with version tracking"""
+        file_hash = hashlib.sha256(content.encode()).hexdigest()
+        
+        # Create version entry
+        version_info = {
+            'content': content,
+            'hash': file_hash,
+            'uploaded_by': user_id,
+            'timestamp': datetime.now(),
+            'size': len(content)
+        }
+        
+        if file_path not in self.versions:
+            self.versions[file_path] = []
+        
+        self.versions[file_path].append(version_info)
+        self.files[file_path] = version_info
+        
+        return {
+            'version': len(self.versions[file_path]),
+            'hash': file_hash,
+            'size': len(content)
+        }
+    
+    def share_file(self, file_path, user_id, permission_level):
+        """Share file with specific permissions"""
+        if file_path not in self.permissions:
+            self.permissions[file_path] = {}
+        
+        self.permissions[file_path][user_id] = {
+            'level': permission_level,  # 'read', 'write', 'admin'
+            'granted_at': datetime.now()
+        }
+    
+    def get_file_versions(self, file_path, user_id):
+        """Get version history if user has access"""
+        if not self._check_permission(file_path, user_id, 'read'):
+            raise PermissionError("Access denied")
+        
+        return [
+            {
+                'version': i + 1,
+                'hash': version['hash'],
+                'uploaded_by': version['uploaded_by'],
+                'timestamp': version['timestamp'],
+                'size': version['size']
+            }
+            for i, version in enumerate(self.versions.get(file_path, []))
+        ]
+```
 
 ## Types of Storage Systems
 
 Storage systems can be categorized into several types based on their architecture and use cases:
 
-- **File Systems**: Organize and store data in files and directories, providing a hierarchical structure for data management. Examples include NTFS, ext4, and HFS+.
-- **Object Storage**: Stores data as objects, each with a unique identifier, allowing for scalable and flexible data management. Object storage systems are often used for unstructured data, such as images, videos, and backups. Examples include Amazon S3, Google Cloud Storage, and OpenStack Swift.
-- **Block Storage**: Divides data into fixed-size blocks, allowing for efficient storage and retrieval. Block storage is commonly used in databases and virtual machines, providing high performance and low latency.
-- **Database Storage**: Manages structured data using a database management system (DBMS). It provides features such as data integrity, transaction management, and query capabilities. Examples include relational databases (MySQL, PostgreSQL) and NoSQL databases (MongoDB, Cassandra).
-- **Distributed Storage**: Spreads data across multiple nodes or servers to enhance performance, availability, and fault tolerance. Distributed storage systems can handle large volumes of data and provide redundancy to prevent data loss. Examples include Hadoop Distributed File System (HDFS) and Google File System (GFS).
+### File Systems
+
+Organize and store data in files and directories, providing a hierarchical structure for data management. Examples include NTFS, ext4, and HFS+.
+
+#### Traditional File Systems
+
+```bash title="File System Operations and Management"
+# Create and mount a new ext4 file system
+mkfs.ext4 /dev/sdb1
+mount /dev/sdb1 /mnt/data
+
+# Set up directory structure with permissions
+mkdir -p /mnt/data/{users,shared,backups}
+chmod 755 /mnt/data/users
+chmod 777 /mnt/data/shared
+chmod 700 /mnt/data/backups
+
+# Configure file system quotas
+quotacheck -cum /mnt/data
+quotaon /mnt/data
+setquota -u john 1000000 1200000 1000 1200 /mnt/data
+```
+
+#### Distributed File Systems
+
+```python title="HDFS (Hadoop Distributed File System) Example"
+from hdfs import InsecureClient
+
+# Connect to HDFS cluster
+client = InsecureClient('http://namenode:9870', user='hadoop')
+
+# Upload large file with replication
+with open('large_dataset.csv', 'rb') as local_file:
+    client.write('/data/datasets/large_dataset.csv', 
+                local_file, 
+                replication=3,  # 3 copies across cluster
+                blocksize=134217728)  # 128MB blocks
+
+# List files and check replication
+for path, dirs, files in client.walk('/data'):
+    for file in files:
+        file_status = client.status(f"{path}/{file}")
+        print(f"File: {file}, Replication: {file_status['replication']}")
+```
+
+### Object Storage
+
+Stores data as objects, each with a unique identifier, allowing for scalable and flexible data management. Object storage systems are often used for unstructured data, such as images, videos, and backups. Examples include Amazon S3, Google Cloud Storage, and OpenStack Swift.
+
+#### Object Storage Implementation
+
+```python title="S3-Compatible Object Storage"
+import boto3
+from botocore.exceptions import ClientError
+
+class ObjectStorageManager:
+    def __init__(self, endpoint_url, access_key, secret_key):
+        self.s3_client = boto3.client(
+            's3',
+            endpoint_url=endpoint_url,
+            aws_access_key_id=access_key,
+            aws_secret_access_key=secret_key
+        )
+    
+    def create_bucket(self, bucket_name, region='us-east-1'):
+        """Create a new storage bucket"""
+        try:
+            if region == 'us-east-1':
+                self.s3_client.create_bucket(Bucket=bucket_name)
+            else:
+                self.s3_client.create_bucket(
+                    Bucket=bucket_name,
+                    CreateBucketConfiguration={'LocationConstraint': region}
+                )
+            return True
+        except ClientError as e:
+            print(f"Error creating bucket: {e}")
+            return False
+    
+    def upload_object(self, bucket_name, object_key, file_path, metadata=None):
+        """Upload object with metadata"""
+        extra_args = {}
+        if metadata:
+            extra_args['Metadata'] = metadata
+        
+        try:
+            self.s3_client.upload_file(
+                file_path, bucket_name, object_key, 
+                ExtraArgs=extra_args
+            )
+            return True
+        except ClientError as e:
+            print(f"Error uploading object: {e}")
+            return False
+    
+    def set_lifecycle_policy(self, bucket_name):
+        """Configure automatic data archiving"""
+        lifecycle_config = {
+            'Rules': [
+                {
+                    'ID': 'ArchiveOldData',
+                    'Status': 'Enabled',
+                    'Filter': {'Prefix': 'logs/'},
+                    'Transitions': [
+                        {
+                            'Days': 30,
+                            'StorageClass': 'STANDARD_IA'
+                        },
+                        {
+                            'Days': 90,
+                            'StorageClass': 'GLACIER'
+                        }
+                    ]
+                }
+            ]
+        }
+        
+        self.s3_client.put_bucket_lifecycle_configuration(
+            Bucket=bucket_name,
+            LifecycleConfiguration=lifecycle_config
+        )
+```
+
+### Block Storage
+
+Divides data into fixed-size blocks, allowing for efficient storage and retrieval. Block storage is commonly used in databases and virtual machines, providing high performance and low latency.
+
+#### Block Storage Configuration
+
+```yaml title="Kubernetes Persistent Volume with Block Storage"
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: database-pv
+spec:
+  capacity:
+    storage: 100Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ssd-block-storage
+  csi:
+    driver: ebs.csi.aws.com
+    volumeHandle: vol-0123456789abcdef0
+    fsType: ext4
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: database-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Gi
+  storageClassName: ssd-block-storage
+```
+
+#### iSCSI Block Storage Setup
+
+```bash title="iSCSI Target and Initiator Configuration"
+# On storage server (target)
+yum install scsi-target-utils -y
+
+# Create backing store
+dd if=/dev/zero of=/var/lib/iscsi_disks/disk1.img bs=1M count=10240
+
+# Configure target
+cat > /etc/tgt/conf.d/disk1.conf << EOF
+<target iqn.2024.com.company:disk1>
+    backing-store /var/lib/iscsi_disks/disk1.img
+    initiator-address 192.168.1.100
+    incominguser client secretpassword
+</target>
+EOF
+
+# Start target service
+systemctl start tgtd
+systemctl enable tgtd
+
+# On client (initiator)
+yum install iscsi-initiator-utils -y
+
+# Configure initiator
+echo "InitiatorName=iqn.2024.com.company:client" > /etc/iscsi/initiatorname.iscsi
+
+# Discover and connect to target
+iscsiadm -m discovery -t st -p 192.168.1.200
+iscsiadm -m node --login
+```
+
+### Database Storage
+
+Manages structured data using a database management system (DBMS). It provides features such as data integrity, transaction management, and query capabilities. Examples include relational databases (MySQL, PostgreSQL) and NoSQL databases (MongoDB, Cassandra).
+
+#### Database Storage Engines
+
+```sql title="MySQL Storage Engine Comparison"
+-- InnoDB for ACID compliance and transactions
+CREATE TABLE orders (
+    order_id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id INT,
+    order_date TIMESTAMP,
+    total_amount DECIMAL(10,2)
+) ENGINE=InnoDB;
+
+-- MyISAM for read-heavy workloads
+CREATE TABLE product_catalog (
+    product_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255),
+    description TEXT,
+    price DECIMAL(10,2)
+) ENGINE=MyISAM;
+
+-- Memory engine for temporary data
+CREATE TABLE user_sessions (
+    session_id VARCHAR(128) PRIMARY KEY,
+    user_id INT,
+    login_time TIMESTAMP,
+    last_activity TIMESTAMP
+) ENGINE=MEMORY;
+```
+
+#### NoSQL Database Examples
+
+```javascript title="MongoDB Document Storage"
+// Connect to MongoDB
+const { MongoClient } = require('mongodb');
+
+class DocumentStorage {
+    constructor(connectionString, databaseName) {
+        this.client = new MongoClient(connectionString);
+        this.db = this.client.db(databaseName);
+    }
+    
+    async insertDocument(collectionName, document) {
+        const collection = this.db.collection(collectionName);
+        
+        // Add metadata
+        document.createdAt = new Date();
+        document.updatedAt = new Date();
+        
+        const result = await collection.insertOne(document);
+        return result.insertedId;
+    }
+    
+    async findDocuments(collectionName, query, options = {}) {
+        const collection = this.db.collection(collectionName);
+        
+        // Add indexing for performance
+        await collection.createIndex(query);
+        
+        return await collection.find(query, options).toArray();
+    }
+    
+    async updateDocument(collectionName, filter, update) {
+        const collection = this.db.collection(collectionName);
+        
+        update.$set = update.$set || {};
+        update.$set.updatedAt = new Date();
+        
+        return await collection.updateOne(filter, update);
+    }
+}
+```
+
+### Distributed Storage
+
+Spreads data across multiple nodes or servers to enhance performance, availability, and fault tolerance. Distributed storage systems can handle large volumes of data and provide redundancy to prevent data loss. Examples include Hadoop Distributed File System (HDFS) and Google File System (GFS).
+
+#### Distributed Storage Implementation
+
+```python title="Distributed Hash Table (DHT) Implementation"
+import hashlib
+import json
+from typing import Dict, List, Any
+
+class DistributedHashTable:
+    def __init__(self, nodes: List[str], replication_factor: int = 3):
+        self.nodes = sorted(nodes)  # Consistent ordering
+        self.replication_factor = replication_factor
+        self.data_store: Dict[str, Any] = {}
+        
+    def hash_key(self, key: str) -> int:
+        """Generate hash for consistent key distribution"""
+        return int(hashlib.sha256(key.encode()).hexdigest(), 16)
+    
+    def get_responsible_nodes(self, key: str) -> List[str]:
+        """Find nodes responsible for storing the key"""
+        hash_value = self.hash_key(key)
+        start_idx = hash_value % len(self.nodes)
+        
+        # Select nodes for replication
+        responsible_nodes = []
+        for i in range(self.replication_factor):
+            node_idx = (start_idx + i) % len(self.nodes)
+            responsible_nodes.append(self.nodes[node_idx])
+        
+        return responsible_nodes
+    
+    def put(self, key: str, value: Any) -> bool:
+        """Store key-value pair across multiple nodes"""
+        nodes = self.get_responsible_nodes(key)
+        success_count = 0
+        
+        for node in nodes:
+            try:
+                # In real implementation, this would be network call
+                self._store_on_node(node, key, value)
+                success_count += 1
+            except Exception as e:
+                print(f"Failed to store on {node}: {e}")
+        
+        # Require majority of replicas to succeed
+        return success_count >= (self.replication_factor // 2 + 1)
+    
+    def get(self, key: str) -> Any:
+        """Retrieve value, trying multiple replicas for fault tolerance"""
+        nodes = self.get_responsible_nodes(key)
+        
+        for node in nodes:
+            try:
+                value = self._retrieve_from_node(node, key)
+                if value is not None:
+                    return value
+            except Exception as e:
+                print(f"Failed to retrieve from {node}: {e}")
+                continue
+        
+        return None
+    
+    def _store_on_node(self, node: str, key: str, value: Any):
+        """Simulate storing data on a specific node"""
+        node_key = f"{node}:{key}"
+        self.data_store[node_key] = {
+            'value': value,
+            'timestamp': time.time(),
+            'checksum': hashlib.md5(str(value).encode()).hexdigest()
+        }
+    
+    def _retrieve_from_node(self, node: str, key: str) -> Any:
+        """Simulate retrieving data from a specific node"""
+        node_key = f"{node}:{key}"
+        if node_key in self.data_store:
+            return self.data_store[node_key]['value']
+        return None
+```
 
 ## Storage Models
 
-Storage models define how data is organized, accessed, and managed within a storage system. Common storage models include:
+Storage models define how data is organized, accessed, and managed within a storage system. Each model has specific advantages and use cases:
 
-- **Hierarchical Storage Model**: Organizes data in a tree-like structure with parent-child relationships, allowing for efficient data retrieval and management. This model is commonly used in file systems.
-- **Relational Storage Model**: Uses tables to represent data, with relationships defined between tables through keys. This model is prevalent in relational databases, enabling complex queries and data manipulation.
-- **Document Storage Model**: Stores data as documents, typically in formats like JSON or XML. This model is commonly used in NoSQL databases, allowing for flexible and schema-less data storage.
-- **Key-Value Storage Model**: Stores data as key-value pairs, where each key is unique and maps to a specific value. This model is often used in caching systems and NoSQL databases, providing fast access to data based on keys.
-- **Graph Storage Model**: Represents data as nodes and edges, allowing for efficient storage and retrieval of complex relationships. This model is commonly used in graph databases, enabling applications to analyze and traverse relationships between entities.
+### Hierarchical Storage Model
+
+Organizes data in a tree-like structure with parent-child relationships, allowing for efficient data retrieval and management. This model is commonly used in file systems.
+
+#### File System Hierarchy Example
+
+```bash title="Traditional File System Structure"
+/
+├── home/
+│   ├── users/
+│   │   ├── john/
+│   │   │   ├── documents/
+│   │   │   ├── downloads/
+│   │   │   └── projects/
+│   │   └── jane/
+│   └── shared/
+├── var/
+│   ├── log/
+│   ├── cache/
+│   └── tmp/
+└── opt/
+    └── applications/
+```
+
+#### Hierarchical Database Model
+
+```python title="Hierarchical Data Management"
+class HierarchicalStorage:
+    def __init__(self):
+        self.root = {'name': 'root', 'children': {}, 'data': None}
+    
+    def create_path(self, path: str, data=None):
+        """Create hierarchical path structure"""
+        parts = path.strip('/').split('/')
+        current = self.root
+        
+        for part in parts:
+            if part not in current['children']:
+                current['children'][part] = {
+                    'name': part,
+                    'children': {},
+                    'data': None,
+                    'parent': current
+                }
+            current = current['children'][part]
+        
+        if data is not None:
+            current['data'] = data
+    
+    def find_path(self, path: str):
+        """Navigate through hierarchy to find data"""
+        parts = path.strip('/').split('/')
+        current = self.root
+        
+        for part in parts:
+            if part in current['children']:
+                current = current['children'][part]
+            else:
+                return None
+        
+        return current
+    
+    def list_children(self, path: str):
+        """List all children at a given path"""
+        node = self.find_path(path)
+        return list(node['children'].keys()) if node else []
+```
+
+### Relational Storage Model
+
+Uses tables to represent data, with relationships defined between tables through keys. This model is prevalent in relational databases, enabling complex queries and data manipulation.
+
+#### Advanced Relational Schema
+
+```sql title="Complex Relational Database Design"
+-- Users table with constraints
+CREATE TABLE users (
+    user_id SERIAL PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_login TIMESTAMP,
+    is_active BOOLEAN DEFAULT TRUE,
+    profile_data JSONB
+);
+
+-- Products with categories (many-to-many)
+CREATE TABLE categories (
+    category_id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    parent_category_id INTEGER REFERENCES categories(category_id)
+);
+
+CREATE TABLE products (
+    product_id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    price DECIMAL(10,2) NOT NULL,
+    stock_quantity INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Junction table for many-to-many relationship
+CREATE TABLE product_categories (
+    product_id INTEGER REFERENCES products(product_id) ON DELETE CASCADE,
+    category_id INTEGER REFERENCES categories(category_id) ON DELETE CASCADE,
+    PRIMARY KEY (product_id, category_id)
+);
+
+-- Orders with complex relationships
+CREATE TABLE orders (
+    order_id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(user_id),
+    order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status VARCHAR(20) DEFAULT 'pending',
+    total_amount DECIMAL(10,2),
+    shipping_address JSONB,
+    billing_address JSONB
+);
+
+-- Advanced queries with joins
+CREATE VIEW order_summary AS
+SELECT 
+    o.order_id,
+    u.username,
+    u.email,
+    o.order_date,
+    o.status,
+    o.total_amount,
+    COUNT(oi.product_id) as item_count
+FROM orders o
+JOIN users u ON o.user_id = u.user_id
+LEFT JOIN order_items oi ON o.order_id = oi.order_id
+GROUP BY o.order_id, u.username, u.email, o.order_date, o.status, o.total_amount;
+```
+
+### Document Storage Model
+
+Stores data as documents, typically in formats like JSON or XML. This model is commonly used in NoSQL databases, allowing for flexible and schema-less data storage.
+
+#### Document Database Implementation
+
+```javascript title="Advanced Document Storage with MongoDB"
+const { MongoClient } = require('mongodb');
+
+class DocumentDatabase {
+    constructor(connectionString, databaseName) {
+        this.client = new MongoClient(connectionString);
+        this.db = this.client.db(databaseName);
+    }
+    
+    async createCollection(name, schema) {
+        """Create collection with schema validation"""
+        await this.db.createCollection(name, {
+            validator: {
+                $jsonSchema: schema
+            },
+            validationLevel: "strict",
+            validationAction: "error"
+        });
+    }
+    
+    async insertDocument(collection, document) {
+        """Insert document with automatic indexing"""
+        // Add metadata
+        document._metadata = {
+            created: new Date(),
+            modified: new Date(),
+            version: 1
+        };
+        
+        const coll = this.db.collection(collection);
+        
+        // Create indexes based on document structure
+        const indexes = this.generateIndexes(document);
+        for (const index of indexes) {
+            await coll.createIndex(index);
+        }
+        
+        return await coll.insertOne(document);
+    }
+    
+    generateIndexes(document) {
+        """Generate indexes based on document structure"""
+        const indexes = [];
+        
+        // Create text index for string fields
+        const textFields = {};
+        this.findStringFields(document, textFields);
+        if (Object.keys(textFields).length > 0) {
+            indexes.push(textFields);
+        }
+        
+        // Create compound indexes for common query patterns
+        if (document.userId && document.timestamp) {
+            indexes.push({ userId: 1, timestamp: -1 });
+        }
+        
+        return indexes;
+    }
+    
+    findStringFields(obj, textFields, prefix = '') {
+        """Recursively find string fields for text indexing"""
+        for (const [key, value] of Object.entries(obj)) {
+            const fieldPath = prefix ? `${prefix}.${key}` : key;
+            
+            if (typeof value === 'string') {
+                textFields[fieldPath] = 'text';
+            } else if (typeof value === 'object' && value !== null) {
+                this.findStringFields(value, textFields, fieldPath);
+            }
+        }
+    }
+}
+
+// Example usage with complex document
+const userProfile = {
+    userId: "user123",
+    profile: {
+        personalInfo: {
+            firstName: "John",
+            lastName: "Doe",
+            email: "john.doe@example.com"
+        },
+        preferences: {
+            theme: "dark",
+            language: "en",
+            notifications: {
+                email: true,
+                push: false
+            }
+        },
+        activityLog: [
+            {
+                action: "login",
+                timestamp: new Date(),
+                ipAddress: "192.168.1.100"
+            }
+        ]
+    }
+};
+```
+
+### Key-Value Storage Model
+
+Stores data as key-value pairs, where each key is unique and maps to a specific value. This model is often used in caching systems and NoSQL databases, providing fast access to data based on keys.
+
+#### High-Performance Key-Value Store
+
+```python title="Distributed Key-Value Storage with Redis"
+import redis
+import json
+import time
+from typing import Any, Optional
+
+class DistributedKeyValueStore:
+    def __init__(self, redis_nodes, replication_factor=2):
+        self.nodes = [redis.Redis(host=node['host'], port=node['port']) 
+                     for node in redis_nodes]
+        self.replication_factor = replication_factor
+    
+    def put(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
+        """Store key-value pair with optional TTL"""
+        serialized_value = json.dumps({
+            'data': value,
+            'timestamp': time.time(),
+            'type': type(value).__name__
+        })
+        
+        # Determine which nodes to store on
+        responsible_nodes = self._get_responsible_nodes(key)
+        success_count = 0
+        
+        for node in responsible_nodes:
+            try:
+                if ttl:
+                    node.setex(key, ttl, serialized_value)
+                else:
+                    node.set(key, serialized_value)
+                success_count += 1
+            except Exception as e:
+                print(f"Failed to store on node: {e}")
+        
+        # Require majority of replicas to succeed
+        return success_count >= (self.replication_factor // 2 + 1)
+    
+    def get(self, key: str) -> Any:
+        """Retrieve value with fallback to replicas"""
+        responsible_nodes = self._get_responsible_nodes(key)
+        
+        for node in responsible_nodes:
+            try:
+                serialized_value = node.get(key)
+                if serialized_value:
+                    data = json.loads(serialized_value)
+                    return data['data']
+            except Exception as e:
+                continue
+        
+        return None
+    
+    def batch_get(self, keys: list) -> dict:
+        """Efficiently retrieve multiple keys"""
+        # Group keys by responsible nodes
+        node_keys = {}
+        for key in keys:
+            responsible_nodes = self._get_responsible_nodes(key)
+            primary_node = responsible_nodes[0]
+            
+            if primary_node not in node_keys:
+                node_keys[primary_node] = []
+            node_keys[primary_node].append(key)
+        
+        # Batch retrieve from each node
+        results = {}
+        for node, node_key_list in node_keys.items():
+            try:
+                pipe = node.pipeline()
+                for key in node_key_list:
+                    pipe.get(key)
+                values = pipe.execute()
+                
+                for key, value in zip(node_key_list, values):
+                    if value:
+                        data = json.loads(value)
+                        results[key] = data['data']
+            except Exception as e:
+                print(f"Batch get failed for node: {e}")
+        
+        return results
+    
+    def _get_responsible_nodes(self, key: str):
+        """Determine which nodes are responsible for a key"""
+        hash_value = hash(key) % len(self.nodes)
+        responsible = []
+        
+        for i in range(self.replication_factor):
+            node_idx = (hash_value + i) % len(self.nodes)
+            responsible.append(self.nodes[node_idx])
+        
+        return responsible
+```
+
+### Graph Storage Model
+
+Represents data as nodes and edges, allowing for efficient storage and retrieval of complex relationships. This model is commonly used in graph databases, enabling applications to analyze and traverse relationships between entities.
+
+#### Graph Database Implementation
+
+```python title="Graph Storage with Neo4j"
+from neo4j import GraphDatabase
+import json
+
+class GraphStorageManager:
+    def __init__(self, uri, username, password):
+        self.driver = GraphDatabase.driver(uri, auth=(username, password))
+    
+    def close(self):
+        self.driver.close()
+    
+    def create_user_network(self, users_data):
+        """Create social network graph"""
+        with self.driver.session() as session:
+            # Create users
+            for user in users_data:
+                session.run("""
+                    CREATE (u:User {
+                        userId: $userId,
+                        name: $name,
+                        email: $email,
+                        joinDate: $joinDate,
+                        interests: $interests
+                    })
+                    """, 
+                    userId=user['id'],
+                    name=user['name'],
+                    email=user['email'],
+                    joinDate=user['joinDate'],
+                    interests=user['interests']
+                )
+            
+            # Create relationships
+            for user in users_data:
+                for friend_id in user.get('friends', []):
+                    session.run("""
+                        MATCH (u1:User {userId: $userId1})
+                        MATCH (u2:User {userId: $userId2})
+                        CREATE (u1)-[:FRIENDS_WITH {since: $since}]->(u2)
+                        """,
+                        userId1=user['id'],
+                        userId2=friend_id,
+                        since=user.get('friendshipDate', '2024-01-01')
+                    )
+    
+    def find_mutual_friends(self, user1_id, user2_id):
+        """Find mutual friends between two users"""
+        with self.driver.session() as session:
+            result = session.run("""
+                MATCH (u1:User {userId: $user1})-[:FRIENDS_WITH]-(mutual)-[:FRIENDS_WITH]-(u2:User {userId: $user2})
+                WHERE u1 <> u2
+                RETURN mutual.name as name, mutual.userId as userId
+                """,
+                user1=user1_id,
+                user2=user2_id
+            )
+            return [{'name': record['name'], 'userId': record['userId']} 
+                   for record in result]
+    
+    def recommend_friends(self, user_id, max_recommendations=5):
+        """Recommend friends based on mutual connections"""
+        with self.driver.session() as session:
+            result = session.run("""
+                MATCH (u:User {userId: $userId})-[:FRIENDS_WITH]-(friend)-[:FRIENDS_WITH]-(recommendation)
+                WHERE u <> recommendation 
+                AND NOT (u)-[:FRIENDS_WITH]-(recommendation)
+                WITH recommendation, count(friend) as mutualFriends
+                ORDER BY mutualFriends DESC
+                LIMIT $limit
+                RETURN recommendation.name as name, 
+                       recommendation.userId as userId,
+                       mutualFriends
+                """,
+                userId=user_id,
+                limit=max_recommendations
+            )
+            return [{'name': record['name'], 
+                    'userId': record['userId'],
+                    'mutualFriends': record['mutualFriends']} 
+                   for record in result]
+    
+    def analyze_network_centrality(self):
+        """Find most connected users in the network"""
+        with self.driver.session() as session:
+            result = session.run("""
+                MATCH (u:User)-[r:FRIENDS_WITH]-()
+                WITH u, count(r) as connections
+                ORDER BY connections DESC
+                LIMIT 10
+                RETURN u.name as name, u.userId as userId, connections
+                """)
+            return [{'name': record['name'],
+                    'userId': record['userId'],
+                    'connections': record['connections']} 
+                   for record in result]
+```
 
 ## Best Practices
 
-- **Data Backup**: Regularly back up data to prevent loss due to hardware failures, accidental deletions, or disasters. Implement automated backup solutions and store backups in secure locations.
-- **Data Encryption**: Encrypt sensitive data both at rest and in transit to protect it from unauthorized access. Use strong encryption algorithms and manage encryption keys securely.
-- **Access Control**: Implement strict access controls to ensure that only authorized users can access and modify data. Use role-based access control (RBAC) or attribute-based access control (ABAC) to manage permissions effectively.
-- **Data Monitoring**: Continuously monitor data access and usage patterns to detect anomalies, unauthorized access, or performance issues. Use logging and auditing tools to track data changes and access attempts.
-- **Data Archiving**: Archive old or infrequently accessed data to reduce storage costs and improve performance. Implement policies for data retention and archiving based on business requirements and compliance regulations.
+Implementing effective storage systems requires following proven practices that ensure reliability, security, and performance:
+
+### Data Backup
+
+Regularly back up data to prevent loss due to hardware failures, accidental deletions, or disasters. Implement automated backup solutions and store backups in secure locations.
+
+#### Comprehensive Backup Strategy
+
+```bash title="Multi-Tier Backup System"
+#!/bin/bash
+# Comprehensive backup script with multiple strategies
+
+BACKUP_ROOT="/backups"
+DATE=$(date +%Y%m%d_%H%M%S)
+LOG_FILE="/var/log/backup_${DATE}.log"
+
+# Function for logging
+log() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "$LOG_FILE"
+}
+
+# Full backup (weekly)
+perform_full_backup() {
+    log "Starting full backup"
+    
+    # Database backup with compression
+    pg_dump -h localhost -U backup_user mydb | \
+        gzip > "${BACKUP_ROOT}/full/db_full_${DATE}.sql.gz"
+    
+    # File system backup using rsync
+    rsync -avz --delete \
+        /data/ \
+        "${BACKUP_ROOT}/full/files_${DATE}/" \
+        >> "$LOG_FILE" 2>&1
+    
+    # Create checksum for integrity verification
+    find "${BACKUP_ROOT}/full" -type f -newer /tmp/last_full_backup \
+        -exec sha256sum {} \; > "${BACKUP_ROOT}/full/checksums_${DATE}.txt"
+    
+    touch /tmp/last_full_backup
+    log "Full backup completed"
+}
+
+# Incremental backup (daily)
+perform_incremental_backup() {
+    log "Starting incremental backup"
+    
+    # Database transaction log backup
+    pg_basebackup -h localhost -U backup_user -D "${BACKUP_ROOT}/incremental/db_${DATE}" -Ft -z
+    
+    # Incremental file backup
+    rsync -avz --backup --backup-dir="${BACKUP_ROOT}/incremental/deleted_${DATE}" \
+        --delete \
+        /data/ \
+        "${BACKUP_ROOT}/current/" \
+        >> "$LOG_FILE" 2>&1
+    
+    log "Incremental backup completed"
+}
+
+# Verify backup integrity
+verify_backup() {
+    log "Verifying backup integrity"
+    
+    # Check database backup
+    if gunzip -t "${BACKUP_ROOT}/full/db_full_${DATE}.sql.gz"; then
+        log "Database backup integrity verified"
+    else
+        log "ERROR: Database backup corrupted"
+        send_alert "Database backup corrupted"
+    fi
+    
+    # Verify file checksums
+    if sha256sum -c "${BACKUP_ROOT}/full/checksums_${DATE}.txt" --quiet; then
+        log "File backup integrity verified"
+    else
+        log "ERROR: File backup integrity check failed"
+        send_alert "File backup integrity check failed"
+    fi
+}
+
+# Cloud backup sync
+sync_to_cloud() {
+    log "Syncing backups to cloud storage"
+    
+    # Upload to AWS S3 with encryption
+    aws s3 sync "${BACKUP_ROOT}/" "s3://company-backups/$(hostname)/" \
+        --storage-class STANDARD_IA \
+        --server-side-encryption AES256 \
+        --exclude "*.tmp" \
+        >> "$LOG_FILE" 2>&1
+    
+    log "Cloud sync completed"
+}
+
+# Main backup execution
+case "$1" in
+    "full")
+        perform_full_backup
+        verify_backup
+        sync_to_cloud
+        ;;
+    "incremental")
+        perform_incremental_backup
+        sync_to_cloud
+        ;;
+    *)
+        log "Usage: $0 {full|incremental}"
+        exit 1
+        ;;
+esac
+```
+
+### Data Encryption
+
+Encrypt sensitive data both at rest and in transit to protect it from unauthorized access. Use strong encryption algorithms and manage encryption keys securely.
+
+#### Advanced Encryption Implementation
+
+```python title="Enterprise-Grade Data Encryption"
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import rsa, padding
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+import os
+import base64
+import json
+
+class EnterpriseEncryption:
+    def __init__(self):
+        self.rsa_key = rsa.generate_private_key(
+            public_exponent=65537,
+            key_size=4096
+        )
+        self.public_key = self.rsa_key.public_key()
+    
+    def encrypt_file(self, file_path: str, password: str) -> str:
+        """Encrypt file with hybrid encryption (RSA + AES)"""
+        # Generate random AES key
+        aes_key = os.urandom(32)
+        iv = os.urandom(16)
+        
+        # Encrypt AES key with RSA
+        encrypted_aes_key = self.public_key.encrypt(
+            aes_key,
+            padding.OAEP(
+                mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                algorithm=hashes.SHA256(),
+                label=None
+            )
+        )
+        
+        # Encrypt file content with AES
+        cipher = Cipher(algorithms.AES(aes_key), modes.CBC(iv))
+        encryptor = cipher.encryptor()
+        
+        with open(file_path, 'rb') as file:
+            plaintext = file.read()
+            
+            # Pad data to block size
+            pad_length = 16 - (len(plaintext) % 16)
+            padded_data = plaintext + bytes([pad_length]) * pad_length
+            
+            encrypted_content = encryptor.update(padded_data) + encryptor.finalize()
+        
+        # Create encrypted file package
+        encrypted_package = {
+            'encrypted_key': base64.b64encode(encrypted_aes_key).decode(),
+            'iv': base64.b64encode(iv).decode(),
+            'content': base64.b64encode(encrypted_content).decode(),
+            'algorithm': 'AES-256-CBC',
+            'key_algorithm': 'RSA-4096-OAEP'
+        }
+        
+        encrypted_file_path = f"{file_path}.encrypted"
+        with open(encrypted_file_path, 'w') as encrypted_file:
+            json.dump(encrypted_package, encrypted_file)
+        
+        return encrypted_file_path
+    
+    def decrypt_file(self, encrypted_file_path: str) -> str:
+        """Decrypt file using private key"""
+        with open(encrypted_file_path, 'r') as encrypted_file:
+            encrypted_package = json.load(encrypted_file)
+        
+        # Decrypt AES key with RSA private key
+        encrypted_aes_key = base64.b64decode(encrypted_package['encrypted_key'])
+        aes_key = self.rsa_key.decrypt(
+            encrypted_aes_key,
+            padding.OAEP(
+                mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                algorithm=hashes.SHA256(),
+                label=None
+            )
+        )
+        
+        # Decrypt content with AES
+        iv = base64.b64decode(encrypted_package['iv'])
+        encrypted_content = base64.b64decode(encrypted_package['content'])
+        
+        cipher = Cipher(algorithms.AES(aes_key), modes.CBC(iv))
+        decryptor = cipher.decryptor()
+        
+        padded_data = decryptor.update(encrypted_content) + decryptor.finalize()
+        
+        # Remove padding
+        pad_length = padded_data[-1]
+        plaintext = padded_data[:-pad_length]
+        
+        # Write decrypted file
+        decrypted_file_path = encrypted_file_path.replace('.encrypted', '.decrypted')
+        with open(decrypted_file_path, 'wb') as decrypted_file:
+            decrypted_file.write(plaintext)
+        
+        return decrypted_file_path
+    
+    def export_public_key(self) -> str:
+        """Export public key for sharing"""
+        pem = self.public_key.public_key().public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo
+        )
+        return pem.decode()
+```
+
+### Access Control
+
+Implement strict access controls to ensure that only authorized users can access and modify data. Use role-based access control (RBAC) or attribute-based access control (ABAC) to manage permissions effectively.
+
+#### Advanced Access Control System
+
+```python title="Attribute-Based Access Control (ABAC)"
+from datetime import datetime, timedelta
+from typing import Dict, List, Any
+import json
+
+class ABACEngine:
+    def __init__(self):
+        self.policies = []
+        self.attributes = {}
+    
+    def add_policy(self, policy: Dict[str, Any]):
+        """Add access control policy"""
+        self.policies.append(policy)
+    
+    def set_user_attributes(self, user_id: str, attributes: Dict[str, Any]):
+        """Set attributes for a user"""
+        self.attributes[user_id] = attributes
+    
+    def evaluate_access(self, user_id: str, resource: str, action: str, context: Dict[str, Any] = None) -> bool:
+        """Evaluate if user has access to resource for given action"""
+        user_attrs = self.attributes.get(user_id, {})
+        context = context or {}
+        
+        # Add current time to context
+        context['current_time'] = datetime.now()
+        context['user_id'] = user_id
+        
+        for policy in self.policies:
+            if self._matches_policy(policy, user_attrs, resource, action, context):
+                return policy.get('effect', 'deny') == 'allow'
+        
+        # Default deny
+        return False
+    
+    def _matches_policy(self, policy: Dict, user_attrs: Dict, resource: str, action: str, context: Dict) -> bool:
+        """Check if policy matches the access request"""
+        
+        # Check resource pattern
+        if not self._matches_pattern(policy.get('resource', '*'), resource):
+            return False
+        
+        # Check action
+        if policy.get('action') != '*' and policy.get('action') != action:
+            return False
+        
+        # Check user attributes
+        required_attrs = policy.get('user_attributes', {})
+        for attr_name, required_value in required_attrs.items():
+            if user_attrs.get(attr_name) != required_value:
+                return False
+        
+        # Check time-based conditions
+        time_conditions = policy.get('time_conditions', {})
+        if time_conditions:
+            current_time = context['current_time']
+            
+            # Check time range
+            if 'start_time' in time_conditions and 'end_time' in time_conditions:
+                start_time = datetime.fromisoformat(time_conditions['start_time'])
+                end_time = datetime.fromisoformat(time_conditions['end_time'])
+                if not (start_time <= current_time <= end_time):
+                    return False
+            
+            # Check day of week
+            if 'allowed_days' in time_conditions:
+                current_day = current_time.strftime('%A').lower()
+                if current_day not in time_conditions['allowed_days']:
+                    return False
+        
+        # Check IP-based conditions
+        ip_conditions = policy.get('ip_conditions', {})
+        if ip_conditions and 'client_ip' in context:
+            allowed_ips = ip_conditions.get('allowed_ips', [])
+            if allowed_ips and context['client_ip'] not in allowed_ips:
+                return False
+        
+        return True
+    
+    def _matches_pattern(self, pattern: str, value: str) -> bool:
+        """Simple pattern matching with wildcards"""
+        if pattern == '*':
+            return True
+        
+        # Handle basic wildcard patterns
+        if '*' in pattern:
+            parts = pattern.split('*')
+            if len(parts) == 2:
+                prefix, suffix = parts
+                return value.startswith(prefix) and value.endswith(suffix)
+        
+        return pattern == value
+
+# Example usage
+abac = ABACEngine()
+
+# Define policies
+abac.add_policy({
+    'name': 'database_admin_policy',
+    'resource': 'database/*',
+    'action': '*',
+    'user_attributes': {'role': 'admin'},
+    'effect': 'allow'
+})
+
+abac.add_policy({
+    'name': 'business_hours_read_policy',
+    'resource': 'database/sales_data',
+    'action': 'read',
+    'user_attributes': {'department': 'sales'},
+    'time_conditions': {
+        'allowed_days': ['monday', 'tuesday', 'wednesday', 'thursday', 'friday']
+    },
+    'effect': 'allow'
+})
+
+# Set user attributes
+abac.set_user_attributes('user123', {
+    'role': 'analyst',
+    'department': 'sales',
+    'clearance_level': 2
+})
+
+# Check access
+context = {'client_ip': '192.168.1.100'}
+has_access = abac.evaluate_access('user123', 'database/sales_data', 'read', context)
+```
+
+### Data Monitoring
+
+Continuously monitor data access and usage patterns to detect anomalies, unauthorized access, or performance issues. Use logging and auditing tools to track data changes and access attempts.
+
+#### Comprehensive Monitoring System
+
+```python title="Data Access Monitoring and Alerting"
+import logging
+import json
+from datetime import datetime, timedelta
+from collections import defaultdict, deque
+import threading
+import time
+
+class DataAccessMonitor:
+    def __init__(self, alert_threshold=100, time_window=300):
+        self.access_log = deque(maxlen=10000)  # Keep last 10k accesses
+        self.user_activity = defaultdict(list)
+        self.alert_threshold = alert_threshold
+        self.time_window = time_window  # 5 minutes
+        self.anomaly_patterns = {}
+        
+        # Setup logging
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s - %(levelname)s - %(message)s',
+            handlers=[
+                logging.FileHandler('/var/log/data_access.log'),
+                logging.StreamHandler()
+            ]
+        )
+        self.logger = logging.getLogger(__name__)
+        
+        # Start monitoring thread
+        self.monitoring_thread = threading.Thread(target=self._continuous_monitoring)
+        self.monitoring_thread.daemon = True
+        self.monitoring_thread.start()
+    
+    def log_access(self, user_id: str, resource: str, action: str, 
+                   ip_address: str, success: bool, metadata: dict = None):
+        """Log data access attempt"""
+        access_record = {
+            'timestamp': datetime.now(),
+            'user_id': user_id,
+            'resource': resource,
+            'action': action,
+            'ip_address': ip_address,
+            'success': success,
+            'metadata': metadata or {}
+        }
+        
+        self.access_log.append(access_record)
+        self.user_activity[user_id].append(access_record)
+        
+        # Log to file
+        log_message = json.dumps({
+            'timestamp': access_record['timestamp'].isoformat(),
+            'user_id': user_id,
+            'resource': resource,
+            'action': action,
+            'ip_address': ip_address,
+            'success': success,
+            'metadata': metadata
+        })
+        
+        if success:
+            self.logger.info(f"ACCESS_SUCCESS: {log_message}")
+        else:
+            self.logger.warning(f"ACCESS_DENIED: {log_message}")
+        
+        # Real-time anomaly detection
+        self._check_immediate_anomalies(access_record)
+    
+    def _check_immediate_anomalies(self, access_record):
+        """Check for immediate anomalies"""
+        user_id = access_record['user_id']
+        current_time = access_record['timestamp']
+        
+        # Check for rapid access attempts
+        recent_accesses = [
+            access for access in self.user_activity[user_id]
+            if current_time - access['timestamp'] <= timedelta(minutes=1)
+        ]
+        
+        if len(recent_accesses) > 20:  # More than 20 accesses per minute
+            self._send_alert('RAPID_ACCESS', {
+                'user_id': user_id,
+                'access_count': len(recent_accesses),
+                'time_window': '1 minute'
+            })
+        
+        # Check for access from new IP
+        user_ips = set(access['ip_address'] for access in self.user_activity[user_id][:-1])
+        if access_record['ip_address'] not in user_ips and len(user_ips) > 0:
+            self._send_alert('NEW_IP_ACCESS', {
+                'user_id': user_id,
+                'new_ip': access_record['ip_address'],
+                'known_ips': list(user_ips)
+            })
+        
+        # Check for failed login attempts
+        failed_attempts = [
+            access for access in recent_accesses
+            if not access['success'] and access['action'] == 'login'
+        ]
+        
+        if len(failed_attempts) >= 5:
+            self._send_alert('BRUTE_FORCE_ATTEMPT', {
+                'user_id': user_id,
+                'failed_attempts': len(failed_attempts),
+                'ip_address': access_record['ip_address']
+            })
+    
+    def _continuous_monitoring(self):
+        """Background monitoring for patterns and trends"""
+        while True:
+            try:
+                self._analyze_access_patterns()
+                self._check_resource_usage()
+                self._detect_unusual_activity()
+                time.sleep(60)  # Check every minute
+            except Exception as e:
+                self.logger.error(f"Monitoring error: {e}")
+    
+    def _analyze_access_patterns(self):
+        """Analyze access patterns for anomalies"""
+        current_time = datetime.now()
+        
+        # Analyze access by hour of day
+        hourly_access = defaultdict(int)
+        for access in self.access_log:
+            if current_time - access['timestamp'] <= timedelta(days=1):
+                hour = access['timestamp'].hour
+                hourly_access[hour] += 1
+        
+        # Detect unusual time access
+        current_hour = current_time.hour
+        avg_hourly = sum(hourly_access.values()) / max(len(hourly_access), 1)
+        
+        if hourly_access[current_hour] > avg_hourly * 3:
+            self._send_alert('UNUSUAL_TIME_ACCESS', {
+                'hour': current_hour,
+                'access_count': hourly_access[current_hour],
+                'average': avg_hourly
+            })
+    
+    def _send_alert(self, alert_type: str, details: dict):
+        """Send security alert"""
+        alert = {
+            'timestamp': datetime.now().isoformat(),
+            'type': alert_type,
+            'details': details,
+            'severity': self._get_alert_severity(alert_type)
+        }
+        
+        self.logger.critical(f"SECURITY_ALERT: {json.dumps(alert)}")
+        
+        # In production, this would integrate with alerting systems
+        # like PagerDuty, Slack, email, etc.
+        print(f"🚨 ALERT: {alert_type} - {details}")
+    
+    def _get_alert_severity(self, alert_type: str) -> str:
+        """Determine alert severity level"""
+        high_severity = ['BRUTE_FORCE_ATTEMPT', 'DATA_BREACH_ATTEMPT']
+        medium_severity = ['RAPID_ACCESS', 'NEW_IP_ACCESS']
+        
+        if alert_type in high_severity:
+            return 'HIGH'
+        elif alert_type in medium_severity:
+            return 'MEDIUM'
+        else:
+            return 'LOW'
+    
+    def generate_access_report(self, start_date: datetime, end_date: datetime) -> dict:
+        """Generate comprehensive access report"""
+        relevant_accesses = [
+            access for access in self.access_log
+            if start_date <= access['timestamp'] <= end_date
+        ]
+        
+        report = {
+            'period': {
+                'start': start_date.isoformat(),
+                'end': end_date.isoformat()
+            },
+            'total_accesses': len(relevant_accesses),
+            'successful_accesses': len([a for a in relevant_accesses if a['success']]),
+            'failed_accesses': len([a for a in relevant_accesses if not a['success']]),
+            'unique_users': len(set(a['user_id'] for a in relevant_accesses)),
+            'unique_ips': len(set(a['ip_address'] for a in relevant_accesses)),
+            'top_users': self._get_top_users(relevant_accesses),
+            'resource_access': self._get_resource_stats(relevant_accesses),
+            'hourly_distribution': self._get_hourly_distribution(relevant_accesses)
+        }
+        
+        return report
+```
+
+### Data Archiving
+
+Archive old or infrequently accessed data to reduce storage costs and improve performance. Implement policies for data retention and archiving based on business requirements and compliance regulations.
+
+#### Intelligent Data Archiving System
+
+```python title="Automated Data Archiving with Lifecycle Management"
+import sqlite3
+from datetime import datetime, timedelta
+import os
+import gzip
+import json
+from typing import List, Dict
+
+class DataArchivalManager:
+    def __init__(self, db_path: str, archive_path: str):
+        self.db_path = db_path
+        self.archive_path = archive_path
+        self.policies = []
+        
+        # Ensure archive directory exists
+        os.makedirs(archive_path, exist_ok=True)
+        
+        # Setup archival tracking database
+        self._setup_archival_db()
+    
+    def _setup_archival_db(self):
+        """Setup database to track archival operations"""
+        conn = sqlite3.connect(f"{self.archive_path}/archival_log.db")
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS archival_operations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                table_name TEXT NOT NULL,
+                operation_type TEXT NOT NULL,
+                records_count INTEGER,
+                archive_file TEXT,
+                operation_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                retention_policy TEXT
+            )
+        ''')
+        
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS retention_policies (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                policy_name TEXT UNIQUE NOT NULL,
+                table_pattern TEXT NOT NULL,
+                retention_days INTEGER NOT NULL,
+                archive_after_days INTEGER NOT NULL,
+                compression_enabled BOOLEAN DEFAULT TRUE,
+                created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
+        conn.commit()
+        conn.close()
+    
+    def add_retention_policy(self, policy_name: str, table_pattern: str, 
+                           retention_days: int, archive_after_days: int, 
+                           compression_enabled: bool = True):
+        """Add data retention policy"""
+        conn = sqlite3.connect(f"{self.archive_path}/archival_log.db")
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            INSERT OR REPLACE INTO retention_policies 
+            (policy_name, table_pattern, retention_days, archive_after_days, compression_enabled)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (policy_name, table_pattern, retention_days, archive_after_days, compression_enabled))
+        
+        conn.commit()
+        conn.close()
+    
+    def execute_archival_policies(self):
+        """Execute all configured archival policies"""
+        # Get all policies
+        conn = sqlite3.connect(f"{self.archive_path}/archival_log.db")
+        cursor = conn.cursor()
+        
+        cursor.execute('SELECT * FROM retention_policies')
+        policies = cursor.fetchall()
+        conn.close()
+        
+        for policy in policies:
+            policy_id, policy_name, table_pattern, retention_days, archive_after_days, compression_enabled, _ = policy
+            
+            try:
+                self._execute_policy(policy_name, table_pattern, retention_days, 
+                                   archive_after_days, compression_enabled)
+            except Exception as e:
+                print(f"Error executing policy {policy_name}: {e}")
+    
+    def _execute_policy(self, policy_name: str, table_pattern: str, 
+                       retention_days: int, archive_after_days: int, 
+                       compression_enabled: bool):
+        """Execute individual archival policy"""
+        
+        # Connect to main database
+        main_conn = sqlite3.connect(self.db_path)
+        main_cursor = main_conn.cursor()
+        
+        # Find tables matching pattern
+        main_cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        all_tables = [table[0] for table in main_cursor.fetchall()]
+        
+        matching_tables = [table for table in all_tables if table_pattern in table]
+        
+        for table_name in matching_tables:
+            # Check if table has timestamp column
+            main_cursor.execute(f"PRAGMA table_info({table_name})")
+            columns = main_cursor.fetchall()
+            
+            timestamp_column = None
+            for column in columns:
+                if 'timestamp' in column[1].lower() or 'date' in column[1].lower():
+                    timestamp_column = column[1]
+                    break
+            
+            if not timestamp_column:
+                print(f"No timestamp column found in {table_name}, skipping...")
+                continue
+            
+            # Archive old data
+            archive_cutoff = datetime.now() - timedelta(days=archive_after_days)
+            self._archive_table_data(table_name, timestamp_column, archive_cutoff, 
+                                   compression_enabled, policy_name)
+            
+            # Delete very old data
+            delete_cutoff = datetime.now() - timedelta(days=retention_days)
+            self._delete_old_data(table_name, timestamp_column, delete_cutoff, policy_name)
+        
+        main_conn.close()
+    
+    def _archive_table_data(self, table_name: str, timestamp_column: str, 
+                           cutoff_date: datetime, compression_enabled: bool, 
+                           policy_name: str):
+        """Archive table data older than cutoff date"""
+        
+        main_conn = sqlite3.connect(self.db_path)
+        main_cursor = main_conn.cursor()
+        
+        # Get data to archive
+        main_cursor.execute(f'''
+            SELECT * FROM {table_name} 
+            WHERE {timestamp_column} < ? 
+            AND {timestamp_column} NOT IN (
+                SELECT {timestamp_column} FROM archived_{table_name}_log 
+                WHERE archived_date IS NOT NULL
+            )
+        ''', (cutoff_date.isoformat(),))
+        
+        data_to_archive = main_cursor.fetchall()
+        
+        if not data_to_archive:
+            main_conn.close()
+            return
+        
+        # Get column names
+        main_cursor.execute(f"PRAGMA table_info({table_name})")
+        columns = [column[1] for column in main_cursor.fetchall()]
+        
+        # Create archive file
+        archive_filename = f"{table_name}_archive_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        archive_filepath = os.path.join(self.archive_path, archive_filename)
+        
+        # Prepare archive data
+        archive_data = {
+            'table_name': table_name,
+            'columns': columns,
+            'archive_date': datetime.now().isoformat(),
+            'policy_name': policy_name,
+            'record_count': len(data_to_archive),
+            'data': [dict(zip(columns, row)) for row in data_to_archive]
+        }
+        
+        # Write archive file
+        if compression_enabled:
+            with gzip.open(f"{archive_filepath}.gz", 'wt') as f:
+                json.dump(archive_data, f, indent=2, default=str)
+            archive_filename += '.gz'
+        else:
+            with open(archive_filepath, 'w') as f:
+                json.dump(archive_data, f, indent=2, default=str)
+        
+        # Log archival operation
+        self._log_archival_operation(table_name, 'ARCHIVE', len(data_to_archive), 
+                                   archive_filename, policy_name)
+        
+        # Remove archived data from main table
+        archived_ids = [row[0] for row in data_to_archive]  # Assuming first column is ID
+        placeholders = ','.join(['?' for _ in archived_ids])
+        main_cursor.execute(f'DELETE FROM {table_name} WHERE {columns[0]} IN ({placeholders})', 
+                          archived_ids)
+        
+        main_conn.commit()
+        main_conn.close()
+        
+        print(f"Archived {len(data_to_archive)} records from {table_name}")
+    
+    def _log_archival_operation(self, table_name: str, operation_type: str, 
+                               records_count: int, archive_file: str, policy_name: str):
+        """Log archival operation"""
+        conn = sqlite3.connect(f"{self.archive_path}/archival_log.db")
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            INSERT INTO archival_operations 
+            (table_name, operation_type, records_count, archive_file, retention_policy)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (table_name, operation_type, records_count, archive_file, policy_name))
+        
+        conn.commit()
+        conn.close()
+    
+    def restore_from_archive(self, archive_filename: str, target_table: str = None):
+        """Restore data from archive file"""
+        archive_filepath = os.path.join(self.archive_path, archive_filename)
+        
+        # Read archive file
+        if archive_filename.endswith('.gz'):
+            with gzip.open(archive_filepath, 'rt') as f:
+                archive_data = json.load(f)
+        else:
+            with open(archive_filepath, 'r') as f:
+                archive_data = json.load(f)
+        
+        table_name = target_table or archive_data['table_name']
+        columns = archive_data['columns']
+        data = archive_data['data']
+        
+        # Restore to database
+        main_conn = sqlite3.connect(self.db_path)
+        main_cursor = main_conn.cursor()
+        
+        # Create table if it doesn't exist (based on first record structure)
+        if data:
+            column_defs = ', '.join([f"{col} TEXT" for col in columns])
+            main_cursor.execute(f'''
+                CREATE TABLE IF NOT EXISTS {table_name} ({column_defs})
+            ''')
+        
+        # Insert data
+        for record in data:
+            values = [record.get(col) for col in columns]
+            placeholders = ','.join(['?' for _ in columns])
+            main_cursor.execute(f'''
+                INSERT INTO {table_name} ({','.join(columns)}) 
+                VALUES ({placeholders})
+            ''', values)
+        
+        main_conn.commit()
+        main_conn.close()
+        
+        print(f"Restored {len(data)} records to {table_name}")
+        
+        # Log restore operation
+        self._log_archival_operation(table_name, 'RESTORE', len(data), 
+                                   archive_filename, 'MANUAL_RESTORE')
+```
 
 ## Next Steps
 
@@ -84,12 +2288,18 @@ Storage models define how data is organized, accessed, and managed within a stor
 
 | Priority | Action                                                                                     | Purpose                                                       |
 | -------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------- |
-| **High** | [Data Warehouses](/db-different-databases-and-their-foundational-concepts/data-warehouses) | Learn large-scale data storage and analytical processing      |
-| **High** | [ETL Processes](/db-data-warehousing/ETL-processes)                                        | Master data extraction, transformation, and loading workflows |
+| **High** | [Data Warehouses and Data Lakes](/db-different-databases-and-their-foundational-concepts/data-warehouses-and-data-lakes) | Learn large-scale data storage and analytical processing      |
+| **High** | [Data Recovery](/db-data-storage/data-recovery)                                          | Learn backup strategies and disaster recovery procedures |
+| **Medium** | [In Memory Databases](/db-different-databases-and-their-foundational-concepts/in-memory) | Explore high-performance memory-based database systems   |
 
 ### Optional Actions
 
-| Action | Purpose |
-| ------ | ------- |
+| Action                                                                                                                             | Purpose                                                        |
+| ---------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| [Development Resources and Tools for Back-End Development](/util-general-development-resources-and-tools-for-back-end-development) | Explore essential tools and frameworks for backend development |
+| [Database Management Tools](/util-database-management-tools)                                                                       | Discover tools for database administration and monitoring      |
+| [Backup and Recovery Tools](/util-backup-and-recovery-tools)                                                                       | Learn about data protection and disaster recovery solutions    |
+| [Load Testing and Benchmarking Tools](/util-load-testing-and-benchmarking-tools)                                                   | Test storage system performance under various loads            |
+| [ETL Processes](/db-data-warehousing/ETL-processes)                                        | Master data extraction, transformation, and loading workflows |
 
 <BackToTop />
