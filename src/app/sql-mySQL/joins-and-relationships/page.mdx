@@ -1,0 +1,376 @@
+import BackToTop from "@/components/BackToTop";
+
+# Joins And Relationships
+
+## Table of Contents
+
+## Overview
+
+Joins and relationships are key concepts in relational databases, enabling you to retrieve and associate data across multiple tables using related columns. Mastering these concepts is essential for designing normalized and efficient database structures.
+
+## Types of Relationships
+
+Relational databases use relationships to define how tables are connected. The primary types include:
+
+### One-to-One (1:1)
+
+Each row in Table A corresponds to a single row in Table B, and vice versa. This is useful for splitting data for organizational or security reasons.
+
+Suppose you have a `Users` table and a `UserProfiles` table. Each user has one profile, and each profile belongs to one user. The `UserProfiles` table might use the same primary key as `Users` to enforce this relationship.
+
+```sql title="Users with Profiles"
+CREATE TABLE Users (
+    user_id INT PRIMARY KEY,
+    username VARCHAR(50)
+);
+
+CREATE TABLE UserProfiles (
+    user_id INT PRIMARY KEY,
+    bio TEXT,
+    FOREIGN KEY (user_id) REFERENCES Users(user_id)
+);
+```
+
+### One-to-Many (1:N)
+
+A single row in Table A can be linked to multiple rows in Table B, but each row in Table B links back to only one row in Table A. For example, a customer can have multiple orders.
+
+A `Customers` table and an `Orders` table. Each customer can place multiple orders, but each order is placed by only one customer.
+
+```sql title="Customers and Orders"
+CREATE TABLE Customers (
+    customer_id INT PRIMARY KEY,
+    name VARCHAR(100)
+);
+
+CREATE TABLE Orders (
+    order_id INT PRIMARY KEY,
+    customer_id INT,
+    order_date DATE,
+    FOREIGN KEY (customer_id) REFERENCES Customers(customer_id)
+);
+```
+
+### Many-to-One (N:1)
+
+The reverse of one-to-many, where multiple rows in Table A relate to a single row in Table B. For instance, many employees may belong to one department.
+
+An `Employees` table and a `Departments` table. Many employees can be assigned to one department.
+
+```sql title="Employees and Departments"
+CREATE TABLE Departments (
+    department_id INT PRIMARY KEY,
+    department_name VARCHAR(100)
+);
+
+CREATE TABLE Employees (
+    employee_id INT PRIMARY KEY,
+    name VARCHAR(100),
+    department_id INT,
+    FOREIGN KEY (department_id) REFERENCES Departments(department_id)
+);
+```
+
+### Many-to-Many (M:N)
+
+Rows in Table A can relate to multiple rows in Table B and vice versa. This is typically managed with a junction table containing foreign keys to both tables, such as students enrolled in multiple courses and courses with multiple students.
+
+A `Students` table and a `Courses` table, with a `StudentCourses` junction table to represent enrollments.
+
+```sql title="Students and Courses"
+CREATE TABLE Students (
+    student_id INT PRIMARY KEY,
+    name VARCHAR(100)
+);
+
+CREATE TABLE Courses (
+    course_id INT PRIMARY KEY,
+    course_name VARCHAR(100)
+);
+
+CREATE TABLE StudentCourses (
+    student_id INT,
+    course_id INT,
+    PRIMARY KEY (student_id, course_id),
+    FOREIGN KEY (student_id) REFERENCES Students(student_id),
+    FOREIGN KEY (course_id) REFERENCES Courses(course_id)
+);
+```
+
+## Joins
+
+Joins are used to combine rows from two or more tables based on a related column. The most common types of joins are:
+
+### INNER JOIN
+
+Returns only the rows that have matching values in both tables.
+
+```sql title="Inner Join Example"
+SELECT Customers.name, Orders.order_date
+FROM Customers
+INNER JOIN Orders ON Customers.customer_id = Orders.customer_id;
+```
+
+In this example, only customers with orders will be returned.
+
+If `Customers` originally had:
+
+```txt
++-------------+----------------+
+| customer_id | name           |
++-------------+----------------+
+| 1           | Alice          |
+| 2           | Bob            |
+| 3           | Charlie        |
++-------------+----------------+
+```
+
+And `Orders` had:
+
+```txt
++----------+-------------+------------+
+| order_id | customer_id | order_date |
++----------+-------------+------------+
+| 101      | 1           | 2023-10-01 |
+| 102      | 2           | 2023-10-02 |
+| 103      | 1           | 2023-10-03 |
++----------+-------------+------------+
+```
+
+The result of the inner join would be:
+
+```txt
++-------+------------+
+| name  | order_date |
++-------+------------+
+| Alice | 2023-10-01 |
+| Bob   | 2023-10-02 |
+| Alice | 2023-10-03 |
++-------+------------+
+```
+
+### LEFT JOIN (or LEFT OUTER JOIN)
+
+Returns all rows from the left table and the matched rows from the right table. If there is no match, NULL values are returned for columns from the right table.
+
+```sql title="Left Join Example"
+SELECT Customers.name, Orders.order_date
+FROM Customers
+LEFT JOIN Orders ON Customers.customer_id = Orders.customer_id;
+```
+
+In this example, all customers will be returned, even those without orders.
+If `Customers` originally had:
+
+```txt
++-------------+----------------+
+| customer_id | name           |
++-------------+----------------+
+| 1           | Alice          |
+| 2           | Bob            |
+| 3           | Charlie        |
++-------------+----------------+
+```
+
+And `Orders` had:
+
+```txt
++----------+-------------+------------+
+| order_id | customer_id | order_date |
++----------+-------------+------------+
+| 101      | 1           | 2023-10-01 |
+| 102      | 2           | 2023-10-02 |
++----------+-------------+------------+
+```
+
+The result of the left join would be:
+
+```txt
++----------+------------+
+| name     | order_date |
++----------+------------+
+| Alice    | 2023-10-01 |
+| Bob      | 2023-10-02 |
+| Charlie  | NULL       |
++----------+------------+
+```
+
+### RIGHT JOIN (or RIGHT OUTER JOIN)
+
+Returns all rows from the right table and the matched rows from the left table. If there is no match, NULL values are returned for columns from the left table.
+
+```sql title="Right Join Example"
+SELECT Customers.name, Orders.order_date
+FROM Customers
+RIGHT JOIN Orders ON Customers.customer_id = Orders.customer_id;
+```
+
+In this example, all orders will be returned, even those without a matching customer.
+If `Customers` originally had:
+
+```txt
++-------------+----------------+
+| customer_id | name           |
++-------------+----------------+
+| 1           | Alice          |
+| 2           | Bob            |
+| 3           | Charlie        |
++-------------+----------------+
+```
+
+And `Orders` had:
+
+```txt
++----------+-------------+------------+
+| order_id | customer_id | order_date |
++----------+-------------+------------+
+| 101      | 1           | 2023-10-01 |
+| 102      | 2           | 2023-10-02 |
+| 103      | 4           | 2023-10-03 |
++----------+-------------+------------+
+```
+
+The result of the right join would be:
+
+```txt
++-------+------------+
+| name  | order_date |
++-------+------------+
+| Alice | 2023-10-01 |
+| Bob   | 2023-10-02 |
+| NULL  | 2023-10-03 |
++-------+------------+
+```
+
+### FULL OUTER JOIN
+
+Returns all rows when there is a match in either left or right table records. If there is no match, NULL values are returned for columns from the table that does not have a match.
+
+```sql title="Full Outer Join Example"
+SELECT Customers.name, Orders.order_date
+FROM Customers
+FULL OUTER JOIN Orders ON Customers.customer_id = Orders.customer_id;
+```
+
+In this example, all customers and all orders will be returned, with NULLs where there are no matches.
+If `Customers` originally had:
+
+```txt
++-------------+----------------+
+| customer_id | name           |
++-------------+----------------+
+| 1           | Alice          |
+| 2           | Bob            |
+| 3           | Charlie        |
++-------------+----------------+
+```
+
+And `Orders` had:
+
+```txt
++----------+-------------+------------+
+| order_id | customer_id | order_date |
++----------+-------------+------------+
+| 101      | 1           | 2023-10-01 |
+| 102      | 2           | 2023-10-02 |
+| 103      | 4           | 2023-10-03 |
++----------+-------------+------------+
+```
+
+The result of the full outer join would be:
+
+```txt
++---------+------------+
+| name    | order_date |
++---------+------------+
+| Alice   | 2023-10-01 |
+| Bob     | 2023-10-02 |
+| Charlie | NULL       |
+| NULL    | 2023-10-03 |
++---------+------------+
+```
+
+## Self Join
+
+A self join is a regular join but the table is joined with itself. This is useful for hierarchical data or when you need to compare rows within the same table.
+
+```sql title="Self Join Example"
+SELECT a.name AS Employee, b.name AS Manager
+FROM Employees a
+JOIN Employees b ON a.manager_id = b.employee_id;
+```
+
+In this example, we assume the `Employees` table has a `manager_id` column that references the `employee_id` of the manager. The self join allows us to retrieve each employee along with their manager's name.
+
+## Cross Join
+
+A cross join returns the Cartesian product of two tables, meaning it combines every row from the first table with every row from the second table. This type of join is rarely used in practice due to the large result set it can produce, but it can be useful in specific scenarios.
+
+```sql title="Cross Join Example"
+SELECT Customers.name, Orders.order_date
+FROM Customers
+CROSS JOIN Orders;
+```
+
+In this example, every customer will be paired with every order, resulting in a potentially large number of rows in the result set.
+If `Customers` originally had:
+
+```txt
++-------------+----------------+
+| customer_id | name           |
++-------------+----------------+
+| 1           | Alice          |
+| 2           | Bob            |
+| 3           | Charlie        |
++-------------+----------------+
+```
+
+And `Orders` had:
+
+```txt
++----------+-------------+------------+
+| order_id | customer_id | order_date |
++----------+-------------+------------+
+| 101      | 1           | 2023-10-01 |
+| 102      | 2           | 2023-10-02 |
+| 103      | 3           | 2023-10-03 |
++----------+-------------+------------+
+```
+
+The result of the cross join would be:
+
+```txt
++---------+------------+
+| name    | order_date |
++---------+------------+
+| Alice   | 2023-10-01 |
+| Alice   | 2023-10-02 |
+| Alice   | 2023-10-03 |
+| Bob     | 2023-10-01 |
+| Bob     | 2023-10-02 |
+| Bob     | 2023-10-03 |
+| Charlie | 2023-10-01 |
+| Charlie | 2023-10-02 |
+| Charlie | 2023-10-03 |
++-------+------------+
+```
+
+## Best Practices for Joins
+
+- **Use INNER JOIN when possible**: It is the most efficient and commonly used join type.
+- **Avoid CROSS JOINs unless necessary**: They can produce large result sets and are rarely needed.
+- **Use appropriate indexes**: Indexing the columns used in joins can significantly improve performance.
+- **Be cautious with LEFT and RIGHT JOINs**: They can lead to unexpected NULL values if not handled properly. Always check for NULLs in the result set.
+- **Understand the data model**: Knowing how tables are related helps in choosing the right join type and writing efficient queries.
+
+## Next Steps
+
+### Immediate Actions
+
+| Action                                                          | Purpose                                                              |
+| --------------------------------------------------------------- | -------------------------------------------------------------------- |
+| [Replication Queries](/sql-mySQL/replication-and-clustering)    | Learn how to set up and manage replication in MySQL.                 |
+| [Stored Procedures](/sql-mySQL/stored-procedures)               | Create reusable code blocks and improve database performance.        |
+| [Performance Optimization](/sql-mySQL/performance-optimization) | Learn techniques to optimize MySQL queries and database performance. |
+
+<BackToTop />
