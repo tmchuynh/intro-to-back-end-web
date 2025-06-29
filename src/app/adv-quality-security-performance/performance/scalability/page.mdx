@@ -146,7 +146,7 @@ API rate limiting is a technique used to control the amount of incoming traffic 
 
 ##### Token Bucket Algorithm
 
-```python
+```python title="src/rate-limiting/token-bucket.py"
 class TokenBucket:
     def __init__(self, capacity, refill_rate):
         self.capacity = capacity
@@ -167,7 +167,7 @@ class TokenBucket:
         return False
 ```
 
-```python
+```python title="examples/token-bucket-usage.py"
 # Example usage
 bucket = TokenBucket(capacity=10, refill_rate=1)  # 10 tokens
 if bucket.consume(1):  # Try to consume 1 token
@@ -178,7 +178,7 @@ else:
 
 ##### Leaky Bucket Algorithm
 
-```python
+```python title="src/rate-limiting/leaky-bucket.py"
 class LeakyBucket:
     def __init__(self, capacity, leak_rate):
         self.capacity = capacity
@@ -199,7 +199,7 @@ class LeakyBucket:
         return False
 ```
 
-```python
+```python title="examples/leaky-bucket-usage.py"
 # Example usage
 bucket = LeakyBucket(capacity=10, leak_rate=1)  # 10 requests per second
 if bucket.add_request():
@@ -210,7 +210,7 @@ else:
 
 ##### Fixed Window Counter
 
-```python
+```python title="src/rate-limiting/fixed-window-counter.py"
 class FixedWindowCounter:
     def __init__(self, limit, window_size):
         self.limit = limit
@@ -230,7 +230,7 @@ class FixedWindowCounter:
         return False
 ```
 
-```python
+```python title="examples/fixed-window-counter-usage.py"
 # Example usage
 counter = FixedWindowCounter(limit=5, window_size=60)  # 5 requests per minute
 if counter.is_allowed("client1"):
@@ -241,7 +241,7 @@ else:
 
 ##### Sliding Window Algorithm
 
-```python
+```python title="src/rate-limiting/sliding-window.py"
 from collections import deque
 class SlidingWindow:
     def __init__(self, window_size):
@@ -256,7 +256,7 @@ class SlidingWindow:
         return len(self.requests) < self.window_size  # Check if within limit
 ```
 
-```python
+```python title="examples/sliding-window-usage.py"
 # Example usage
 window = SlidingWindow(window_size=60)  # 60 seconds window
 if window.is_allowed(time.time()):
@@ -267,7 +267,7 @@ else:
 
 ##### IP-Based Rate Limiting
 
-```python
+```python title="src/rate-limiting/ip-rate-limiter.py"
 from collections import defaultdict
 class IPRateLimiter:
     def __init__(self, limit, window_size):
@@ -286,7 +286,7 @@ class IPRateLimiter:
         return False
 ```
 
-```python
+```python title="examples/ip-rate-limiter-usage.py"
 # Example usage
 limiter = IPRateLimiter(limit=100, window_size=3600)  # 100 requests per hour
 if limiter.is_allowed("192.168.1.1"):  # Replace with actual client IP
@@ -312,7 +312,7 @@ else:
 
 ### Rate Limiting Example
 
-```python
+```python title="src/api/rate-limited-app.py"
 from flask import Flask, request, jsonify
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -333,12 +333,12 @@ if __name__ == "__main__":
     app.run(debug=True)
 ```
 
-```bash
+```bash title="examples/rate-limit-test.sh"
 # Example usage
 curl -i http://localhost:5000/api/resource
 ```
 
-```bash
+```bash title="examples/rate-limit-response.txt"
 HTTP/1.0 200 OK
 Content-Type: application/json
 {
@@ -352,12 +352,12 @@ Content-Type: application/json
 }
 ```
 
-```bash
+```bash title="examples/rate-limit-exceeded-test.sh"
 # Example usage with rate limit exceeded
 curl -i http://localhost:5000/api/resource
 ```
 
-```bash
+```bash title="examples/rate-limit-exceeded-response.txt"
 HTTP/1.0 429 TOO MANY REQUESTS
 Content-Type: application/json
 {
