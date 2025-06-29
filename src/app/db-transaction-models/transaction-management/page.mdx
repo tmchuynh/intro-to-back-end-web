@@ -1,0 +1,470 @@
+import BackToTop from "@/components/BackToTop";
+
+# Transaction Management
+
+## Table of Contents
+
+## Introduction
+
+Transaction management is a critical aspect of database systems, ensuring data integrity and consistency during concurrent operations. It involves the coordination of multiple operations that must be executed as a single unit, adhering to the principles of ACID (Atomicity, Consistency, Isolation, Durability) or BASE (Basically Available, Soft state, Eventually consistent). Transaction management in databases ensures that all operations within a transaction are completed successfully or none at all, preventing partial updates that could lead to data corruption.
+
+### What is a Transaction?
+
+A transaction is a sequence of one or more SQL operations that are executed as a single logical unit of work. Transactions are essential for maintaining the integrity of the database, especially in environments where multiple users or applications access the database concurrently. A transaction must satisfy [the ACID properties](/db-transaction-models/introduction-to-ACID-and-BASE) to ensure reliability and consistency.
+
+#### ACID Properties
+
+- **Atomicity**: Ensures that all operations within a transaction are completed successfully. If any operation fails, the entire transaction is rolled back, leaving the database unchanged.
+- **Consistency**: Guarantees that a transaction brings the database from one valid state to another valid state. It ensures that any data written to the database must be valid according to all defined rules, including constraints and cascades.
+- **Isolation**: Ensures that transactions are executed in isolation from one another. This means that the operations of one transaction do not affect the operations of another transaction, even if they are executed concurrently.
+- **Durability**: Guarantees that once a transaction has been committed, it will remain in the database even in the event of a system failure. This is typically achieved through the use of logs and backups.
+
+## Why Transaction Management is Important
+
+Transaction management is crucial for several reasons:
+
+- **Data Integrity**: Ensures that the database remains in a consistent state even in the event of system failures or concurrent access.
+- **Concurrency Control**: Manages simultaneous operations on the database, preventing conflicts and ensuring that transactions do not interfere with each other.
+- **Error Recovery**: Provides mechanisms to roll back transactions in case of errors, ensuring that the database can recover to a consistent state.
+- **Performance Optimization**: Helps in optimizing the performance of database operations by managing locks and resources effectively.
+
+## Key Concepts in Transaction Management
+
+- **Transaction States**: Transactions can be in various states, including active, partially committed, committed, failed, and aborted. Understanding these states is essential for managing transactions effectively.
+- **Locking Mechanisms**: Locks are used to control access to database resources during a transaction. Different types of locks (shared, exclusive) are used to ensure that transactions do not interfere with each other.
+- **Two-Phase Commit Protocol**: A protocol used to ensure that all participants in a distributed transaction agree on the outcome (commit or rollback). It involves a prepare phase and a commit phase, ensuring that all nodes in a distributed system reach a consensus before finalizing the transaction.
+- **Isolation Levels**: Different isolation levels (read uncommitted, read committed, repeatable read, serializable) define how transactions interact with each other. Each level provides a trade-off between consistency and performance, allowing developers to choose the appropriate level based on application requirements.
+
+### Transaction States
+
+- **Active**: The transaction is currently being executed.
+- **Partially Committed**: The transaction has executed all operations but has not yet been committed.
+- **Committed**: The transaction has been successfully completed and changes are permanently applied to the database.
+- **Failed**: The transaction has encountered an error and cannot be completed.
+- **Aborted**: The transaction has been rolled back, and all changes made during the transaction are undone.
+
+### Locking Mechanisms
+
+Locks are essential for managing concurrent access to database resources. They prevent conflicts between transactions by ensuring that only one transaction can modify a resource at a time. There are two main types of locks:
+
+#### Shared Locks
+
+- Allow multiple transactions to read a resource simultaneously.
+- Prevent any transaction from modifying the resource until all shared locks are released.
+
+#### Exclusive Locks
+
+- Allow a transaction to read and modify a resource.
+- Prevent any other transaction from acquiring a lock on the resource until the exclusive lock is released.
+
+### Two-Phase Commit Protocol
+
+The Two-Phase Commit (2PC) protocol is used in distributed databases to ensure that all participants in a transaction agree on the outcome. It consists of two phases:
+
+1. **Prepare Phase**: The coordinator sends a prepare request to all participants, asking them to prepare for the commit. Each participant responds with either a "yes" (ready to commit) or "no" (not ready).
+2. **Commit Phase**: If all participants respond with "yes," the coordinator sends a commit request, and all participants commit the transaction. If any participant responds with "no," the coordinator sends a rollback request, and all participants roll back the transaction.
+
+### Isolation Levels
+
+Isolation levels define how transactions interact with each other and the visibility of changes made by one transaction to others. The four main isolation levels are:
+
+#### Read Uncommitted
+
+- Allows transactions to read uncommitted changes made by other transactions.
+- Provides the highest level of concurrency but the lowest level of consistency.
+
+#### Read Committed
+
+- Ensures that transactions can only read committed changes made by other transactions.
+- Prevents dirty reads but allows non-repeatable reads and phantom reads.
+
+#### Repeatable Read
+
+- Guarantees that if a transaction reads a row, it will see the same data if it reads it again within the same transaction.
+- Prevents dirty reads and non-repeatable reads but allows phantom reads.
+
+#### Serializable
+
+- Provides the highest level of isolation by ensuring that transactions are executed in a way that they appear to be executed one after the other, even if they are executed concurrently.
+- Prevents dirty reads, non-repeatable reads, and phantom reads but can lead to reduced concurrency and performance.
+
+<BackToTop />
+
+## Transaction Management in Different Databases
+
+Transaction management is implemented differently across various database systems, but the core principles remain consistent. Most relational databases, such as MySQL, PostgreSQL, and Oracle, support ACID transactions and provide mechanisms for concurrency control, locking, and isolation levels. Non-relational databases, such as MongoDB and Cassandra, may implement BASE principles, focusing on availability and partition tolerance while allowing for eventual consistency.
+
+### RDBMS
+
+Relational Database Management Systems (RDBMS) like MySQL and PostgreSQL implement transaction management using the ACID properties. They provide robust mechanisms for concurrency control, including locking and isolation levels, ensuring that transactions are executed reliably and consistently. RDBMSs typically support SQL-based transaction management, allowing developers to define transactions using SQL commands like `BEGIN`, `COMMIT`, and `ROLLBACK`.
+
+#### Example in MySQL
+
+```sql title="MySQL Transaction Example"
+START TRANSACTION;
+UPDATE accounts SET balance = balance - 100 WHERE account_id = 1;
+UPDATE accounts SET balance = balance + 100 WHERE account_id = 2;
+COMMIT;
+```
+
+#### Example in PostgreSQL
+
+```sql title="PostgreSQL Transaction Example"
+BEGIN;
+UPDATE accounts SET balance = balance - 100 WHERE account_id = 1;
+UPDATE accounts SET balance = balance + 100 WHERE account_id = 2;
+COMMIT;
+```
+
+### NoSQL Databases
+
+NoSQL databases, such as MongoDB and Cassandra, often prioritize availability and partition tolerance over strict consistency. They may implement BASE principles, allowing for eventual consistency rather than strict ACID compliance. Transaction management in NoSQL databases may involve different mechanisms, such as optimistic concurrency control or multi-document transactions, depending on the specific database system. For example, MongoDB supports multi-document transactions that adhere to ACID properties, while Cassandra uses lightweight transactions for conditional updates.
+
+#### Example in MongoDB
+
+```javascript title="MongoDB Multi-Document Transaction"
+const session = db.startSession();
+session.startTransaction();
+try {
+  db.accounts.updateOne(
+    { account_id: 1 },
+    { $inc: { balance: -100 } },
+    { session }
+  );
+  db.accounts.updateOne(
+    { account_id: 2 },
+    { $inc: { balance: 100 } },
+    { session }
+  );
+  session.commitTransaction();
+} catch (error) {
+  session.abortTransaction();
+} finally {
+  session.endSession();
+}
+```
+
+### Cloud Databases
+
+Cloud databases, such as Amazon DynamoDB and Google Cloud Spanner, provide transaction management features that are designed for scalability and high availability. These databases often implement distributed transaction management, allowing transactions to span multiple nodes or regions. They may use techniques like two-phase commit or Paxos consensus algorithms to ensure that transactions are executed reliably across distributed systems. Cloud databases typically offer APIs or SDKs for transaction management, allowing developers to define and manage transactions programmatically.
+
+#### Example in Amazon DynamoDB
+
+```javascript title="Amazon DynamoDB Transaction Example"
+const AWS = require("aws-sdk");
+const dynamodb = new AWS.DynamoDB.DocumentClient();
+const params = {
+  TransactItems: [
+    {
+      Update: {
+        TableName: "Accounts",
+        Key: { account_id: 1 },
+        UpdateExpression: "SET balance = balance - :amount",
+        ExpressionAttributeValues: { ":amount": 100 },
+      },
+    },
+    {
+      Update: {
+        TableName: "Accounts",
+        Key: { account_id: 2 },
+        UpdateExpression: "SET balance = balance + :amount",
+        ExpressionAttributeValues: { ":amount": 100 },
+      },
+    },
+  ],
+};
+```
+
+### Key-Value Stores
+
+Key-value stores, such as Redis and Amazon DynamoDB, implement transaction management with a focus on high performance and low latency. They often use techniques like optimistic concurrency control or atomic operations to ensure that transactions are executed efficiently. Transaction management in key-value stores may involve mechanisms for handling concurrent writes, ensuring that data is stored and retrieved quickly. Some key-value stores also support features like multi-key transactions or batch operations, allowing for efficient management of related data.
+
+#### Example in Redis
+
+```redis title="Redis Transaction Example"
+MULTI
+SET account:1:balance 900
+SET account:2:balance 1100
+EXEC
+```
+
+<BackToTop />
+
+### NewSQL Databases
+
+NewSQL databases, such as Google Spanner and CockroachDB, combine the scalability of NoSQL databases with the ACID guarantees of traditional RDBMS. They implement transaction management using distributed consensus algorithms to ensure that transactions are executed consistently across multiple nodes. NewSQL databases often provide SQL interfaces for transaction management, allowing developers to define transactions using familiar SQL syntax while benefiting from the scalability and performance of distributed systems.
+
+#### Example in Google Spanner
+
+```sql title="Google Spanner Transaction Example"
+BEGIN TRANSACTION;
+UPDATE accounts SET balance = balance - 100 WHERE account_id = 1;
+UPDATE accounts SET balance = balance + 100 WHERE account_id = 2;
+COMMIT TRANSACTION;
+```
+
+### Object-Oriented Databases
+
+Object-oriented databases, such as ObjectDB and db4o, implement transaction management with a focus on managing complex data structures and relationships. They often use ACID transactions to ensure that changes to objects are applied consistently. Transaction management in object-oriented databases may involve mechanisms for locking objects during updates, ensuring that concurrent transactions do not interfere with each other. These databases typically provide APIs or query languages for transaction management, allowing developers to define and manage transactions within their applications.
+
+#### Example in ObjectDB
+
+```java title="ObjectDB Transaction Example"
+EntityManager em = emf.createEntityManager();
+EntityTransaction tx = em.getTransaction();
+tx.begin();
+Account account1 = em.find(Account.class, 1);
+Account account2 = em.find(Account.class, 2);
+account1.setBalance(account1.getBalance() - 100);
+account2.setBalance(account2.getBalance() + 100);
+tx.commit();
+em.close();
+```
+
+### Column-Family Stores
+
+Column-family stores, such as Apache Cassandra and HBase, implement transaction management with a focus on high availability and scalability. They often use techniques like lightweight transactions or batch operations to ensure that updates are applied consistently across distributed nodes. Transaction management in column-family stores may involve mechanisms for handling concurrent writes, ensuring that data is stored and retrieved efficiently. These databases typically provide APIs or query languages for transaction management, allowing developers to define and manage transactions programmatically.
+
+#### Example in Apache Cassandra
+
+```cql title="Apache Cassandra Transaction Example"
+BEGIN BATCH
+UPDATE accounts SET balance = balance - 100 WHERE account_id = 1;
+UPDATE accounts SET balance = balance + 100 WHERE account_id = 2;
+APPLY BATCH;
+```
+
+### Distributed Databases
+
+Distributed databases, such as Apache Cassandra and Google Spanner, implement transaction management across multiple nodes or clusters. They often use consensus algorithms like Paxos or Raft to ensure that transactions are executed consistently across distributed systems. Distributed transaction management may involve techniques like two-phase commit or three-phase commit to ensure that all nodes agree on the outcome of a transaction. These databases may also provide mechanisms for conflict resolution and data replication to maintain consistency across distributed environments.
+
+#### Example in Apache Cassandra
+
+```cql title="Apache Cassandra Distributed Transaction Example"
+BEGIN TRANSACTION
+UPDATE accounts SET balance = balance - 100 WHERE account_id = 1;
+UPDATE accounts SET balance = balance + 100 WHERE account_id = 2;
+COMMIT TRANSACTION;
+```
+
+<BackToTop />
+
+### Multi-Model Databases
+
+Multi-model databases, such as ArangoDB and OrientDB, implement transaction management across different data models (e.g., document, graph, key-value). They often support ACID transactions across multiple data models, allowing developers to define transactions that span different types of data. Transaction management in multi-model databases may involve mechanisms for handling concurrent writes, ensuring that data is stored and retrieved efficiently across different models. These databases typically provide APIs or query languages for transaction management, allowing developers to define and manage transactions programmatically.
+
+#### Example in ArangoDB
+
+```javascript title="ArangoDB Multi-Model Transaction Example"
+const db = require("@arangodb").db;
+const transaction = require("@arangodb/transaction");
+transaction.begin();
+try {
+  db._query("UPDATE accounts SET balance = balance - 100 WHERE account_id = 1");
+  db._query("UPDATE accounts SET balance = balance + 100 WHERE account_id = 2");
+  transaction.commit();
+} catch (error) {
+  transaction.rollback();
+} finally {
+  transaction.end();
+}
+```
+
+### Document Stores
+
+Document stores, such as MongoDB and Couchbase, implement transaction management with a focus on managing semi-structured data. They often support multi-document transactions that adhere to ACID properties, allowing developers to define transactions that span multiple documents. Transaction management in document stores may involve mechanisms for handling concurrent writes, ensuring that data is stored and retrieved efficiently. These databases typically provide APIs or query languages for transaction management, allowing developers to define and manage transactions programmatically.
+
+#### Example in Couchbase
+
+```javascript title="Couchbase Transaction Example"
+const couchbase = require("couchbase");
+const cluster = new couchbase.Cluster("couchbase://localhost");
+const bucket = cluster.bucket("my_bucket");
+const collection = bucket.defaultCollection();
+const transaction = couchbase.transactions.createTransaction();
+transaction.run(async (ctx) => {
+  await ctx.get("account:1");
+  await ctx.get("account:2");
+  await ctx.mutateIn("account:1", [
+    couchbase.MutateInSpec.replace("balance", 900),
+  ]);
+  await ctx.mutateIn("account:2", [
+    couchbase.MutateInSpec.replace("balance", 1100),
+  ]);
+});
+```
+
+### ETL Processes
+
+ETL (Extract, Transform, Load) processes are often used in data warehousing and big data environments to manage large volumes of data. Transaction management in ETL processes may involve mechanisms for handling data extraction, transformation, and loading while ensuring that data integrity is maintained. ETL tools may implement transaction management features to ensure that data is processed consistently, even in the presence of failures or concurrent operations. This may include features like checkpointing, rollback capabilities, and data validation to ensure that the ETL process can recover gracefully from errors.
+
+#### Example in Apache NiFi
+
+```xml title="Apache NiFi ETL Transaction Example"
+<flow>
+  <processor name="ExtractData" class="org.apache.nifi.processors.ExtractData">
+    <property name="Source" value="data_source"/>
+  </processor>
+  <processor name="TransformData" class="org.apache.nifi.processors.TransformData">
+    <property name="Transformation" value="data_transformation"/>
+  </processor>
+  <processor name="LoadData" class="org.apache.nifi.processors.LoadData">
+    <property name="Destination" value="data_destination"/>
+  </processor>
+  <connection source="ExtractData" destination="TransformData"/>
+  <connection source="TransformData" destination="LoadData"/>
+</flow>
+```
+
+<BackToTop />
+
+### Data Lakes
+
+Data lakes, such as Amazon S3 and Azure Data Lake, implement transaction management with a focus on storing large volumes of unstructured or semi-structured data. They often use techniques like write-ahead logging or append-only storage to ensure that data is written consistently and efficiently. Transaction management in data lakes may involve mechanisms for handling concurrent writes, ensuring that data is stored in a way that supports efficient querying and analysis. Some data lakes also support features like versioning or time travel, allowing users to access historical versions of data or revert to previous states.
+
+#### Example in Amazon S3
+
+```python title="Amazon S3 Transaction Example"
+import boto3
+s3 = boto3.client('s3')
+bucket_name = 'my-data-lake'
+# Upload a file to the data lake
+s3.upload_file('local_file.txt', bucket_name, 'data/local_file.txt')
+# Append data to an existing file
+s3.put_object(Bucket=bucket_name, Key='data/local_file.txt', Body='Additional data to append')
+# Versioning can be enabled to manage changes over time
+s3.put_bucket_versioning(Bucket=bucket_name, VersioningConfiguration={'Status': 'Enabled'})
+```
+
+### Data Warehouses
+
+Data warehouses, such as Amazon Redshift and Google BigQuery, implement transaction management with a focus on analytical processing and large-scale data storage. They often use techniques like batch processing or write-ahead logging to ensure that data is written consistently and efficiently. Transaction management in data warehouses may involve mechanisms for handling concurrent writes, ensuring that data is stored in a way that supports efficient querying and analysis. Some data warehouses also support features like materialized views or partitioning, allowing for efficient data retrieval and analysis over large datasets.
+
+#### Example in Amazon Redshift
+
+```sql title="Amazon Redshift Transaction Example"
+BEGIN;
+INSERT INTO sales (sale_id, amount) VALUES (1, 100);
+INSERT INTO sales (sale_id, amount) VALUES (2, 200);
+COMMIT;
+```
+
+### Time-Series Databases
+
+Time-series databases, such as InfluxDB and TimescaleDB, often implement transaction management with a focus on high write throughput and efficient data storage. They may use techniques like batch processing or write-ahead logging to ensure that time-series data is written consistently and efficiently. Transaction management in time-series databases may involve mechanisms for handling concurrent writes, ensuring that data is stored in a way that maintains temporal consistency. Some time-series databases also support features like continuous queries or downsampling, allowing for efficient data retrieval and analysis over time.
+
+#### Example in InfluxDB
+
+```sql title="InfluxDB Transaction Example"
+BEGIN;
+INSERT INTO temperature (time, value) VALUES ('2023-10-01T00:00:00Z', 22.5);
+INSERT INTO temperature (time, value) VALUES ('2023-10-01T01:00:00Z', 23.0);
+COMMIT;
+```
+
+#### Example in TimescaleDB
+
+```sql title="TimescaleDB Transaction Example"
+BEGIN;
+INSERT INTO temperature (time, value) VALUES ('2023-10-01T00:00:00Z', 22.5);
+INSERT INTO temperature (time, value) VALUES ('2023-10-01T01:00:00Z', 23.0);
+COMMIT;
+```
+
+### Object Storage Systems
+
+Object storage systems, such as Amazon S3 and Google Cloud Storage, implement transaction management with a focus on storing large volumes of unstructured data. They often use techniques like write-ahead logging or append-only storage to ensure that data is written consistently and efficiently. Transaction management in object storage systems may involve mechanisms for handling concurrent writes, ensuring that data is stored in a way that supports efficient retrieval and analysis. Some object storage systems also support features like versioning or lifecycle management, allowing users to manage data over time.
+
+#### Example in Google Cloud Storage
+
+```python title="Google Cloud Storage Transaction Example"
+from google.cloud import storage
+client = storage.Client()
+bucket = client.bucket('my-object-storage')
+# Upload a file to the object storage
+blob = bucket.blob('data/local_file.txt')
+blob.upload_from_filename('local_file.txt')
+# Append data to an existing file
+blob = bucket.blob('data/local_file.txt')
+blob.upload_from_string('Additional data to append', if_generation_match=blob.generation)
+# Versioning can be enabled to manage changes over time
+bucket.versioning_enabled = True
+```
+
+<BackToTop />
+
+### Graph Databases
+
+Graph databases, such as Neo4j and Amazon Neptune, implement transaction management with a focus on managing relationships and traversing graph structures. They often use ACID transactions to ensure that changes to nodes and edges are applied consistently. Transaction management in graph databases may involve mechanisms for locking nodes or edges during updates, ensuring that concurrent transactions do not interfere with each other. Graph databases may also provide features like multi-node transactions or distributed graph processing, allowing for efficient management of large-scale graph data across multiple nodes or clusters.
+
+#### Example in Neo4j
+
+```cypher title="Neo4j Transaction Example"
+BEGIN TRANSACTION;
+CREATE (a:Account {id: 1, balance: 900});
+CREATE (b:Account {id: 2, balance: 1100});
+MATCH (a:Account {id: 1}), (b:Account {id: 2})
+SET a.balance = a.balance - 100, b.balance = b.balance + 100;
+COMMIT TRANSACTION;
+```
+
+### In-Memory Databases
+
+In-memory databases, such as Redis and Memcached, implement transaction management with a focus on high performance and low latency. They often use techniques like optimistic concurrency control or atomic operations to ensure that transactions are executed efficiently in memory. Transaction management in in-memory databases may involve mechanisms for handling concurrent writes, ensuring that data is stored and retrieved quickly. Some in-memory databases also support features like pub/sub messaging or data persistence, allowing for efficient data retrieval and real-time updates.
+
+#### Example in Redis
+
+```redis title="Redis Transaction Example"
+MULTI
+SET account:1:balance 900
+SET account:2:balance 1100
+EXEC
+```
+
+### Embedded Databases
+
+Embedded databases, such as SQLite and H2, implement transaction management within the application itself. They often use lightweight mechanisms for managing transactions, such as file-based storage or in-memory data structures. Transaction management in embedded databases may involve mechanisms for handling concurrent access, ensuring that data is stored and retrieved efficiently. These databases typically provide APIs or libraries for transaction management, allowing developers to define and manage transactions within their applications. Embedded databases are often used in mobile applications or lightweight applications where simplicity and performance are prioritized.
+
+#### Example in SQLite
+
+```sql title="SQLite Transaction Example"
+BEGIN TRANSACTION;
+UPDATE accounts SET balance = balance - 100 WHERE account_id = 1;
+UPDATE accounts SET balance = balance + 100 WHERE account_id = 2;
+COMMIT;
+```
+
+### Search Engines
+
+Search engines, such as Elasticsearch and Apache Solr, implement transaction management with a focus on indexing and searching large volumes of data. They often use techniques like batch processing or write-ahead logging to ensure that data is indexed consistently and efficiently. Transaction management in search engines may involve mechanisms for handling concurrent writes, ensuring that data is indexed and searchable in real-time. Some search engines also support features like distributed indexing or real-time search, allowing for efficient retrieval and analysis of large datasets. Search engines may also provide APIs or query languages for managing transactions, allowing developers to define and execute search queries programmatically.
+
+#### Example in Elasticsearch
+
+```json title="Elasticsearch Transaction Example"
+POST /accounts/_bulk
+{ "index": { "_id": "1" } }
+{ "balance": 900 }
+{ "index": { "_id": "2" } }
+{ "balance": 1100 }
+```
+
+## Next Steps
+
+### Immediate Actions
+
+| Priority   | Action                                                                                     | Purpose                                                        |
+| ---------- | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------- |
+| **High**   | [Concurrency Control](/db-transaction-models/concurrency-control)                          | Manage simultaneous database access and prevent data conflicts |
+| **Medium** | [Storage Systems](/db-data-storage/storage-systems)                                        | Understand how data is physically stored and retrieved         |
+| **Medium** | [Data Warehouses](/db-different-databases-and-their-foundational-concepts/data-warehouses) | Learn large-scale data storage and analytical processing       |
+| **Low**    | [ETL Processes](/db-data-warehousing/ETL-processes)                                        | Master data extraction, transformation, and loading workflows  |
+
+### Optional Actions
+
+| Action                                                                                                                             | Purpose                                                                  |
+| ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| [Development Resources and Tools for Back-End Development](/util-general-development-resources-and-tools-for-back-end-development) | Explore essential tools and frameworks for backend development           |
+| [Database Management Tools](/util-database-management-tools)                                                                       | Discover tools for database administration, monitoring, and optimization |
+| [Object Relational Mapping (ORM) and Query Builder Tools and Resources](/util-object-relational-mapping-and-query-builders)        | Discover advanced ORM tools and query optimization techniques            |
+
+<BackToTop />
