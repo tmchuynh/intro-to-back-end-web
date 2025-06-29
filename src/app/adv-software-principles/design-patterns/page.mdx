@@ -89,7 +89,7 @@ Creational patterns abstract the instantiation process and help make a system in
 
 **TypeScript Implementation**:
 
-```typescript
+```typescript title="src/patterns/creational/singleton/database-manager.ts"
 class DatabaseManager {
   private static instance: DatabaseManager;
   private connectionPool: any[] = [];
@@ -170,7 +170,7 @@ console.log(dbManager1 === dbManager2); // true - same instance
 
 **TypeScript Implementation**:
 
-```typescript
+```typescript title="src/patterns/creational/factory/payment-processor.ts"
 // Product interface
 interface PaymentProcessor {
   processPayment(amount: number): boolean;
@@ -271,7 +271,7 @@ const smartProcessor = PaymentProcessorFactory.createProcessorByAmount(1500);
 
 **TypeScript Implementation**:
 
-```typescript
+```typescript title="src/patterns/creational/builder/http-request-builder.ts"
 // Product
 class HttpRequest {
   private constructor(
@@ -392,7 +392,7 @@ console.log(request);
 
 **TypeScript Implementation**:
 
-```typescript
+```typescript title="src/patterns/creational/prototype/game-character.ts"
 // Prototype interface
 interface Cloneable<T> {
   clone(): T;
@@ -538,7 +538,7 @@ Structural patterns are concerned with how classes and objects are composed to f
 
 **TypeScript Implementation**:
 
-```typescript
+```typescript title="src/patterns/structural/adapter/media-adapter.ts"
 // Target interface (what the client expects)
 interface MediaPlayer {
   play(audioType: string, fileName: string): void;
@@ -632,7 +632,7 @@ player.play("avi", "clip.avi"); // Not supported
 
 **TypeScript Implementation**:
 
-```typescript
+```typescript title="src/patterns/structural/bridge/tv-remote-bridge.ts"
 // Implementor
 interface RemoteControl {
   turnOn(): void;
@@ -736,7 +736,7 @@ myTV.turnOff();
 
 **TypeScript Implementation**:
 
-```typescript
+```typescript title="src/patterns/structural/composite/graphics-composite.ts"
 // Component
 interface Graphic {
   print(): void;
@@ -837,7 +837,7 @@ compound.print();
 
 **TypeScript Implementation**:
 
-```typescript
+```typescript title="src/patterns/structural/decorator/coffee-decorator.ts"
 // Component interface
 interface Coffee {
   cost(): number;
@@ -932,7 +932,7 @@ console.log(myCoffee.cost()); // 2.7
 
 **TypeScript Implementation**:
 
-```typescript
+```typescript title="src/patterns/structural/facade/computer-facade.ts"
 // Subsystem classes
 class CPU {
   freeze(): void {
@@ -1020,7 +1020,7 @@ computer.start();
 
 **TypeScript Implementation**:
 
-```typescript
+```typescript title="src/patterns/structural/flyweight/character-flyweight.ts"
 // Flyweight
 class Character {
   constructor(
@@ -1098,7 +1098,7 @@ console.log(c1 === c4); // false
 
 **TypeScript Implementation**:
 
-```typescript
+```typescript title="src/patterns/behavioral/interpreter/expression-interpreter.ts"
 // Abstract expression
 interface Expression {
   interpret(context: Context): boolean;
@@ -1174,7 +1174,7 @@ console.log(isRedApple.interpret(context)); // true
 
 **TypeScript Implementation**:
 
-```typescript
+```typescript title="src/patterns/behavioral/visitor/library-visitor.ts"
 // Element interface
 interface Element {
   accept(visitor: Visitor): void;
@@ -1272,7 +1272,7 @@ for (const element of elements) {
 
 **TypeScript Implementation**:
 
-```typescript
+```typescript title="src/patterns/structural/proxy/image-proxy.ts"
 // Subject interface
 interface Image {
   display(): void;
@@ -1409,7 +1409,7 @@ Behavioral patterns are concerned with algorithms and the assignment of responsi
 
 **TypeScript Implementation**:
 
-```typescript
+```typescript title="src/patterns/behavioral/observer/stock-observer.ts"
 // Observer interface
 interface Observer {
   update(subject: Subject): void;
@@ -1599,7 +1599,7 @@ appleStock.price = 142.8; // Web display won't be notified
 
 **TypeScript Implementation**:
 
-```typescript
+```typescript title="src/patterns/behavioral/strategy/sorting-strategy.ts"
 // Strategy interface
 interface SortingStrategy {
   sort(data: number[]): number[];
@@ -1797,7 +1797,7 @@ console.log(
 
 ### Overuse of Patterns
 
-```typescript
+```typescript title="examples/anti-patterns/overengineered-calculator.ts"
 // ❌ Overengineered - using patterns unnecessarily
 class SimpleCalculatorFactory {
   createCalculator(): Calculator {
@@ -1819,7 +1819,7 @@ function add(a: number, b: number): number {
 
 ### Pattern Misuse
 
-```typescript
+```typescript title="examples/anti-patterns/misused-singleton.ts"
 // ❌ Misusing Singleton for convenience
 class Utils {
   private static instance: Utils;
@@ -1852,7 +1852,7 @@ class DateUtils {
 
 Don't force patterns where they're not needed. Let the problem drive the solution:
 
-```typescript
+```typescript title="examples/best-practices/pattern-choice.ts"
 // ❌ Forcing a pattern
 class StringSingletonFactory {
   private static instance: StringSingletonFactory;
@@ -1879,7 +1879,7 @@ function createString(value: string): string {
 
 ### 2. Combine Patterns When Appropriate
 
-```typescript
+```typescript title="examples/best-practices/combined-patterns.ts"
 // Combining Factory + Strategy + Observer
 class PaymentSystemFactory {
   static createPaymentSystem(): PaymentSystem {
@@ -1906,7 +1906,7 @@ class PaymentSystem {
 
 ### 3. Consider Performance Implications
 
-```typescript
+```typescript title="examples/best-practices/performance-considerations.ts"
 // Be careful with pattern overhead
 class CachedFactory {
   private cache = new Map<string, Product>();
@@ -1930,7 +1930,7 @@ class CachedFactory {
 
 ### 4. Document Pattern Usage
 
-```typescript
+```typescript title="examples/best-practices/documented-singleton.ts"
 /**
  * UserService follows the Singleton pattern to ensure
  * a single point of user management across the application.
