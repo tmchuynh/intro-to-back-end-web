@@ -1,0 +1,217 @@
+import BackToTop from "@/components/BackToTop";
+
+# Concurrency Control
+
+## Table of Contents
+
+## Introduction
+
+Concurrency control is a critical aspect of database management that ensures the integrity and consistency of data when multiple transactions are executed simultaneously. It prevents issues such as lost updates, dirty reads, and non-repeatable reads by managing how transactions interact with each other. This is particularly important in multi-user environments where concurrent access to the database can lead to conflicts and inconsistencies.
+
+### Why Concurrency Control Matters
+
+- **Data Integrity**: Ensures that transactions do not interfere with each other, maintaining the integrity of the database.
+- **Consistency**: Guarantees that the database remains in a consistent state even when multiple transactions are executed concurrently.
+- **Performance**: Optimizes the use of resources by allowing multiple transactions to be processed simultaneously without conflicts.
+
+## Concurrency Control Techniques
+
+### Locking Mechanisms
+
+Locking is a common technique used to manage concurrent access to database resources. It involves placing locks on data items to prevent other transactions from modifying them until the lock is released. There are several types of locks:
+
+#### Shared Locks
+
+Shared locks allow multiple transactions to read a data item but prevent any transaction from modifying it. This ensures that while one transaction is reading a data item, no other transaction can change it, thus maintaining consistency.
+
+Shared locks are typically used for read operations, allowing concurrent reads while preventing writes. For example, if Transaction A acquires a shared lock on a data item, Transaction B can also acquire a shared lock on the same item, allowing both transactions to read the data simultaneously. However, if Transaction C attempts to acquire an exclusive lock on that item, it will be blocked until all shared locks are released.
+
+```sql title="SQL Example of Shared Lock"
+BEGIN;
+SELECT * FROM accounts WHERE account_id = 1 LOCK IN SHARE MODE;
+-- Transaction A acquires a shared lock on account_id 1
+SELECT * FROM accounts WHERE account_id = 2 LOCK IN SHARE MODE;
+-- Transaction B acquires a shared lock on account_id 2
+COMMIT;
+```
+
+#### Exclusive Locks
+
+Exclusive locks allow a transaction to read and modify a data item, preventing other transactions from acquiring any locks on that item until the exclusive lock is released. This ensures that no other transaction can read or write to the locked item, maintaining data integrity during updates.
+
+Exclusive locks are typically used for write operations, ensuring that only one transaction can modify a data item at a time. For example, if Transaction A acquires an exclusive lock on a data item, no other transaction can acquire any locks (shared or exclusive) on that item until Transaction A releases the lock.
+
+```sql title="SQL Example of Exclusive Lock"
+BEGIN;
+UPDATE accounts SET balance = balance - 100 WHERE account_id = 1;
+-- Transaction A acquires an exclusive lock on account_id 1
+UPDATE accounts SET balance = balance + 100 WHERE account_id = 2;
+-- Transaction A modifies account_id 2
+COMMIT;
+```
+
+```sql title="SQL Example of Exclusive Lock with Blocking"
+BEGIN;
+SELECT * FROM accounts WHERE account_id = 1 FOR UPDATE;
+-- Transaction A acquires an exclusive lock on account_id 1
+UPDATE accounts SET balance = balance - 100 WHERE account_id = 1;
+-- Transaction A modifies account_id 1
+COMMIT;
+```
+
+#### Intent Locks
+
+Intent locks are a type of lock used in hierarchical locking systems, such as those found in relational databases. They indicate a transaction's intention to acquire locks on lower-level resources (e.g., rows or pages) within a higher-level resource (e.g., a table). Intent locks help prevent deadlocks and ensure that transactions can safely acquire locks on multiple levels without conflicts.
+
+Intent locks are typically used in conjunction with shared and exclusive locks to indicate a transaction's intention to acquire locks on specific resources. For example, if a transaction intends to acquire an exclusive lock on a row within a table, it may first acquire an intent exclusive lock on the table itself. This allows other transactions to know that the table is being modified and prevents them from acquiring conflicting locks.
+
+```sql title="SQL Example of Intent Lock"
+BEGIN;
+SELECT * FROM accounts WHERE account_id = 1 LOCK IN SHARE MODE;
+-- Transaction A acquires an intent shared lock on account_id 1
+SELECT * FROM accounts WHERE account_id = 2 LOCK IN SHARE MODE;
+-- Transaction B acquires an intent shared lock on account_id 2
+-- Transaction A can now acquire shared locks on lower-level resources
+SELECT * FROM transactions WHERE account_id = 1 LOCK IN SHARE MODE;
+-- Transaction A acquires a shared lock on transactions related to account_id 1
+COMMIT;
+```
+
+#### Read Locks
+
+Read locks are a type of shared lock that allows multiple transactions to read a data item simultaneously. However, it prevents any transaction from acquiring an exclusive lock on that item until all read locks are released. This allows for concurrent reads while preventing modifications, ensuring that readers do not see inconsistent data.
+
+Read locks are typically used for read operations, allowing multiple transactions to read the same data item without blocking each other. For example, if Transaction A acquires a read lock on a data item, Transaction B can also acquire a read lock on the same item, allowing both transactions to read the data simultaneously. However, if Transaction C attempts to acquire an exclusive lock on that item, it will be blocked until all read locks are released.
+
+```sql title="SQL Example of Read Lock"
+BEGIN;
+SELECT * FROM accounts WHERE account_id = 1 LOCK IN SHARE MODE;
+-- Transaction A acquires a read lock on account_id 1
+SELECT * FROM accounts WHERE account_id = 2 LOCK IN SHARE MODE;
+-- Transaction B acquires a read lock on account_id 2
+-- Both transactions can read the data simultaneously
+COMMIT;
+```
+
+#### Write Locks
+
+Write locks are a type of exclusive lock that allows a transaction to modify a data item. When a transaction acquires a write lock, it prevents other transactions from acquiring any locks (shared or exclusive) on that item until the write lock is released. This ensures that no other transaction can read or write to the locked item, maintaining data integrity during updates.
+
+Write locks are typically used for write operations, ensuring that only one transaction can modify a data item at a time. For example, if Transaction A acquires a write lock on a data item, no other transaction can acquire any locks (shared or exclusive) on that item until Transaction A releases the lock.
+
+```sql title="SQL Example of Write Lock"
+BEGIN;
+UPDATE accounts SET balance = balance - 100 WHERE account_id = 1;
+-- Transaction A acquires a write lock on account_id 1
+UPDATE accounts SET balance = balance + 100 WHERE account_id = 2;
+-- Transaction A modifies account_id 2
+COMMIT;
+```
+
+### Timestamp Ordering
+
+Timestamp ordering is a concurrency control technique that assigns a unique timestamp to each transaction. Transactions are executed based on their timestamps, ensuring that older transactions are prioritized over newer ones. This approach helps maintain a consistent order of operations and prevents conflicts between transactions. If a transaction attempts to read or write a data item that has been modified by a newer transaction, it may be rolled back or delayed until the newer transaction completes.
+
+```sql title="SQL Example of Timestamp Ordering"
+BEGIN;
+SELECT * FROM accounts WHERE account_id = 1;
+-- Transaction A reads account_id 1
+UPDATE accounts SET balance = balance - 100 WHERE account_id = 1;
+-- Transaction A modifies account_id 1
+COMMIT;
+```
+
+### Optimistic Concurrency Control
+
+Optimistic concurrency control assumes that conflicts between transactions are rare. It allows transactions to execute without locking data items, but before committing, it checks whether any conflicts have occurred. If a conflict is detected, the transaction is rolled back and may be retried. This approach is suitable for applications with low contention, as it minimizes locking overhead and allows for greater concurrency.
+
+```sql title="SQL Example of Optimistic Concurrency Control with Retry Logic"
+BEGIN;
+SELECT * FROM accounts WHERE account_id = 1;
+-- Transaction A reads account_id 1
+UPDATE accounts SET balance = balance - 100 WHERE account_id = 1;
+-- Transaction A modifies account_id 1
+-- Before committing, check if the data has been modified by another transaction
+IF NOT EXISTS (SELECT * FROM accounts WHERE account_id = 1 AND balance = <original_balance>) THEN
+    ROLLBACK; -- Conflict detected, rollback transaction
+ELSE
+    COMMIT; -- No conflict, commit transaction
+END IF;
+```
+
+### Two-Phase Locking (2PL)
+
+Two-Phase Locking is a widely used concurrency control protocol that ensures serializability by dividing the transaction execution into two phases. This two-phase approach ensures that once a transaction releases a lock, it cannot interfere with other transactions, thus preventing deadlocks and ensuring that transactions are executed in a serializable manner.
+
+#### Growing Phase
+
+In the growing phase, a transaction can acquire locks but cannot release any locks. This phase continues until the transaction has acquired all the locks it needs. During this phase, the transaction may read or write data items, but it cannot release any locks. This ensures that the transaction has exclusive access to the data it is working with, preventing other transactions from interfering.
+
+```sql title="SQL Example of Two-Phase Locking Growing Phase"
+BEGIN;
+SELECT * FROM accounts WHERE account_id = 1 FOR UPDATE;
+-- Transaction A acquires a lock on account_id 1
+UPDATE accounts SET balance = balance - 100 WHERE account_id = 1;
+-- Transaction A modifies account_id 1
+SELECT * FROM accounts WHERE account_id = 2 FOR UPDATE;
+-- Transaction A acquires a lock on account_id 2
+UPDATE accounts SET balance = balance + 100 WHERE account_id = 2;
+-- Transaction A modifies account_id 2
+```
+
+#### Shrinking Phase
+
+In the shrinking phase, a transaction can release locks but cannot acquire any new locks. This phase begins after the transaction has completed its operations and is ready to commit. The transaction releases all locks it acquired during the growing phase. This ensures that other transactions can now access the data items that were previously locked, allowing for greater concurrency. Once a transaction enters the shrinking phase, it cannot acquire any new locks, ensuring that it does not interfere with other transactions.
+
+```sql title="SQL Example of Two-Phase Locking Shrinking Phase"
+COMMIT;
+-- Transaction A releases all locks and commits its changes
+```
+
+### Multiversion Concurrency Control (MVCC)
+
+Multiversion Concurrency Control allows multiple versions of a data item to exist simultaneously. Each transaction sees a snapshot of the database at a specific point in time, allowing for concurrent reads and writes without conflicts. When a transaction modifies a data item, a new version is created, and the old version remains available for other transactions. This approach improves concurrency and reduces contention, as readers do not block writers and vice versa. MVCC is commonly used in databases like PostgreSQL and Oracle.
+
+```sql title="SQL Example of Multiversion Concurrency Control"
+BEGIN;
+SELECT * FROM accounts WHERE account_id = 1;
+-- Transaction A reads account_id 1, seeing the version at the time of the read
+UPDATE accounts SET balance = balance - 100 WHERE account_id = 1;
+-- Transaction A modifies account_id 1, creating a new version
+COMMIT;
+```
+
+## Concurrency Control in Different Database Systems
+
+### Relational Databases
+
+Relational databases, such as MySQL and PostgreSQL, typically implement concurrency control using locking mechanisms and two-phase locking protocols. They provide various isolation levels, such as Read Committed, Repeatable Read, and Serializable, allowing developers to choose the level of consistency required for their applications. For example, in MySQL, the default isolation level is Repeatable Read, which prevents dirty reads and non-repeatable reads but allows phantom reads. PostgreSQL uses MVCC to provide high concurrency while maintaining data consistency.
+
+### NoSQL Databases
+
+NoSQL databases, such as MongoDB and Cassandra, often prioritize availability and partition tolerance over strict consistency. They may implement BASE principles, allowing for eventual consistency rather than strict ACID compliance. Concurrency control in NoSQL databases may involve different mechanisms, such as optimistic concurrency control or multi-document transactions, depending on the specific database system. For example, MongoDB supports multi-document transactions that adhere to ACID properties, while Cassandra uses lightweight transactions for conditional updates.
+
+### Graph Databases
+
+Graph databases, such as Neo4j and ArangoDB, often use MVCC to manage concurrent access to graph data. They allow multiple transactions to read and write to the graph simultaneously without conflicts. Graph databases typically provide mechanisms for locking nodes and relationships to ensure data integrity during concurrent operations. For example, Neo4j uses a combination of optimistic concurrency control and locking to manage concurrent transactions, allowing for high concurrency while maintaining data consistency.
+
+### NewSQL Databases
+
+NewSQL databases, such as Google Spanner and CockroachDB, combine the scalability of NoSQL databases with the ACID guarantees of traditional RDBMS. They implement transaction management using distributed consensus algorithms to ensure that transactions are executed consistently across multiple nodes. NewSQL databases often provide SQL interfaces for transaction management, allowing developers to define transactions using familiar SQL syntax while benefiting from the scalability and performance of distributed systems. For example, Google Spanner uses a two-phase commit protocol to ensure that transactions are executed atomically across distributed nodes, providing strong consistency and high availability.
+
+## Next Steps
+
+### Immediate Actions
+
+| Priority | Action                                                                                     | Purpose                                                       |
+| -------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------- |
+| **High** | [Storage Systems](/db-data-storage/storage-systems)                                        | Understand how data is physically stored and retrieved        |
+| **High** | [Data Warehouses](/db-different-databases-and-their-foundational-concepts/data-warehouses) | Learn large-scale data storage and analytical processing      |
+| **High** | [ETL Processes](/db-data-warehousing/ETL-processes)                                        | Master data extraction, transformation, and loading workflows |
+
+### Optional Actions
+
+| Action | Purpose |
+| ------ | ------- |
+
+<BackToTop />
