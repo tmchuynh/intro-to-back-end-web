@@ -18,6 +18,20 @@ This command creates a new database in your MySQL server. You can replace `my_da
 CREATE DATABASE my_database;
 ```
 
+You can also create a database with specific character set and collation:
+
+```sql frame="terminal" showLineNumbers=false title="Create database with character set"
+CREATE DATABASE my_ecommerce_db 
+CHARACTER SET utf8mb4 
+COLLATE utf8mb4_unicode_ci;
+```
+
+Create a database only if it doesn't already exist:
+
+```sql frame="terminal" showLineNumbers=false title="Create database if not exists"
+CREATE DATABASE IF NOT EXISTS company_db;
+```
+
 ### Drop a Database
 
 This command deletes an existing database. Be cautious when using this command, as it will permanently remove all data within the database. Replace `my_database` with the name of the database you want to drop.
@@ -34,6 +48,8 @@ This command selects the database you want to work with. Replace `my_database` w
 USE my_database;
 ```
 
+<BackToTop />
+
 ## Data Manipulation Language (DML) Commands
 
 ### Show All Databases
@@ -44,10 +60,51 @@ This command lists all databases available in your MySQL server. This will be us
 SHOW DATABASES;
 ```
 
+```txt
++--------------------+
+| Database           |
++--------------------+
+| information_schema |
+| mysql              |
+| performance_schema |
+| sys                |
+| my_database        |
+| company_db         |
+| ecommerce_db       |
++--------------------+
+```
+
 You can filter the databases shown by using a `LIKE` clause. This is useful if you have many databases and want to find specific ones.
 
 ```sql frame="terminal" showLineNumbers=false title="Show specific databases"
 SHOW DATABASES LIKE 'my_database%';
+```
+
+```txt
++--------------------+
+| Database           |
++--------------------+
+| my_database        |
+| my_database_backup |
+| my_database_test   |
++--------------------+
+```
+
+You can also use wildcards for more flexible pattern matching:
+
+```sql frame="terminal" showLineNumbers=false title="Show databases with wildcard patterns"
+SHOW DATABASES LIKE '%_db';
+```
+
+```txt
++--------------------+
+| Database           |
++--------------------+
+| company_db         |
+| ecommerce_db       |
+| inventory_db       |
+| user_data_db       |
++--------------------+
 ```
 
 ### Show All Tables
@@ -58,6 +115,44 @@ This command lists all tables in the currently selected database. It helps you s
 SHOW TABLES;
 ```
 
+```txt
++-------------------------+
+| Tables_in_ecommerce_db  |
++-------------------------+
+| categories              |
+| order_items             |
+| orders                  |
+| products                |
+| users                   |
+| user_sessions           |
+| payment_methods         |
+| shipping_addresses      |
++-------------------------+
+```
+
+You can also filter tables with pattern matching:
+
+```sql frame="terminal" showLineNumbers=false title="Show tables with pattern"
+SHOW TABLES LIKE 'user%';
+```
+
+```txt
++-------------------------+
+| Tables_in_ecommerce_db  |
++-------------------------+
+| users                   |
+| user_sessions           |
++-------------------------+
+```
+
+Get more detailed information about tables:
+
+```sql frame="terminal" showLineNumbers=false title="Show table status"
+SHOW TABLE STATUS LIKE 'users';
+```
+
+This will display detailed information including engine type, row count, data length, and more.
+
 ### Show Table Structure
 
 This command displays the structure of a specific table, including its columns, data types, and constraints. Replace `my_table` with the name of the table you want to inspect.
@@ -66,6 +161,62 @@ This command displays the structure of a specific table, including its columns, 
 SHOW COLUMNS FROM my_table;
 ```
 
+```txt
++------------+--------------+------+-----+-------------------+-----------------------------+
+| Field      | Type         | Null | Key | Default           | Extra                       |
++------------+--------------+------+-----+-------------------+-----------------------------+
+| user_id    | int          | NO   | PRI | NULL              | auto_increment              |
+| username   | varchar(50)  | NO   | UNI | NULL              |                             |
+| email      | varchar(100) | NO   | UNI | NULL              |                             |
+| first_name | varchar(50)  | YES  |     | NULL              |                             |
+| last_name  | varchar(50)  | YES  |     | NULL              |                             |
+| is_active  | tinyint(1)   | YES  |     | 1                 |                             |
+| created_at | timestamp    | YES  |     | CURRENT_TIMESTAMP | DEFAULT_GENERATED           |
+| updated_at | timestamp    | YES  |     | CURRENT_TIMESTAMP | DEFAULT_GENERATED on update |
++------------+--------------+------+-----+-------------------+-----------------------------+
+```
+
+Alternative commands for viewing table structure:
+
+```sql frame="terminal" showLineNumbers=false title="Describe table (alternative syntax)"
+DESCRIBE users;
+DESC users;
+```
+
+```sql frame="terminal" showLineNumbers=false title="Show create table statement"
+SHOW CREATE TABLE users;
+```
+
+This will show the complete CREATE TABLE statement used to create the table, including all constraints and indexes:
+
+```txt
++-------+--------------------------------------------------+
+| Table | Create Table                                     |
++-------+--------------------------------------------------+
+| users | CREATE TABLE `users` (                          |
+|       |   `user_id` int NOT NULL AUTO_INCREMENT,        |
+|       |   `username` varchar(50) NOT NULL,              |
+|       |   `email` varchar(100) NOT NULL,                |
+|       |   `first_name` varchar(50) DEFAULT NULL,        |
+|       |   `last_name` varchar(50) DEFAULT NULL,         |
+|       |   `is_active` tinyint(1) DEFAULT '1',           |
+|       |   `created_at` timestamp NULL DEFAULT           |
+|       |   CURRENT_TIMESTAMP,                            |
+|       |   `updated_at` timestamp NULL DEFAULT           |
+|       |   CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,|
+|       |   PRIMARY KEY (`user_id`),                      |
+|       |   UNIQUE KEY `username` (`username`),           |
+|       |   UNIQUE KEY `email` (`email`)                  |
+|       | ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4         |
+|       | COLLATE=utf8mb4_0900_ai_ci                      |
++-------+--------------------------------------------------+
+```
+
+View indexes on a table:
+
+```sql frame="terminal" showLineNumbers=false title="Show table indexes"
+SHOW INDEX FROM users;
+```
 ### Create a Table
 
 This command creates a new table within the currently selected database. You can define the columns and their data types. Replace `my_table` with your desired table name and adjust the columns as needed.
@@ -79,18 +230,51 @@ CREATE TABLE my_table (
 );
 ```
 
-This command creates a table named `my_table` with four columns: `id`, `name`, `age`, and `created_at`. The `id` column is an auto-incrementing primary key, while the `name` column is a required string field, and the `created_at` column automatically records the timestamp when a row is created.
+Here are more advanced table creation examples:
 
-```txt
-+----+------------+-----+---------------------+
-| id | name       | age | created_at          |
-+----+------------+-----+---------------------+
-|  1 | John Doe   |  30 | 2023-10-01 12:00:00 |
-|  2 | Alice      |  25 | 2023-10-01 12:05:00 |
-|  3 | Bob        |  28 | 2023-10-01 12:10:00 |
-|  4 | Charlie    |  22 | 2023-10-01 12:15:00 |
-|  5 | Jane Doe   |  27 | 2023-10-01 12:20:00 |
-+----+------------+-----+---------------------+
+```sql frame="terminal" showLineNumbers=false title="Create users table with constraints"
+CREATE TABLE users (
+    user_id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    first_name VARCHAR(50),
+    last_name VARCHAR(50),
+    date_of_birth DATE,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT chk_age CHECK (DATEDIFF(CURDATE(), date_of_birth) / 365 >= 13)
+);
+```
+
+```sql frame="terminal" showLineNumbers=false title="Create products table with foreign key"
+CREATE TABLE products (
+    product_id INT AUTO_INCREMENT PRIMARY KEY,
+    product_name VARCHAR(100) NOT NULL,
+    description TEXT,
+    price DECIMAL(10, 2) NOT NULL,
+    stock_quantity INT DEFAULT 0,
+    category_id INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_category (category_id),
+    INDEX idx_price (price),
+    CONSTRAINT chk_price CHECK (price > 0),
+    CONSTRAINT chk_stock CHECK (stock_quantity >= 0)
+);
+```
+
+```sql frame="terminal" showLineNumbers=false title="Create orders table with multiple foreign keys"
+CREATE TABLE orders (
+    order_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    total_amount DECIMAL(12, 2) NOT NULL,
+    order_status ENUM('pending', 'processing', 'shipped', 'delivered', 'cancelled') DEFAULT 'pending',
+    shipping_address TEXT NOT NULL,
+    payment_method ENUM('credit_card', 'debit_card', 'paypal', 'cash') NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
 ```
 
 ### Drop a Table
@@ -109,6 +293,23 @@ This command inserts a new row of data into a table. Replace `my_table` with the
 INSERT INTO my_table (name, age) VALUES ('John Doe', 30);
 ```
 
+Here are more insert examples with different scenarios:
+
+```sql frame="terminal" showLineNumbers=false title="Insert into users table"
+INSERT INTO users (username, email, password_hash, first_name, last_name, date_of_birth) 
+VALUES ('johndoe123', 'john.doe@email.com', 'hashed_password_123', 'John', 'Doe', '1990-05-15');
+```
+
+```sql frame="terminal" showLineNumbers=false title="Insert with all columns specified"
+INSERT INTO products (product_name, description, price, stock_quantity, category_id) 
+VALUES ('Wireless Headphones', 'High-quality Bluetooth headphones with noise cancellation', 149.99, 50, 1);
+```
+
+```sql frame="terminal" showLineNumbers=false title="Insert with default values"
+INSERT INTO products (product_name, price) 
+VALUES ('Basic T-Shirt', 19.99);
+```
+
 ### Insert Multiple Rows
 
 This command inserts multiple rows of data into a table in a single query. Replace `my_table` with the name of your table and adjust the values as needed.
@@ -120,24 +321,31 @@ INSERT INTO my_table (name, age) VALUES
 ('Charlie', 22);
 ```
 
-### Insert Data with Specific Columns
+Here are more examples of bulk inserts:
 
-This command inserts data into specific columns of a table. You can specify which columns to insert values into. Replace `my_table` with your table name and adjust the columns and values as needed.
-
-```sql frame="terminal" showLineNumbers=false title="Insert data with specific columns"
-INSERT INTO my_table (name) VALUES ('Jane Doe');
+```sql frame="terminal" showLineNumbers=false title="Insert multiple users"
+INSERT INTO users (username, email, password_hash, first_name, last_name, date_of_birth) VALUES
+('alice_smith', 'alice@example.com', 'hashed_pass_alice', 'Alice', 'Smith', '1992-08-20'),
+('bob_johnson', 'bob@example.com', 'hashed_pass_bob', 'Bob', 'Johnson', '1985-12-10'),
+('charlie_brown', 'charlie@example.com', 'hashed_pass_charlie', 'Charlie', 'Brown', '1998-03-25'),
+('diana_wilson', 'diana@example.com', 'hashed_pass_diana', 'Diana', 'Wilson', '1987-11-08');
 ```
 
-```txt
-+----+------------+-----+---------------------+
-| id | name       | age | created_at          |
-+----+------------+-----+---------------------+
-|  1 | John Doe   |  30 | 2023-10-01 12:00:00 |
-|  2 | Alice      |  25 | 2023-10-01 12:05:00 |
-|  3 | Bob        |  28 | 2023-10-01 12:10:00 |
-|  4 | Charlie    |  22 | 2023-10-01 12:15:00 |
-|  5 | Jane Doe   | NULL | 2023-10-01 12:20:00 |
-+----+------------+-----+---------------------+
+```sql frame="terminal" showLineNumbers=false title="Insert multiple products"
+INSERT INTO products (product_name, description, price, stock_quantity, category_id) VALUES
+('Laptop Computer', 'High-performance laptop for professionals', 1299.99, 25, 2),
+('Smartphone', 'Latest model with advanced camera features', 799.99, 100, 2),
+('Coffee Mug', 'Ceramic mug perfect for morning coffee', 12.99, 200, 3),
+('Desk Lamp', 'Adjustable LED desk lamp with USB charging port', 45.99, 75, 4),
+('Notebook Set', 'Pack of 3 lined notebooks for note-taking', 8.99, 150, 5);
+```
+
+```sql frame="terminal" showLineNumbers=false title="Insert orders with different statuses"
+INSERT INTO orders (user_id, total_amount, order_status, shipping_address, payment_method) VALUES
+(1, 1299.99, 'processing', '123 Main St, Anytown, ST 12345', 'credit_card'),
+(2, 812.98, 'shipped', '456 Oak Ave, Another City, ST 67890', 'paypal'),
+(3, 58.97, 'delivered', '789 Pine Rd, Some Town, ST 11111', 'debit_card'),
+(1, 25.98, 'pending', '123 Main St, Anytown, ST 12345', 'credit_card');
 ```
 
 ### Altering a Table
@@ -148,12 +356,68 @@ This command modifies the structure of an existing table. You can add, drop, or 
 ALTER TABLE my_table ADD COLUMN email VARCHAR(255);
 ```
 
+Here are more comprehensive table alteration examples:
+
+```sql frame="terminal" showLineNumbers=false title="Add multiple columns"
+ALTER TABLE users 
+ADD COLUMN phone_number VARCHAR(20),
+ADD COLUMN address TEXT,
+ADD COLUMN city VARCHAR(50),
+ADD COLUMN country VARCHAR(50) DEFAULT 'USA';
+```
+
+```sql frame="terminal" showLineNumbers=false title="Modify column data type"
+ALTER TABLE products 
+MODIFY COLUMN description TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+```sql frame="terminal" showLineNumbers=false title="Change column name and type"
+ALTER TABLE users 
+CHANGE COLUMN date_of_birth birth_date DATE;
+```
+
+```sql frame="terminal" showLineNumbers=false title="Drop a column"
+ALTER TABLE products 
+DROP COLUMN old_field;
+```
+
+```sql frame="terminal" showLineNumbers=false title="Add primary key to existing table"
+ALTER TABLE categories 
+ADD COLUMN category_id INT AUTO_INCREMENT PRIMARY KEY FIRST;
+```
+
+```sql frame="terminal" showLineNumbers=false title="Add foreign key constraint"
+ALTER TABLE products 
+ADD CONSTRAINT fk_products_category 
+FOREIGN KEY (category_id) REFERENCES categories(category_id) 
+ON DELETE SET NULL ON UPDATE CASCADE;
+```
+
+```sql frame="terminal" showLineNumbers=false title="Add index for better performance"
+ALTER TABLE users 
+ADD INDEX idx_email (email),
+ADD INDEX idx_name (first_name, last_name),
+ADD INDEX idx_created_at (created_at);
+```
+
+```sql frame="terminal" showLineNumbers=false title="Add unique constraint"
+ALTER TABLE users 
+ADD CONSTRAINT unique_username UNIQUE (username),
+ADD CONSTRAINT unique_email UNIQUE (email);
+```
+
 You can also add a `CHECK` constraint to ensure that the `age` column only contains values greater than 0.
 
 ```sql frame="terminal" showLineNumbers=false title="Add a CHECK constraint"
 ALTER TABLE my_table ADD CONSTRAINT chk_age CHECK (age > 0);
 ```
 
+```sql frame="terminal" showLineNumbers=false title="Add multiple CHECK constraints"
+ALTER TABLE products 
+ADD CONSTRAINT chk_price_positive CHECK (price > 0),
+ADD CONSTRAINT chk_stock_non_negative CHECK (stock_quantity >= 0),
+ADD CONSTRAINT chk_product_name_length CHECK (LENGTH(product_name) >= 2);
+```
 ### Rename a Table
 
 This command renames an existing table. Replace `old_table_name` with the current name of the table and `new_table_name` with the desired new name.
@@ -170,16 +434,48 @@ This command updates existing data in a table. You can specify which rows to upd
 UPDATE my_table SET age = 31 WHERE name = 'John Doe';
 ```
 
-```txt
-+----+------------+-----+---------------------+
-| id | name       | age | created_at          |
-+----+------------+-----+---------------------+
-|  1 | John Doe   |  31 | 2023-10-01 12:00:00 |
-|  2 | Alice      |  25 || 2023-10-01 12:05:00 |
-|  3 | Bob        |  28 | 2023-10-01 12:10:00 |
-|  4 | Charlie    |  22 | 2023-10-01 12:15:00 |
-|  5 | Jane Doe   |  27 || 2023-10-01 12:20:00 |
-+----+------------++-----+---------------------+
+Here are more update examples with different scenarios:
+
+```sql frame="terminal" showLineNumbers=false title="Update user email"
+UPDATE users 
+SET email = 'john.doe.new@email.com' 
+WHERE username = 'johndoe123';
+```
+
+```sql frame="terminal" showLineNumbers=false title="Update multiple columns"
+UPDATE users 
+SET first_name = 'Jonathan', 
+    last_name = 'Smith', 
+    updated_at = CURRENT_TIMESTAMP 
+WHERE user_id = 1;
+```
+
+```sql frame="terminal" showLineNumbers=false title="Update product price with percentage increase"
+UPDATE products 
+SET price = price * 1.10 
+WHERE category_id = 2;
+```
+
+```sql frame="terminal" showLineNumbers=false title="Update order status"
+UPDATE orders 
+SET order_status = 'shipped', 
+    updated_at = CURRENT_TIMESTAMP 
+WHERE order_id = 1001 AND order_status = 'processing';
+```
+
+```sql frame="terminal" showLineNumbers=false title="Update stock quantity after sale"
+UPDATE products 
+SET stock_quantity = stock_quantity - 5 
+WHERE product_id = 1 AND stock_quantity >= 5;
+```
+
+```sql frame="terminal" showLineNumbers=false title="Conditional update with CASE"
+UPDATE users 
+SET is_active = CASE 
+    WHEN DATEDIFF(CURRENT_DATE, created_at) > 365 THEN FALSE 
+    ELSE TRUE 
+END 
+WHERE user_id BETWEEN 1 AND 100;
 ```
 
 ### Delete Data from a Table
@@ -195,7 +491,7 @@ DELETE FROM my_table WHERE name = 'John Doe';
 | id | name       | age | created_at          |
 +----+------------+-----+---------------------+
 |  1 | Alice      |  25 | 2023-10-01 12:05:00 |
-|  2 | Bob        |  28 || 2023-10-01 12:10:00 |
+|  2 | Bob        |  28 | 2023-10-01 12:10:00 |
 |  3 | Charlie    |  22 | 2023-10-01 12:15:00 |
 |  4 | Jane Doe   |  27 | 2023-10-01 12:20:00 |
 +----+------------+-----+---------------------+
@@ -219,36 +515,50 @@ This command retrieves data from a table. You can specify which columns to selec
 SELECT * FROM my_table WHERE age > 25;
 ```
 
-```txt
-+----+------------+-----+---------------------+
-| id | name       | age | created_at          |
-+----+------------+-----+---------------------+
-|  1 | John Doe   |  30 | 2023-10-01 12:00:00 |
-|  2 | Alice      |  25 | 2023-10-01 12:05:00 |
-|  3 | Bob        |  28 | 2023-10-01 12:10:00 |
-|  4 | Charlie    |  22 || 2023-10-01 12:15:00 |
-+----+------------++-----+---------------------+
+Here are more comprehensive select examples:
+
+```sql frame="terminal" showLineNumbers=false title="Select with multiple conditions"
+SELECT user_id, username, email, first_name, last_name 
+FROM users 
+WHERE is_active = TRUE AND DATEDIFF(CURRENT_DATE, date_of_birth) / 365 >= 18;
 ```
 
-This command retrieves all rows from `my_table` where the `age` is greater than 25. The results include all columns from the table.
-You can also select specific columns instead of all columns by specifying them in the `SELECT` statement. For example, to select only the `name` and `age` columns, you can use the following command:
-
-```sql frame="terminal" showLineNumbers=false title="Select specific columns from a table"
-SELECT name, age FROM my_table WHERE age > 25;
+```sql frame="terminal" showLineNumbers=false title="Select with date range"
+SELECT order_id, user_id, total_amount, order_date 
+FROM orders 
+WHERE order_date BETWEEN '2023-01-01' AND '2023-12-31' 
+AND order_status IN ('delivered', 'shipped');
 ```
 
-```txt
-+------------+-----+
-| name       | age |
-+------------+-----+
-| John Doe   |  30 |
-| Alice      |  25 |
-| Bob        |  28 |
-| Charlie    |  22 |
-+------------+-----+
+```sql frame="terminal" showLineNumbers=false title="Select with calculated columns"
+SELECT 
+    product_name,
+    price,
+    stock_quantity,
+    (price * stock_quantity) AS total_inventory_value,
+    CASE 
+        WHEN stock_quantity < 10 THEN 'Low Stock'
+        WHEN stock_quantity < 50 THEN 'Medium Stock'
+        ELSE 'High Stock'
+    END AS stock_status
+FROM products;
 ```
 
-This command retrieves the names and ages of individuals older than 25 from `my_table`. The results include only the specified columns.
+```sql frame="terminal" showLineNumbers=false title="Select with string functions"
+SELECT 
+    CONCAT(first_name, ' ', last_name) AS full_name,
+    UPPER(username) AS username_upper,
+    LENGTH(email) AS email_length,
+    DATE_FORMAT(created_at, '%Y-%m-%d') AS registration_date
+FROM users 
+WHERE email LIKE '%@gmail.com';
+```
+
+```sql frame="terminal" showLineNumbers=false title="Select with subquery"
+SELECT product_name, price 
+FROM products 
+WHERE price > (SELECT AVG(price) FROM products);
+```
 
 ### Select Specific Columns
 
@@ -285,7 +595,7 @@ SELECT * FROM my_table WHERE age > 25 AND name LIKE 'John%';
 +----+------------+-----+---------------------+
 |  1 | John Doe   |  30 | 2023-10-01 12:00:00 |
 |  2 | John Smith |  28 | 2023-10-01 12:05:00 |
-+----+------------+----------+
++----+------------+---------------------------+
 ```
 
 This command retrieves all rows from `my_table` where the `age` is greater than 25 and the `name` starts with 'John'. The results include all columns from the table.
@@ -372,134 +682,75 @@ SELECT user_only_num1 AS AgeOfServer, (user_only_num1 - warranty_period) AS NonW
 WHERE user_only_num1 > 0 AND warranty_period > 0;
 ```
 
-```txt
-+----------------+---------------------+
-| AgeOfServer    | NonWarrantyPeriod   |
-+----------------+---------------------+
-| 5              | 2                   |
-| 3              | 1                   |
-| 7              | 4                   |
-+----------------+---------------------+
+Here are more comprehensive aggregate function examples:
+
+```sql frame="terminal" showLineNumbers=false title="Basic aggregate functions"
+SELECT 
+    COUNT(*) AS total_users,
+    COUNT(DISTINCT email) AS unique_emails,
+    MIN(date_of_birth) AS oldest_user_birth,
+    MAX(date_of_birth) AS youngest_user_birth,
+    AVG(DATEDIFF(CURRENT_DATE, date_of_birth) / 365) AS average_age
+FROM users 
+WHERE is_active = TRUE;
 ```
 
-This command retrieves the age of servers and calculates the non-warranty period by subtracting the warranty period from the age of the server. The results are filtered to include only servers with a positive age and warranty period.
-
-### Limit Results
-
-This command retrieves a limited number of rows from a table. You can specify how many rows to return. Replace `my_table` with your table name and adjust the limit as needed.
-
-```sql frame="terminal" showLineNumbers=false title="Limit results from a table"
-SELECT * FROM my_table LIMIT 10;
+```sql frame="terminal" showLineNumbers=false title="Sales analysis with aggregates"
+SELECT 
+    COUNT(order_id) AS total_orders,
+    SUM(total_amount) AS total_revenue,
+    AVG(total_amount) AS average_order_value,
+    MIN(total_amount) AS smallest_order,
+    MAX(total_amount) AS largest_order,
+    STD(total_amount) AS revenue_std_deviation
+FROM orders 
+WHERE order_status = 'delivered';
 ```
 
-```txt
-+----+------------+-----+---------------------+
-| id | name       | age | created_at          |
-+----+------------+-----+---------------------+
-|  1 | John Doe   |  30 | 2023-10-01 12:00:00 |
-|  2 | Alice      |  25 | 2023-10-01 12:05:00 |
-|  3 | Bob        |  28 | 2023-10-01 12:10:00 |
-|  4 | Charlie    |  22 | 2023-10-01 12:15:00 |
-|  5 | Jane Doe   |  27 || 2023-10-01 12:20:00 |
-|  6 |Sophie     |  29 | 2023-10-01 12:25:00 |
-|  7 | Edgar Frank |  35 | 2023-10-01 12:30:00 |
-|  8 | Donald D.   | |  40 | 2023-10-01 12:35:00 |
-|  9 | Raymond F.  |  32 | 2023-10-01 12:40:00 |
-| 10 | Louis      |  31 | 2023-10-01 12:45:00 |
-+----+------------+-----+---------------------+
+```sql frame="terminal" showLineNumbers=false title="Product inventory analysis"
+SELECT 
+    category_id,
+    COUNT(*) AS products_count,
+    SUM(stock_quantity) AS total_stock,
+    AVG(price) AS average_price,
+    SUM(price * stock_quantity) AS total_inventory_value,
+    MIN(price) AS cheapest_product,
+    MAX(price) AS most_expensive_product
+FROM products 
+GROUP BY category_id 
+ORDER BY total_inventory_value DESC;
 ```
 
-### Select with Offset
-
-This command retrieves a limited number of rows from a table, starting from a specific offset. You can specify how many rows to skip before returning the results. Replace `my_table` with your table name and adjust the limit and offset as needed.
-
-```sql frame="terminal" showLineNumbers=false title="Select with offset"
-SELECT * FROM my_table LIMIT 10 OFFSET 5;
+```sql frame="terminal" showLineNumbers=false title="Monthly sales report"
+SELECT 
+    YEAR(order_date) AS year,
+    MONTH(order_date) AS month,
+    MONTHNAME(order_date) AS month_name,
+    COUNT(*) AS orders_count,
+    SUM(total_amount) AS monthly_revenue,
+    AVG(total_amount) AS avg_order_value
+FROM orders 
+WHERE order_status IN ('delivered', 'shipped')
+GROUP BY YEAR(order_date), MONTH(order_date)
+ORDER BY year DESC, month DESC;
 ```
 
-```txt
-+----+------------+-----+---------------------+
-| id | name       | age | created_at          |
-+----+------------+-----+---------------------+
-|  6 | Sophie     |  29 | 2023-10-01 12:25:00 |
-|  7 | Edgar Frank |  35 | 2023-10-01 12:30:00 |
-|  8 | Donald D.   |  40 | 2023-10-01 12:35:00 |
-|  9 | Raymond F.  |  32 | 2023-10-01 12:40:00 |
-| 10 | Louis      |  31 | 2023-10-01 12:45:00 |
-+----+------------++-----+---------------------+
+```sql frame="terminal" showLineNumbers=false title="User engagement statistics"
+SELECT 
+    CASE 
+        WHEN DATEDIFF(CURRENT_DATE, date_of_birth) / 365 < 25 THEN 'Under 25'
+        WHEN DATEDIFF(CURRENT_DATE, date_of_birth) / 365 < 35 THEN '25-34'
+        WHEN DATEDIFF(CURRENT_DATE, date_of_birth) / 365 < 45 THEN '35-44'
+        ELSE '45+'
+    END AS age_group,
+    COUNT(*) AS user_count,
+    COUNT(CASE WHEN is_active = TRUE THEN 1 END) AS active_users,
+    ROUND(COUNT(CASE WHEN is_active = TRUE THEN 1 END) * 100.0 / COUNT(*), 2) AS active_percentage
+FROM users 
+GROUP BY age_group
+ORDER BY age_group;
 ```
-
-### Group By Clause
-
-This command groups rows that have the same values in specified columns into summary rows. You can use aggregate functions like `COUNT`, `SUM`, `AVG`, etc., on grouped data. Replace `my_table` with your table name and adjust the columns as needed.
-
-```sql frame="terminal" showLineNumbers=false title="Group by clause"
-SELECT age, COUNT(*) AS count FROM my_table GROUP BY age;
-```
-
-```txt
-+-----+-------+
-| age | count |
-+-----+-------+
-|  22 |     1 |
-|  25 |     1 |
-|  27 |     1 |
-|  28 |     1 |
-|  29 |     1 |
-|  30 |     1 |
-|  31 |     1 |
-|  32 |     1 |
-|  35 |     1 |
-|  40 |     1 |
-+-----+-------+
-```
-
-This command retrieves the count of rows for each distinct age in the `my_table`. The results are grouped by the `age` column, showing how many entries exist for each age value.
-
-### Having Clause
-
-This command filters the results of a `GROUP BY` query based on a condition. It is used to specify conditions on aggregated data. Replace `my_table` with your table name and adjust the columns and conditions as needed.
-
-```sql frame="terminal" showLineNumbers=false title="Having clause"
-SELECT age, COUNT(*) AS count FROM my_table GROUP BY age HAVING count > 1;
-```
-
-```txt
-+-----+-------+
-| age | count |
-+-----+-------+
-|  22 |     1 |
-|  25 |     1 |
-|  27 |     1 |
-|  28 |     1 |
-|  29 |     1 |
-|  30 |     1 |
-|  31 |     1 |
-|  32 |     1 |
-|  35 |     1 |
-|  40 |     1 |
-+-----+-------+
-```
-
-This command retrieves the count of rows for each distinct age in the `my_table`, but only includes groups where the count is greater than 1. The results are grouped by the `age` column, showing how many entries exist for each age value that meets the condition.
-
-### Count Rows in a Table
-
-This command counts the number of rows in a table. You can apply filters using a `WHERE` clause. Replace `my_table` with your table name.
-
-```sql frame="terminal" showLineNumbers=false title="Count rows in a table"
-SELECT COUNT(*) FROM my_table WHERE age > 25;
-```
-
-```txt
-+----------+
-| COUNT(*) |
-+----------+
-|       5  |
-+----------+
-```
-
-This command counts the number of rows in the `my_table` where the `age` is greater than 25. The result shows the total count of rows that meet this condition.
+<BackToTop />
 
 ## Data Control Language (DCL) Commands
 
@@ -523,6 +774,8 @@ REVOKE ALL PRIVILEGES ON my_database.* FROM 'my_user'@'localhost';
 
 This command revokes all privileges on the specified database from the user `my_user` connecting from `localhost`. You can specify different privileges to revoke, such as `SELECT`, `INSERT`, `UPDATE`, etc.
 
+<BackToTop />
+
 ## Transaction Control Language (TCL) Commands
 
 ### Start a Transaction
@@ -531,6 +784,61 @@ This command begins a new transaction. It allows you to group multiple SQL state
 
 ```sql frame="terminal" showLineNumbers=false title="Start a transaction"
 START TRANSACTION;
+```
+
+Here are practical transaction examples:
+
+```sql frame="terminal" showLineNumbers=false title="Simple transaction example"
+START TRANSACTION;
+
+-- Transfer money between accounts
+UPDATE accounts SET balance = balance - 100 WHERE account_id = 1;
+UPDATE accounts SET balance = balance + 100 WHERE account_id = 2;
+
+-- Check if both updates were successful
+SELECT balance FROM accounts WHERE account_id IN (1, 2);
+
+COMMIT;
+```
+
+```sql frame="terminal" showLineNumbers=false title="E-commerce order transaction"
+START TRANSACTION;
+
+-- Create new order
+INSERT INTO orders (user_id, total_amount, order_status, shipping_address, payment_method) 
+VALUES (5, 299.99, 'pending', '123 Customer St, City, ST 12345', 'credit_card');
+
+-- Get the order ID
+SET @order_id = LAST_INSERT_ID();
+
+-- Add order items
+INSERT INTO order_items (order_id, product_id, quantity, unit_price) VALUES
+(@order_id, 1, 2, 149.99),
+(@order_id, 3, 1, 12.99);
+
+-- Update inventory
+UPDATE products SET stock_quantity = stock_quantity - 2 WHERE product_id = 1;
+UPDATE products SET stock_quantity = stock_quantity - 1 WHERE product_id = 3;
+
+-- Verify stock levels are not negative
+SELECT product_id, stock_quantity FROM products WHERE product_id IN (1, 3) AND stock_quantity < 0;
+
+COMMIT;
+```
+
+```sql frame="terminal" showLineNumbers=false title="Transaction with rollback condition"
+START TRANSACTION;
+
+-- Try to process a large order
+UPDATE products SET stock_quantity = stock_quantity - 100 WHERE product_id = 1;
+
+-- Check if we have enough stock
+SELECT stock_quantity FROM products WHERE product_id = 1;
+
+-- If stock goes negative, we'll rollback (this would be checked in application logic)
+-- For demo, let's assume we need to rollback
+
+ROLLBACK;
 ```
 
 This command initiates a transaction, allowing you to execute multiple SQL statements that can be committed or rolled back as a single unit.
@@ -562,6 +870,16 @@ This command undoes all changes made during the transaction, reverting the datab
 
 | Action                                | Purpose                                                                          |
 | ------------------------------------- | -------------------------------------------------------------------------------- |
-| [SQL Queries](/sql-mySQL/SQL-queries) | Learn how to write and execute SQL queries to interact with your MySQL database. |
+| [Joins and Relationships](/sql-mySQL/joins-and-relationships) | Learn how to work with joins and relationships between tables in MySQL. |
+
+### Additional Learning Resources
+
+| Topic                                 | Description                                                                      |
+| ------------------------------------- | -------------------------------------------------------------------------------- |
+| [Advanced Queries](/sql-mySQL/advanced-queries) | Learn about complex queries, subqueries, and window functions. |
+| [Database Design](/sql-mySQL/database-design) | Understand normalization, relationships, and best practices for schema design. |
+| [Performance Optimization](/sql-mySQL/performance) | Learn about indexes, query optimization, and performance tuning. |
+| [Stored Procedures](/sql-mySQL/stored-procedures) | Create reusable code blocks and improve database performance. |
+| [Database Security](/sql-mySQL/security) | Implement user management, permissions, and security best practices. |
 
 <BackToTop />
