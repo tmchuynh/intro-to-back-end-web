@@ -22,4 +22,469 @@ Clean code is not just about following a set of rules; it's about cultivating a 
 9. **Error Handling**: Implement robust error handling to gracefully manage exceptions and unexpected situations. This improves the reliability of your code.
 10. **Avoid Premature Optimization**: Focus on writing clean and functional code first. Optimize only when necessary, based on profiling and performance analysis.
 
+## Naming Conventions
+
+Good naming is one of the most important aspects of clean code. Names should be descriptive, unambiguous, and communicate intent clearly.
+
+### Variables and Functions
+
+```javascript
+// ❌ Poor naming
+let d; // elapsed time in days
+let u = getUser();
+function calc(x, y) {
+  return x * y * 0.1;
+}
+
+// ✅ Good naming
+let elapsedTimeInDays;
+let currentUser = getUser();
+function calculateDiscountAmount(price, quantity) {
+  return price * quantity * DISCOUNT_RATE;
+}
+```
+
+### Classes and Constants
+
+```python
+# ❌ Poor naming
+class mgr:
+    pass
+
+PI = 3.14
+MAX = 100
+
+# ✅ Good naming
+class UserManager:
+    pass
+
+PI = 3.14159265359
+MAX_RETRY_ATTEMPTS = 100
+```
+
+### Naming Guidelines
+
+1. **Use pronounceable names**: `creationTimestamp` instead of `creatTs`
+2. **Use searchable names**: Avoid single-letter variables except for loop counters
+3. **Avoid mental mapping**: Don't make readers decode abbreviations
+4. **Use solution domain names**: `AccountVisitor`, `JobQueue`
+5. **Add meaningful context**: `addrFirstName` instead of `firstName`
+
+## Function Design
+
+Well-designed functions are the building blocks of clean code. They should be small, focused, and do one thing well.
+
+### Function Size and Complexity
+
+```javascript
+// ❌ Large, complex function
+function processUserData(users) {
+  let result = [];
+  for (let i = 0; i < users.length; i++) {
+    if (users[i].age >= 18 && users[i].isActive) {
+      let fullName = users[i].firstName + " " + users[i].lastName;
+      let email = users[i].email.toLowerCase();
+      // ... more processing
+      result.push({
+        id: users[i].id,
+        fullName: fullName,
+        email: email,
+        // ... more fields
+      });
+    }
+  }
+  return result;
+}
+
+// ✅ Clean, modular functions
+function processUserData(users) {
+  return users.filter(isEligibleUser).map(transformUser);
+}
+
+function isEligibleUser(user) {
+  return user.age >= 18 && user.isActive;
+}
+
+function transformUser(user) {
+  return {
+    id: user.id,
+    fullName: formatFullName(user),
+    email: normalizeEmail(user.email),
+  };
+}
+
+function formatFullName(user) {
+  return `${user.firstName} ${user.lastName}`;
+}
+
+function normalizeEmail(email) {
+  return email.toLowerCase();
+}
+```
+
+### Function Principles
+
+1. **Single Responsibility**: Each function should do one thing
+2. **Small Size**: Ideally 20 lines or fewer
+3. **Few Parameters**: 3 or fewer parameters when possible
+4. **No Side Effects**: Functions should be predictable
+5. **Descriptive Names**: Function names should describe what they do
+
+## Code Structure and Organization
+
+### File Organization
+
+```
+src/
+  components/
+    user/
+      UserProfile.tsx
+      UserList.tsx
+      UserForm.tsx
+      index.ts
+  services/
+    userService.ts
+    apiService.ts
+  utils/
+    validation.ts
+    formatting.ts
+  types/
+    user.ts
+    api.ts
+```
+
+### Module Structure
+
+```typescript
+// ✅ Well-organized module
+// userService.ts
+
+// Imports at the top
+import { ApiClient } from "./apiClient";
+import { User, CreateUserRequest } from "../types/user";
+
+// Constants
+const API_ENDPOINTS = {
+  USERS: "/api/users",
+  USER_BY_ID: "/api/users/:id",
+};
+
+// Types and interfaces
+interface UserServiceConfig {
+  baseUrl: string;
+  timeout: number;
+}
+
+// Main class
+export class UserService {
+  private apiClient: ApiClient;
+
+  constructor(config: UserServiceConfig) {
+    this.apiClient = new ApiClient(config);
+  }
+
+  async getUsers(): Promise<User[]> {
+    return this.apiClient.get(API_ENDPOINTS.USERS);
+  }
+
+  // ... other methods
+}
+
+// Default export
+export default UserService;
+```
+
+## Comments and Documentation
+
+### When to Comment
+
+```javascript
+// ❌ Redundant comments
+let i = 0; // Set i to 0
+user.name = "John"; // Set user name to John
+
+// ✅ Meaningful comments
+// Retry connection up to 3 times with exponential backoff
+for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+  try {
+    await connectToDatabase();
+    break;
+  } catch (error) {
+    if (attempt === MAX_RETRIES) throw error;
+    await delay(Math.pow(2, attempt) * 1000);
+  }
+}
+
+// Complex business logic explanation
+// Calculate compound interest using the formula: A = P(1 + r/n)^(nt)
+// Where: P = principal, r = annual rate, n = compounds per year, t = time
+const futureValue =
+  principal *
+  Math.pow(1 + annualRate / compoundsPerYear, compoundsPerYear * timeInYears);
+```
+
+### Documentation Standards
+
+```typescript
+/**
+ * Calculates the total price including tax and discounts
+ * @param basePrice - The original price before modifications
+ * @param taxRate - Tax rate as a decimal (e.g., 0.08 for 8%)
+ * @param discountPercent - Discount as a percentage (e.g., 10 for 10% off)
+ * @returns The final price after tax and discount
+ * @throws {Error} When basePrice is negative
+ * @example
+ * const total = calculateTotalPrice(100, 0.08, 10);
+ * // Returns: 97.2 (100 - 10% + 8% tax on discounted amount)
+ */
+function calculateTotalPrice(
+  basePrice: number,
+  taxRate: number,
+  discountPercent: number
+): number {
+  if (basePrice < 0) {
+    throw new Error("Base price cannot be negative");
+  }
+
+  const discountedPrice = basePrice * (1 - discountPercent / 100);
+  return discountedPrice * (1 + taxRate);
+}
+```
+
+## Error Handling
+
+### Proper Exception Handling
+
+```python
+# ❌ Poor error handling
+def read_config_file():
+    try:
+        with open('config.json', 'r') as f:
+            return json.load(f)
+    except:
+        return {}
+
+# ✅ Specific error handling
+def read_config_file():
+    """
+    Reads configuration from config.json file.
+
+    Returns:
+        dict: Configuration dictionary
+
+    Raises:
+        ConfigurationError: When config file is invalid or missing
+    """
+    try:
+        with open('config.json', 'r') as f:
+            config = json.load(f)
+            validate_config(config)
+            return config
+
+    except FileNotFoundError:
+        logger.error("Configuration file 'config.json' not found")
+        raise ConfigurationError("Missing configuration file")
+
+    except json.JSONDecodeError as e:
+        logger.error(f"Invalid JSON in config file: {e}")
+        raise ConfigurationError("Invalid configuration format")
+
+    except ValidationError as e:
+        logger.error(f"Configuration validation failed: {e}")
+        raise ConfigurationError("Invalid configuration values")
+```
+
+### Error Handling Best Practices
+
+1. **Be Specific**: Catch specific exceptions, not broad ones
+2. **Fail Fast**: Validate inputs early
+3. **Provide Context**: Include meaningful error messages
+4. **Log Appropriately**: Log errors with sufficient detail
+5. **Clean Up Resources**: Use try-finally or context managers
+
+## Testing Best Practices
+
+### Unit Test Structure
+
+```javascript
+// ✅ Well-structured tests
+describe("UserService", () => {
+  let userService;
+  let mockApiClient;
+
+  beforeEach(() => {
+    mockApiClient = createMockApiClient();
+    userService = new UserService(mockApiClient);
+  });
+
+  describe("getUser", () => {
+    it("should return user when valid ID is provided", async () => {
+      // Arrange
+      const userId = 123;
+      const expectedUser = { id: 123, name: "John Doe" };
+      mockApiClient.get.mockResolvedValue(expectedUser);
+
+      // Act
+      const result = await userService.getUser(userId);
+
+      // Assert
+      expect(result).toEqual(expectedUser);
+      expect(mockApiClient.get).toHaveBeenCalledWith(`/users/${userId}`);
+    });
+
+    it("should throw error when user not found", async () => {
+      // Arrange
+      const userId = 999;
+      mockApiClient.get.mockRejectedValue(new NotFoundError());
+
+      // Act & Assert
+      await expect(userService.getUser(userId)).rejects.toThrow(NotFoundError);
+    });
+  });
+});
+```
+
+### Test Principles
+
+1. **AAA Pattern**: Arrange, Act, Assert
+2. **One Assertion per Test**: Focus on single behavior
+3. **Descriptive Names**: Test names should describe the scenario
+4. **Independent Tests**: Tests shouldn't depend on each other
+5. **Fast Execution**: Tests should run quickly
+
+## Common Code Smells
+
+### Long Method
+
+```python
+# ❌ Long method with multiple responsibilities
+def process_order(order_data):
+    # Validate order (20 lines)
+    if not order_data.get('customer_id'):
+        raise ValueError("Customer ID required")
+    # ... more validation
+
+    # Calculate pricing (15 lines)
+    base_price = 0
+    for item in order_data['items']:
+        base_price += item['price'] * item['quantity']
+    # ... more calculations
+
+    # Send email (10 lines)
+    email_body = f"Order confirmation for {order_data['customer_id']}"
+    # ... email logic
+
+    # Update inventory (12 lines)
+    for item in order_data['items']:
+        # ... inventory updates
+
+    return order_id
+
+# ✅ Refactored into smaller methods
+def process_order(order_data):
+    validate_order(order_data)
+    total_price = calculate_order_total(order_data)
+    order_id = create_order(order_data, total_price)
+    send_confirmation_email(order_data, order_id)
+    update_inventory(order_data['items'])
+    return order_id
+```
+
+### Duplicate Code
+
+```javascript
+// ❌ Duplicate code
+function calculateEmployeeTax(employee) {
+  let tax = 0;
+  if (employee.salary > 50000) {
+    tax = employee.salary * 0.25;
+  } else {
+    tax = employee.salary * 0.15;
+  }
+  return tax;
+}
+
+function calculateContractorTax(contractor) {
+  let tax = 0;
+  if (contractor.payment > 50000) {
+    tax = contractor.payment * 0.25;
+  } else {
+    tax = contractor.payment * 0.15;
+  }
+  return tax;
+}
+
+// ✅ Extracted common logic
+function calculateTax(income) {
+  const taxRate = income > 50000 ? 0.25 : 0.15;
+  return income * taxRate;
+}
+
+function calculateEmployeeTax(employee) {
+  return calculateTax(employee.salary);
+}
+
+function calculateContractorTax(contractor) {
+  return calculateTax(contractor.payment);
+}
+```
+
+## Tools and Linters
+
+### ESLint Configuration
+
+```json
+// .eslintrc.json
+{
+  "extends": ["@typescript-eslint/recommended", "plugin:prettier/recommended"],
+  "rules": {
+    "max-len": ["error", { "code": 100 }],
+    "max-lines-per-function": ["error", { "max": 20 }],
+    "complexity": ["error", { "max": 10 }],
+    "no-console": "warn",
+    "prefer-const": "error",
+    "@typescript-eslint/no-unused-vars": "error"
+  }
+}
+```
+
+### Code Quality Tools
+
+1. **Static Analysis**: SonarQube, CodeClimate
+2. **Linters**: ESLint (JavaScript), Pylint (Python), RuboCop (Ruby)
+3. **Formatters**: Prettier, Black (Python), rustfmt (Rust)
+4. **Type Checkers**: TypeScript, mypy (Python)
+5. **Complexity Analysis**: radon (Python), jscpd (JavaScript)
+
+## Best Practices Checklist
+
+### Before Committing Code
+
+- [ ] **Naming**: All variables, functions, and classes have descriptive names
+- [ ] **Functions**: Each function has a single responsibility and is under 20 lines
+- [ ] **Comments**: Complex logic is explained with meaningful comments
+- [ ] **Tests**: New functionality has corresponding unit tests
+- [ ] **Error Handling**: Errors are handled gracefully with specific exceptions
+- [ ] **Dependencies**: No unnecessary dependencies or imports
+- [ ] **Performance**: No obvious performance bottlenecks
+- [ ] **Security**: No sensitive information exposed
+- [ ] **Formatting**: Code follows consistent formatting standards
+- [ ] **Documentation**: Public APIs are properly documented
+
+### Code Review Focus Areas
+
+- [ ] **Logic Correctness**: Code does what it's supposed to do
+- [ ] **Edge Cases**: Boundary conditions are handled
+- [ ] **Maintainability**: Code is easy to modify and extend
+- [ ] **Performance**: No unnecessary complexity or resource usage
+- [ ] **Security**: No potential vulnerabilities
+- [ ] **Standards**: Follows team coding standards
+- [ ] **Testing**: Adequate test coverage
+
+## Conclusion
+
+Clean code is an investment in the future of your project. While it may take more time initially, it pays dividends in reduced debugging time, easier feature additions, and improved team collaboration. Remember that clean code is not a destination but a continuous journey of improvement.
+
+The key is to start with small changes and gradually build good habits. Use tools to automate what you can, but don't rely solely on them. Develop an eye for code quality and always strive to leave the code better than you found it.
+
 <BackToTop />
