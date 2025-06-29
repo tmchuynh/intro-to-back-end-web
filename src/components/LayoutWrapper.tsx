@@ -47,7 +47,7 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  });
 
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
