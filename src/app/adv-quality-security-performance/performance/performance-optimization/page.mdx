@@ -522,7 +522,7 @@ Understanding algorithmic complexity is crucial for optimization. The Big O nota
 Choosing the right data structure dramatically impacts performance:
 
 **Array vs. Hash Table Lookup:**
-```javascript title="Data Structure Performance Comparison"
+```javascript title="src/utils/data-structure-comparison.js"
 // Inefficient: O(n) array search
 function findUserInArray(users, targetId) {
   for (let i = 0; i < users.length; i++) {
@@ -547,7 +547,7 @@ function findUserInMap(userMap, targetId) {
 ```
 
 **List vs. Set for Membership Testing:**
-```javascript title="Set vs Array Performance"
+```javascript title="src/utils/set-vs-array-performance.js"
 // Inefficient: O(n) array includes
 const permissions = ['read', 'write', 'delete', /* ... 1000 permissions */];
 function hasPermission(permission) {
@@ -569,7 +569,7 @@ function hasPermissionFast(permission) {
 
 Optimizing loops can provide significant performance improvements:
 
-```javascript title="Loop Optimization Techniques"
+```javascript title="src/optimization/loop-optimization.js"
 // Inefficient: Multiple array traversals
 function processUserData(users) {
   const activeUsers = users.filter(user => user.active);
@@ -595,7 +595,7 @@ function processUserDataOptimized(users) {
 
 Sometimes, changing the algorithm entirely provides dramatic improvements:
 
-```javascript title="Algorithmic Improvement Example"
+```javascript title="src/algorithms/sorting-comparison.js"
 // Inefficient: Bubble sort O(n²)
 function bubbleSort(arr) {
   const n = arr.length;
@@ -635,7 +635,7 @@ Database optimization is critical because database operations are often the prim
 Beyond basic indexing, advanced indexing strategies can dramatically improve query performance:
 
 **Composite Indexes:**
-```sql title="Composite Index Strategy"
+```sql title="database/indexes/composite-index-strategy.sql"
 -- Inefficient: Separate indexes
 CREATE INDEX idx_user_status ON users(status);
 CREATE INDEX idx_user_created ON users(created_at);
@@ -653,7 +653,7 @@ CREATE INDEX idx_user_status_created ON users(status, created_at);
 ```
 
 **Partial Indexes:**
-```sql title="Partial Index for Sparse Data"
+```sql title="database/indexes/partial-index-sparse-data.sql"
 -- Inefficient: Index includes all rows
 CREATE INDEX idx_users_email ON users(email);
 
@@ -666,7 +666,7 @@ WHERE status = 'active';
 ```
 
 **Covering Indexes:**
-```sql title="Covering Index Example"
+```sql title="database/indexes/covering-index-example.sql"
 -- Query that requires additional data lookup
 SELECT user_id, name, email 
 FROM users 
@@ -684,7 +684,7 @@ ON users(status, user_id, name, email);
 #### Query Optimization Techniques
 
 **Query Rewriting:**
-```sql title="Query Optimization Examples"
+```sql title="database/optimization/query-optimization-examples.sql"
 -- Inefficient: Using OR in WHERE clause
 SELECT * FROM orders 
 WHERE status = 'pending' 
@@ -706,7 +706,7 @@ WHERE name ILIKE 'john';
 ```
 
 **Join Optimization:**
-```sql title="Join Optimization"
+```sql title="database/optimization/join-optimization.sql"
 -- Inefficient: Multiple subqueries
 SELECT u.name, 
        (SELECT COUNT(*) FROM orders o WHERE o.user_id = u.id) as order_count,
@@ -733,7 +733,7 @@ LEFT JOIN (
 
 Connection pooling significantly reduces the overhead of database connections:
 
-```javascript title="Advanced Connection Pooling"
+```javascript title="src/database/advanced-connection-pooling.js"
 const { Pool } = require('pg');
 
 // Optimized connection pool configuration
@@ -801,7 +801,7 @@ async function executeQuery(query, params = []) {
 #### Database-Specific Optimizations
 
 **PostgreSQL Optimizations:**
-```sql title="PostgreSQL Performance Tuning"
+```sql title="database/postgresql/performance-tuning.sql"
 -- Analyze table statistics for query planner
 ANALYZE users;
 
@@ -817,7 +817,7 @@ SELECT * FROM users WHERE email = 'user@example.com';
 ```
 
 **MySQL Optimizations:**
-```sql title="MySQL Performance Tuning"
+```sql title="database/mysql/performance-tuning.sql"
 -- Optimize table for better performance
 OPTIMIZE TABLE users;
 
@@ -836,7 +836,7 @@ Understanding these optimization types and their appropriate applications enable
 
 Indexing is a technique used to speed up database queries by creating a data structure that allows for faster lookups. Indexes are created on columns that are frequently used in search conditions, allowing the database to quickly locate the relevant rows without scanning the entire table.
 
-```sql title="Create Index Using SQL"
+```sql title="database/schema/create-index.sql"
 CREATE INDEX idx_users_email ON users(email);
 ```
 
@@ -848,7 +848,7 @@ This SQL command creates an index on the `email` column of the `users` table, wh
 
 Query optimization involves rewriting SQL queries to improve their performance. This can include using joins instead of subqueries, avoiding unnecessary columns in `SELECT` statements, and using appropriate filtering conditions.
 
-```sql title="Optimized Query Using SQL"
+```sql title="database/queries/optimized-query.sql"
 SELECT id, name FROM users WHERE active = true;
 ```
 
@@ -858,7 +858,7 @@ This query retrieves only the `id` and `name` columns from the `users` table whe
 
 Connection pooling is a technique used to manage database connections efficiently. Instead of opening and closing connections for each request, a pool of connections is maintained, allowing applications to reuse existing connections. This reduces the overhead of establishing new connections and improves performance, especially in high-traffic applications.
 
-```javascript title="Connection Pooling Using Node.js"
+```javascript title="src/database/connection-pooling.js"
 const { Pool } = require("pg"); // Import the pg library for PostgreSQL
 // Create a connection pool
 // with the necessary configuration parameters
@@ -927,7 +927,7 @@ Caching is one of the most effective performance optimization techniques, provid
 
 Redis provides advanced caching capabilities beyond simple key-value storage:
 
-```javascript title="Advanced Redis Caching Patterns"
+```javascript title="src/cache/redis-caching-patterns.js"
 const redis = require('redis');
 const client = redis.createClient({
   host: 'localhost',
@@ -1034,7 +1034,7 @@ const cluster = require('redis').createCluster({
 
 HTTP caching reduces server load and improves user experience:
 
-```javascript title="HTTP Caching Implementation"
+```javascript title="src/middleware/http-caching.js"
 const express = require('express');
 const app = express();
 
@@ -1108,7 +1108,7 @@ function generateETag(data) {
 
 Proactive cache management ensures optimal performance:
 
-```javascript title="Cache Warming Strategies"
+```javascript title="src/cache/cache-warming-strategies.js"
 // Cache warming for critical data
 async function warmCache() {
   console.log('Starting cache warming process...');
@@ -1167,7 +1167,7 @@ async function preloadUserData(userId) {
 
 Monitor cache effectiveness to optimize strategies:
 
-```javascript title="Cache Metrics and Monitoring"
+```javascript title="src/monitoring/cache-metrics.js"
 class CacheMetrics {
   constructor() {
     this.hits = 0;
@@ -1273,7 +1273,7 @@ Front-end optimization focuses on improving client-side performance, which direc
 
 Beyond basic minification, advanced compression techniques can significantly reduce bundle sizes:
 
-```javascript title="Advanced Build Optimization"
+```javascript title="webpack.config.prod.js"
 // webpack.config.js - Production optimization
 const TerserPlugin = require('terser-webpack-plugin');
 const CompressionPlugin = require('compression-webpack-plugin');
@@ -1385,7 +1385,7 @@ module.exports = {
 
 Modern applications benefit from sophisticated loading strategies:
 
-```javascript title="Advanced Code Splitting Strategies"
+```javascript title="src/components/code-splitting-strategies.jsx"
 // Route-based code splitting with React
 import { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
@@ -1527,7 +1527,7 @@ document.querySelectorAll('[data-preload]').forEach(element => {
 
 Optimize image loading for better perceived performance:
 
-```javascript title="Advanced Image Optimization"
+```javascript title="src/utils/progressive-image-loader.js"
 // Progressive image loading with intersection observer
 class ProgressiveImageLoader {
   constructor() {
@@ -1662,7 +1662,7 @@ This comprehensive approach to caching and front-end optimization provides multi
 
 Minification is the process of removing unnecessary characters from code (such as whitespace, comments, and line breaks) to reduce file size and improve load times. Tools like UglifyJS and Terser can be used to minify JavaScript files, while CSS files can be minified using tools like CSSNano or CleanCSS.
 
-```javascript title="Minified JavaScript Example"
+```javascript title="src/optimization/minified-example.js"
 // Original JavaScript code
 function add(a, b) {
   return a + b;
@@ -1681,7 +1681,7 @@ This example shows how the original JavaScript function is minified by removing 
 
 Bundling involves combining multiple JavaScript or CSS files into a single file to reduce the number of HTTP requests made by the browser. This can significantly improve load times, especially for applications with many small files. Tools like Webpack and Rollup can be used to bundle files efficiently.
 
-```javascript title="Bundling Example Using Webpack"
+```javascript title="webpack.config.js"
 // webpack.config.js
 module.exports = {
   entry: "./src/index.js", // Entry point for the application
@@ -1711,7 +1711,7 @@ This Webpack configuration file specifies the entry point for the application an
 
 Lazy loading is a technique that defers the loading of non-essential resources until they are needed. This can significantly improve initial load times by only loading critical resources upfront and deferring the rest until the user interacts with the application. For example, images can be lazy-loaded as the user scrolls down the page, reducing the initial payload and improving performance.
 
-```html title="Lazy Loading Example Using HTML"
+```html title="public/index.html"
 <img src="image.jpg" loading="lazy" alt="Lazy Loaded Image" />
 ```
 
@@ -1728,7 +1728,7 @@ Performance optimization requires a systematic approach that combines measuremen
 **Establish Performance Baselines:**
 Before optimization, establish clear performance baselines to measure improvement against:
 
-```javascript title="Performance Baseline Measurement"
+```javascript title="src/monitoring/performance-baseline.js"
 class PerformanceBaseline {
   constructor() {
     this.metrics = {
@@ -1793,7 +1793,7 @@ setTimeout(() => {
 **Implement Comprehensive Monitoring:**
 Use multiple monitoring layers to get complete visibility:
 
-```javascript title="Multi-Layer Performance Monitoring"
+```javascript title="src/monitoring/multi-layer-monitoring.js"
 const prometheus = require('prom-client');
 
 // Create custom metrics
@@ -1891,7 +1891,7 @@ function extractTableName(query) {
 **Regular Code Reviews for Performance:**
 Implement performance-focused code review practices:
 
-```javascript title="Performance Code Review Checklist"
+```javascript title="src/code-review/performance-checker.js"
 // Performance review checklist implementation
 class PerformanceReviewChecker {
   static checkAlgorithmComplexity(code) {
@@ -2032,7 +2032,7 @@ class PerformanceReviewChecker {
 **Comprehensive Load Testing Strategy:**
 Implement systematic load testing to validate optimizations:
 
-```javascript title="Automated Load Testing Framework"
+```javascript title="tests/load-testing-framework.js"
 const autocannon = require('autocannon');
 const { performance } = require('perf_hooks');
 
@@ -2223,7 +2223,7 @@ loadTester.runTestSuite(testSuite)
 **Performance Regression Detection:**
 Implement automated systems to detect performance regressions:
 
-```javascript title="Performance Regression Detection"
+```javascript title="src/monitoring/regression-detector.js"
 class PerformanceRegressionDetector {
   constructor(thresholds = {}) {
     this.thresholds = {
@@ -2398,7 +2398,7 @@ These best practices create a comprehensive framework for performance optimizati
 
 ### Load Balancing
 
-```javascript title="Load Balancing Example Using Nginx"
+```javascript title="config/nginx/load-balancing.conf"
 http {
   upstream backend {
     server backend1.example.com;
@@ -2426,7 +2426,7 @@ Scalability is the ability of a system to handle increased load by adding resour
 
 Profiling is the process of analyzing the performance of an application to identify areas for improvement. This can include measuring the execution time of functions, identifying memory usage patterns, and detecting bottlenecks in the code. Profiling tools can help developers understand how their code behaves in different scenarios and optimize it accordingly.
 
-```javascript title="Profiling Example Using Node.js"
+```javascript title="src/profiling/performance-profiler.js"
 const { performance } = require("perf_hooks"); // Import the performance module
 // Measure the execution time of a function
 function expensiveFunction() {
