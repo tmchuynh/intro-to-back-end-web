@@ -26,7 +26,20 @@ As a result, in-memory storage allows enterprises to make data-based decisions i
 
 ### Data Structures
 
+In-memory databases support various data structures, including:
+
+- **Key-Value Pairs**: Simple data structure where each key is associated with a value, allowing for fast retrieval based on keys.
+- **Documents**: Data is stored in document format (e.g., JSON, XML), enabling flexible schema design and easy querying.
+- **Columns**: Data is organized into columns rather than rows, optimizing read and write operations for specific use cases.
+- **Graphs**: Data is stored as nodes and edges, allowing for efficient traversal and querying of relationships.
+
 ### Persistence Options
+
+In-memory databases can be configured to persist data to disk, ensuring durability and recovery in case of system failures. Common persistence options include:
+
+- **Snapshotting**: Periodically taking snapshots of the in-memory data and saving them to disk. This allows for recovery of the database state after a crash or restart.
+- **Write-Ahead Logging (WAL)**: Logging changes to a separate log file before applying them to the in-memory data. This ensures that even if the system crashes, the changes can be replayed from the log to restore the in-memory state.
+- **Replication**: In-memory databases can replicate data across multiple nodes to ensure high availability and fault tolerance. This means that if one node fails, another node can take over with the same in-memory data.
 
 ### Scalability
 
@@ -34,7 +47,15 @@ You can scale your in-memory database to meet fluctuating application demands. B
 
 ### Concurrency Control
 
+In-memory databases often implement advanced concurrency control mechanisms to handle multiple simultaneous transactions efficiently. This ensures data integrity and consistency while allowing high throughput.
+
 ### Data Compression
+
+In-memory databases can use various data compression techniques to reduce memory usage and improve performance. Common compression methods include:
+
+- **Columnar Compression**: Storing data in a columnar format allows for better compression ratios, as similar values are stored together.
+- **Dictionary Encoding**: Replacing frequently occurring values with shorter codes can significantly reduce the amount of memory required.
+- **Delta Encoding**: Storing only the differences between consecutive values can save space, especially for time-series data.
 
 ## Data Models
 
@@ -118,18 +139,18 @@ When an application requests data, the in-memory database retrieves it directly 
 
 ### Immediate Actions
 
-| Priority | Action | Purpose |
-| -------- | ------ | ------- |
+| Priority | Action                                                                                            | Purpose                                                |
+| -------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
 | **High** | [Embedded Databases](/db-different-databases-and-their-foundational-concepts/embedded)            | Explore high-performance memory-based database systems |
 | **High** | [Time Series Databases](/db-different-databases-and-their-foundational-concepts/time-series)      | Explore high-performance memory-based database systems |
 | **High** | [Search Engine Databases](/db-different-databases-and-their-foundational-concepts/search-engines) | Explore high-performance memory-based database systems |
 
 ### Optional Actions
 
-| Action | Purpose |
-| ------ | ------- |
-| [Database Management Tools](/util-database-management-tools)                     | Discover tools for database administration and monitoring     |
-| [Backup and Recovery Tools](/util-backup-and-recovery-tools)                     | Learn about data protection and disaster recovery solutions   |
-| [Load Testing and Benchmarking Tools](/util-load-testing-and-benchmarking-tools) | Test storage system performance under various loads           |
+| Action                                                                           | Purpose                                                     |
+| -------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| [Database Management Tools](/util-database-management-tools)                     | Discover tools for database administration and monitoring   |
+| [Backup and Recovery Tools](/util-backup-and-recovery-tools)                     | Learn about data protection and disaster recovery solutions |
+| [Load Testing and Benchmarking Tools](/util-load-testing-and-benchmarking-tools) | Test storage system performance under various loads         |
 
 <BackToTop />
