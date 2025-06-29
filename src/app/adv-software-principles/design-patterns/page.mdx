@@ -4,525 +4,1968 @@ import BackToTop from "@/components/BackToTop";
 
 ## Table of Contents
 
+- [Introduction to Design Patterns](#introduction-to-design-patterns)
+- [Creational Patterns](#creational-patterns)
+  - [Singleton Pattern](#singleton-pattern)
+  - [Factory Pattern](#factory-pattern)
+  - [Builder Pattern](#builder-pattern)
+  - [Prototype Pattern](#prototype-pattern)
+- [Structural Patterns](#structural-patterns)
+  - [Adapter Pattern](#adapter-pattern)
+  - [Bridge Pattern](#bridge-pattern)
+  - [Composite Pattern](#composite-pattern)
+  - [Decorator Pattern](#decorator-pattern)
+  - [Facade Pattern](#facade-pattern)
+  - [Flyweight Pattern](#flyweight-pattern)
+  - [Proxy Pattern](#proxy-pattern)
+- [Behavioral Patterns](#behavioral-patterns)
+  - [Chain of Responsibility Pattern](#chain-of-responsibility-pattern)
+  - [Command Pattern](#command-pattern)
+  - [Interpreter Pattern](#interpreter-pattern)
+  - [Memento Pattern](#memento-pattern)
+  - [Observer Pattern](#observer-pattern)
+  - [State Pattern](#state-pattern)
+  - [Strategy Pattern](#strategy-pattern)
+  - [Template Method Pattern](#template-method-pattern)
+  - [Visitor Pattern](#visitor-pattern)
+- [Pattern Selection Guidelines](#pattern-selection-guidelines)
+- [Common Anti-Patterns](#common-anti-patterns)
+- [Best Practices](#best-practices)
+
 ## Introduction to Design Patterns
 
 Design patterns are reusable solutions to common software design problems. They provide a proven approach to solving specific design challenges and can be applied across different programming languages and paradigms. Design patterns help in creating flexible and maintainable code by promoting best practices and established design principles.
-For example, the Singleton pattern ensures that a class has only one instance and provides a global point of access to it. This is useful in scenarios where you need to manage shared resources, such as a configuration manager or a logging service. By using the Singleton pattern, you can ensure that there is only one instance of the class throughout the application, preventing conflicts and ensuring consistent behavior.
-Other common design patterns include the Factory pattern for creating objects, the Observer pattern for implementing event-driven systems, and the Decorator pattern for adding functionality to existing objects without modifying their structure. By leveraging design patterns, developers can create software that is easier to understand, maintain, and extend.
 
-## Key Design Patterns
+Design patterns were popularized by the "Gang of Four" (GoF) book, which categorized 23 classic patterns into three main types:
+
+- **Creational Patterns**: Deal with object creation mechanisms
+- **Structural Patterns**: Deal with object composition and relationships
+- **Behavioral Patterns**: Deal with communication between objects and the assignment of responsibilities
+
+The benefits of using design patterns include:
+
+- **Common Vocabulary**: Teams can communicate using pattern names
+- **Proven Solutions**: Battle-tested approaches to common problems
+- **Code Reusability**: Promotes writing reusable and maintainable code
+- **Best Practices**: Incorporates object-oriented design principles
+- **Flexibility**: Makes code more adaptable to changing requirements
+
+## Creational Patterns
+
+Creational patterns abstract the instantiation process and help make a system independent of how its objects are created, composed, and represented.
 
 ### Singleton Pattern
 
-The Singleton pattern ensures that a class has only one instance and provides a global point of access to it. This is useful in scenarios where you need to manage shared resources, such as a configuration manager or a logging service. By using the Singleton pattern, you can ensure that there is only one instance of the class throughout the application, preventing conflicts and ensuring consistent behavior.
-This pattern is implemented by making the class constructor private, providing a static method to access the instance, and using a static variable to hold the instance. When the static method is called, it checks if the instance already exists; if not, it creates a new instance and returns it.
+**Intent**: Ensure a class has only one instance and provide a global point of access to it.
 
-```sql title="Singleton Pattern Example in SQL"
-CREATE TABLE SingletonExample (
-    id INT PRIMARY KEY,
-    value VARCHAR(255)
-);
-CREATE OR REPLACE FUNCTION get_singleton_instance()
-RETURNS SETOF SingletonExample AS $$
-DECLARE
-    instance SingletonExample;
-BEGIN
-    SELECT * INTO instance FROM SingletonExample WHERE id = 1;
-    IF NOT FOUND THEN
-        INSERT INTO SingletonExample (id, value) VALUES (1, 'Initial Value');
-        SELECT * INTO instance FROM SingletonExample WHERE id = 1;
-    END IF;
-    RETURN NEXT instance;
-END;
-$$ LANGUAGE plpgsql;
+**When to Use**:
+
+- Managing shared resources (database connections, logging services)
+- Configuration management where only one instance should exist
+- Coordinating actions across the system
+- Controlling access to expensive resources
+
+**Benefits**:
+
+- Guarantees single instance
+- Global access point
+- Lazy initialization possible
+- Memory efficiency
+
+**Drawbacks**:
+
+- Can make unit testing difficult
+- Violates Single Responsibility Principle
+- Can introduce global state
+- Potential threading issues
+
+**Real-World Examples**:
+
+- Database connection pool managers
+- Application configuration settings
+- Logging services
+- Cache managers
+- Thread pools
+
+**TypeScript Implementation**:
+
+```typescript
+class DatabaseManager {
+  private static instance: DatabaseManager;
+  private connectionPool: any[] = [];
+
+  private constructor() {
+    console.log("Initializing database connection pool...");
+    // Initialize expensive database connections
+    this.initializeConnections();
+  }
+
+  public static getInstance(): DatabaseManager {
+    if (!DatabaseManager.instance) {
+      DatabaseManager.instance = new DatabaseManager();
+    }
+    return DatabaseManager.instance;
+  }
+
+  private initializeConnections(): void {
+    // Create database connections
+    for (let i = 0; i < 10; i++) {
+      this.connectionPool.push(this.createConnection());
+    }
+  }
+
+  private createConnection(): any {
+    return { id: Math.random(), connected: true };
+  }
+
+  public getConnection(): any {
+    if (this.connectionPool.length > 0) {
+      return this.connectionPool.pop();
+    }
+    throw new Error("No available connections");
+  }
+
+  public releaseConnection(connection: any): void {
+    this.connectionPool.push(connection);
+  }
+}
+
+// Usage
+const dbManager1 = DatabaseManager.getInstance();
+const dbManager2 = DatabaseManager.getInstance();
+console.log(dbManager1 === dbManager2); // true - same instance
 ```
 
 ### Factory Pattern
 
-The Factory pattern provides a way to create objects without specifying the exact class of the object that will be created. It defines an interface for creating objects, but allows subclasses to alter the type of objects that will be created. This pattern is useful when you want to encapsulate the instantiation logic and provide a flexible way to create objects based on specific conditions or configurations.
+**Intent**: Create objects without specifying the exact class of object that will be created.
 
-```sql title="Factory Pattern Example in SQL"
-CREATE OR REPLACE FUNCTION create_shape(shape_type VARCHAR)
-RETURNS SETOF Shape AS $$
-DECLARE
-    new_shape Shape;
-BEGIN
-    IF shape_type = 'Circle' THEN
-        INSERT INTO Shape (type, radius) VALUES ('Circle', 5) RETURNING * INTO new_shape;
-    ELSIF shape_type = 'Square' THEN
-        INSERT INTO Shape (type, side_length) VALUES ('Square', 4) RETURNING * INTO new_shape;
-    ELSE
-        RAISE EXCEPTION 'Unknown shape type: %', shape_type;
-    END IF;
-    RETURN NEXT new_shape;
-END;
-$$ LANGUAGE plpgsql;
-```
+**When to Use**:
 
-### Observer Pattern
+- Object creation logic is complex
+- Need to delegate object creation to subclasses
+- Want to encapsulate object creation logic
+- Creating objects based on configuration or runtime conditions
 
-The Observer pattern defines a one-to-many dependency between objects, allowing one object (the subject) to notify multiple dependent objects (observers) about changes in its state. This pattern is commonly used in event-driven systems, where you want to decouple the components that produce events from those that consume them. Observers can subscribe to the subject and receive updates whenever the subject's state changes, enabling a flexible and extensible architecture.
+**Benefits**:
 
-```sql title="Observer Pattern Example in SQL"
-CREATE TABLE Subject (
-    id INT PRIMARY KEY,
-    state VARCHAR(255)
-);
-CREATE TABLE Observer (
-    id INT PRIMARY KEY,
-    name VARCHAR(255),
-    subject_id INT REFERENCES Subject(id)
-);
-CREATE OR REPLACE FUNCTION notify_observers(subject_id INT)
-RETURNS VOID AS $$
-DECLARE
-    observer Observer%ROWTYPE;
-BEGIN
-    FOR observer IN SELECT * FROM Observer WHERE subject_id = subject_id LOOP
-        RAISE NOTICE 'Notifying observer %: Subject state changed to %', observer.name, (SELECT state FROM Subject WHERE id = subject_id);
-    END LOOP;
-END;
-$$ LANGUAGE plpgsql;
+- Encapsulates object creation
+- Promotes loose coupling
+- Easy to extend with new product types
+- Centralizes object creation logic
+
+**Drawbacks**:
+
+- Can become complex with many product types
+- May introduce unnecessary abstraction
+- Requires creating parallel class hierarchies
+
+**Real-World Examples**:
+
+- UI element creation (buttons, forms, dialogs)
+- Database driver selection
+- Payment processor creation
+- Document format handlers
+- Vehicle manufacturing systems
+
+**TypeScript Implementation**:
+
+```typescript
+// Product interface
+interface PaymentProcessor {
+  processPayment(amount: number): boolean;
+}
+
+// Concrete products
+class CreditCardProcessor implements PaymentProcessor {
+  processPayment(amount: number): boolean {
+    console.log(`Processing $${amount} via Credit Card`);
+    // Credit card processing logic
+    return Math.random() > 0.1; // 90% success rate
+  }
+}
+
+class PayPalProcessor implements PaymentProcessor {
+  processPayment(amount: number): boolean {
+    console.log(`Processing $${amount} via PayPal`);
+    // PayPal processing logic
+    return Math.random() > 0.05; // 95% success rate
+  }
+}
+
+class BankTransferProcessor implements PaymentProcessor {
+  processPayment(amount: number): boolean {
+    console.log(`Processing $${amount} via Bank Transfer`);
+    // Bank transfer processing logic
+    return Math.random() > 0.15; // 85% success rate
+  }
+}
+
+// Factory
+class PaymentProcessorFactory {
+  static createProcessor(
+    type: "credit-card" | "paypal" | "bank-transfer"
+  ): PaymentProcessor {
+    switch (type) {
+      case "credit-card":
+        return new CreditCardProcessor();
+      case "paypal":
+        return new PayPalProcessor();
+      case "bank-transfer":
+        return new BankTransferProcessor();
+      default:
+        throw new Error(`Unknown payment processor type: ${type}`);
+    }
+  }
+
+  // Factory method based on amount (business logic)
+  static createProcessorByAmount(amount: number): PaymentProcessor {
+    if (amount < 100) {
+      return new CreditCardProcessor(); // Quick for small amounts
+    } else if (amount < 1000) {
+      return new PayPalProcessor(); // Good balance for medium amounts
+    } else {
+      return new BankTransferProcessor(); // Secure for large amounts
+    }
+  }
+}
+
+// Usage
+const processor = PaymentProcessorFactory.createProcessor("paypal");
+const success = processor.processPayment(250);
+
+const smartProcessor = PaymentProcessorFactory.createProcessorByAmount(1500);
 ```
 
 ### Builder Pattern
 
-The Builder pattern separates the construction of a complex object from its representation, allowing the same construction process to create different representations. This pattern is useful when you want to create an object step by step, especially when the object has many optional parameters or configurations. By using a builder, you can create a fluent interface that makes it easy to construct objects with varying configurations without cluttering the constructor with numerous parameters.
+**Intent**: Separate the construction of a complex object from its representation.
 
-```sql title="Builder Pattern Example in SQL"
-CREATE TYPE ComplexObject AS (
-    part1 VARCHAR(255),
-    part2 VARCHAR(255),
-    part3 VARCHAR(255)
-);
-CREATE OR REPLACE FUNCTION build_complex_object(part1 VARCHAR, part2 VARCHAR, part3 VARCHAR)
-RETURNS ComplexObject AS $$
-BEGIN
-    RETURN ROW(part1, part2, part3)::ComplexObject;
-END;
-$$ LANGUAGE plpgsql;
+**When to Use**:
+
+- Creating objects with many optional parameters
+- Step-by-step object construction is needed
+- Same construction process should create different representations
+- Immutable objects with complex initialization
+
+**Benefits**:
+
+- Clear object construction process
+- Can create different representations
+- Better control over construction process
+- Promotes immutability
+
+**Drawbacks**:
+
+- Can increase code complexity
+- Requires creating additional builder classes
+- May be overkill for simple objects
+
+**Real-World Examples**:
+
+- SQL query builders
+- Configuration objects
+- Report generators
+- Email message builders
+- HTTP request builders
+
+**TypeScript Implementation**:
+
+```typescript
+// Product
+class HttpRequest {
+  private constructor(
+    public readonly url: string,
+    public readonly method: string,
+    public readonly headers: Map<string, string>,
+    public readonly body: string | null,
+    public readonly timeout: number,
+    public readonly retries: number
+  ) {}
+
+  // Static factory method to create builder
+  static builder(): HttpRequestBuilder {
+    return new HttpRequestBuilder();
+  }
+}
+
+// Builder
+class HttpRequestBuilder {
+  private url: string = "";
+  private method: string = "GET";
+  private headers: Map<string, string> = new Map();
+  private body: string | null = null;
+  private timeout: number = 5000;
+  private retries: number = 3;
+
+  setUrl(url: string): HttpRequestBuilder {
+    this.url = url;
+    return this;
+  }
+
+  setMethod(method: string): HttpRequestBuilder {
+    this.method = method;
+    return this;
+  }
+
+  addHeader(key: string, value: string): HttpRequestBuilder {
+    this.headers.set(key, value);
+    return this;
+  }
+
+  setBody(body: string): HttpRequestBuilder {
+    this.body = body;
+    return this;
+  }
+
+  setTimeout(timeout: number): HttpRequestBuilder {
+    this.timeout = timeout;
+    return this;
+  }
+
+  setRetries(retries: number): HttpRequestBuilder {
+    this.retries = retries;
+    return this;
+  }
+
+  build(): HttpRequest {
+    if (!this.url) {
+      throw new Error("URL is required");
+    }
+
+    return new HttpRequest(
+      this.url,
+      this.method,
+      new Map(this.headers),
+      this.body,
+      this.timeout,
+      this.retries
+    );
+  }
+}
+
+// Usage
+const request = HttpRequest.builder()
+  .setUrl("https://api.example.com/users")
+  .setMethod("POST")
+  .addHeader("Content-Type", "application/json")
+  .addHeader("Authorization", "Bearer token123")
+  .setBody(JSON.stringify({ name: "John", email: "john@example.com" }))
+  .setTimeout(10000)
+  .setRetries(5)
+  .build();
+
+console.log(request);
 ```
 
 ### Prototype Pattern
 
-The Prototype pattern allows you to create new objects by copying an existing object, known as the prototype. This pattern is useful when the cost of creating a new instance of an object is more expensive than copying an existing one. By using prototypes, you can create new objects without needing to know their concrete classes, promoting flexibility and reducing dependencies.
+**Intent**: Create new objects by copying an existing object, known as the prototype.
 
-```sql title="Prototype Pattern Example in SQL"
-CREATE TYPE Prototype AS (
-    id INT,
-    name VARCHAR(255)
+**When to Use**:
+
+- Object creation is expensive
+- Similar objects with slight variations are needed
+- Avoiding subclasses of an object creator
+- Runtime object creation based on dynamic conditions
+
+**Benefits**:
+
+- Reduces object creation costs
+- Hides complexity of creating new instances
+- Reduces need for subclassing
+- Allows runtime addition of new products
+
+**Drawbacks**:
+
+- Cloning complex objects can be difficult
+- Deep vs shallow copy considerations
+- Each subclass must implement cloning
+
+**Real-World Examples**:
+
+- Game object templates (enemies, items)
+- Configuration presets
+- Document templates
+- Graphics object cloning
+- Database record templates
+
+**TypeScript Implementation**:
+
+```typescript
+// Prototype interface
+interface Cloneable<T> {
+  clone(): T;
+}
+
+// Concrete prototype
+class GameCharacter implements Cloneable<GameCharacter> {
+  constructor(
+    public name: string,
+    public health: number,
+    public armor: number,
+    public weapons: string[],
+    public skills: Map<string, number>
+  ) {}
+
+  clone(): GameCharacter {
+    // Deep clone implementation
+    return new GameCharacter(
+      this.name,
+      this.health,
+      this.armor,
+      [...this.weapons], // Shallow copy of array
+      new Map(this.skills) // Copy of map
+    );
+  }
+
+  customize(
+    options: Partial<{
+      name: string;
+      health: number;
+      armor: number;
+      weapons: string[];
+      skills: Map<string, number>;
+    }>
+  ): GameCharacter {
+    if (options.name) this.name = options.name;
+    if (options.health) this.health = options.health;
+    if (options.armor) this.armor = options.armor;
+    if (options.weapons) this.weapons = options.weapons;
+    if (options.skills) this.skills = options.skills;
+    return this;
+  }
+}
+
+// Prototype registry
+class CharacterPrototypeRegistry {
+  private prototypes: Map<string, GameCharacter> = new Map();
+
+  registerPrototype(key: string, prototype: GameCharacter): void {
+    this.prototypes.set(key, prototype);
+  }
+
+  getPrototype(key: string): GameCharacter {
+    const prototype = this.prototypes.get(key);
+    if (!prototype) {
+      throw new Error(`Prototype not found: ${key}`);
+    }
+    return prototype.clone();
+  }
+}
+
+// Usage
+const registry = new CharacterPrototypeRegistry();
+
+// Register base character types
+const warrior = new GameCharacter(
+  "Base Warrior",
+  100,
+  50,
+  ["sword", "shield"],
+  new Map([
+    ["strength", 10],
+    ["defense", 8],
+  ])
 );
-CREATE OR REPLACE FUNCTION clone_prototype(original Prototype)
-RETURNS Prototype AS $$
-BEGIN
-    RETURN ROW(original.id, original.name)::Prototype;
-END;
-$$ LANGUAGE plpgsql;
+
+const mage = new GameCharacter(
+  "Base Mage",
+  70,
+  20,
+  ["staff", "spellbook"],
+  new Map([
+    ["intelligence", 10],
+    ["magic", 9],
+  ])
+);
+
+registry.registerPrototype("warrior", warrior);
+registry.registerPrototype("mage", mage);
+
+// Create customized characters from prototypes
+const playerWarrior = registry.getPrototype("warrior").customize({
+  name: "Sir Lancelot",
+  health: 120,
+  weapons: ["enchanted sword", "magic shield"],
+});
+
+const enemyMage = registry.getPrototype("mage").customize({
+  name: "Dark Wizard",
+  health: 80,
+  armor: 30,
+});
+
+console.log(playerWarrior);
+console.log(enemyMage);
 ```
 
-### Composite Pattern
+## Structural Patterns
 
-The Composite pattern allows you to compose objects into tree structures to represent part-whole hierarchies. This pattern is useful when you want to treat individual objects and compositions of objects uniformly. By using the Composite pattern, you can create complex structures where clients can interact with both individual objects and groups of objects in a consistent manner.
-
-```sql title="Composite Pattern Example in SQL"
-CREATE TABLE Component (
-    id INT PRIMARY KEY,
-    name VARCHAR(255),
-    parent_id INT REFERENCES Component(id)
-);
-CREATE OR REPLACE FUNCTION add_component(name VARCHAR, parent_id INT)
-RETURNS VOID AS $$
-BEGIN
-    INSERT INTO Component (name, parent_id) VALUES (name, parent_id);
-END;
-$$ LANGUAGE plpgsql;
-```
-
-### Facade Pattern
-
-The Facade pattern provides a simplified interface to a complex subsystem, making it easier to use. This pattern is useful when you want to hide the complexities of a system and provide a more straightforward interface for clients. By using a facade, you can encapsulate the interactions with multiple subsystems and expose only the necessary methods, promoting ease of use and reducing dependencies.
-
-```sql title="Facade Pattern Example in SQL"
-CREATE TABLE SubsystemA (
-    id INT PRIMARY KEY,
-    data VARCHAR(255)
-);
-CREATE TABLE SubsystemB (
-    id INT PRIMARY KEY,
-    info VARCHAR(255)
-);
-CREATE OR REPLACE FUNCTION facade_method(data VARCHAR, info VARCHAR)
-RETURNS VOID AS $$
-BEGIN
-    INSERT INTO SubsystemA (data) VALUES (data);
-    INSERT INTO SubsystemB (info) VALUES (info);
-END;
-$$ LANGUAGE plpgsql;
-```
-
-### Decorator Pattern
-
-The Decorator pattern allows you to add new functionality to existing objects without modifying their structure. It involves creating a set of decorator classes that are used to wrap concrete components. This pattern is useful when you want to enhance the behavior of an object dynamically, without altering its original code. By using decorators, you can create a flexible and reusable design that allows for easy extension and modification of object behavior.
-
-```sql title="Decorator Pattern Example in SQL"
-CREATE TABLE Component (
-    id INT PRIMARY KEY,
-    name VARCHAR(255)
-);
-CREATE TABLE Decorator (
-    id INT PRIMARY KEY,
-    component_id INT REFERENCES Component(id),
-    additional_behavior VARCHAR(255)
-);
-CREATE OR REPLACE FUNCTION add_decorator(component_id INT, behavior VARCHAR)
-RETURNS VOID AS $$
-BEGIN
-    INSERT INTO Decorator (component_id, additional_behavior) VALUES (component_id, behavior);
-END;
-$$ LANGUAGE plpgsql;
-```
-
-### Template Method Pattern
-
-The Template Method pattern defines the skeleton of an algorithm in a base class, allowing subclasses to override specific steps without changing the overall structure. This pattern is useful when you have a common algorithm that can be customized by subclasses. By using the Template Method pattern, you can promote code reuse and maintainability while allowing for flexibility in the implementation of specific steps.
-
-```sql title="Template Method Pattern Example in SQL"
-CREATE OR REPLACE FUNCTION template_method(param1 VARCHAR, param2 VARCHAR)
-RETURNS VOID AS $$
-BEGIN
-    -- Step 1: Common logic
-    RAISE NOTICE 'Executing common logic with parameters: %, %', param1, param2;
-    -- Step 2: Call subclass-specific logic
-    PERFORM subclass_specific_logic(param1, param2);
-END;
-$$ LANGUAGE plpgsql;
-CREATE OR REPLACE FUNCTION subclass_specific_logic(param1 VARCHAR, param2 VARCHAR)
-RETURNS VOID AS $$
-BEGIN
-    -- Subclass-specific logic implementation
-    RAISE NOTICE 'Executing subclass-specific logic with parameters: %, %', param1, param2;
-END;
-$$ LANGUAGE plpgsql;
-```
-
-### Strategy Pattern
-
-The Strategy pattern defines a family of algorithms, encapsulates each one, and makes them interchangeable. This pattern allows you to select an algorithm at runtime, promoting flexibility and enabling the client to choose the appropriate algorithm based on specific conditions or requirements. The Strategy pattern is useful when you have multiple algorithms that can be applied to a problem, and you want to decouple the algorithm selection from the client code.
-
-```sql title="Strategy Pattern Example in SQL"
-CREATE OR REPLACE FUNCTION execute_strategy(strategy_name VARCHAR, param1 VARCHAR, param2 VARCHAR)
-RETURNS VOID AS $$
-BEGIN
-    IF strategy_name = 'StrategyA' THEN
-        PERFORM strategy_a(param1, param2);
-    ELSIF strategy_name = 'StrategyB' THEN
-        PERFORM strategy_b(param1, param2);
-    ELSE
-        RAISE EXCEPTION 'Unknown strategy: %', strategy_name;
-    END IF;
-END;
-$$ LANGUAGE plpgsql;
-CREATE OR REPLACE FUNCTION strategy_a(param1 VARCHAR, param2 VARCHAR)
-RETURNS VOID AS $$
-BEGIN
-    -- Implementation of Strategy A
-    RAISE NOTICE 'Executing Strategy A with parameters: %, %', param1, param2;
-END;
-$$ LANGUAGE plpgsql;
-CREATE OR REPLACE FUNCTION strategy_b(param1 VARCHAR, param2 VARCHAR)
-RETURNS VOID AS $$
-BEGIN
-    -- Implementation of Strategy B
-    RAISE NOTICE 'Executing Strategy B with parameters: %, %', param1, param2;
-END;
-$$ LANGUAGE plpgsql;
-```
-
-### Chain of Responsibility Pattern
-
-The Chain of Responsibility pattern allows multiple objects to handle a request without the sender needing to know which object will handle it. This pattern promotes loose coupling by allowing the request to pass through a chain of handlers until one of them processes it. It is useful when you want to decouple the sender and receiver of a request, enabling more flexible and extensible designs.
-
-```sql title="Chain of Responsibility Pattern Example in SQL"
-CREATE TABLE Handler (
-    id INT PRIMARY KEY,
-    name VARCHAR(255),
-    next_handler_id INT REFERENCES Handler(id)
-);
-CREATE OR REPLACE FUNCTION handle_request(handler_id INT, request VARCHAR)
-RETURNS VOID AS $$
-DECLARE
-    current_handler Handler%ROWTYPE;
-BEGIN
-    SELECT * INTO current_handler FROM Handler WHERE id = handler_id;
-    IF current_handler IS NULL THEN
-        RAISE EXCEPTION 'Handler not found: %', handler_id;
-    END IF;
-    RAISE NOTICE 'Handler % processing request: %', current_handler.name, request;
-    IF current_handler.next_handler_id IS NOT NULL THEN
-        PERFORM handle_request(current_handler.next_handler_id, request);
-    ELSE
-        RAISE NOTICE 'End of chain reached. Request processed by %', current_handler.name;
-    END IF;
-END;
-$$ LANGUAGE plpgsql;
-```
-
-### State Pattern
-
-The State pattern allows an object to alter its behavior when its internal state changes. This pattern is useful when an object needs to exhibit different behaviors based on its current state, such as a traffic light that changes its color based on time or conditions. By using the State pattern, you can encapsulate state-specific behavior in separate classes, promoting cleaner and more maintainable code.
-
-```sql title="State Pattern Example in SQL"
-CREATE TABLE State (
-    id INT PRIMARY KEY,
-    name VARCHAR(255)
-);
-CREATE TABLE Context (
-    id INT PRIMARY KEY,
-    current_state_id INT REFERENCES State(id)
-);
-CREATE OR REPLACE FUNCTION change_state(context_id INT, new_state_id INT)
-RETURNS VOID AS $$
-BEGIN
-    UPDATE Context SET current_state_id = new_state_id WHERE id = context_id;
-    RAISE NOTICE 'Context % changed to state %', context_id, new_state_id;
-END;
-$$ LANGUAGE plpgsql;
-CREATE OR REPLACE FUNCTION perform_action(context_id INT)
-RETURNS VOID AS $$
-DECLARE
-    current_state State%ROWTYPE;
-BEGIN
-    SELECT * INTO current_state FROM Context JOIN State ON Context.current_state_id = State.id WHERE Context.id = context_id;
-    IF current_state IS NULL THEN
-        RAISE EXCEPTION 'Context not found or has no state: %', context_id;
-    END IF;
-    RAISE NOTICE 'Performing action in state %', current_state.name;
-    -- Add state-specific behavior here
-END;
-$$ LANGUAGE plpgsql;
-```
-
-### Command Pattern
-
-The Command pattern encapsulates a request as an object, allowing you to parameterize clients with queues, requests, and operations. This pattern is useful for implementing undo/redo functionality, logging operations, or queuing requests for execution. By using the Command pattern, you can decouple the sender of a request from the receiver, enabling more flexible and extensible designs.
-
-```sql title="Command Pattern Example in SQL"
-CREATE TABLE Command (
-    id INT PRIMARY KEY,
-    name VARCHAR(255),
-    executed BOOLEAN DEFAULT FALSE
-);
-CREATE OR REPLACE FUNCTION execute_command(command_id INT)
-RETURNS VOID AS $$
-BEGIN
-    UPDATE Command SET executed = TRUE WHERE id = command_id;
-    RAISE NOTICE 'Command % executed', command_id;
-END;
-$$ LANGUAGE plpgsql;
-CREATE OR REPLACE FUNCTION undo_command(command_id INT)
-RETURNS VOID AS $$
-BEGIN
-    UPDATE Command SET executed = FALSE WHERE id = command_id;
-    RAISE NOTICE 'Command % undone', command_id;
-END;
-$$ LANGUAGE plpgsql;
-```
-
-### Memento Pattern
-
-The Memento pattern allows you to capture and restore an object's internal state without exposing its implementation details. This pattern is useful when you want to implement undo/redo functionality or save the state of an object at a specific point in time. By using the Memento pattern, you can create a snapshot of an object's state and restore it later, promoting encapsulation and separation of concerns.
-
-```sql title="Memento Pattern Example in SQL"
-CREATE TABLE Memento (
-    id INT PRIMARY KEY,
-    state VARCHAR(255)
-);
-CREATE TABLE Originator (
-    id INT PRIMARY KEY,
-    current_state VARCHAR(255)
-);
-CREATE OR REPLACE FUNCTION create_memento(originator_id INT)
-RETURNS INT AS $$
-DECLARE
-    new_memento_id INT;
-BEGIN
-    INSERT INTO Memento (state) SELECT current_state FROM Originator WHERE id = originator_id RETURNING id INTO new_memento_id;
-    RAISE NOTICE 'Memento created with ID % for originator %', new_memento_id, originator_id;
-    RETURN new_memento_id;
-END;
-$$ LANGUAGE plpgsql;
-CREATE OR REPLACE FUNCTION restore_memento(originator_id INT, memento_id INT)
-RETURNS VOID AS $$
-BEGIN
-    UPDATE Originator SET current_state = (SELECT state FROM Memento WHERE id = memento_id) WHERE id = originator_id;
-    RAISE NOTICE 'Originator % restored to memento %', originator_id, memento_id;
-END;
-$$ LANGUAGE plpgsql;
-```
+Structural patterns are concerned with how classes and objects are composed to form larger structures.
 
 ### Adapter Pattern
 
-The Adapter pattern allows incompatible interfaces to work together by converting the interface of one class into another that the client expects. This pattern is useful when you want to integrate existing classes with a new interface without modifying their code. By using an adapter, you can create a bridge between the incompatible interfaces, enabling them to collaborate seamlessly.
+**Intent**: Allow incompatible interfaces to work together by converting the interface of one class into another.
 
-```sql title="Adapter Pattern Example in SQL"
-CREATE TABLE Target (
-    id INT PRIMARY KEY,
-    name VARCHAR(255)
-);
-CREATE TABLE Adaptee (
-    id INT PRIMARY KEY,
-    description VARCHAR(255)
-);
-CREATE OR REPLACE FUNCTION adapt_adaptee(adaptee_id INT)
-RETURNS Target AS $$
-DECLARE
-    adapted_target Target%ROWTYPE;
-BEGIN
-    SELECT id, description INTO adapted_target FROM Adaptee WHERE id = adaptee_id;
-    IF adapted_target IS NULL THEN
-        RAISE EXCEPTION 'Adaptee not found: %', adaptee_id;
-    END IF;
-    adapted_target.name := adapted_target.description; -- Adapting the interface
-    RAISE NOTICE 'Adaptee % adapted to Target with name %', adaptee_id, adapted_target.name;
-    RETURN adapted_target;
-END;
-$$ LANGUAGE plpgsql;
+**When to Use**:
+
+- Integrating third-party libraries with incompatible interfaces
+- Legacy code integration
+- Making existing classes work with others without modifying their source code
+- Creating reusable classes that work with unrelated classes
+
+**Benefits**:
+
+- Enables integration of incompatible interfaces
+- Promotes code reuse
+- Separates interface conversion from business logic
+- Allows working with legacy code
+
+**Drawbacks**:
+
+- Increases code complexity
+- Can make code harder to understand
+- May introduce performance overhead
+
+**Real-World Examples**:
+
+- Database adapter for different database systems
+- Payment gateway adapters
+- Third-party API integration
+- File format converters
+- Media player adapters
+
+**TypeScript Implementation**:
+
+```typescript
+// Target interface (what the client expects)
+interface MediaPlayer {
+  play(audioType: string, fileName: string): void;
+}
+
+// Adaptee (existing incompatible interface)
+class AdvancedMediaPlayer {
+  playVlc(fileName: string): void {
+    console.log(`Playing vlc file: ${fileName}`);
+  }
+
+  playMp4(fileName: string): void {
+    console.log(`Playing mp4 file: ${fileName}`);
+  }
+}
+
+// Adapter
+class MediaAdapter implements MediaPlayer {
+  private advancedPlayer: AdvancedMediaPlayer;
+
+  constructor(audioType: string) {
+    this.advancedPlayer = new AdvancedMediaPlayer();
+  }
+
+  play(audioType: string, fileName: string): void {
+    if (audioType === "vlc") {
+      this.advancedPlayer.playVlc(fileName);
+    } else if (audioType === "mp4") {
+      this.advancedPlayer.playMp4(fileName);
+    } else {
+      throw new Error(`${audioType} format not supported`);
+    }
+  }
+}
+
+// Client
+class AudioPlayer implements MediaPlayer {
+  private adapter: MediaAdapter | null = null;
+
+  play(audioType: string, fileName: string): void {
+    if (audioType === "mp3") {
+      console.log(`Playing mp3 file: ${fileName}`);
+    } else if (["vlc", "mp4"].includes(audioType)) {
+      this.adapter = new MediaAdapter(audioType);
+      this.adapter.play(audioType, fileName);
+    } else {
+      console.log(`${audioType} format not supported`);
+    }
+  }
+}
+
+// Usage
+const player = new AudioPlayer();
+player.play("mp3", "song.mp3"); // Direct support
+player.play("vlc", "movie.vlc"); // Through adapter
+player.play("mp4", "video.mp4"); // Through adapter
+player.play("avi", "clip.avi"); // Not supported
 ```
 
 ### Bridge Pattern
 
-The Bridge pattern separates an interface from its implementation, allowing them to vary independently. This pattern is useful when you want to decouple abstraction from implementation, enabling you to change either without affecting the other. By using the Bridge pattern, you can create a flexible architecture that allows for easy extension and modification of both the interface and its implementation.
+**Intent**: Separate an interface from its implementation, allowing them to vary independently.
 
-```sql title="Bridge Pattern Example in SQL"
-CREATE TABLE Abstraction (
-    id INT PRIMARY KEY,
-    name VARCHAR(255)
-);
-CREATE TABLE Implementation (
-    id INT PRIMARY KEY,
-    details VARCHAR(255)
-);
-CREATE OR REPLACE FUNCTION create_bridge(abstraction_name VARCHAR, implementation_details VARCHAR)
-RETURNS VOID AS $$
-BEGIN
-    INSERT INTO Abstraction (name) VALUES (abstraction_name);
-    INSERT INTO Implementation (details) VALUES (implementation_details);
-    RAISE NOTICE 'Bridge created with Abstraction % and Implementation %', abstraction_name, implementation_details;
-END;
-$$ LANGUAGE plpgsql;
+**When to Use**:
+
+- Decoupling abstraction from implementation
+- Avoiding permanent binding between an abstraction and its implementation
+- Multiple possible implementations for an abstraction
+- Runtime binding of implementations
+
+**Benefits**:
+
+- Flexibility in changing implementations
+- Improved code organization
+- Can switch implementations at runtime
+- Reduces compile-time dependencies
+
+**Drawbacks**:
+
+- Increases complexity with additional interfaces
+- Can be overkill for simple cases
+- Requires careful design to avoid confusion
+
+**Real-World Examples**:
+
+- Device control systems (TV, Radio)
+- Remote method invocation
+- Cross-platform GUI toolkits
+- Database access layers
+- Logging frameworks
+
+**TypeScript Implementation**:
+
+```typescript
+// Implementor
+interface RemoteControl {
+  turnOn(): void;
+  turnOff(): void;
+}
+
+// Concrete Implementors
+class SonyRemote implements RemoteControl {
+  turnOn(): void {
+    console.log("Sony TV is now ON");
+  }
+
+  turnOff(): void {
+    console.log("Sony TV is now OFF");
+  }
+}
+
+class SamsungRemote implements RemoteControl {
+  turnOn(): void {
+    console.log("Samsung TV is now ON");
+  }
+
+  turnOff(): void {
+    console.log("Samsung TV is now OFF");
+  }
+}
+
+// Abstraction
+class TV {
+  constructor(protected remote: RemoteControl) {}
+
+  turnOn(): void {
+    this.remote.turnOn();
+  }
+
+  turnOff(): void {
+    this.remote.turnOff();
+  }
+}
+
+// Refined Abstraction
+class SmartTV extends TV {
+  private isStreaming: boolean = false;
+
+  turnOn(): void {
+    super.turnOn();
+    console.log("Smart TV is booting up...");
+  }
+
+  turnOff(): void {
+    if (this.isStreaming) {
+      console.log("Stopping the stream...");
+    }
+    super.turnOff();
+  }
+
+  stream(channel: string): void {
+    this.isStreaming = true;
+    console.log(`Streaming ${channel}...`);
+  }
+}
+
+// Usage
+let myTV: TV = new SmartTV(new SonyRemote());
+myTV.turnOn();
+myTV.stream("Netflix");
+myTV.turnOff();
+```
+
+### Composite Pattern
+
+**Intent**: Compose objects into tree structures to represent part-whole hierarchies.
+
+**When to Use**:
+
+- Representing hierarchies of objects
+- Treating individual objects and compositions uniformly
+- Simplifying client code that uses the objects
+- Building complex UI components
+
+**Benefits**:
+
+- Simplifies client code
+- Makes it easy to add new components
+- Supports recursive structures
+- Promotes flexibility and extensibility
+
+**Drawbacks**:
+
+- Can make the design more complex
+- Difficult to restrict the component types
+- May lead to performance overhead
+
+**Real-World Examples**:
+
+- File system hierarchies
+- Organization charts
+- Composite UI components (panels, containers)
+- Graphics drawing systems
+- Document object models
+
+**TypeScript Implementation**:
+
+```typescript
+// Component
+interface Graphic {
+  print(): void;
+}
+
+// Leaf
+class Dot implements Graphic {
+  constructor(
+    private x: number,
+    private y: number
+  ) {}
+
+  print(): void {
+    console.log(`Dot at (${this.x}, ${this.y})`);
+  }
+}
+
+// Leaf
+class Circle implements Graphic {
+  constructor(
+    private x: number,
+    private y: number,
+    private radius: number
+  ) {}
+
+  print(): void {
+    console.log(`Circle at (${this.x}, ${this.y}) with radius ${this.radius}`);
+  }
+}
+
+// Composite
+class CompoundGraphic implements Graphic {
+  private children: Graphic[] = [];
+
+  add(child: Graphic): void {
+    this.children.push(child);
+  }
+
+  remove(child: Graphic): void {
+    const index = this.children.indexOf(child);
+    if (index !== -1) {
+      this.children.splice(index, 1);
+    }
+  }
+
+  print(): void {
+    console.log("CompoundGraphic:");
+    for (const child of this.children) {
+      child.print();
+    }
+  }
+}
+
+// Usage
+const dot1 = new Dot(1, 2);
+const dot2 = new Dot(3, 4);
+const circle1 = new Circle(5, 6, 10);
+
+const compound = new CompoundGraphic();
+compound.add(dot1);
+compound.add(dot2);
+compound.add(circle1);
+
+compound.print();
+```
+
+### Decorator Pattern
+
+**Intent**: Add new functionality to existing objects without modifying their structure.
+
+**When to Use**:
+
+- Enhancing object behavior dynamically
+- Adding responsibilities to individual objects
+- Avoiding class explosion due to subclassing
+- Implementing cross-cutting concerns (logging, security)
+
+**Benefits**:
+
+- Flexible and reusable design
+- Enhances single responsibility principle
+- Avoids class explosion
+- Can be combined in multiple ways
+
+**Drawbacks**:
+
+- Can make the system more complex
+- Difficulties in debugging
+- May impact performance due to multiple wrappers
+
+**Real-World Examples**:
+
+- Java I/O classes (BufferedReader, FileReader)
+- GUI libraries (window decorators)
+- Coffee and beverage order system
+- Text formatting (bold, italic, underline)
+- Notification systems (email, SMS, push)
+
+**TypeScript Implementation**:
+
+```typescript
+// Component interface
+interface Coffee {
+  cost(): number;
+  ingredients(): string;
+}
+
+// Concrete component
+class SimpleCoffee implements Coffee {
+  cost(): number {
+    return 2;
+  }
+
+  ingredients(): string {
+    return "Coffee";
+  }
+}
+
+// Decorator
+abstract class CoffeeDecorator implements Coffee {
+  constructor(protected coffee: Coffee) {}
+
+  abstract cost(): number;
+  abstract ingredients(): string;
+}
+
+// Concrete decorators
+class MilkDecorator extends CoffeeDecorator {
+  cost(): number {
+    return this.coffee.cost() + 0.5;
+  }
+
+  ingredients(): string {
+    return `${this.coffee.ingredients()}, Milk`;
+  }
+}
+
+class SugarDecorator extends CoffeeDecorator {
+  cost(): number {
+    return this.coffee.cost() + 0.2;
+  }
+
+  ingredients(): string {
+    return `${this.coffee.ingredients()}, Sugar`;
+  }
+}
+
+// Usage
+let myCoffee: Coffee = new SimpleCoffee();
+console.log(myCoffee.ingredients()); // Coffee
+console.log(myCoffee.cost()); // 2
+
+myCoffee = new MilkDecorator(myCoffee);
+console.log(myCoffee.ingredients()); // Coffee, Milk
+console.log(myCoffee.cost()); // 2.5
+
+myCoffee = new SugarDecorator(myCoffee);
+console.log(myCoffee.ingredients()); // Coffee, Milk, Sugar
+console.log(myCoffee.cost()); // 2.7
+```
+
+### Facade Pattern
+
+**Intent**: Provide a simplified interface to a complex subsystem, making it easier to use.
+
+**When to Use**:
+
+- Hiding the complexities of a subsystem
+- Providing a simple interface for a set of interfaces
+- Reducing dependencies on external code
+- Improving code readability and usability
+
+**Benefits**:
+
+- Simplifies the usage of complex systems
+- Reduces learning curve for using subsystems
+- Promotes loose coupling
+- Can provide default implementations
+
+**Drawbacks**:
+
+- Can become a god object if not careful
+- May hide important details from the user
+- Changes in the subsystem may require changes in the facade
+
+**Real-World Examples**:
+
+- Java's `javax.faces` Facade for JSF
+- Spring Framework's `ApplicationContext`
+- Hibernate's `SessionFactory`
+- Facade for complex APIs (e.g., AWS SDK)
+- Unified logging facade (e.g., SLF4J)
+
+**TypeScript Implementation**:
+
+```typescript
+// Subsystem classes
+class CPU {
+  freeze(): void {
+    console.log("CPU freezing...");
+  }
+
+  jump(position: number): void {
+    console.log(`CPU jumping to position ${position}`);
+  }
+
+  execute(): void {
+    console.log("CPU executing.");
+  }
+}
+
+class Memory {
+  load(position: number, data: string): void {
+    console.log(`Memory loading data at position ${position}: ${data}`);
+  }
+}
+
+class HardDrive {
+  read(lba: number, size: number): string {
+    console.log(`HardDrive reading from LBA ${lba} with size ${size}`);
+    return "data";
+  }
+}
+
+// Facade
+class Computer {
+  private cpu: CPU;
+  private memory: Memory;
+  private hardDrive: HardDrive;
+
+  constructor() {
+    this.cpu = new CPU();
+    this.memory = new Memory();
+    this.hardDrive = new HardDrive();
+  }
+
+  start(): void {
+    this.cpu.freeze();
+    this.memory.load(0, this.hardDrive.read(0, 1024));
+    this.cpu.jump(0);
+    this.cpu.execute();
+  }
+}
+
+// Usage
+const computer = new Computer();
+computer.start();
 ```
 
 ### Flyweight Pattern
 
-The Flyweight pattern is used to minimize memory usage by sharing common data among multiple objects. This pattern is useful when you have a large number of similar objects that share some state, allowing you to reduce memory overhead by storing shared data in a single location. By using the Flyweight pattern, you can create lightweight objects that can be reused, promoting efficiency and performance.
+**Intent**: Minimize memory usage by sharing common data among multiple objects.
 
-```sql title="Flyweight Pattern Example in SQL"
-CREATE TABLE Flyweight (
-    id INT PRIMARY KEY,
-    shared_data VARCHAR(255)
-);
-CREATE TABLE Context (
-    id INT PRIMARY KEY,
-    flyweight_id INT REFERENCES Flyweight(id),
-    unique_data VARCHAR(255)
-);
-CREATE OR REPLACE FUNCTION create_flyweight(shared_data VARCHAR, unique_data VARCHAR)
-RETURNS VOID AS $$
-BEGIN
-    INSERT INTO Flyweight (shared_data) VALUES (shared_data);
-    INSERT INTO Context (flyweight_id, unique_data) VALUES (currval('Flyweight_id_seq'), unique_data);
-    RAISE NOTICE 'Flyweight created with shared data % and unique data %', shared_data, unique_data;
-END;
-$$ LANGUAGE plpgsql;
+**When to Use**:
+
+- Large numbers of similar objects are needed
+- Objects share some state but have distinct values
+- Reducing memory overhead is critical
+- Implementing caching mechanisms
+
+**Benefits**:
+
+- Reduces memory usage
+- Improves performance through shared data
+- Promotes reuse of existing objects
+- Can lead to significant savings in large systems
+
+**Drawbacks**:
+
+- Complexity in managing shared and unique states
+- Difficulties in implementation and maintenance
+- May introduce performance overhead in some cases
+
+**Real-World Examples**:
+
+- Character encoding tables
+- Font and glyph caching in text rendering
+- Database connection pooling
+- Image and texture caching in graphics
+- Object pooling in game development
+
+**TypeScript Implementation**:
+
+```typescript
+// Flyweight
+class Character {
+  constructor(
+    public code: number,
+    public font: string
+  ) {}
+
+  display(): void {
+    console.log(
+      `Displaying character ${String.fromCharCode(this.code)} in font ${this.font}`
+    );
+  }
+}
+
+// Flyweight Factory
+class CharacterFactory {
+  private static cache: { [key: string]: Character } = {};
+
+  static getCharacter(code: number, font: string): Character {
+    const key = `${code}-${font}`;
+    if (!this.cache[key]) {
+      this.cache[key] = new Character(code, font);
+    }
+    return this.cache[key];
+  }
+}
+
+// Usage
+const c1 = CharacterFactory.getCharacter(65, "Arial");
+const c2 = CharacterFactory.getCharacter(65, "Arial");
+const c3 = CharacterFactory.getCharacter(66, "Arial");
+const c4 = CharacterFactory.getCharacter(65, "Times New Roman");
+
+c1.display();
+c2.display();
+c3.display();
+c4.display();
+
+console.log(c1 === c2); // true
+console.log(c1 === c3); // false
+console.log(c1 === c4); // false
 ```
 
 ### Interpreter Pattern
 
-The Interpreter pattern defines a representation for a language's grammar along with an interpreter that uses this representation to interpret sentences in the language. This pattern is useful when you want to evaluate expressions or parse input based on a defined grammar. By using the Interpreter pattern, you can create a flexible and extensible system for interpreting complex expressions or commands.
+**Intent**: Define a representation for a language's grammar along with an interpreter that uses this representation to interpret sentences in the language.
 
-```sql title="Interpreter Pattern Example in SQL"
-CREATE TABLE Expression (
-    id INT PRIMARY KEY,
-    expression VARCHAR(255)
-);
-CREATE OR REPLACE FUNCTION interpret_expression(expression_id INT)
-RETURNS VOID AS $$
-DECLARE
-    expr Expression%ROWTYPE;
-BEGIN
-    SELECT * INTO expr FROM Expression WHERE id = expression_id;
-    IF expr IS NULL THEN
-        RAISE EXCEPTION 'Expression not found: %', expression_id;
-    END IF;
-    RAISE NOTICE 'Interpreting expression: %', expr.expression;
-    -- Add logic to interpret the expression here
-END;
-$$ LANGUAGE plpgsql;
+**When to Use**:
+
+- Designing a language or protocol
+- Evaluating expressions or parsing input
+- Implementing domain-specific languages (DSLs)
+- Configurable systems with complex rules
+
+**Benefits**:
+
+- Flexibility in defining and changing grammar
+- Easy to extend with new expressions
+- Promotes separation of concerns
+- Can optimize specific expressions
+
+**Drawbacks**:
+
+- Can become complex with large grammars
+- Performance overhead in interpreting
+- Difficulties in debugging and testing
+
+**Real-World Examples**:
+
+- SQL query parsers and evaluators
+- Regular expression engines
+- Expression builders for configuration languages
+- Scripting languages interpreters
+- Domain-specific languages (e.g., HTML, CSS)
+
+**TypeScript Implementation**:
+
+```typescript
+// Abstract expression
+interface Expression {
+  interpret(context: Context): boolean;
+}
+
+// Terminal expression
+class TerminalExpression implements Expression {
+  constructor(private data: string) {}
+
+  interpret(context: Context): boolean {
+    return context.input.includes(this.data);
+  }
+}
+
+// Non-terminal expression
+class AndExpression implements Expression {
+  constructor(
+    private expr1: Expression,
+    private expr2: Expression
+  ) {}
+
+  interpret(context: Context): boolean {
+    return this.expr1.interpret(context) && this.expr2.interpret(context);
+  }
+}
+
+// Context
+class Context {
+  constructor(public input: string) {}
+}
+
+// Usage
+const context = new Context("red apple");
+
+const isRed = new TerminalExpression("red");
+const isApple = new TerminalExpression("apple");
+const isRedApple = new AndExpression(isRed, isApple);
+
+console.log(isRedApple.interpret(context)); // true
 ```
 
 ### Visitor Pattern
 
-The Visitor pattern allows you to define new operations on a set of objects without changing their classes. This pattern is useful when you want to perform operations on a collection of objects with different types, enabling you to add new functionality without modifying the existing code. By using the Visitor pattern, you can create a flexible and extensible design that allows for easy addition of new operations.
+**Intent**: Define new operations on a set of objects without changing their classes.
 
-```sql title="Visitor Pattern Example in SQL"
-CREATE TABLE Element (
-    id INT PRIMARY KEY,
-    name VARCHAR(255)
-);
-CREATE TABLE Visitor (
-    id INT PRIMARY KEY,
-    operation VARCHAR(255)
-);
-CREATE OR REPLACE FUNCTION visit_element(element_id INT, visitor_id INT)
-RETURNS VOID AS $$
-DECLARE
-    element Element%ROWTYPE;
-    visitor Visitor%ROWTYPE;
-BEGIN
-    SELECT * INTO element FROM Element WHERE id = element_id;
-    IF element IS NULL THEN
-        RAISE EXCEPTION 'Element not found: %', element_id;
-    END IF;
-    SELECT * INTO visitor FROM Visitor WHERE id = visitor_id;
-    IF visitor IS NULL THEN
-        RAISE EXCEPTION 'Visitor not found: %', visitor_id;
-    END IF;
-    RAISE NOTICE 'Visiting element % with visitor %: %', element.name, visitor.operation, visitor.operation;
-    -- Add logic to perform the visitor operation on the element here
-END;
-$$ LANGUAGE plpgsql;
+**When to Use**:
+
+- Performing operations on objects with different types
+- Adding new functionality to a collection of objects
+- Avoiding polluting the classes with unrelated methods
+- Implementing operations that depend on the object structure
+
+**Benefits**:
+
+- Easy to add new operations
+- Centralizes operations on objects
+- Promotes separation of concerns
+- Can optimize specific operations
+
+**Drawbacks**:
+
+- Can be difficult to implement
+- Requires updating the visitor interface for new operations
+- May lead to performance overhead
+
+**Real-World Examples**:
+
+- Compilers (syntax tree visitors)
+- Object serialization and deserialization
+- GUI frameworks (event handling)
+- Database ORM (query generation)
+- Code analysis and transformation tools
+
+**TypeScript Implementation**:
+
+```typescript
+// Element interface
+interface Element {
+  accept(visitor: Visitor): void;
+}
+
+// Concrete elements
+class Book implements Element {
+  constructor(
+    public title: string,
+    public author: string
+  ) {}
+
+  accept(visitor: Visitor): void {
+    visitor.visitBook(this);
+  }
+}
+
+class Magazine implements Element {
+  constructor(
+    public title: string,
+    public issue: number
+  ) {}
+
+  accept(visitor: Visitor): void {
+    visitor.visitMagazine(this);
+  }
+}
+
+// Visitor interface
+interface Visitor {
+  visitBook(book: Book): void;
+  visitMagazine(magazine: Magazine): void;
+}
+
+// Concrete visitor
+class PrintVisitor implements Visitor {
+  visitBook(book: Book): void {
+    console.log(`Printing book: ${book.title} by ${book.author}`);
+  }
+
+  visitMagazine(magazine: Magazine): void {
+    console.log(
+      `Printing magazine: ${magazine.title}, Issue #${magazine.issue}`
+    );
+  }
+}
+
+// Usage
+const elements: Element[] = [
+  new Book("The Great Gatsby", "F. Scott Fitzgerald"),
+  new Magazine("Time", 2023),
+  new Book("1984", "George Orwell"),
+  new Magazine("National Geographic", 2022),
+];
+
+const printVisitor = new PrintVisitor();
+
+for (const element of elements) {
+  element.accept(printVisitor);
+}
 ```
 
 ### Proxy Pattern
 
-The Proxy pattern provides a surrogate or placeholder for another object to control access to it. This pattern is useful when you want to add an additional layer of control or functionality to an existing object, such as lazy loading, access control, or logging. By using a proxy, you can intercept requests to the real object and provide additional behavior without modifying the original object's code.
+**Intent**: Provide a surrogate or placeholder for another object to control access to it.
 
-```sql title="Proxy Pattern Example in SQL"
-CREATE TABLE RealObject (
-    id INT PRIMARY KEY,
-    name VARCHAR(255)
-);
-CREATE TABLE ProxyObject (
-    id INT PRIMARY KEY,
-    real_object_id INT REFERENCES RealObject(id),
-    access_control BOOLEAN DEFAULT TRUE
-);
-CREATE OR REPLACE FUNCTION access_real_object(proxy_id INT)
-RETURNS VOID AS $$
-DECLARE
-    proxy ProxyObject%ROWTYPE;
-BEGIN
-    SELECT * INTO proxy FROM ProxyObject WHERE id = proxy_id;
-    IF proxy IS NULL THEN
-        RAISE EXCEPTION 'Proxy not found: %', proxy_id;
-    END IF;
-    IF NOT proxy.access_control THEN
-        RAISE EXCEPTION 'Access denied to real object through proxy %', proxy_id;
-    END IF;
-    RAISE NOTICE 'Accessing real object % through proxy %', proxy.real_object_id, proxy_id;
-    -- Add logic to access the real object here
-END;
-$$ LANGUAGE plpgsql;
+**When to Use**:
+
+- Lazy loading of expensive objects
+- Access control and security
+- Caching expensive operations
+- Logging and monitoring object access
+- Remote object access
+
+**Benefits**:
+
+- Controls access to the original object
+- Can perform additional operations (caching, logging)
+- Supports lazy initialization
+- Can handle remote object access
+
+**Drawbacks**:
+
+- Adds complexity to the system
+- May introduce performance overhead
+- Can make debugging more difficult
+
+**Real-World Examples**:
+
+- Virtual proxy for large images
+- Security proxy for access control
+- Remote proxy for distributed systems
+- Cache proxy for expensive operations
+- Smart reference counting
+
+**TypeScript Implementation**:
+
+```typescript
+// Subject interface
+interface Image {
+  display(): void;
+  getSize(): number;
+}
+
+// Real subject
+class RealImage implements Image {
+  private fileName: string;
+  private size: number;
+
+  constructor(fileName: string) {
+    this.fileName = fileName;
+    this.loadFromDisk();
+  }
+
+  private loadFromDisk(): void {
+    console.log(`Loading image from disk: ${this.fileName}`);
+    // Simulate expensive loading operation
+    this.size = Math.floor(Math.random() * 1000000) + 100000;
+    // Simulate loading delay
+    setTimeout(() => {}, 1000);
+  }
+
+  display(): void {
+    console.log(`Displaying image: ${this.fileName}`);
+  }
+
+  getSize(): number {
+    return this.size;
+  }
+}
+
+// Proxy
+class ImageProxy implements Image {
+  private realImage: RealImage | null = null;
+  private fileName: string;
+  private accessCount: number = 0;
+  private lastAccessed: Date | null = null;
+
+  constructor(fileName: string) {
+    this.fileName = fileName;
+  }
+
+  display(): void {
+    this.logAccess();
+
+    // Lazy loading - only create real image when needed
+    if (!this.realImage) {
+      console.log("Creating real image instance...");
+      this.realImage = new RealImage(this.fileName);
+    }
+
+    this.realImage.display();
+  }
+
+  getSize(): number {
+    this.logAccess();
+
+    if (!this.realImage) {
+      // Return cached size or estimate without loading
+      return 0; // or cached value
+    }
+
+    return this.realImage.getSize();
+  }
+
+  private logAccess(): void {
+    this.accessCount++;
+    this.lastAccessed = new Date();
+    console.log(
+      `Image accessed ${this.accessCount} times. Last: ${this.lastAccessed}`
+    );
+  }
+
+  // Additional proxy functionality
+  getAccessStats(): { count: number; lastAccessed: Date | null } {
+    return {
+      count: this.accessCount,
+      lastAccessed: this.lastAccessed,
+    };
+  }
+}
+
+// Usage
+console.log("Creating image proxy...");
+const image = new ImageProxy("large_photo.jpg");
+
+console.log("\nFirst display call:");
+image.display(); // Real image created and loaded here
+
+console.log("\nSecond display call:");
+image.display(); // Uses existing real image
+
+console.log("\nAccess stats:");
+console.log(image.getAccessStats());
 ```
+
+## Behavioral Patterns
+
+Behavioral patterns are concerned with algorithms and the assignment of responsibilities between objects.
+
+### Observer Pattern
+
+**Intent**: Define a one-to-many dependency between objects so that when one object changes state, all dependents are notified.
+
+**When to Use**:
+
+- Multiple objects need to be notified of changes
+- Loose coupling between subject and observers is desired
+- Event-driven systems
+- Model-View architectures
+
+**Benefits**:
+
+- Loose coupling between subject and observers
+- Dynamic relationships between objects
+- Support for broadcast communication
+- Follows Open/Closed principle
+
+**Drawbacks**:
+
+- Can cause memory leaks if observers aren't removed
+- Observers are notified in random order
+- Can lead to complex chains of updates
+
+**Real-World Examples**:
+
+- Event handling systems
+- Model-View-Controller (MVC) architecture
+- Stock price monitoring
+- Newsletter subscriptions
+- Social media notifications
+
+**TypeScript Implementation**:
+
+```typescript
+// Observer interface
+interface Observer {
+  update(subject: Subject): void;
+}
+
+// Subject interface
+interface Subject {
+  attach(observer: Observer): void;
+  detach(observer: Observer): void;
+  notify(): void;
+}
+
+// Concrete subject
+class Stock implements Subject {
+  private observers: Observer[] = [];
+  private _symbol: string;
+  private _price: number;
+
+  constructor(symbol: string, initialPrice: number) {
+    this._symbol = symbol;
+    this._price = initialPrice;
+  }
+
+  get symbol(): string {
+    return this._symbol;
+  }
+
+  get price(): number {
+    return this._price;
+  }
+
+  set price(value: number) {
+    console.log(
+      `Stock ${this._symbol} price changed from $${this._price} to $${value}`
+    );
+    this._price = value;
+    this.notify();
+  }
+
+  attach(observer: Observer): void {
+    const index = this.observers.indexOf(observer);
+    if (index === -1) {
+      this.observers.push(observer);
+      console.log(`Observer attached to ${this._symbol}`);
+    }
+  }
+
+  detach(observer: Observer): void {
+    const index = this.observers.indexOf(observer);
+    if (index !== -1) {
+      this.observers.splice(index, 1);
+      console.log(`Observer detached from ${this._symbol}`);
+    }
+  }
+
+  notify(): void {
+    console.log(
+      `Notifying ${this.observers.length} observers of ${this._symbol}`
+    );
+    this.observers.forEach((observer) => observer.update(this));
+  }
+}
+
+// Concrete observers
+class StockDisplay implements Observer {
+  private name: string;
+
+  constructor(name: string) {
+    this.name = name;
+  }
+
+  update(subject: Subject): void {
+    if (subject instanceof Stock) {
+      console.log(
+        `${this.name} Display: ${subject.symbol} is now $${subject.price}`
+      );
+    }
+  }
+}
+
+class StockAlert implements Observer {
+  private threshold: number;
+  private type: "above" | "below";
+
+  constructor(threshold: number, type: "above" | "below") {
+    this.threshold = threshold;
+    this.type = type;
+  }
+
+  update(subject: Subject): void {
+    if (subject instanceof Stock) {
+      const price = subject.price;
+      if (
+        (this.type === "above" && price > this.threshold) ||
+        (this.type === "below" && price < this.threshold)
+      ) {
+        console.log(
+          `🚨 ALERT: ${subject.symbol} is ${this.type} $${this.threshold} (Current: $${price})`
+        );
+      }
+    }
+  }
+}
+
+class Portfolio implements Observer {
+  private holdings: Map<string, number> = new Map();
+
+  addHolding(symbol: string, shares: number): void {
+    this.holdings.set(symbol, shares);
+  }
+
+  update(subject: Subject): void {
+    if (subject instanceof Stock) {
+      const shares = this.holdings.get(subject.symbol);
+      if (shares) {
+        const value = shares * subject.price;
+        console.log(
+          `📊 Portfolio: ${shares} shares of ${subject.symbol} = $${value.toFixed(2)}`
+        );
+      }
+    }
+  }
+}
+
+// Usage
+const appleStock = new Stock("AAPL", 150.0);
+
+const mobileDisplay = new StockDisplay("Mobile");
+const webDisplay = new StockDisplay("Web");
+const highAlert = new StockAlert(160, "above");
+const lowAlert = new StockAlert(140, "below");
+const myPortfolio = new Portfolio();
+
+// Attach observers
+appleStock.attach(mobileDisplay);
+appleStock.attach(webDisplay);
+appleStock.attach(highAlert);
+appleStock.attach(lowAlert);
+appleStock.attach(myPortfolio);
+
+// Set up portfolio
+myPortfolio.addHolding("AAPL", 100);
+
+// Trigger updates
+console.log("\n--- Price Changes ---");
+appleStock.price = 155.5; // Normal update
+appleStock.price = 165.75; // Should trigger high alert
+appleStock.price = 135.25; // Should trigger low alert
+
+// Detach an observer
+console.log("\n--- Detaching Web Display ---");
+appleStock.detach(webDisplay);
+appleStock.price = 142.8; // Web display won't be notified
+```
+
+### Strategy Pattern
+
+**Intent**: Define a family of algorithms, encapsulate each one, and make them interchangeable.
+
+**When to Use**:
+
+- Multiple ways to perform a task
+- Algorithm selection should be dynamic
+- Avoiding conditional statements for algorithm selection
+- Different variations of an algorithm
+
+**Benefits**:
+
+- Eliminates conditional statements
+- Easy to add new algorithms
+- Algorithms can be tested independently
+- Runtime algorithm selection
+
+**Drawbacks**:
+
+- Increases number of classes
+- Clients must be aware of different strategies
+- Communication overhead between strategy and context
+
+**Real-World Examples**:
+
+- Sorting algorithms selection
+- Payment processing methods
+- Compression algorithms
+- Route calculation strategies
+- Discount calculation methods
+
+**TypeScript Implementation**:
+
+```typescript
+// Strategy interface
+interface SortingStrategy {
+  sort(data: number[]): number[];
+  getName(): string;
+}
+
+// Concrete strategies
+class BubbleSort implements SortingStrategy {
+  sort(data: number[]): number[] {
+    console.log("Using Bubble Sort");
+    const arr = [...data];
+    for (let i = 0; i < arr.length; i++) {
+      for (let j = 0; j < arr.length - i - 1; j++) {
+        if (arr[j] > arr[j + 1]) {
+          [arr[j], arr[j + 1]] = [arr[j + 1], arr[j]];
+        }
+      }
+    }
+    return arr;
+  }
+
+  getName(): string {
+    return "Bubble Sort";
+  }
+}
+
+class QuickSort implements SortingStrategy {
+  sort(data: number[]): number[] {
+    console.log("Using Quick Sort");
+    return this.quickSort([...data]);
+  }
+
+  private quickSort(arr: number[]): number[] {
+    if (arr.length <= 1) return arr;
+
+    const pivot = arr[Math.floor(arr.length / 2)];
+    const left = arr.filter((x) => x < pivot);
+    const middle = arr.filter((x) => x === pivot);
+    const right = arr.filter((x) => x > pivot);
+
+    return [...this.quickSort(left), ...middle, ...this.quickSort(right)];
+  }
+
+  getName(): string {
+    return "Quick Sort";
+  }
+}
+
+class MergeSort implements SortingStrategy {
+  sort(data: number[]): number[] {
+    console.log("Using Merge Sort");
+    return this.mergeSort([...data]);
+  }
+
+  private mergeSort(arr: number[]): number[] {
+    if (arr.length <= 1) return arr;
+
+    const mid = Math.floor(arr.length / 2);
+    const left = this.mergeSort(arr.slice(0, mid));
+    const right = this.mergeSort(arr.slice(mid));
+
+    return this.merge(left, right);
+  }
+
+  private merge(left: number[], right: number[]): number[] {
+    const result = [];
+    let leftIndex = 0;
+    let rightIndex = 0;
+
+    while (leftIndex < left.length && rightIndex < right.length) {
+      if (left[leftIndex] < right[rightIndex]) {
+        result.push(left[leftIndex]);
+        leftIndex++;
+      } else {
+        result.push(right[rightIndex]);
+        rightIndex++;
+      }
+    }
+
+    return result.concat(left.slice(leftIndex)).concat(right.slice(rightIndex));
+  }
+
+  getName(): string {
+    return "Merge Sort";
+  }
+}
+
+// Context
+class DataSorter {
+  private strategy: SortingStrategy;
+
+  constructor(strategy: SortingStrategy) {
+    this.strategy = strategy;
+  }
+
+  setStrategy(strategy: SortingStrategy): void {
+    this.strategy = strategy;
+    console.log(`Strategy changed to: ${strategy.getName()}`);
+  }
+
+  sortData(data: number[]): number[] {
+    const startTime = Date.now();
+    const result = this.strategy.sort(data);
+    const endTime = Date.now();
+
+    console.log(
+      `Sorted ${data.length} elements in ${endTime - startTime}ms using ${this.strategy.getName()}`
+    );
+    return result;
+  }
+
+  // Intelligent strategy selection based on data characteristics
+  selectOptimalStrategy(data: number[]): void {
+    if (data.length < 10) {
+      this.setStrategy(new BubbleSort()); // Simple for small arrays
+    } else if (data.length < 1000) {
+      this.setStrategy(new QuickSort()); // Good general purpose
+    } else {
+      this.setStrategy(new MergeSort()); // Stable for large arrays
+    }
+  }
+}
+
+// Usage
+const data = [64, 34, 25, 12, 22, 11, 90, 88, 76, 50, 42];
+console.log("Original data:", data);
+
+const sorter = new DataSorter(new BubbleSort());
+
+// Manual strategy selection
+console.log("\n--- Manual Strategy Selection ---");
+let sorted = sorter.sortData(data);
+console.log("Sorted:", sorted);
+
+sorter.setStrategy(new QuickSort());
+sorted = sorter.sortData(data);
+console.log("Sorted:", sorted);
+
+// Automatic strategy selection
+console.log("\n--- Automatic Strategy Selection ---");
+const smallData = [5, 2, 8, 1, 9];
+const largeData = Array.from({ length: 1500 }, () =>
+  Math.floor(Math.random() * 1000)
+);
+
+sorter.selectOptimalStrategy(smallData);
+sorter.sortData(smallData);
+
+sorter.selectOptimalStrategy(largeData);
+const largeSorted = sorter.sortData(largeData);
+console.log(
+  `Large data sorted: first 10 elements: [${largeSorted.slice(0, 10).join(", ")}...]`
+);
+```
+
+## Pattern Selection Guidelines
+
+### When to Use Each Pattern
+
+**Creational Patterns**:
+
+- Use **Singleton** when you need exactly one instance (database connections, loggers)
+- Use **Factory** when object creation logic is complex or varies
+- Use **Builder** for objects with many optional parameters
+- Use **Prototype** when object creation is expensive
+
+**Structural Patterns**:
+
+- Use **Adapter** when integrating incompatible interfaces
+- Use **Decorator** when you need to add behavior dynamically
+- Use **Facade** when you want to simplify complex subsystems
+- Use **Proxy** when you need to control access or add functionality
+
+**Behavioral Patterns**:
+
+- Use **Observer** for event-driven systems with multiple listeners
+- Use **Strategy** when you have multiple algorithms for the same task
+- Use **Command** for undo/redo functionality or request queuing
+- Use **State** when object behavior changes significantly based on state
+
+### Decision Matrix
+
+| Problem                    | Recommended Pattern | Alternative       |
+| -------------------------- | ------------------- | ----------------- |
+| Object creation is complex | Factory             | Builder           |
+| Need single instance       | Singleton           | Static class      |
+| Multiple algorithms        | Strategy            | Conditional logic |
+| Interface incompatibility  | Adapter             | Wrapper           |
+| Add behavior dynamically   | Decorator           | Inheritance       |
+| Event notifications        | Observer            | Polling           |
+| Control object access      | Proxy               | Direct access     |
+| Undo/Redo operations       | Command             | Manual tracking   |
+
+## Common Anti-Patterns
+
+### Overuse of Patterns
+
+```typescript
+// ❌ Overengineered - using patterns unnecessarily
+class SimpleCalculatorFactory {
+  createCalculator(): Calculator {
+    return new Calculator();
+  }
+}
+
+class Calculator {
+  add(a: number, b: number): number {
+    return a + b;
+  }
+}
+
+// ✅ Simple solution - no pattern needed
+function add(a: number, b: number): number {
+  return a + b;
+}
+```
+
+### Pattern Misuse
+
+```typescript
+// ❌ Misusing Singleton for convenience
+class Utils {
+  private static instance: Utils;
+
+  private constructor() {}
+
+  static getInstance(): Utils {
+    if (!Utils.instance) {
+      Utils.instance = new Utils();
+    }
+    return Utils.instance;
+  }
+
+  formatDate(date: Date): string {
+    return date.toISOString();
+  }
+}
+
+// ✅ Use static methods or modules instead
+class DateUtils {
+  static formatDate(date: Date): string {
+    return date.toISOString();
+  }
+}
+```
+
+## Best Practices
+
+### 1. Choose Patterns Based on Problems
+
+Don't force patterns where they're not needed. Let the problem drive the solution:
+
+```typescript
+// ❌ Forcing a pattern
+class StringSingletonFactory {
+  private static instance: StringSingletonFactory;
+
+  private constructor() {}
+
+  static getInstance(): StringSingletonFactory {
+    if (!StringSingletonFactory.instance) {
+      StringSingletonFactory.instance = new StringSingletonFactory();
+    }
+    return StringSingletonFactory.instance;
+  }
+
+  createString(value: string): string {
+    return value;
+  }
+}
+
+// ✅ Simple and direct
+function createString(value: string): string {
+  return value;
+}
+```
+
+### 2. Combine Patterns When Appropriate
+
+```typescript
+// Combining Factory + Strategy + Observer
+class PaymentSystemFactory {
+  static createPaymentSystem(): PaymentSystem {
+    const processor = new StrategyBasedProcessor();
+    const eventBus = new PaymentEventBus();
+
+    return new PaymentSystem(processor, eventBus);
+  }
+}
+
+class PaymentSystem {
+  constructor(
+    private processor: PaymentProcessor,
+    private eventBus: PaymentEventBus
+  ) {}
+
+  processPayment(amount: number, method: string): boolean {
+    const success = this.processor.process(amount, method);
+    this.eventBus.notify(new PaymentEvent(amount, method, success));
+    return success;
+  }
+}
+```
+
+### 3. Consider Performance Implications
+
+```typescript
+// Be careful with pattern overhead
+class CachedFactory {
+  private cache = new Map<string, Product>();
+
+  createProduct(type: string): Product {
+    if (this.cache.has(type)) {
+      return this.cache.get(type)!.clone(); // Use Prototype pattern
+    }
+
+    const product = this.buildProduct(type);
+    this.cache.set(type, product);
+    return product.clone();
+  }
+
+  private buildProduct(type: string): Product {
+    // Expensive creation logic
+    return new Product(type);
+  }
+}
+```
+
+### 4. Document Pattern Usage
+
+```typescript
+/**
+ * UserService follows the Singleton pattern to ensure
+ * a single point of user management across the application.
+ *
+ * This prevents multiple instances from creating
+ * conflicting user states and ensures consistent
+ * user session management.
+ */
+class UserService {
+  private static instance: UserService;
+  private currentUser: User | null = null;
+
+  private constructor() {}
+
+  static getInstance(): UserService {
+    if (!UserService.instance) {
+      UserService.instance = new UserService();
+    }
+    return UserService.instance;
+  }
+
+  // Implementation...
+}
+```
+
+## Conclusion
+
+Design patterns are powerful tools that can significantly improve code quality, maintainability, and team communication. However, they should be used judiciously:
+
+1. **Solve Real Problems**: Only use patterns when they address actual design challenges
+2. **Start Simple**: Begin with simple solutions and introduce patterns as complexity grows
+3. **Know the Trade-offs**: Understand the benefits and drawbacks of each pattern
+4. **Team Understanding**: Ensure your team understands the patterns being used
+5. **Documentation**: Document why patterns were chosen and how they're implemented
+
+Remember that patterns are means to an end, not ends in themselves. The goal is to create maintainable, flexible, and understandable code that solves real business problems effectively.
 
 <BackToTop />
