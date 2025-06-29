@@ -21,6 +21,21 @@ GET /api/v1/users
 GET /api/v2/users
 ```
 
+**Real-world Example: Twitter API**
+```http title="Twitter API URI Versioning"
+GET https://api.twitter.com/1.1/statuses/user_timeline.json
+GET https://api.twitter.com/2/tweets
+```
+
+**Advantages:**
+- Clear and visible versioning
+- Easy to cache and route
+- Simple for clients to understand
+
+**Disadvantages:**
+- Requires URL changes for new versions
+- Can lead to URL proliferation
+
 ### Query Parameter Versioning
 
 In query parameter versioning, the version number is specified as a query parameter in the request URL. This method allows for more flexibility in versioning but can lead to confusion if not documented clearly.
@@ -28,7 +43,30 @@ In query parameter versioning, the version number is specified as a query parame
 ```http title="Query Parameter Versioning Example"
 GET /api/users?version=1
 GET /api/users?version=2
+GET /api/users?v=1.2
+GET /api/users?api_version=2023-01-15
 ```
+
+**Real-world Example: Stripe API**
+```http title="Stripe API Query Parameter Versioning"
+GET https://api.stripe.com/v1/charges?version=2020-08-27
+POST https://api.stripe.com/v1/payment_intents?api_version=2022-11-15
+```
+
+**Use Cases:**
+- When you want to keep URLs clean but allow version flexibility
+- For backward compatibility with existing integrations
+- When supporting multiple minor versions simultaneously
+
+**Advantages:**
+- Keeps base URLs consistent
+- Optional versioning (can default to latest)
+- Easy to implement
+
+**Disadvantages:**
+- Can be forgotten or omitted by clients
+- Caching complexity
+- URL parameters can become cluttered
 
 ### Header Versioning
 
@@ -36,10 +74,39 @@ Header versioning involves specifying the API version in the request headers. Th
 
 ```http title="Header Versioning Example"
 GET /api/users
-Accept: application/vnd.example.v1+json
+API-Version: v1
+
 GET /api/users
-Accept: application/vnd.example.v2+json
+API-Version: v2
+
+GET /api/users
+X-API-Version: 2.1.0
+
+GET /api/users
+Version: 2023-03-15
 ```
+
+**Real-world Example: GitHub API**
+```http title="GitHub API Header Versioning"
+GET https://api.github.com/user/repos
+Accept: application/vnd.github+json
+X-GitHub-Api-Version: 2022-11-28
+```
+
+**Use Cases:**
+- RESTful APIs that want to maintain clean URLs
+- When supporting multiple versioning dimensions (API version + data format)
+- Enterprise APIs with complex versioning requirements
+
+**Advantages:**
+- Clean URLs
+- Can combine with content negotiation
+- Flexible header naming
+
+**Disadvantages:**
+- Headers can be overlooked
+- Debugging complexity
+- Requires client-side header management
 
 ### Content Negotiation
 
@@ -49,19 +116,78 @@ This method is flexible and can support multiple versions simultaneously, but it
 ```http title="Content Negotiation Example"
 GET /api/users
 Accept: application/vnd.example.v1+json
+
 GET /api/users
 Accept: application/vnd.example.v2+json
+
+GET /api/users
+Accept: application/vnd.company.api+json;version=2
+
+GET /api/users
+Accept: application/json;version=1.0
 ```
+
+**Real-world Example: Salesforce API**
+```http title="Salesforce API Content Negotiation"
+GET https://instance.salesforce.com/services/data/v58.0/sobjects/Account
+Accept: application/json
+
+GET https://instance.salesforce.com/services/data/v59.0/sobjects/Account
+Accept: application/vnd.api+json
+```
+
+**Use Cases:**
+- APIs that serve multiple data formats (JSON, XML, MessagePack)
+- When version affects response structure significantly
+- RESTful APIs following HTTP standards strictly
+
+**Advantages:**
+- Follows HTTP standards
+- Can specify both version and format
+- Flexible and extensible
+
+**Disadvantages:**
+- Complex media type management
+- Client library complexity
+- Limited tooling support
 
 ### Semantic Versioning
 
 Semantic versioning (SemVer) is a versioning scheme that uses a three-part version number (major.minor.patch) to indicate changes in the API. This approach provides clear expectations for clients regarding the impact of changes.
 
 ```http title="Semantic Versioning Example"
-GET /api/v1.0.0/users
-GET /api/v1.1.0/users
-GET /api/v2.0.0/users
+GET /api/v1.0.0/users    # Initial release
+GET /api/v1.1.0/users    # New features, backward compatible
+GET /api/v1.1.1/users    # Bug fixes, backward compatible
+GET /api/v2.0.0/users    # Breaking changes
 ```
+
+**Versioning Rules:**
+- **MAJOR** version: Breaking changes that require client updates
+- **MINOR** version: New features that are backward compatible
+- **PATCH** version: Bug fixes that are backward compatible
+
+**Real-world Example: Kubernetes API**
+```http title="Kubernetes API Semantic Versioning"
+GET /api/v1/pods                    # Stable v1
+GET /apis/apps/v1/deployments       # Apps API v1
+GET /apis/extensions/v1beta1/deployments  # Beta version
+```
+
+**Use Cases:**
+- APIs with frequent incremental updates
+- When you need to communicate change impact clearly
+- Open source APIs where community adoption matters
+
+**Advantages:**
+- Clear communication of change impact
+- Predictable upgrade paths
+- Industry standard approach
+
+**Disadvantages:**
+- Can lead to version proliferation
+- Requires discipline in change classification
+- Complex URL structures
 
 ### Versioning by Feature Flags
 
@@ -69,10 +195,58 @@ Feature flags allow developers to enable or disable specific features in the API
 
 ```http title="Feature Flags Example"
 GET /api/users
-Feature-Flag: new-feature=true
+Feature-Flag: new-user-fields=true
+
 GET /api/users
-Feature-Flag: new-feature=false
+Feature-Flag: new-user-fields=false
+
+GET /api/users
+X-Features: pagination-v2,sorting-v3
+
+GET /api/users?features=new-algorithm,enhanced-search
 ```
+
+**Advanced Feature Flag Examples:**
+```http title="Multi-Feature Management"
+GET /api/products
+X-Feature-Flags: search-v2=true,recommendations=false,pricing-v3=true
+
+POST /api/orders
+Feature-Toggles: payment-gateway-v2,inventory-realtime,shipping-calculator-v3
+Content-Type: application/json
+{
+  "user_id": 123,
+  "items": [...]
+}
+```
+
+**Real-world Example: LaunchDarkly API**
+```javascript title="Client-side Feature Flag Usage"
+// JavaScript SDK
+const showNewFeature = ldClient.variation('new-api-endpoint', false);
+if (showNewFeature) {
+  fetch('/api/v2/users');
+} else {
+  fetch('/api/v1/users');
+}
+```
+
+**Use Cases:**
+- A/B testing new API features
+- Gradual rollout of breaking changes
+- Emergency feature disable without deployment
+- Customer-specific feature access
+
+**Advantages:**
+- Runtime feature control
+- No version proliferation
+- Easy rollback mechanism
+- Granular feature management
+
+**Disadvantages:**
+- Added complexity in API logic
+- Potential performance overhead
+- Debugging complexity with multiple flag combinations
 
 ### Versioning by Subdomains
 
@@ -81,7 +255,43 @@ Subdomain versioning involves using different subdomains for different API versi
 ```http title="Subdomain Versioning Example"
 GET https://v1.api.example.com/users
 GET https://v2.api.example.com/users
+GET https://api-v3.example.com/users
+GET https://legacy.api.example.com/users
 ```
+
+**Real-world Example: AWS Services**
+```http title="AWS API Subdomain Versioning"
+GET https://ec2.amazonaws.com/         # EC2 Classic
+GET https://ec2.us-east-1.amazonaws.com/  # Regional endpoints
+GET https://s3.amazonaws.com/bucket/object  # S3 global
+GET https://s3-us-west-2.amazonaws.com/bucket/object  # S3 regional
+```
+
+**Advanced Subdomain Strategies:**
+```http title="Environment + Version Subdomains"
+GET https://v1.api.staging.example.com/users
+GET https://v2.api.production.example.com/users
+GET https://beta.api.example.com/users
+GET https://canary.api.example.com/users
+```
+
+**Use Cases:**
+- Complete isolation between API versions
+- Different infrastructure for different versions
+- Legacy system separation
+- Geographic or regional API distribution
+
+**Advantages:**
+- Complete version isolation
+- Easy to route traffic
+- Clear separation of concerns
+- Independent scaling per version
+
+**Disadvantages:**
+- DNS management complexity
+- SSL certificate management
+- Infrastructure overhead
+- Cross-origin issues in web applications
 
 ### Versioning by Media Type
 
@@ -90,52 +300,316 @@ Media type versioning uses the `Accept` header to specify the desired version of
 ```http title="Media Type Versioning Example"
 GET /api/users
 Accept: application/vnd.example.v1+json
+
 GET /api/users
 Accept: application/vnd.example.v2+json
+
+GET /api/users
+Accept: application/vnd.company.user.v3+xml
+
+GET /api/users
+Accept: application/vnd.api+json;version=2.1
 ```
 
-## Best Practices for API Versioning
+**Real-world Example: GitHub API**
+```http title="GitHub API Media Type Versioning"
+GET https://api.github.com/user
+Accept: application/vnd.github.v3+json
 
-When implementing API versioning, consider the following best practices:
+GET https://api.github.com/user
+Accept: application/vnd.github.raw+json
 
-- **Keep it Simple**: Choose a versioning strategy that is easy to understand and implement. Avoid overcomplicating the versioning scheme.
-- **Document Changes**: Clearly document the changes introduced in each version, including breaking changes, new features, and deprecations. This helps clients understand how to adapt to new versions.
-- **Use Semantic Versioning**: If applicable, use semantic versioning to communicate the impact of changes. This provides clients with clear expectations about the stability of the API.
-- **Deprecate Responsibly**: When introducing a new version, provide a deprecation period for the old version. Notify clients in advance and provide migration guides to help them transition to the new version.
-- **Version Granularity**: Consider the granularity of your versioning strategy. For example, if you frequently introduce small changes, a minor versioning scheme (e.g., v1.1) may be more appropriate than a major versioning scheme (e.g, v2).
-- **Avoid Breaking Changes**: Strive to minimize breaking changes in new versions. If breaking changes are necessary, provide clear migration paths and support for both old and new versions during the transition period.
-- **Monitor Usage**: Track the usage of different API versions to understand client adoption and plan for future deprecations. This helps prioritize which versions to maintain and which to phase out.
-- **Versioning in Documentation**: Clearly indicate the version of the API in your documentation. This helps clients identify which version they are using and what changes have been made in each version.
-- **Testing**: Implement thorough testing for each API version to ensure compatibility and functionality. Automated tests can help catch issues early and ensure that new versions do not break existing functionality.
-- **Versioning in Client Libraries**: If you provide client libraries for your API, ensure that they are versioned alongside the API. This helps clients manage dependencies and ensures compatibility between the client and server.
-- **Versioning in SDKs**: If you offer SDKs for different programming languages, version them alongside the API. This ensures that clients using the SDKs are aware of the API version they are interacting with and can adapt to changes accordingly.
-- **Versioning in Error Responses**: Include the API version in error responses. This helps clients identify which version of the API they are using when troubleshooting issues.
-- **Versioning in Analytics**: If you collect analytics data, include the API version in the data. This allows you to analyze usage patterns and identify which versions are most popular among clients.
-- **Versioning in Rate Limiting**: If you implement rate limiting, consider applying it per API version. This allows you to manage traffic and resource usage more effectively across different versions of the API.
-- **Versioning in Caching**: If you use caching mechanisms, consider versioning your cache keys based on the API version. This helps ensure that clients receive the correct cached responses for the version they are using.
-- **Versioning in Security**: If you implement security measures (e.g., authentication, authorization), ensure that they are compatible with all supported API versions. This helps maintain a consistent security posture across versions.
-- **Versioning in Monitoring**: If you use monitoring tools, include the API version in your monitoring metrics. This allows you to track performance and reliability for each version separately and identify any issues that may arise.
-- **Versioning in Support**: When providing support for your API, ensure that your support team is aware of the different versions and can assist clients with version-specific issues. This helps maintain a high level of customer satisfaction and ensures that clients receive the assistance they need for their specific API version.
-- **Versioning in Community Forums**: If you have community forums or discussion boards, encourage users to specify the API version they are using when asking questions or reporting issues. This helps other community members provide accurate and relevant assistance based on the specific version they are using.
-- **Versioning in Change Logs**: Maintain a change log that documents all changes made in each API version. This provides clients with a clear history of changes and helps them understand the evolution of the API over time. A well-maintained change log can also serve as a reference for developers when troubleshooting issues or implementing new features.
-- **Versioning in Migration Guides**: Provide migration guides for clients transitioning from one version to another. These guides should outline the changes, provide examples of how to adapt to the new version, and highlight any deprecated features. Migration guides can significantly reduce the friction for clients when upgrading to a new version and help them quickly adapt to the changes.
-- **Versioning in Client Communication**: When communicating with clients about API changes, be transparent about the reasons for the changes and the benefits they bring. This helps build trust with clients and encourages them to embrace new versions. Additionally, consider providing a feedback mechanism for clients to share their thoughts on the changes, which can help you improve future versions and address any concerns they may have.
-- **Versioning in API Gateways**: If you use an API gateway, configure it to handle versioning appropriately. This includes routing requests to the correct version of the API based on the versioning strategy you choose. An API gateway can also help manage authentication, rate limiting, and caching for different API versions, ensuring a consistent experience for clients across versions.
-- **Versioning in API Documentation**: Ensure that your API documentation is versioned alongside the API. This includes providing clear instructions on how to use each version, examples of requests and responses, and any specific requirements or limitations for each version. Versioned documentation helps clients quickly find the information they need for the specific version they are using and reduces confusion when multiple versions are available.
-- **Versioning in API Testing**: Implement automated tests for each API version to ensure that they function correctly and meet the expected behavior. This includes unit tests, integration tests, and end-to-end tests that cover the functionality of each version. Automated testing helps catch issues early and ensures that new versions do not introduce regressions or break existing functionality. Additionally, consider using contract testing to verify that the API adheres to the expected contract for each version, ensuring compatibility between clients and the server.
-- **Versioning in API Analytics**: If you collect analytics data for your API, include the API version in the analytics data. This allows you to analyze usage patterns, identify which versions are most popular, and track the adoption of new features. Analytics can also help you identify potential issues or bottlenecks in specific versions, allowing you to address them proactively. Consider using tools like Google Analytics, Mixpanel, or custom analytics solutions to gather insights into API usage and performance across different versions.
-- **Versioning in API Security**: Ensure that your API security measures are compatible with all supported versions. This includes implementing authentication and authorization mechanisms that work seamlessly across versions. Additionally, consider using version-specific security policies to address any unique security requirements for each version. Regularly review and update your security practices to address emerging threats and vulnerabilities, ensuring that all versions of the API remain secure and compliant with industry standards.
-- **Versioning in API Performance**: Monitor the performance of each API version to identify any performance issues or bottlenecks. This includes tracking response times, error rates, and resource usage for each version. Performance monitoring can help you identify areas for optimization and ensure that all versions of the API meet the expected performance standards. Consider using tools like New Relic, Datadog, or custom performance monitoring solutions to gather insights into API performance across different versions.
-- **Versioning in API Scalability**: Plan for scalability when designing your API versions. This includes considering how each version will handle increased traffic, data volume, and user load. Implementing scalable architecture patterns, such as microservices or serverless architectures, can help ensure that your API can handle growth without compromising performance or reliability. Additionally, consider implementing load balancing and auto-scaling mechanisms to dynamically adjust resources based on demand for each API version.
-- **Versioning in API Usability**: Focus on usability when designing your API versions. This includes providing clear and consistent error messages, intuitive endpoints, and comprehensive documentation. Usability improvements can significantly enhance the developer experience and reduce the learning curve for clients using your API. Consider conducting usability testing with real users to gather feedback on the API design and identify areas for improvement. This can help you create a more user-friendly API that meets the needs of your clients and encourages adoption of new versions.
-- **Versioning in API Ecosystem**: Consider the broader ecosystem of your API when implementing versioning. This includes how your API interacts with other services, libraries, and tools. Ensure that your versioning strategy aligns with the ecosystem and provides a consistent experience for clients. Additionally, consider how your API versions will integrate with third-party services, SDKs, and libraries. Providing clear guidelines and compatibility information can help clients navigate the ecosystem and ensure that they can effectively use your API across different versions.
-- **Versioning in API Community**: Engage with the developer community around your API to gather feedback and insights on versioning practices. This includes participating in forums, discussion boards, and social media platforms where developers discuss your API. Community engagement can help you understand the needs and expectations of your clients, identify common pain points, and gather ideas for improving your versioning strategy. Additionally, consider hosting webinars, workshops, or Q&A sessions to educate clients about versioning practices and gather feedback on your API versions. This can help build a strong community around your API and foster collaboration and innovation.
-- **Versioning in API Governance**: Establish governance practices for managing API versions. This includes defining policies for versioning, deprecation, and migration, as well as establishing processes for reviewing and approving changes to the API. Governance practices help ensure consistency and quality across API versions and provide a framework for managing changes effectively. Consider forming an API governance committee or working group that includes representatives from different teams involved in API development, such as product management, engineering, and support. This collaborative approach can help ensure that all stakeholders are aligned on versioning practices and that changes are made in a controlled and transparent manner.
-- **Versioning in API Lifecycle Management**: Implement lifecycle management practices for your API versions. This includes defining the lifecycle stages for each version, such as development, testing, production, and deprecation. Lifecycle management helps ensure that each version is properly maintained, monitored, and supported throughout its lifecycle. Consider using tools like API management platforms or version control systems to track the status and history of each API version. Additionally, establish processes for retiring old versions and transitioning clients to new versions. This can help ensure a smooth transition for clients and minimize disruptions when deprecating older versions.
-- **Versioning in API Change Management**: Implement change management practices for your API versions. This includes defining processes for reviewing, approving, and communicating changes to the API. Change management helps ensure that changes are made in a controlled and transparent manner, minimizing the risk of breaking existing clients.
-  Consider using version control systems to track changes to the API code and documentation. Additionally, establish a change log that documents all changes made in each version, including breaking changes, new features, and deprecations. This provides clients with a clear history of changes and helps them understand the evolution of the API over time. Regularly review and update your change management practices to ensure they remain effective and aligned with the needs of your clients and the goals of your API.
-- **Versioning in API Training**: Provide training and resources for clients to help them understand and effectively use your API versions. This includes creating tutorials, guides, and documentation that cover the key concepts and features of each version. Consider offering webinars, workshops, or online courses to educate clients about versioning practices and best practices for using your API. Additionally, consider creating sample applications or code snippets that demonstrate how to use different versions of the API. Training resources can help clients quickly get up to speed with new versions and reduce the learning curve for adopting changes. Regularly update your training materials to reflect the latest versioning practices and features.
-- **Versioning in API Feedback Loops**: Establish feedback loops with clients to gather insights on their experiences with different API versions. This includes soliciting feedback through surveys, interviews, or user testing sessions. Feedback loops help you understand how clients are using your API, identify pain points, and gather ideas for improving versioning practices. Consider creating a feedback portal or dedicated communication channels where clients can share their thoughts and suggestions. Regularly review and analyze the feedback received to inform future versioning decisions and enhancements. Additionally, consider implementing a feedback mechanism within the API itself, allowing clients to provide feedback directly through API requests or responses. This can help you gather real-time feedback and address issues promptly.
-- **Versioning in API Innovation**: Encourage innovation and experimentation with your API versions. This includes providing opportunities for clients to test new features, provide feedback on experimental versions, and contribute to the development of new features. Innovation can help drive the evolution of your API and ensure that it remains relevant and valuable to clients. Consider hosting hackathons, developer challenges, or innovation labs where clients can explore new ideas and collaborate on API enhancements. Additionally, consider creating a developer community or forum where clients can share their experiences, showcase their projects, and collaborate on new features. This collaborative approach can help foster a culture of innovation and continuous improvement within your API ecosystem.
+GET https://api.github.com/user
+Accept: application/vnd.github.v3.star+json
+```
+
+**Advanced Media Type Examples:**
+```http title="Complex Media Type Versioning"
+# Version + Format + Features
+GET /api/products
+Accept: application/vnd.ecommerce.product.v2+json;charset=utf-8;features=pricing,inventory
+
+# Multiple Accept Headers
+GET /api/users
+Accept: application/vnd.company.v2+json, application/vnd.company.v1+json;q=0.8, application/json;q=0.5
+```
+
+**Use Cases:**
+- APIs that serve multiple data formats
+- When response structure varies significantly between versions
+- Fine-grained control over API features and format
+- APIs following strict REST principles
+
+**Advantages:**
+- Follows HTTP content negotiation standards
+- Can specify both version and format preferences
+- Supports quality values for preference ordering
+- Flexible feature negotiation
+
+**Disadvantages:**
+- Complex media type management
+- Limited client library support
+- Debugging difficulty
+- MIME type registration considerations
+
+## Choosing the Right Versioning Strategy
+
+### Decision Matrix
+
+| Strategy | Complexity | URL Cleanliness | Caching | Client Support | Use Case |
+|----------|------------|-----------------|---------|----------------|----------|
+| URI Versioning | Low | Medium | Easy | Excellent | Most APIs, clear versioning needs |
+| Query Parameter | Low | High | Medium | Good | Backward compatibility focus |
+| Header Versioning | Medium | High | Hard | Good | RESTful APIs, clean URLs |
+| Content Negotiation | High | High | Hard | Medium | Multi-format APIs |
+| Semantic Versioning | Medium | Medium | Easy | Good | Frequent updates, clear communication |
+| Feature Flags | High | High | Hard | Medium | A/B testing, gradual rollouts |
+| Subdomain | Medium | Medium | Easy | Good | Version isolation, microservices |
+| Media Type | High | High | Hard | Poor | Strict REST compliance |
+
+### Decision Tree
+
+```mermaid
+graph TD
+    A[Start: Choose Versioning Strategy] --> B{Need URL cleanliness?}
+    B -->|Yes| C{Multiple data formats?}
+    B -->|No| D{Frequent small changes?}
+    
+    C -->|Yes| E[Content Negotiation]
+    C -->|No| F{A/B testing needed?}
+    
+    F -->|Yes| G[Feature Flags]
+    F -->|No| H[Header Versioning]
+    
+    D -->|Yes| I[Semantic Versioning]
+    D -->|No| J{Need version isolation?}
+    
+    J -->|Yes| K[Subdomain Versioning]
+    J -->|No| L[URI Versioning]
+```
+
+### Hybrid Approaches
+
+Many successful APIs combine multiple strategies:
+
+```http title="Hybrid Strategy Example"
+# Major versions in URI + minor versions in headers
+GET /api/v2/users
+API-Version: 2.3
+Feature-Flags: enhanced-search=true
+
+# Subdomain + semantic versioning
+GET https://v2.api.example.com/users
+Accept: application/vnd.company.v2.1+json
+```
+
+## Implementation Patterns
+
+### 1. The Adapter Pattern
+
+Use adapters to maintain multiple API versions with a single codebase:
+
+```javascript title="Version Adapter Pattern"
+class UserController {
+  async getUsers(req, res) {
+    const users = await this.userService.getUsers();
+    const version = this.getApiVersion(req);
+    
+    // Use adapter to transform response based on version
+    const adapter = VersionAdapterFactory.create(version);
+    const transformedUsers = adapter.transformUsers(users);
+    
+    res.json(transformedUsers);
+  }
+}
+
+class V1UserAdapter {
+  transformUsers(users) {
+    return users.map(user => ({
+      id: user.id,
+      name: user.fullName,        // v1 uses 'name'
+      email: user.email,
+      created: user.createdAt     // v1 uses 'created'
+    }));
+  }
+}
+
+class V2UserAdapter {
+  transformUsers(users) {
+    return users.map(user => ({
+      id: user.id,
+      full_name: user.fullName,   // v2 uses 'full_name'
+      email: user.email,
+      avatar_url: user.avatarUrl, // v2 adds avatar
+      created_at: user.createdAt  // v2 uses 'created_at'
+    }));
+  }
+}
+```
+
+### 2. The Proxy Pattern
+
+Route requests to different service implementations:
+
+```javascript title="Version Proxy Pattern"
+class APIGateway {
+  async routeRequest(req, res) {
+    const version = this.extractVersion(req);
+    
+    switch(version) {
+      case 'v1':
+        return this.v1Service.handleRequest(req, res);
+      case 'v2':
+        return this.v2Service.handleRequest(req, res);
+      case 'v3':
+        return this.v3Service.handleRequest(req, res);
+      default:
+        return this.latestService.handleRequest(req, res);
+    }
+  }
+}
+```
+
+### 3. The Decorator Pattern
+
+Add version-specific behavior to base implementations:
+
+```javascript title="Version Decorator Pattern"
+class BaseUserService {
+  async getUser(id) {
+    return await this.repository.findById(id);
+  }
+}
+
+class V2UserServiceDecorator extends BaseUserService {
+  async getUser(id) {
+    const user = await super.getUser(id);
+    
+    // V2 specific enhancements
+    user.avatar_url = await this.avatarService.getAvatarUrl(user.id);
+    user.preferences = await this.preferencesService.getPreferences(user.id);
+    
+    return user;
+  }
+}
+```
+
+## Advanced Topics
+
+### Version Sunset Automation
+
+Automate the deprecation process:
+
+```javascript title="Automated Sunset Process"
+class VersionManager {
+  constructor() {
+    this.versionConfig = {
+      'v1': {
+        sunsetDate: new Date('2024-12-31'),
+        warningPhases: [90, 60, 30, 7], // days before sunset
+        status: 'deprecated'
+      },
+      'v2': {
+        sunsetDate: null,
+        status: 'active'
+      }
+    };
+  }
+  
+  checkDeprecationStatus(version) {
+    const config = this.versionConfig[version];
+    if (!config || !config.sunsetDate) return null;
+    
+    const daysUntilSunset = this.getDaysUntil(config.sunsetDate);
+    
+    if (daysUntilSunset <= 0) {
+      throw new Error(`API ${version} has been retired`);
+    }
+    
+    if (config.warningPhases.includes(daysUntilSunset)) {
+      return {
+        warning: true,
+        message: `API ${version} will be retired in ${daysUntilSunset} days`,
+        migrationUrl: `https://docs.example.com/migrate-${version}`
+      };
+    }
+    
+    return null;
+  }
+}
+```
+
+### Contract Testing for Versions
+
+Ensure version compatibility with contract testing:
+
+```javascript title="Contract Testing Example"
+describe('API Contract Tests', () => {
+  const versions = ['v1', 'v2'];
+  
+  versions.forEach(version => {
+    describe(`API ${version}`, () => {
+      test('should maintain user schema contract', async () => {
+        const response = await request(`/api/${version}/users/1`);
+        const schema = await loadSchema(`user-${version}.json`);
+        
+        expect(response.body).toMatchSchema(schema);
+      });
+      
+      test('should maintain error response format', async () => {
+        const response = await request(`/api/${version}/users/999`);
+        const errorSchema = await loadSchema(`error-${version}.json`);
+        
+        expect(response.body).toMatchSchema(errorSchema);
+      });
+    });
+  });
+});
+```
+
+## Summary and Recommendations
+
+### Quick Start Checklist
+
+For new APIs, follow this checklist:
+
+1. **Choose Your Strategy**
+   - ✅ Start with URI versioning for simplicity
+   - ✅ Use semantic versioning for clear communication
+   - ✅ Consider feature flags for gradual rollouts
+
+2. **Set Up Infrastructure**
+   - ✅ Implement version detection and routing
+   - ✅ Set up monitoring and analytics
+   - ✅ Create automated testing for each version
+
+3. **Plan for the Future**
+   - ✅ Define deprecation policies
+   - ✅ Create migration guide templates
+   - ✅ Establish version support lifecycle
+
+4. **Document Everything**
+   - ✅ Version-specific API documentation
+   - ✅ Change logs and migration guides
+   - ✅ Client integration examples
+
+### Industry Standards by API Type
+
+| API Type | Recommended Strategy | Examples |
+|----------|---------------------|----------|
+| REST APIs | URI + Semantic Versioning | `/api/v1.2/users` |
+| GraphQL APIs | Schema Versioning | `@deprecated` directives |
+| gRPC APIs | Package Versioning | `package api.v1` |
+| WebSocket APIs | Protocol Versioning | `Sec-WebSocket-Protocol: v2` |
+
+### Final Recommendations
+
+1. **Start Simple**: Begin with URI versioning and evolve as needed
+2. **Plan Ahead**: Design your versioning strategy before your first API release
+3. **Communicate Early**: Give clients plenty of notice about changes and deprecations
+4. **Test Thoroughly**: Ensure each version works correctly and maintains backward compatibility where promised
+5. **Monitor Actively**: Track version usage and performance to inform future decisions
+
+Remember: The best versioning strategy is the one that serves your clients effectively while allowing your API to evolve. Choose simplicity over complexity, and always prioritize developer experience.
 
 <BackToTop />
