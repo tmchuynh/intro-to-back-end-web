@@ -1671,69 +1671,36 @@ WHERE stock_quantity = 0
         AND o.order_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)
   );
 ```
+### Data Integrity and Constraints
 
-## Conclusion
+```sql title="Data integrity checks and constraints"
+-- Check for foreign key integrity
+SELECT 'Orphaned Orders' AS issue, COUNT(*) AS count
+FROM orders o
+WHERE NOT EXISTS (
+    SELECT 1 FROM customers c WHERE c.customer_id = o.customer_id
+);
+UNION ALL
+SELECT 'Orphaned Order Items', COUNT(*)
+FROM order_items oi
+WHERE NOT EXISTS (
+    SELECT 1 FROM orders o WHERE o.order_id = oi.order_id
+);
+-- Check for unique constraints
+SELECT 'Duplicate Product SKUs' AS issue, COUNT(*) AS count
+FROM products
+GROUP BY sku
+HAVING COUNT(*) > 1;
+```
 
-SQL is an indispensable tool for anyone working with data in the modern digital landscape. From simple data retrieval to complex business intelligence queries, SQL provides the foundation for effective database management and analysis.
+## Next Steps
 
-### Key Takeaways
+Next, we will explore how to set up MySQL, including installation and basic configuration. This will provide you with the foundational knowledge needed to start working with MySQL databases effectively.
 
-Throughout this guide, we've covered essential SQL concepts and operations:
+### Immediate Actions
 
-#### Data Retrieval and Analysis
-- SELECT statements for extracting specific information
-- Aggregate functions for statistical analysis and reporting
-- Pattern matching and filtering for flexible data searches
-- Advanced querying techniques for complex business requirements
-
-#### Data Management
-- INSERT operations for adding new records
-- UPDATE statements for maintaining current information
-- DELETE operations for data cleanup and management
-- Database structure management through DDL operations
-
-#### Advanced Operations
-- JOIN operations for combining data from multiple tables
-- GROUP BY clauses for organizing and summarizing data
-- Conditional logic with CASE statements for data transformation
-- Performance optimization through proper indexing and query design
-
-### Next Steps in Your SQL Journey
-
-Now that you have a solid foundation in SQL, consider exploring these advanced topics:
-
-#### Database Design and Architecture
-- Learn about database normalization and design principles
-- Understand entity-relationship modeling
-- Explore data warehousing concepts for analytical systems
-
-#### Advanced SQL Features
-- Study window functions for sophisticated analytical queries
-- Learn about stored procedures and functions for reusable logic
-- Explore triggers for automated data management
-- Understand views for simplified data access
-
-#### Performance and Optimization
-- Master query execution plans and optimization techniques
-- Learn about database indexing strategies
-- Understand partitioning for large-scale data management
-- Study caching mechanisms and performance tuning
-
-#### Specialized Applications
-- Explore specific database systems like PostgreSQL, MySQL, or SQL Server
-- Learn about NoSQL databases and when to use them
-- Study data analytics and business intelligence tools
-- Understand database security and access control
-
-### Practical Application
-
-The best way to master SQL is through hands-on practice. Consider:
-
-- Working with real datasets to solve business problems
-- Building personal projects that require database management
-- Contributing to open-source projects that use databases
-- Taking on data analysis challenges and competitions
-
-SQL skills are highly transferable across different database systems and remain relevant regardless of technological changes. The fundamental concepts you've learned here will serve as a strong foundation for your continued growth in data management and analysis.
+| Action                                                                                     | Purpose                                                       |
+| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------- |
+| [Setting Up MySQL](/sql-mySQL/setup-and-basics)                                        |  Learn how to install and configure MySQL for your environment. |
 
 <BackToTop />
