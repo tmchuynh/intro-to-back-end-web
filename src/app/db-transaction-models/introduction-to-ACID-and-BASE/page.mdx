@@ -1,0 +1,1094 @@
+import BackToTop from "@/components/BackToTop";
+
+# Introduction To ACID And BASE
+
+## Table of Contents
+
+## Introduction
+
+A database transaction is a group of operations executed as a single, indivisible unit. For instance, when transferring funds between two bank accounts, both the debit and credit steps must succeed together; if either fails, the transaction is undone to preserve data integrity.
+
+ACID databases prioritize strict consistency, ensuring that all steps in a transaction must succeed for any changes to be applied. If any step fails, no changes are made. In contrast, BASE databases prioritize availability and allow temporary inconsistencies, with the understanding that the system will eventually become consistent as updates are synchronized.
+
+## Why ACID and BASE Matter
+
+Modern databases often distribute and replicate data across multiple nodes to improve performance and reliability. This distributed nature introduces challenges in maintaining data consistency, especially when users expect transactions—such as reads and writes grouped together—to leave the system in a consistent state.
+
+The CAP theorem (Brewer’s theorem) highlights a fundamental limitation: a distributed system can only guarantee two out of three properties at any time:
+
+- **Consistency:** Every read receives the latest committed data or an error.
+- **Availability:** Every request receives a response, even if it may not reflect the latest data.
+- **Partition tolerance:** The system continues to function despite network failures or communication breakdowns between nodes.
+
+ACID-compliant databases are ideal for scenarios where data integrity is critical, such as financial transactions or inventory management. They ensure that all operations within a transaction are reliably processed, and the database remains valid even in the event of errors. BASE systems, in contrast, are designed for large-scale, distributed applications where high availability and scalability are prioritized over immediate consistency. Examples include social networks, online marketplaces, and analytics platforms, where temporary inconsistencies are acceptable as long as the system remains responsive and eventually becomes consistent.
+
+Consider an e-commerce site: when a customer adds an item to their cart, the system must decide how to handle concurrent updates to product stock. If strict consistency is enforced, the transaction may be canceled if any step fails, ensuring accurate stock levels but potentially reducing availability. Alternatively, prioritizing availability may allow the transaction to proceed, even if other users temporarily see outdated stock information.
+
+In some applications, such as banking, consistency is non-negotiable and ACID is preferred. In others, like social media, temporary inconsistencies (such as a delayed friend count update) are acceptable, making BASE a better fit. Understanding these trade-offs enables developers and architects to choose the right database model for their application’s requirements, balancing consistency, availability, and scalability according to business needs.
+
+## ACID
+
+ACID stands for Atomicity, Consistency, Isolation, and Durability. It is a set of properties that guarantee that database transactions are processed reliably and ensure the integrity of data even in the presence of errors, power failures, or other unexpected problems. These properties form the foundation of traditional relational database management systems (RDBMS) and are crucial for applications where data integrity is paramount.
+
+### Atomicity
+
+Atomicity ensures that a transaction is treated as a single, indivisible unit of work. This means that either all operations within the transaction are completed successfully, or none are applied at all. If any part of the transaction fails, the entire transaction is rolled back, leaving the database in its previous state.
+
+The concept of atomicity is often described using the "all-or-nothing" principle. This property is implemented through various mechanisms such as transaction logs, savepoints, and rollback operations that allow the database to undo partially completed transactions.
+
+#### Banking Transfer Example
+
+Suppose you are transferring money from Account A to Account B. The transaction involves two steps: deducting money from Account A and adding it to Account B. If the deduction succeeds but the addition fails, atomicity ensures that the deduction is also undone, so no money is lost or created.
+
+```sql title="Bank Transfer Example"
+-- Example of a banking transfer transaction
+BEGIN TRANSACTION;
+UPDATE accounts SET balance = balance - 100 WHERE account_id = 'A';
+UPDATE accounts SET balance = balance + 100 WHERE account_id = 'B';
+COMMIT; -- Only if both updates succeed
+```
+
+#### E-commerce Order Example
+
+Consider an online shopping transaction that involves:
+
+1. Reducing product inventory
+2. Creating an order record
+3. Processing payment
+4. Updating customer loyalty points
+
+If the payment processing fails, atomicity ensures that the inventory is restored, the order is not created, and loyalty points remain unchanged.
+
+```sql title="E-commerce Order Example"
+BEGIN TRANSACTION;
+UPDATE inventory SET quantity = quantity - 1 WHERE product_id = 'ITEM123';
+INSERT INTO orders (customer_id, product_id, quantity) VALUES (12345, 'ITEM123', 1);
+UPDATE customers SET loyalty_points = loyalty_points + 10 WHERE customer_id = 12345;
+-- If any step fails, the entire transaction is rolled back
+ROLLBACK; -- Undo all changes if any step fails
+COMMIT; -- Only if all steps succeed
+```
+
+#### Implementation Considerations
+
+- **Transaction Logs**: Databases maintain detailed logs of all operations to enable rollback
+- **Savepoints**: Allow partial rollbacks within complex transactions
+- **Two-Phase Commit**: Used in distributed systems to ensure atomicity across multiple databases
+- **Performance Impact**: Maintaining atomicity can slow down operations due to logging and locking overhead
+
+### Consistency
+
+Consistency ensures that a transaction brings the database from one valid state to another. It guarantees that any data written to the database must be valid according to all defined rules, including constraints, cascades, and triggers. If a transaction violates any of these rules, it will not be committed, and the database will remain unchanged.
+
+Consistency is maintained through various database mechanisms including referential integrity constraints, check constraints, unique constraints, and custom business rules implemented through triggers or stored procedures.
+
+#### Types of Consistency Rules
+
+- **Referential Integrity**: Ensures that foreign key relationships remain valid. For example, an order cannot reference a customer that doesn't exist.
+- **Data Type Constraints**: Ensures that data matches the expected format and range. For instance, an age field cannot contain negative values or non-numeric data.
+- **Business Rule Constraints**: Custom rules specific to the application domain, such as "a customer's credit limit cannot exceed $50,000" or "an employee cannot be their own manager."
+
+#### Banking Example
+
+If a database has a rule that account balances cannot be negative, a transaction that would result in a negative balance will be rejected, preserving the consistency of the data.
+
+```sql title="Consistency Constraint Example"
+-- Creating a table with consistency constraints
+CREATE TABLE accounts (
+    account_id VARCHAR(20) PRIMARY KEY,
+    customer_id INT NOT NULL,
+    balance DECIMAL(15,2) NOT NULL CHECK (balance >= 0),
+    account_type VARCHAR(10) CHECK (account_type IN ('savings', 'checking')),
+    FOREIGN KEY (customer_id) REFERENCES customers(customer_id)
+);
+
+-- This transaction would fail due to balance constraint
+BEGIN TRANSACTION;
+UPDATE accounts SET balance = balance - 1000 WHERE account_id = 'ACC001';
+-- If balance becomes negative, transaction is rolled back
+COMMIT;
+```
+
+#### E-commerce Inventory Example
+
+Consider an inventory management system where product quantities must never go below zero:
+
+```sql title="Inventory Consistency"
+-- Inventory table with constraints
+CREATE TABLE inventory (
+    product_id VARCHAR(20) PRIMARY KEY,
+    quantity INT NOT NULL CHECK (quantity >= 0),
+    reserved_quantity INT NOT NULL DEFAULT 0 CHECK (reserved_quantity >= 0),
+    CHECK (reserved_quantity <= quantity)
+);
+
+-- Transaction that maintains consistency
+BEGIN TRANSACTION;
+-- Check if sufficient stock exists before processing order
+DECLARE @current_stock INT;
+SELECT @current_stock = quantity FROM inventory WHERE product_id = 'PROD123';
+
+IF @current_stock >= 5 BEGIN
+    UPDATE inventory SET quantity = quantity - 5 WHERE product_id = 'PROD123';
+    INSERT INTO orders (product_id, quantity) VALUES ('PROD123', 5);
+    COMMIT;
+END ELSE BEGIN
+    ROLLBACK;
+    RAISERROR('Insufficient stock', 16, 1);
+END;
+```
+
+### Isolation
+
+Isolation ensures that transactions are executed independently of one another. Even if multiple transactions are occurring simultaneously, the results of each transaction should not be visible to others until they are committed. This prevents issues such as dirty reads, non-repeatable reads, and phantom reads.
+
+Isolation is implemented through various locking mechanisms and is controlled by isolation levels that determine how strictly transactions are isolated from each other. The four standard isolation levels are:
+
+#### Isolation Levels
+
+- **Read Uncommitted**: Allows dirty reads, meaning one transaction can read data modified by another transaction that has not yet been committed.
+- **Read Committed**: Prevents dirty reads, ensuring that only committed data can be read.
+- **Repeatable Read**: Prevents dirty reads and non-repeatable reads, ensuring that if a row is read twice in the same transaction, it will have the same values.
+- **Serializable**: The highest isolation level, preventing all read phenomena (dirty reads, non-repeatable reads, phantom reads). Transactions appear to execute serially, one after the other.
+
+##### Read Uncommitted (Level 0)
+
+- Lowest isolation level
+- Allows dirty reads (reading uncommitted changes from other transactions)
+- Highest performance but lowest data integrity
+- Rarely used in production systems
+
+##### Read Committed (Level 1)
+
+- Prevents dirty reads
+- Only committed data can be read
+- Most common default isolation level
+- Still allows non-repeatable reads and phantom reads
+
+##### Repeatable Read (Level 2)
+
+- Prevents dirty reads and non-repeatable reads
+- Ensures that if a row is read twice in the same transaction, it will have the same values
+- Still allows phantom reads (new rows appearing in range queries)
+
+##### Serializable (Level 3)
+
+- Highest isolation level
+- Prevents all read phenomena (dirty reads, non-repeatable reads, phantom reads)
+- Transactions appear to execute serially
+- Lowest performance due to strict locking
+
+#### Common Isolation Problems
+
+##### Dirty Read
+
+Reading data that has been written by another transaction but not yet committed. This can lead to inconsistencies if the transaction is rolled back.
+
+```sql title="Dirty Read Example"
+-- Transaction A
+BEGIN TRANSACTION;
+UPDATE accounts SET balance = 500 WHERE account_id = 'ACC001';
+-- Transaction B reads balance = 500 (uncommitted)
+-- Transaction A rolls back
+ROLLBACK;
+-- Transaction B has read invalid data
+```
+
+##### Non-Repeatable Read
+
+Reading the same row twice within a transaction returns different values. This occurs when another transaction modifies the data between the two reads.
+
+```sql title="Non-Repeatable Read Example"
+-- Transaction A
+BEGIN TRANSACTION;
+SELECT balance FROM accounts WHERE account_id = 'ACC001'; -- Returns 1000
+
+-- Transaction B commits an update
+UPDATE accounts SET balance = 500 WHERE account_id = 'ACC001';
+
+-- Transaction A reads again
+SELECT balance FROM accounts WHERE account_id = 'ACC001'; -- Returns 500
+COMMIT;
+```
+
+##### Phantom Read
+
+New rows appear in the result set of a repeated query within the same transaction. This can happen when another transaction inserts new rows that match the query criteria after the initial read.
+
+```sql title="Phantom Read Example"
+-- Transaction A
+BEGIN TRANSACTION;
+SELECT COUNT(*) FROM orders WHERE customer_id = 123; -- Returns 5
+
+-- Transaction B inserts a new order
+INSERT INTO orders (customer_id, amount) VALUES (123, 100);
+
+-- Transaction A reads again
+SELECT COUNT(*) FROM orders WHERE customer_id = 123; -- Returns 6
+COMMIT;
+```
+
+#### Practical Example
+
+If two users try to purchase the last item in stock at the same time, isolation ensures that only one transaction will succeed, and the other will be rolled back or retried, preventing both users from buying the same item.
+
+```sql title="Concurrent Purchase Example"
+-- User 1 Transaction
+BEGIN TRANSACTION;
+DECLARE @stock INT;
+SELECT @stock = quantity FROM inventory WHERE product_id = 'ITEM123';
+
+IF @stock > 0 BEGIN
+    UPDATE inventory SET quantity = quantity - 1 WHERE product_id = 'ITEM123';
+    INSERT INTO orders (customer_id, product_id) VALUES (1, 'ITEM123');
+    COMMIT;
+END ELSE BEGIN
+    ROLLBACK;
+END;
+
+-- User 2 Transaction (running concurrently)
+-- Due to isolation, this will either:
+-- 1. Wait for User 1's transaction to complete, then see quantity = 0
+-- 2. Or be blocked until User 1 commits/rollsback
+```
+
+### Durability
+
+Durability guarantees that once a transaction has been committed, it will remain in the system even in the event of a system failure. This means that the changes made by the transaction are permanently recorded in the database and will survive crashes, power failures, or other unexpected events.
+
+Durability is achieved through various mechanisms that ensure data persists to non-volatile storage before a transaction is considered complete.
+
+#### Implementation Mechanisms
+
+##### Write-Ahead Logging (WAL)
+
+- Transaction logs are written to disk before data changes
+- Ensures that committed transactions can be recovered even if data pages are not yet written to disk
+- Critical for crash recovery
+
+##### Force-Write Policies
+
+- Data and log records are forcibly written to disk at commit time
+- Uses synchronous I/O operations to ensure data reaches persistent storage
+- May impact performance but guarantees durability
+
+##### Redundant Storage
+
+- Data is stored across multiple physical devices
+- RAID configurations, database replication, and backup systems
+- Protects against hardware failures
+
+##### Checkpointing
+
+- Periodic process that flushes all dirty pages to disk
+- Reduces recovery time by creating consistent points in the transaction log
+- Balances performance with recovery efficiency
+
+#### Banking Example
+
+After a bank transfer is completed and the transaction is committed, the updated balances are saved to non-volatile storage. Even if the database server crashes immediately afterward, the committed transaction will not be lost.
+
+```sql title="Durable Banking Transaction"
+-- Bank transfer with durability guarantees
+BEGIN TRANSACTION;
+
+-- Log entry: "Starting transfer of $500 from ACC001 to ACC002"
+UPDATE accounts SET balance = balance - 500 WHERE account_id = 'ACC001';
+-- Log entry: "Debited $500 from ACC001, new balance: $1500"
+
+UPDATE accounts SET balance = balance + 500 WHERE account_id = 'ACC002';
+-- Log entry: "Credited $500 to ACC002, new balance: $2500"
+
+INSERT INTO transaction_history (from_account, to_account, amount, timestamp)
+VALUES ('ACC001', 'ACC002', 500, NOW());
+-- Log entry: "Created history record for transfer"
+
+COMMIT;
+-- Log entry: "Transaction committed" - SYNC TO DISK
+-- Only after this sync completes is the transaction considered durable
+```
+
+#### E-commerce Order Processing
+
+```sql title="Durable Order Processing"
+BEGIN TRANSACTION;
+
+-- Create order record
+INSERT INTO orders (customer_id, total_amount, status, created_at)
+VALUES (12345, 299.99, 'confirmed', NOW());
+
+-- Update inventory
+UPDATE inventory SET quantity = quantity - 1 WHERE product_id = 'LAPTOP001';
+
+-- Process payment
+INSERT INTO payments (order_id, amount, payment_method, status)
+VALUES (LAST_INSERT_ID(), 299.99, 'credit_card', 'completed');
+
+-- Generate invoice
+INSERT INTO invoices (order_id, amount, invoice_date)
+VALUES (LAST_INSERT_ID(), 299.99, NOW());
+
+COMMIT;
+-- All changes are now durably stored and will survive system failures
+```
+
+#### Recovery Example
+
+When a database system starts up after a crash, it uses the transaction log to ensure durability:
+
+```sql title="Recovery Process"
+-- Pseudo-code for database recovery
+RECOVERY_PROCESS:
+1. Read transaction log from last checkpoint
+2. Identify committed transactions that may not be reflected in data files
+3. REDO: Apply all committed transactions to ensure durability
+4. Identify uncommitted transactions at time of crash
+5. UNDO: Reverse all uncommitted transactions to maintain atomicity
+6. Database is now in consistent, durable state
+```
+
+#### Durability Trade-offs
+
+##### Performance vs. Durability
+
+- Synchronous writes (high durability) vs. asynchronous writes (better performance)
+- Transaction batching can improve throughput while maintaining durability
+- Memory-based caching vs. immediate disk persistence
+
+##### Storage Considerations
+
+- SSD vs. HDD performance characteristics
+- Network-attached storage in distributed systems
+- Backup and replication strategies for disaster recovery
+
+Together, these ACID properties provide a strong foundation for reliable and predictable database behavior, making them essential for applications where data integrity and correctness are critical, such as banking, inventory management, and order processing systems.
+
+## BASE
+
+BASE stands for Basically Available, Soft state, and Eventually consistent. It is an alternative to ACID, primarily used in distributed systems and NoSQL databases where high availability and scalability are prioritized over strict consistency. BASE systems are designed to handle the challenges of large-scale, distributed architectures where traditional ACID properties may be too restrictive or performance-limiting.
+
+### Basically Available
+
+Basically Available means that the system guarantees availability of data, even in the face of failures. This means that the system will always respond to requests, but it may not always return the most up-to-date data. The focus is on ensuring that the system remains operational and can serve requests, even if some data may be stale or inconsistent.
+
+#### Key Characteristics
+
+- **Graceful Degradation**: When parts of the system fail, the remaining parts continue to function, possibly with reduced functionality.
+- **Partial Failures**: Some operations may succeed while others fail, but the system as a whole remains available.
+- **Response Guarantee**: The system promises to respond to requests, even if the response indicates temporary unavailability of specific data.
+
+#### Social Media Example
+
+```javascript title="Social Media Feed - Basically Available"
+// User requests their social media feed
+async function getFeed(userId) {
+  try {
+    // Try to get fresh feed from primary data center
+    const feed = await primaryDB.getFeed(userId);
+    return { data: feed, source: "primary", fresh: true };
+  } catch (primaryError) {
+    try {
+      // Fallback to cached feed from secondary data center
+      const cachedFeed = await secondaryDB.getCachedFeed(userId);
+      return {
+        data: cachedFeed,
+        source: "cache",
+        fresh: false,
+        message: "Some posts may be delayed",
+      };
+    } catch (secondaryError) {
+      // Still provide basic functionality
+      return {
+        data: await getOfflineFeed(userId),
+        source: "offline",
+        fresh: false,
+        message: "Limited offline content available",
+      };
+    }
+  }
+}
+```
+
+#### E-commerce Search Example
+
+```javascript title="Product Search - Basically Available"
+async function searchProducts(query) {
+  const results = await Promise.allSettled([
+    searchService.searchInventory(query),
+    searchService.searchRecommendations(query),
+    searchService.searchPromotions(query),
+  ]);
+
+  // Return whatever results are available
+  return {
+    inventory: results[0].status === "fulfilled" ? results[0].value : [],
+    recommendations: results[1].status === "fulfilled" ? results[1].value : [],
+    promotions: results[2].status === "fulfilled" ? results[2].value : [],
+    availabilityStatus: results.map((r) => r.status),
+  };
+}
+```
+
+### Soft State
+
+Soft state means that the state of the system may change over time, even without new input. This is in contrast to the hard state of ACID systems, where the state is expected to remain consistent until a transaction is committed. In BASE systems, data may be updated asynchronously, and the system may not always reflect the most current state of the data.
+
+#### Characteristics of Soft State
+
+- **No Persistence Guarantees**: Data may be lost if not explicitly persisted
+- **State Changes Over Time**: System state evolves as background processes synchronize data
+- **Asynchronous Updates**: Changes propagate through the system at different rates
+- **Temporary Inconsistencies**: Different nodes may have different views of the data
+
+#### Content Delivery Network Example
+
+```javascript title="CDN Cache - Soft State"
+class CDNCache {
+  constructor() {
+    this.cache = new Map();
+    this.ttl = new Map(); // Time to live for each item
+
+    // Background process to expire stale data
+    setInterval(() => this.evictExpired(), 60000);
+  }
+
+  set(key, value, ttlSeconds = 300) {
+    this.cache.set(key, value);
+    this.ttl.set(key, Date.now() + ttlSeconds * 1000);
+  }
+
+  get(key) {
+    if (this.isExpired(key)) {
+      this.cache.delete(key);
+      this.ttl.delete(key);
+      return null; // Soft state - data disappeared
+    }
+    return this.cache.get(key);
+  }
+
+  isExpired(key) {
+    const expiry = this.ttl.get(key);
+    return expiry && Date.now() > expiry;
+  }
+
+  evictExpired() {
+    for (const [key] of this.ttl) {
+      if (this.isExpired(key)) {
+        this.cache.delete(key);
+        this.ttl.delete(key);
+      }
+    }
+  }
+}
+```
+
+#### Distributed Session Management
+
+```javascript title="Session Store - Soft State"
+class DistributedSession {
+  constructor() {
+    this.sessions = new Map();
+    this.lastAccess = new Map();
+
+    // Sessions automatically expire after inactivity
+    setInterval(() => this.cleanupSessions(), 300000); // 5 minutes
+  }
+
+  createSession(userId, data) {
+    const sessionId = this.generateId();
+    this.sessions.set(sessionId, { userId, ...data });
+    this.lastAccess.set(sessionId, Date.now());
+
+    // Asynchronously replicate to other nodes
+    this.replicateAsync(sessionId, { userId, ...data });
+
+    return sessionId;
+  }
+
+  getSession(sessionId) {
+    if (!this.sessions.has(sessionId)) {
+      // Try to fetch from other nodes
+      this.fetchFromPeers(sessionId);
+      return null; // Soft state - may be available later
+    }
+
+    this.lastAccess.set(sessionId, Date.now());
+    return this.sessions.get(sessionId);
+  }
+
+  cleanupSessions() {
+    const now = Date.now();
+    const timeout = 30 * 60 * 1000; // 30 minutes
+
+    for (const [sessionId, lastTime] of this.lastAccess) {
+      if (now - lastTime > timeout) {
+        this.sessions.delete(sessionId);
+        this.lastAccess.delete(sessionId);
+        // State naturally expires - soft state principle
+      }
+    }
+  }
+}
+```
+
+### Eventually Consistent
+
+Eventually consistent means that the system guarantees that, given enough time, all updates will propagate through the system, and all nodes will converge to the same state. This means that while the system may not be immediately consistent, it will eventually reach a consistent state as updates are propagated and applied across the distributed system.
+
+#### Convergence Mechanisms
+
+- **Anti-Entropy Protocols**: Background processes that synchronize data between nodes
+- **Gossip Protocols**: Nodes randomly share updates with peers to spread changes
+- **Vector Clocks**: Track causality and ordering of events across distributed nodes
+- **Merkle Trees**: Efficiently identify differences between node states
+
+#### Social Network Example
+
+```javascript title="Friend Relationship - Eventually Consistent"
+class SocialNetwork {
+  constructor(nodeId) {
+    this.nodeId = nodeId;
+    this.friendships = new Map();
+    this.vectorClock = new Map();
+  }
+
+  addFriend(userId1, userId2) {
+    const timestamp = Date.now();
+    const change = {
+      type: "ADD_FRIEND",
+      userId1,
+      userId2,
+      timestamp,
+      nodeId: this.nodeId,
+    };
+
+    // Apply locally immediately
+    this.applyChange(change);
+
+    // Propagate to other nodes asynchronously
+    this.propagateChange(change);
+
+    return { success: true, note: "Change will propagate to all nodes" };
+  }
+
+  applyChange(change) {
+    const key = `${change.userId1}-${change.userId2}`;
+    const reverseKey = `${change.userId2}-${change.userId1}`;
+
+    if (change.type === "ADD_FRIEND") {
+      this.friendships.set(key, change.timestamp);
+      this.friendships.set(reverseKey, change.timestamp);
+    }
+
+    // Update vector clock
+    this.vectorClock.set(change.nodeId, change.timestamp);
+  }
+
+  async propagateChange(change) {
+    // Send to peer nodes - eventual consistency
+    const peers = await this.getPeerNodes();
+
+    peers.forEach(async (peer) => {
+      try {
+        await peer.receiveChange(change);
+      } catch (error) {
+        // Store for retry later - eventual consistency
+        this.queueForRetry(peer, change);
+      }
+    });
+  }
+
+  getFriends(userId) {
+    const friends = [];
+    for (const [key, timestamp] of this.friendships) {
+      const [user1, user2] = key.split("-");
+      if (user1 === userId) {
+        friends.push({ friendId: user2, since: timestamp });
+      }
+    }
+
+    return {
+      friends,
+      note: "Data may not reflect recent changes from other nodes",
+    };
+  }
+}
+```
+
+#### Distributed Counter Example
+
+```javascript title="Page View Counter - Eventually Consistent"
+class DistributedCounter {
+  constructor(nodeId) {
+    this.nodeId = nodeId;
+    this.localCounts = new Map();
+    this.globalView = new Map(); // Eventually consistent view
+  }
+
+  increment(counterId) {
+    // Increment locally immediately
+    const current = this.localCounts.get(counterId) || 0;
+    this.localCounts.set(counterId, current + 1);
+
+    // Asynchronously sync with other nodes
+    this.scheduleSync(counterId);
+
+    return this.getLocalCount(counterId);
+  }
+
+  getLocalCount(counterId) {
+    return this.localCounts.get(counterId) || 0;
+  }
+
+  getGlobalCount(counterId) {
+    // May be stale, but eventually consistent
+    let total = 0;
+    for (const [nodeId, counts] of this.globalView) {
+      total += counts.get(counterId) || 0;
+    }
+    return total;
+  }
+
+  async scheduleSync(counterId) {
+    // Batch updates for efficiency
+    setTimeout(async () => {
+      await this.syncWithPeers(counterId);
+    }, 5000); // Sync every 5 seconds
+  }
+
+  async syncWithPeers(counterId) {
+    const peers = await this.getPeerNodes();
+    const localCount = this.localCounts.get(counterId);
+
+    // Send local count to peers
+    const syncPromises = peers.map((peer) =>
+      peer.updateCount(this.nodeId, counterId, localCount)
+    );
+
+    // Receive updates from peers
+    const updates = await Promise.allSettled(syncPromises);
+
+    // Update global view with successful responses
+    updates.forEach((result, index) => {
+      if (result.status === "fulfilled") {
+        const peerId = peers[index].nodeId;
+        if (!this.globalView.has(peerId)) {
+          this.globalView.set(peerId, new Map());
+        }
+        this.globalView.get(peerId).set(counterId, result.value);
+      }
+    });
+  }
+}
+```
+
+## Key Differences
+
+| Feature             | ACID                                                    | BASE                                       |
+| ------------------- | ------------------------------------------------------- | ------------------------------------------ |
+| Transaction Model   | Strict, synchronous                                     | Flexible, asynchronous                     |
+| Consistency         | Strong consistency                                      | Eventual consistency                       |
+| Availability        | High availability, but may sacrifice performance        | High availability, prioritizes performance |
+| Use Cases           | Traditional relational databases, critical transactions | Distributed systems, NoSQL databases       |
+| Data Integrity      | Immediate and strict                                    | Relaxed, eventual convergence              |
+| Scalability         | Vertical scaling preferred                              | Horizontal scaling optimized               |
+| Partition Tolerance | Lower tolerance to network partitions                   | High tolerance to network partitions       |
+| Performance         | May be slower due to strict guarantees                  | Higher throughput and lower latency        |
+| Complexity          | Simpler reasoning about data state                      | More complex eventual consistency patterns |
+| Error Handling      | All-or-nothing transaction semantics                    | Graceful degradation and partial failures  |
+
+## When to Choose ACID vs BASE
+
+### Choose ACID When:
+
+#### Financial Systems
+
+- Banking transactions, payment processing
+- Accounting systems, billing platforms
+- Any system where monetary accuracy is critical
+
+#### Inventory Management
+
+- E-commerce stock tracking
+- Supply chain management
+- Resource allocation systems
+
+#### Regulatory Compliance
+
+- Healthcare records (HIPAA compliance)
+- Financial reporting (SOX compliance)
+- Audit trail requirements
+
+#### Critical Business Operations
+
+- Order processing systems
+- Reservation systems (hotels, airlines)
+- Manufacturing control systems
+
+```sql title="ACID Use Case Example - Banking"
+-- Critical banking operation requiring ACID properties
+BEGIN TRANSACTION;
+
+-- Withdraw from source account
+UPDATE accounts
+SET balance = balance - 1000.00,
+    last_transaction = NOW()
+WHERE account_id = 'ACC123'
+  AND balance >= 1000.00; -- Prevent overdraft
+
+-- Verify withdrawal succeeded
+IF @@ROWCOUNT = 0 BEGIN
+    ROLLBACK;
+    RAISERROR('Insufficient funds or invalid account', 16, 1);
+    RETURN;
+END;
+
+-- Deposit to destination account
+UPDATE accounts
+SET balance = balance + 1000.00,
+    last_transaction = NOW()
+WHERE account_id = 'ACC456';
+
+-- Log transaction for audit
+INSERT INTO transaction_log (
+    from_account, to_account, amount,
+    transaction_type, timestamp
+) VALUES (
+    'ACC123', 'ACC456', 1000.00,
+    'TRANSFER', NOW()
+);
+
+COMMIT; -- All operations must succeed together
+```
+
+### Choose BASE When:
+
+#### Social Media Platforms
+
+- User feeds, posts, comments
+- Like counts, follower counts
+- Content recommendation systems
+
+#### Content Delivery
+
+- CDN systems, media streaming
+- Web caching layers
+- Global content distribution
+
+#### Analytics and Logging
+
+- Application metrics, user behavior tracking
+- Search indexing, data warehousing
+- Real-time analytics dashboards
+
+#### High-Scale Web Applications
+
+- Session management across data centers
+- Shopping cart systems (non-critical items)
+- User preference storage
+
+```javascript title="BASE Use Case Example - Social Media"
+// Social media post system using BASE principles
+class PostService {
+  async createPost(userId, content) {
+    const postId = generateId();
+
+    // Write to primary database immediately
+    await this.primaryDB.createPost({
+      id: postId,
+      userId,
+      content,
+      timestamp: Date.now(),
+    });
+
+    // Asynchronously update related systems
+    this.updateAsync([
+      () => this.searchIndex.addPost(postId, content),
+      () => this.feedService.addToFollowerFeeds(userId, postId),
+      () => this.analyticsService.trackPost(userId, postId),
+      () => this.notificationService.notifyMentions(content, postId),
+    ]);
+
+    return {
+      postId,
+      status: "posted",
+      note: "Post is live, additional features updating in background",
+    };
+  }
+
+  async updateAsync(operations) {
+    // BASE: Best effort, eventual consistency
+    operations.forEach(async (op) => {
+      try {
+        await op();
+      } catch (error) {
+        // Queue for retry - eventual consistency
+        this.retryQueue.add(op);
+      }
+    });
+  }
+}
+```
+
+## Real-World Database Examples
+
+### ACID Databases
+
+#### PostgreSQL
+
+- Full ACID compliance with configurable isolation levels
+- Strong consistency guarantees
+- MVCC (Multi-Version Concurrency Control) for performance
+- Ideal for financial applications, e-commerce platforms
+
+#### MySQL (InnoDB)
+
+- ACID-compliant storage engine
+- Row-level locking for better concurrency
+- Transaction support with rollback capabilities
+- Widely used for web applications requiring data integrity
+
+#### Oracle Database
+
+- Enterprise-grade ACID compliance
+- Advanced transaction management features
+- Read consistency and flashback capabilities
+- Preferred for large-scale enterprise applications
+
+#### Microsoft SQL Server
+
+- Comprehensive ACID support
+- Advanced isolation levels and locking mechanisms
+- Integration with .NET applications
+- Strong in enterprise Windows environments
+
+```sql title="PostgreSQL ACID Example"
+-- PostgreSQL with serializable isolation
+BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+
+-- Complex business logic with full ACID guarantees
+WITH order_totals AS (
+    SELECT customer_id, SUM(amount) as total
+    FROM orders
+    WHERE created_date = CURRENT_DATE
+    GROUP BY customer_id
+)
+UPDATE customer_loyalty
+SET points = points + (
+    SELECT COALESCE(total * 0.01, 0)
+    FROM order_totals
+    WHERE order_totals.customer_id = customer_loyalty.customer_id
+);
+
+COMMIT; -- Guaranteed consistent across all affected records
+```
+
+### BASE Databases
+
+#### MongoDB
+
+- Document-oriented, eventually consistent
+- Horizontal scaling through sharding
+- Flexible schema for rapid development
+- Popular for content management, real-time analytics
+
+#### Cassandra
+
+- Distributed, wide-column store
+- Tunable consistency levels
+- Linear scalability and high availability
+- Used by Netflix, Instagram for massive scale
+
+#### Redis
+
+- In-memory data structure store
+- Eventually consistent in cluster mode
+- High performance for caching and sessions
+- Used for real-time applications, leaderboards
+
+#### Amazon DynamoDB
+
+- Managed NoSQL with eventual consistency
+- Automatic scaling and high availability
+- Global tables for multi-region replication
+- Serverless applications, gaming leaderboards
+
+```javascript title="MongoDB BASE Example"
+// MongoDB with eventual consistency
+const postSchema = new mongoose.Schema({
+  userId: ObjectId,
+  content: String,
+  timestamp: Date,
+  likes: { type: Number, default: 0 },
+  comments: [commentSchema],
+});
+
+// Write operation - immediately available
+async function createPost(userId, content) {
+  const post = new Post({
+    userId,
+    content,
+    timestamp: new Date(),
+  });
+
+  await post.save(); // Available immediately
+
+  // Background operations - eventual consistency
+  updateUserStats(userId);
+  updateFollowerFeeds(userId, post._id);
+  indexForSearch(post);
+
+  return post;
+}
+
+// Read operations may see slightly stale data
+async function getUserFeed(userId) {
+  return await Post.find({
+    userId: { $in: await getFollowedUsers(userId) },
+  })
+    .sort({ timestamp: -1 })
+    .limit(50)
+    .lean(); // May not include very recent posts
+}
+```
+
+## Performance Considerations
+
+### ACID Performance Characteristics
+
+#### Latency Impact
+
+- Synchronous operations increase response time
+- Lock contention can cause blocking
+- Complex transactions may hold resources longer
+
+#### Throughput Limitations
+
+- Serializable isolation can significantly reduce concurrent transactions
+- Write operations are generally slower due to logging and consistency checks
+- Read operations may block on uncommitted writes
+
+#### Optimization Strategies
+
+```sql title="ACID Performance Optimization"
+-- Use appropriate isolation levels
+SET TRANSACTION ISOLATION LEVEL READ COMMITTED; -- Instead of SERIALIZABLE
+
+-- Minimize transaction scope
+BEGIN TRANSACTION;
+-- Keep transactions short and focused
+UPDATE inventory SET quantity = quantity - 1 WHERE product_id = ?;
+INSERT INTO orders (product_id, customer_id) VALUES (?, ?);
+COMMIT; -- Quick commit
+
+-- Use read replicas for read-heavy workloads
+-- Master: handles writes with full ACID
+-- Slaves: handle reads with eventual consistency
+```
+
+### BASE Performance Characteristics
+
+#### High Throughput
+
+- Asynchronous operations don't block user requests
+- Horizontal scaling increases capacity linearly
+- Reduced lock contention improves concurrent access
+
+#### Lower Latency
+
+- Immediate response to user actions
+- Background processing doesn't affect user experience
+- Geographic distribution reduces network latency
+
+#### Scaling Considerations
+
+```javascript title="BASE Performance Patterns"
+// Write-through pattern for better performance
+class CacheService {
+  async writeThrough(key, data) {
+    // Write to cache immediately - fast response
+    await this.cache.set(key, data);
+
+    // Write to database asynchronously
+    this.writeToDatabase(key, data).catch((err) => {
+      // Handle eventual consistency issues
+      this.scheduleRetry(key, data);
+    });
+
+    return { success: true, cached: true };
+  }
+
+  async read(key) {
+    // Try cache first - very fast
+    let data = await this.cache.get(key);
+
+    if (!data) {
+      // Fallback to database - eventual consistency
+      data = await this.database.get(key);
+      if (data) {
+        // Update cache for next time
+        this.cache.set(key, data);
+      }
+    }
+
+    return data;
+  }
+}
+```
+
+### Hybrid Approaches
+
+Many modern systems use both ACID and BASE patterns where appropriate:
+
+```javascript title="Hybrid System Example"
+class OrderProcessingService {
+  async processOrder(orderData) {
+    // ACID: Critical financial transaction
+    const paymentResult = await this.paymentService.processPayment({
+      amount: orderData.total,
+      customerId: orderData.customerId,
+      transactionId: orderData.transactionId,
+    });
+
+    if (!paymentResult.success) {
+      throw new Error("Payment failed");
+    }
+
+    // ACID: Update inventory (prevent overselling)
+    await this.inventoryService.reserveItems(orderData.items);
+
+    // BASE: Non-critical operations
+    this.backgroundTasks([
+      () => this.emailService.sendConfirmation(orderData),
+      () => this.analyticsService.trackPurchase(orderData),
+      () => this.recommendationService.updatePreferences(orderData),
+      () => this.loyaltyService.updatePoints(orderData.customerId),
+    ]);
+
+    return {
+      orderId: orderData.orderId,
+      status: "confirmed",
+      message: "Order processed, confirmation email will arrive shortly",
+    };
+  }
+}
+```
+
+## Next Steps
+
+### Immediate Actions
+
+| Priority | Action                                                                  | Purpose                                                    |
+| -------- | ----------------------------------------------------------------------- | ---------------------------------------------------------- |
+| **High** | [Consistency Models](/db-transaction-models/consistency-models)         | Learn how different consistency models affect ORM behavior |
+| **High** | [Transaction Management](/db-transaction-models/transaction-management) | Master transaction handling within ORM frameworks          |
+| **High** | [Concurrency Control](/db-transaction-models/concurrency-control)       | Prevent data conflicts in multi-user ORM applications      |
+
+### Optional Actions
+
+| Action                                                                                                                             | Purpose                                                        |
+| ---------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| [Development Resources and Tools for Back-End Development](/util-general-development-resources-and-tools-for-back-end-development) | Explore essential tools and frameworks for backend development |
+
+<BackToTop />
+```
