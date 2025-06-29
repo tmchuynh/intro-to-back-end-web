@@ -281,14 +281,22 @@ function categorizeNavigationItems(
 
     // If item has children, check if it's a top-level section that should be categorized as a whole
     if (item.children && item.children.length > 0) {
-      // Check for other framework/library sections
+      // Check for advanced topics first (including quality, security, performance)
       if (
         path.includes("docker") ||
         path.includes("kubernetes") ||
         path.includes("deployment-strategies") ||
+        path.includes("quality-security-performance") ||
+        path.includes("advanced") ||
+        path.includes("principles") ||
         title.includes("docker") ||
         title.includes("kubernetes") ||
-        title.includes("deployment")
+        title.includes("deployment") ||
+        title.includes("quality") ||
+        title.includes("security") ||
+        title.includes("performance") ||
+        title.includes("advanced") ||
+        title.includes("principles")
       ) {
         return "advanced";
       }
@@ -416,6 +424,8 @@ function categorizeNavigationItems(
       title.includes("principles") ||
       title.includes("advanced") ||
       title.includes("security") ||
+      title.includes("performance") ||
+      title.includes("quality") ||
       title.includes("kubernetes") ||
       title.includes("deployment")
     ) {
