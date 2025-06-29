@@ -137,7 +137,7 @@ Prometheus is widely used in cloud-native environments for monitoring applicatio
 - **Alerting**: Includes built-in alerting capabilities, allowing users to set up alerts based on specific conditions in their time series data.
 - **Visualization Integration**: Integrates with various visualization tools, such as Grafana, to create dashboards and graphs for visualizing trends and patterns in time series data.
 
-```promql title="Example of Prometheus Query"
+```txt title="Example of Prometheus Query"
 avg_over_time(http_requests_total[5m]) by (job)
 ```
 
@@ -154,7 +154,7 @@ OpenTSDB is particularly useful for applications that require high scalability a
 - **Downsampling**: Reduces the resolution of data over time, making it easier to visualize trends without overwhelming the system with high-frequency data.
 - **Aggregation**: Supports aggregation functions for computing statistics over time intervals, enabling users to analyze trends and patterns in their time series data.
 
-```tsdb title="Example of OpenTSDB Query"
+```txt title="Example of OpenTSDB Query"
 SELECT avg(value) FROM temperature WHERE time >= now() - 1h GROUP BY time(10m)
 ```
 
@@ -171,7 +171,7 @@ Graphite is particularly useful for applications that require real-time monitori
 - **Real-time Graphing**: Includes a powerful graphing library for visualizing time series data in real-time, allowing users to create custom dashboards and graphs.
 - **Data Retention Policies**: Allows users to define how long data should be kept, helping manage storage costs and performance.
 
-```graphite title="Example of Graphite Query"
+```txt title="Example of Graphite Query"
 averageSeries(temperature.*) OVER 1h
 ```
 
@@ -188,7 +188,7 @@ VictoriaMetrics is particularly well-suited for applications that require high s
 - **Powerful Query Language**: Provides a powerful query language for performing complex queries and aggregations on time series data.
 - **Scalability**: Designed to scale horizontally, allowing it to handle increasing data volumes without sacrificing performance.
 
-```promql title="Example of VictoriaMetrics Query"
+```txt title="Example of VictoriaMetrics Query"
 avg_over_time(http_requests_total[5m]) by (job)
 ```
 
