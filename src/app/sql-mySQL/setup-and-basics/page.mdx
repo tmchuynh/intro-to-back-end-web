@@ -6,7 +6,9 @@ import BackToTop from "@/components/BackToTop";
 
 ## Getting Started with MySQL
 
-MySQL is a widely used relational database management system (RDBMS) that allows you to store, retrieve, and manage data efficiently. It is known for its reliability, performance, and ease of use. It supports a wide range of applications, from small-scale projects to large enterprise systems. MySQL is particularly popular for web applications, data warehousing, and online transaction processing (OLTP) systems. It is an open-source database, which means it is freely available and can be modified to suit specific needs. MySQL uses Structured Query Language (SQL) for querying and managing data, making it accessible to developers and database administrators. MySQL is compatible with various operating systems, including Windows, Linux, and macOS, and it integrates well with popular programming languages such as PHP, Python, Java, and Ruby. Its robust community support and extensive documentation make it a preferred choice for many developers and organizations. MySQL is often used in conjunction with web servers like Apache or Nginx, and it can be easily scaled to handle large volumes of data and high traffic loads. It also offers features like replication, clustering, and partitioning to enhance performance and availability. MySQL is a versatile database system that provides a solid foundation for building data-driven applications.
+MySQL is a widely used relational database management system (RDBMS) that allows you to store, retrieve, and manage data efficiently. It is known for its reliability, performance, and ease of use. It supports a wide range of applications, from small-scale projects to large enterprise systems. MySQL is particularly popular for web applications, data warehousing, and online transaction processing (OLTP) systems. It is an open-source database, which means it is freely available and can be modified to suit specific needs.
+
+MySQL uses Structured Query Language (SQL) for querying and managing data, making it accessible to developers and database administrators. MySQL is compatible with various operating systems, including Windows, Linux, and macOS, and it integrates well with popular programming languages such as PHP, Python, Java, and Ruby. Its robust community support and extensive documentation make it a preferred choice for many developers and organizations. MySQL is often used in conjunction with web servers like Apache or Nginx, and it can be easily scaled to handle large volumes of data and high traffic loads. It also offers features like replication, clustering, and partitioning to enhance performance and availability. MySQL is a versatile database system that provides a solid foundation for building data-driven applications.
 
 ## Installing MySQL
 
@@ -80,161 +82,12 @@ This command connects you to the MySQL server as the root user. The `-u` flag sp
 
 Once you enter the password, you will be presented with the MySQL prompt, where you can start executing SQL commands.
 
-## Basic MySQL Commands
-
-### Connecting to the local MySQL server
-
-```sql frame="terminal" showLineNumbers=false title="Connect to MySQL server"
-mysql -u root -p
-```
-
-If your MySQL server is hosted on a different machine, you can connect to it by specifying the hostname or IP address. Replace `hostname` with the actual hostname or IP address of your MySQL server, and `username` with your MySQL username.
-
-```sql frame="terminal" showLineNumbers=false title="Connect to MySQL server on a specific host"
-mysql -h hostname -u username -p
-```
-
-### Creating and Managing Databases
-
-#### Create a New Database
-
-This will create a new database in your MySQL server. You can replace `my_database` with your desired database name.
-
-```sql frame="terminal" showLineNumbers=false title="Create a new database"
-CREATE DATABASE my_database;
-```
-
-#### Drop a Database
-
-This command deletes an existing database. Be cautious when using this command, as it will permanently remove all data within the database. Replace `my_database` with the name of the database you want to drop.
-
-```sql frame="terminal" showLineNumbers=false title="Drop a database"
-DROP DATABASE my_database;
-```
-
-#### Use a Specific Database
-
-This command selects the database you want to work with. Replace `my_database` with the name of the database you created or want to use.
-
-```sql frame="terminal" showLineNumbers=false title="Use a specific database"
-USE my_database;
-```
-
-### Displaying Information
-
-#### Show all databases
-
-This will list all databases available in your MySQL server. This will be useful to check if your installation was successful and if you have any existing databases.
-
-```sql frame="terminal" showLineNumbers=false title="Show all databases"
-SHOW DATABASES;
-```
-
-You can filter the databases shown by using a `LIKE` clause. This is useful if you have many databases and want to find specific ones.
-
-```sql frame="terminal" showLineNumbers=false title="Show specific databases"
-SHOW DATABASES LIKE 'my_database%';
-```
-
-#### Show Current User
-
-This command displays the username of the currently connected MySQL user. It helps you verify your connection and permissions.
-
-```sql frame="terminal" showLineNumbers=false title="Show current user"
-SELECT CURRENT_USER;
-```
-
-This will display the current user connected to the MySQL server, which is useful for confirming your access rights.
-
-```txt
-+------------------+
-| CURRENT_USER()   |
-+------------------+
-| root@localhost   |
-+------------------+
-```
-
-#### List Users and Their Privileges
-
-This command lists all users in the MySQL server along with their privileges. It helps you manage user access and permissions.
-
-```sql frame="terminal" showLineNumbers=false title="List users and their privileges"
-SHOW GRANTS;
-```
-
-You can run this command to see the privileges granted to all users in the MySQL server. The output will show the privileges for each user, which is useful for auditing and managing user access.
-
-You can also view the privileges of a specific user by using the `SHOW GRANTS FOR` command. Replace `username` with the actual username you want to check.
-
-```sql frame="terminal" showLineNumbers=false title="Show grants for a specific user"
-SHOW GRANTS FOR 'username'@'localhost';
-```
-
-You can also use the `mysql.user` table to see user privileges in a more structured format. This command retrieves user privileges from the `mysql.user` table.
-This will display the privileges of all users in the MySQL server, which is useful for auditing and managing user access.
-
-```sql frame="terminal" showLineNumbers=false title="List users and their privileges"
-SELECT User, Host, Select_priv, Insert_priv, Update_priv, Delete_priv FROM mysql.user;
-```
-
-#### Show All Tables
-
-This command lists all tables in the currently selected database. It helps you see what data structures are available for querying.
-
-```sql frame="terminal" showLineNumbers=false title="Show all tables"
-SHOW TABLES;
-```
-
-You can filter the tables shown by using a `LIKE` clause. This is useful if you have many tables and want to find specific ones.
-
-```sql frame="terminal" showLineNumbers=false title="Show specific tables"
-SHOW TABLES LIKE 'users%';
-```
-
-This command will display all tables in the current database that start with `users`.
-For example, if you have a table named `users`, the output might look like this:
-
-```txt
-+-----------------------+
-| Tables_in_my_database |
-+-----------------------+
-| users                 |
-+-----------------------+
-```
-
-#### Show Table Structure
-
-##### Using `DESCRIBE`
-
-You can use the `DESCRIBE` command to view the structure of a table, including its columns, data types, and constraints. This is useful for understanding how your data is organized.
-
-This command displays the structure of a specific table, including its columns and their data types. Replace `users` with the name of your table.
-
-```sql frame="terminal" showLineNumbers=false title="Show table structure"
-DESCRIBE users;
-```
-
-This will display the structure of the `users` table, including column names, data types, and constraints.
-
-For example, if you created a `users` table, the output might look like this:
-
-```txt
-+-------------+------------------+------+-----+-------------------+----------------+
-| Field       | Type             | Null | Key | Default           | Extra          |
-+-------------+------------------+------+-----+-------------------+----------------+
-| id          | int(11)          | NO   | PRI | NULL              | auto_increment |
-| name        | varchar(100)     | NO   |     | NULL              |                |
-| email       | varchar(100)     | NO   | UNI | NULL              |                |
-| created_at  | timestamp        | NO   |     | CURRENT_TIMESTAMP |                |
-+-------------+------------------+------+-----+-------------------+----------------+
-```
-
 ## Next Steps
 
 ### Immediate Actions
 
-| Action                                | Purpose                                                                          |
-| ------------------------------------- | -------------------------------------------------------------------------------- |
+| Action                                          | Purpose                                                                       |
+| ----------------------------------------------- | ----------------------------------------------------------------------------- |
 | [SQL Basic Commands](/sql-mySQL/basic-commands) | Learn how to execute basic SQL commands to interact with your MySQL database. |
 
 <BackToTop />
