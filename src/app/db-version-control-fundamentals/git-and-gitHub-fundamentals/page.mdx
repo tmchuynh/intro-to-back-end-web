@@ -4,6 +4,32 @@ import BackToTop from "@/components/BackToTop";
 
 ## Table of Contents
 
+- [Introduction](#introduction)
+- [GitHub](#github)
+  - [Account Types](#account-types)
+    - [User Accounts](#user-accounts)
+      - [Personal Accounts](#personal-accounts)
+      - [Managed User Accounts](#managed-user-accounts)
+    - [Organization Accounts](#organization-accounts)
+- [Git](#git)
+  - [Understanding Version Control Systems](#understanding-version-control-systems)
+  - [Distributed Version Control Advantages](#distributed-version-control-advantages)
+  - [Essential Git Commands](#essential-git-commands)
+  - [Practical Git Workflows](#practical-git-workflows)
+  - [Git Branching Strategies](#git-branching-strategies)
+  - [Advanced Git Concepts](#advanced-git-concepts)
+  - [Git Best Practices](#git-best-practices)
+  - [Common Git Scenarios](#common-git-scenarios)
+  - [Troubleshooting Common Issues](#troubleshooting-common-issues)
+- [GitHub Features and Tools](#github-features-and-tools)
+  - [Pull Requests](#pull-requests)
+  - [Issues and Project Management](#issues-and-project-management)
+  - [GitHub Actions](#github-actions)
+  - [Security Features](#security-features)
+- [Integration and Collaboration](#integration-and-collaboration)
+- [Learning Resources](#learning-resources)
+- [Next Steps](#next-steps)
+
 ## Introduction
 
 Git is a powerful distributed version control system that revolutionizes how developers collaborate on projects. Unlike traditional systems, Git enables multiple team members to work simultaneously on the same codebase without conflicts, automatically tracking every change made to the source code. This makes Git indispensable for modern software development, providing a complete history of project evolution and seamless collaboration capabilities.
@@ -226,6 +252,309 @@ git push origin feature/my-feature
 **Pro tip:** Always pull the latest changes before starting new work to avoid merge conflicts and ensure you're building on the most current codebase.
 
 For comprehensive Git documentation and advanced commands, visit the [official Git reference](https://git-scm.com/docs).
+
+## Git Branching Strategies
+
+Effective branching strategies are crucial for team collaboration and maintaining code quality. Different strategies suit different team sizes and project requirements.
+
+#### Git Flow
+
+Git Flow is a comprehensive branching model designed for projects with scheduled releases:
+
+```bash title="Git Flow workflow"
+# Initialize git flow in your repository
+git flow init
+
+# Start a new feature
+git flow feature start user-authentication
+
+# Work on your feature
+# Make commits as usual...
+git add .
+git commit -m "Implement login functionality"
+
+# Finish the feature (merges to develop)
+git flow feature finish user-authentication
+
+# Create a release branch
+git flow release start v1.2.0
+
+# Make final adjustments for release
+git add .
+git commit -m "Update version numbers"
+
+# Finish the release (merges to main and develop)
+git flow release finish v1.2.0
+
+# Handle hotfixes on production
+git flow hotfix start critical-bug-fix
+git add .
+git commit -m "Fix critical security vulnerability"
+git flow hotfix finish critical-bug-fix
+```
+
+**Git Flow branch structure:**
+- **main** – Production-ready code
+- **develop** – Integration branch for features
+- **feature/** – Individual feature development
+- **release/** – Preparation for production releases
+- **hotfix/** – Emergency fixes for production
+
+#### GitHub Flow
+
+GitHub Flow offers a simplified workflow ideal for continuous deployment:
+
+```bash title="GitHub Flow workflow"
+# Create and switch to a feature branch
+git checkout -b feature/payment-integration
+
+# Make your changes and commit regularly
+git add payment-gateway.js
+git commit -m "Add Stripe payment integration"
+
+git add tests/payment.test.js
+git commit -m "Add payment integration tests"
+
+# Push your branch to GitHub
+git push origin feature/payment-integration
+
+# Create a Pull Request on GitHub
+# After review and approval, merge via GitHub interface
+
+# Clean up local branch after merge
+git checkout main
+git pull origin main
+git branch -d feature/payment-integration
+```
+
+**GitHub Flow principles:**
+- **main** branch is always deployable
+- Feature branches created from main
+- Regular commits with descriptive messages
+- Pull Requests for code review
+- Deploy immediately after merge
+
+#### Feature Branch Workflow
+
+A flexible approach suitable for teams of any size:
+
+```bash title="Feature branch workflow"
+# Update your main branch
+git checkout main
+git pull origin main
+
+# Create a descriptive feature branch
+git checkout -b feature/user-profile-page
+
+# Develop your feature with atomic commits
+git add components/UserProfile.jsx
+git commit -m "Create UserProfile component with basic layout"
+
+git add styles/profile.css
+git commit -m "Add responsive styling for user profile"
+
+git add api/user-api.js
+git commit -m "Implement user data fetching API"
+
+# Push your completed feature
+git push origin feature/user-profile-page
+
+# Create Pull Request for team review
+# Merge after approval and testing
+```
+
+## Advanced Git Concepts
+
+Understanding these advanced concepts will make you more effective with Git and help you handle complex scenarios.
+
+#### Rebasing vs. Merging
+
+**Merging** preserves history but creates merge commits:
+
+```bash title="Merge workflow"
+# Switch to main branch
+git checkout main
+git pull origin main
+
+# Merge your feature branch
+git merge feature/new-dashboard
+
+# Results in a merge commit that shows branch integration
+# History: A-B-C-D-M (where M is merge commit)
+```
+
+**Rebasing** creates a linear history:
+
+```bash title="Rebase workflow"
+# Switch to your feature branch
+git checkout feature/new-dashboard
+
+# Rebase onto latest main
+git rebase main
+
+# Results in linear history
+# History: A-B-C-D-E-F (no merge commit)
+
+# Force push after rebase (be careful!)
+git push --force-with-lease origin feature/new-dashboard
+```
+
+**When to use each:**
+- **Merge** for feature integration and public branches
+- **Rebase** for cleaning up private branch history before sharing
+
+#### Interactive Rebasing
+
+Clean up your commit history before sharing:
+
+```bash title="Interactive rebase"
+# Rebase last 3 commits interactively
+git rebase -i HEAD~3
+
+# This opens an editor with options:
+# pick a1b2c3d Add user authentication
+# squash d4e5f6g Fix authentication bug
+# reword g7h8i9j Implement logout feature
+
+# Result: Clean, meaningful commit history
+```
+
+**Rebase options:**
+- **pick** – Keep commit as-is
+- **squash** – Combine with previous commit
+- **reword** – Change commit message
+- **drop** – Remove commit entirely
+
+#### Cherry-picking
+
+Apply specific commits to different branches:
+
+```bash title="Cherry-picking commits"
+# Switch to target branch
+git checkout hotfix/security-update
+
+# Apply specific commit from another branch
+git cherry-pick a1b2c3d
+
+# Apply multiple commits
+git cherry-pick a1b2c3d..f6g7h8i
+
+# Cherry-pick with conflict resolution
+git cherry-pick a1b2c3d
+# Resolve conflicts, then:
+git cherry-pick --continue
+```
+
+#### Stashing Changes
+
+Temporarily save work without committing:
+
+```bash title="Git stash workflow"
+# Save current changes
+git stash
+
+# Save with descriptive message
+git stash push -m "Work in progress on user settings"
+
+# List all stashes
+git stash list
+
+# Apply most recent stash
+git stash pop
+
+# Apply specific stash without removing it
+git stash apply stash@{2}
+
+# Clear all stashes
+git stash clear
+```
+
+## Git Best Practices
+
+To make the most of Git's capabilities and ensure a smooth collaborative experience, consider these best practices:
+
+- **Commit often, commit early:** Frequent commits with clear messages create a detailed project history and make it easier to track changes.
+- **Use branches strategically:** Leverage branches for new features, bug fixes, and experiments to keep the main codebase stable.
+- **Write meaningful commit messages:** Clear and descriptive messages provide context for your changes and help collaborators understand your intentions.
+- **Keep your branches up to date:** Regularly pull changes from the main branch into your feature branches to minimize merge conflicts.
+- **Review changes before merging:** Always review code changes, either through pull requests or local diffs, to maintain code quality and consistency.
+
+Following these best practices will improve your workflow efficiency and contribute to a healthier, more manageable project repository.
+
+## Common Git Scenarios
+
+Here are some common scenarios you may encounter while using Git, along with solutions to address them:
+
+- **Undoing local changes:** Use `git checkout -- <file>` to discard changes in your working directory, or `git reset HEAD <file>` to unstage changes.
+- **Recovering deleted branches:** If you accidentally delete a branch, you can recover it using `git reflog` to find the commit reference and `git checkout -b <branch> <commit>` to restore it.
+- **Resolving merge conflicts:** Git will highlight conflicts in the affected files. Edit the files to resolve the conflicts, then stage and commit the changes.
+- **Viewing project history:** Use `git log` to view the commit history, or `git blame <file>` to see line-by-line changes and authorship information.
+
+Familiarizing yourself with these common scenarios and their solutions will help you navigate Git more confidently and effectively.
+
+## Troubleshooting Common Issues
+
+Encountering issues while using Git is normal, but knowing how to troubleshoot common problems can save you time and frustration:
+
+- **Authentication failures:** Ensure your SSH keys are correctly configured, or use a personal access token if you're prompted for a password.
+- **Merge conflicts:** Resolve conflicts manually by editing the affected files, then stage and commit the changes.
+- **Detached HEAD state:** If you find yourself in a detached HEAD state, you can create a new branch from your current commit using `git checkout -b <new-branch>`.
+
+For more complex issues, consult the [official Git documentation](https://git-scm.com/doc) or seek assistance from the Git community.
+
+## GitHub Features and Tools
+
+GitHub offers a rich set of features and tools that enhance the development workflow and facilitate collaboration:
+
+### Pull Requests
+
+Pull requests are at the heart of GitHub's collaboration model. They provide a structured way to propose, discuss, and review changes before integrating them into the main codebase.
+
+**Key aspects of pull requests:**
+
+- **Code review:** Pull requests enable team members to review and comment on code changes, ensuring quality and consistency.
+- **Continuous integration:** Automated tests and checks can be configured to run on pull requests, providing immediate feedback on the impact of changes.
+- **Merge options:** GitHub offers various merge options, including merge commits, squashing, and rebasing, to accommodate different workflow preferences.
+
+### Issues and Project Management
+
+GitHub's issue tracking and project management features help teams plan, prioritize, and discuss work:
+
+- **Issues:** Use issues to track bugs, enhancements, and tasks. They can be organized with labels, milestones, and assignees.
+- **Projects:** GitHub Projects provide a flexible way to manage and visualize work using boards, lists, and cards.
+- **Automation:** GitHub Actions can automate workflows, such as updating issues or deploying code, based on triggers and events.
+
+### GitHub Actions
+
+GitHub Actions is a powerful feature that enables automation of workflows directly within your GitHub repository:
+
+- **CI/CD:** Automate your build, test, and deployment processes with continuous integration and continuous deployment (CI/CD) pipelines.
+- **Custom workflows:** Create custom workflows that respond to repository events, such as pull requests, issues, and releases.
+- **Marketplace:** Explore the GitHub Marketplace for pre-built actions and workflows that can be easily integrated into your projects.
+
+### Security Features
+
+GitHub provides a range of security features to help protect your code and manage access:
+
+- **Branch protection rules:** Enforce policies for pull requests, such as requiring reviews or passing status checks before merging.
+- **Code scanning:** Automatically scan your code for vulnerabilities and receive alerts about potential security issues.
+- **Secret management:** Securely store and manage sensitive information, such as API keys and passwords, using GitHub Secrets.
+
+## Integration and Collaboration
+
+GitHub's integration capabilities and collaborative features make it a central hub for modern software development:
+
+- **Third-party integrations:** Connect GitHub with other tools and services, such as project management software, communication platforms, and cloud providers.
+- **Webhooks:** Configure webhooks to receive real-time notifications about repository events, enabling custom integrations and automation.
+- **Collaborative coding:** Use GitHub Codespaces to create and share cloud-based development environments that include your code, dependencies, and tools.
+
+## Learning Resources
+
+To further enhance your Git and GitHub skills, explore these learning resources:
+
+- **GitHub Learning Lab:** Interactive courses and tutorials on Git, GitHub, and other development topics.
+- **Pro Git book:** A comprehensive guide to Git, available for free online.
+- **GitHub Docs:** The official documentation for GitHub, covering all aspects of the platform.
 
 ## Next Steps
 
