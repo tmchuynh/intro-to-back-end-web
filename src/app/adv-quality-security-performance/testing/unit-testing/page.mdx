@@ -1,0 +1,369 @@
+import BackToTop from "@/components/BackToTop";
+
+# Unit Testing
+
+## Table of Contents
+
+## Introduction
+
+Unit testing is a software testing technique where individual components or functions of a program are tested in isolation to ensure they work as intended. This practice helps identify bugs early in the development process, making it easier to maintain and refactor code. Unit tests are typically automated and can be run frequently to catch regressions or unintended changes in behavior.
+
+## What are Unit Tests?
+
+Unit tests are small, isolated tests that verify the functionality of a specific piece of code, such as a function or method. They are designed to test the smallest parts of an application independently, ensuring that each unit behaves correctly. Unit tests are usually written by developers and are an essential part of the software development lifecycle.
+
+## Benefits of Unit Testing
+
+- **Early Bug Detection**: Unit tests help catch bugs early in the development process, reducing the cost of fixing them later.
+- **Code Quality**: Writing unit tests encourages developers to write cleaner, more modular code, as it becomes easier to test small, focused units.
+- **Refactoring Confidence**: With a comprehensive suite of unit tests, developers can refactor code with confidence, knowing that any changes will be validated by the tests.
+- **Documentation**: Unit tests serve as documentation for the codebase, providing examples of how functions and methods are expected to behave.
+
+## How to Write Unit Tests
+
+Writing unit tests involves creating test cases that cover various scenarios for a specific function or method. Here are some general steps to follow:
+
+1. **Identify the Unit**: Determine which function or method you want to test.
+2. **Define Test Cases**: Create test cases that cover different inputs and expected outputs for the unit.
+3. **Use a Testing Framework**: Utilize a testing framework (e.g., JUnit for Java, pytest for Python, or Mocha for JavaScript) to write and run your tests.
+4. **Write Assertions**: In each test case, write assertions to check if the actual output matches the expected output.
+5. **Run Tests**: Execute the tests using the testing framework and verify that all tests pass.
+
+## How are Unit Tests Executed?
+
+Unit tests are executed using a testing framework that provides tools for running tests, reporting results, and managing test cases. When you run the tests, the framework will execute each test case, check the assertions, and report any failures or errors. Most frameworks also provide features for organizing tests, running subsets of tests, and generating test reports.
+
+## How are Unit Tests Done?
+
+Unit tests are typically written in the same programming language as the application code. They are organized into test classes or modules, with each test case defined as a method or function. The tests are executed using a testing framework that provides a structured way to run the tests and report results.
+
+### AAA Pattern
+
+The AAA (Arrange, Act, Assert) pattern is a common structure for writing unit tests. It helps organize the test code into three distinct sections:
+
+1. **Arrange**: Set up the necessary conditions for the test, such as creating objects or initializing variables.
+2. **Act**: Execute the code being tested, such as calling a function or method.
+3. **Assert**: Verify that the outcome of the action matches the expected result using assertions.
+
+This pattern makes tests easier to read and understand, as it clearly separates the setup, execution, and verification steps. Development teams often adopt this pattern to maintain consistency in their unit tests. This approach not only improves readability but also helps in identifying issues quickly when tests fail. It also encourages developers to think about the different scenarios they need to test, leading to more comprehensive test coverage.
+
+## Popular Unit Testing Frameworks
+
+### JUnit
+
+- **Language**: Java
+- **Description**: A widely used testing framework for Java applications, providing annotations and assertions to write and run tests easily.
+- **Documentation**: [JUnit Documentation](https://junit.org/junit5/docs/current/user-guide/)
+
+```java
+class Calculator {
+    public int add(int a, int b) {
+        return a + b;
+    }
+}
+
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+public class CalculatorTest {
+
+    @Test
+    public void testAdd() {
+        Calculator calculator = new Calculator();
+        assertEquals(5, calculator.add(2, 3));
+    }
+}
+```
+
+### pytest
+
+- **Language**: Python
+- **Description**: A powerful testing framework for Python that supports fixtures, parameterized tests, and plugins, making it easy to write and run tests.
+- **Documentation**: [pytest Documentation](https://docs.pytest.org/en/stable/)
+
+```python
+import pytest
+def add(a, b):
+    return a + b
+
+def test_add():
+    assert add(2, 3) == 5
+```
+
+### Unittest
+
+- **Language**: Python
+- **Description**: The built-in testing framework for Python, providing a rich set of tools for writing and running tests, including test discovery and fixtures.
+- **Documentation**: [unittest Documentation](https://docs.python.org/3/library/unittest.html)
+
+```python
+import unittest
+def add(a, b):
+    return a + b
+
+class TestAdd(unittest.TestCase):
+    def test_add(self):
+        self.assertEqual(add(2, 3), 5)
+
+if __name__ == "__main__":
+    unittest.main()
+```
+
+### Selenium
+
+- **Language**: Multiple (Java, Python, C#, JavaScript)
+- **Description**: A popular framework for automating web browsers, allowing developers to write tests that interact with web applications and verify their behavior.
+- **Documentation**: [Selenium Documentation](https://www.selenium.dev/documentation/en/)
+
+```python
+from selenium import webdriver
+def test_google_search():
+    driver = webdriver.Chrome()
+    driver.get("https://www.google.com")
+    assert "Google" in driver.title
+    search_box = driver.find_element("name", "q")
+    search_box.send_keys("Selenium")
+    search_box.submit()
+    assert "Selenium" in driver.title
+    driver.quit()
+```
+
+```java
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.By;
+import org.openqa.selenium.Keys;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+public class GoogleSearchTest {
+    @Test
+    public void testGoogleSearch() {
+        WebDriver driver = new ChromeDriver();
+        driver.get("https://www.google.com");
+        assertTrue(driver.getTitle().contains("Google"));
+        driver.findElement(By.name("q")).sendKeys("Selenium", Keys.RETURN);
+        // Optionally, wait for the results to load here
+        assertTrue(driver.getTitle().contains("Selenium"));
+        driver.quit();
+    }
+}
+```
+
+```javascript
+const { Builder, By, Key } = require("selenium-webdriver");
+async function testGoogleSearch() {
+  let driver = await new Builder().forBrowser("chrome").build();
+  try {
+    await driver.get("https://www.google.com");
+    let title = await driver.getTitle();
+    console.assert(title.includes("Google"), "Title should contain 'Google'");
+    let searchBox = await driver.findElement(By.name("q"));
+    await searchBox.sendKeys("Selenium", Key.RETURN);
+    title = await driver.getTitle();
+    console.assert(
+      title.includes("Selenium"),
+      "Title should contain 'Selenium'"
+    );
+  } finally {
+    await driver.quit();
+  }
+}
+testGoogleSearch();
+```
+
+### Cucumber
+
+- **Language**: Multiple (Java, JavaScript, Ruby, etc.)
+- **Description**: A tool for behavior-driven development (BDD) that allows developers to write tests in a human-readable format using Gherkin syntax, promoting collaboration between developers and non-technical stakeholders.
+- **Documentation**: [Cucumber Documentation](https://cucumber.io/docs/guides/overview/)
+
+```javascript
+// This code is intended to be used in a Cucumber.js step definition file.
+const { Given, When, Then } = require("@cucumber/cucumber");
+const assert = require("assert");
+Given("I have a calculator", function () {
+  this.calculator = {
+    add: function (a, b) {
+      return a + b;
+    },
+  };
+});
+When("I add {int} and {int}", function (a, b) {
+  this.result = this.calculator.add(a, b);
+});
+Then("the result should be {int}", function (expected) {
+  assert.strictEqual(this.result, expected);
+});
+```
+
+```java
+class Calculator {
+    public int add(int a, int b) {
+        return a + b;
+    }
+}
+
+import io.cucumber.java.en.Given;
+import io.cucumber.java.en.Then;
+import io.cucumber.java.en.When;
+import static org.junit.Assert.assertEquals;
+public class CalculatorSteps {
+    private Calculator calculator;
+    private int result;
+    @Given("I have a calculator")
+    public void i_have_a_calculator() {
+        calculator = new Calculator();
+    }
+    @When("I add {int} and {int}")
+    public void i_add_and(int a, int b) {
+        result = calculator.add(a, b);
+    }
+    @Then("the result should be {int}")
+    public void the_result_should_be(int expected) {
+        assertEquals(expected, result);
+    }
+}
+```
+
+```ruby
+Given("I have a calculator") do
+  @calculator = Calculator.new
+end
+When("I add {int} and {int}") do |a, b|
+  @result = @calculator.add(a, b)
+end
+Then("the result should be {int}") do |expected|
+  expect(@result).to eq(expected)
+end
+```
+
+### Mocha
+
+- **Language**: JavaScript
+- **Description**: A flexible testing framework for Node.js and browser applications, allowing developers to write tests in a variety of styles (BDD, TDD) and providing support for asynchronous testing.
+- **Documentation**: [Mocha Documentation](https://mochajs.org/)
+
+```javascript
+// Save this code in a file named add.test.js and run it using the 'mocha' command.
+const assert = require("assert");
+
+function add(a, b) {
+  return a + b;
+}
+
+describe("add", function () {
+  it("should return the sum of two numbers", function () {
+    assert.strictEqual(add(2, 3), 5);
+  });
+});
+```
+
+### Jest
+
+- **Language**: JavaScript
+- **Description**: A delightful JavaScript testing framework with a focus on simplicity, providing built-in assertions, mocking, and code coverage.
+- **Documentation**: [Jest Documentation](https://jestjs.io/)
+
+```javascript
+// This code is intended to be run with Jest, where 'test' and 'expect' are available globally.
+function sum(a, b) {
+  return a + b;
+}
+test("adds 1 + 2 to equal 3", () => {
+  expect(sum(1, 2)).toBe(3);
+});
+```
+
+### Cypress
+
+- **Language**: JavaScript
+- **Description**: A modern end-to-end testing framework for web applications, providing a powerful API for writing tests and a user-friendly interface for debugging.
+- **Documentation**: [Cypress Documentation](https://docs.cypress.io/guides/overview/why-cypress)
+
+```javascript
+describe("My First Test", () => {
+  it("Visits the Kitchen Sink", () => {
+    cy.visit("https://example.cypress.io");
+    cy.contains("type").click();
+    cy.url().should("include", "/commands/actions");
+    cy.get(".action-email").type("test@example.com");
+    cy.get(".action-email").should("have.value", "test@example.com");
+  });
+});
+```
+
+### Playwright
+
+- **Language**: JavaScript, Python, C#, Java
+- **Description**: A powerful end-to-end testing framework for web applications, supporting multiple browsers and providing a rich API for writing tests.
+- **Documentation**: [Playwright Documentation](https://playwright.dev/docs/intro)
+
+```javascript
+const { test, expect } = require("@playwright/test");
+test("basic test", async ({ page }) => {
+  await page.goto("https://example.com");
+  const title = await page.title();
+  expect(title).toBe("Example Domain");
+});
+```
+
+```python
+from playwright.sync_api import sync_playwright
+def run(playwright):
+    browser = playwright.chromium.launch()
+    page = browser.new_page()
+    page.goto("https://example.com")
+    assert page.title() == "Example Domain"
+    browser.close()
+with sync_playwright() as playwright:
+    run(playwright)
+```
+
+```java
+import com.microsoft.playwright.*;
+import com.microsoft.playwright.Page;
+public class Example {
+    public static void main(String[] args) {
+        try (Playwright playwright = Playwright.create()) {
+            Browser browser = playwright.chromium().launch();
+            Page page = browser.newPage();
+            page.navigate("https://example.com");
+            System.out.println("Title: " + page.title());
+            browser.close();
+        }
+    }
+}
+```
+
+### Jasmine
+
+- **Language**: JavaScript
+- **Description**: A behavior-driven development (BDD) framework for testing JavaScript code, providing a clean syntax for writing tests and built-in assertions.
+- **Documentation**: [Jasmine Documentation](https://jasmine.github.io/)
+
+```javascript
+function add(a, b) {
+  return a + b;
+}
+
+describe("add", function () {
+  it("should return the sum of two numbers", function () {
+    expect(add(2, 3)).toBe(5);
+  });
+});
+```
+
+## Conclusion
+
+Unit testing is a crucial practice in software development that helps ensure the reliability and maintainability of code. By writing unit tests, developers can catch bugs early, improve code quality, and gain confidence in their codebase. With a variety of testing frameworks available for different programming languages, developers can choose the one that best fits their needs and preferences.
+
+## Next Steps
+
+| Resource                                                                                           | Tools                                                                                                                              |
+| -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| [Automating Tests](/adv-quality-security-performance/testing/automating-tests)                     | [Development Resources and Tools for Back-End Development](/util-general-development-resources-and-tools-for-back-end-development) |
+| [Performance Testing](/adv-quality-security-performance/testing/performance-testing)               | [Load Testing and Benchmarking Tools](/util-load-testing-and-benchmarking-tools)                                                   |
+| [Performance Monitoring](/adv-quality-security-performance/performance/monitoring)                 | [Database Management Tools](/util-database-management-tools)                                                                       |
+| [Integration Testing](/adv-quality-security-performance/testing/integration-testing)               | [Schema Migration and Version Control Tools](/util-schema-migration-and-version-control)                                           |
+| [Performance Optimization](/adv-quality-security-performance/performance/performance-optimization) | [Backup and Recovery Tools](/util-backup-and-recovery-tools)                                                                       |
+
+<BackToTop />
