@@ -578,6 +578,10 @@ pre code.hljs {
     @apply text-sm text-muted-foreground my-2;
   }
 
+  p {
+    @apply my-2;
+  }
+
   .expressive-code {
     @apply my-10;
   }

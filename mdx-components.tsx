@@ -84,19 +84,6 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
         {children}
       </CustomHeading>
     ),
-    p: ({ children, className, ...props }) => {
-      // If className is provided, it's likely an explicit JSX <p> element
-      // So we return it as-is to avoid wrapping issues
-      if (className) {
-        return (
-          <p className={className} {...props}>
-            {children}
-          </p>
-        );
-      }
-      // For markdown-generated paragraphs, use a span with block display to avoid HTML nesting issues
-      return <span className="block leading-relaxed">{children}</span>;
-    },
     ul: ({ children }) => (
       <ul className="space-y-1 list-disc list-outside">{children}</ul>
     ),
