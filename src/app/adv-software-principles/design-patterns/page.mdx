@@ -1,0 +1,224 @@
+import BackToTop from "@/components/BackToTop";
+
+# Design Patterns
+
+## Table of Contents
+
+## Introduction to Design Patterns
+
+Design patterns are reusable solutions to common software design problems. They provide a proven approach to solving specific design challenges and can be applied across different programming languages and paradigms. Design patterns help in creating flexible and maintainable code by promoting best practices and established design principles.
+For example, the Singleton pattern ensures that a class has only one instance and provides a global point of access to it. This is useful in scenarios where you need to manage shared resources, such as a configuration manager or a logging service. By using the Singleton pattern, you can ensure that there is only one instance of the class throughout the application, preventing conflicts and ensuring consistent behavior.
+Other common design patterns include the Factory pattern for creating objects, the Observer pattern for implementing event-driven systems, and the Decorator pattern for adding functionality to existing objects without modifying their structure. By leveraging design patterns, developers can create software that is easier to understand, maintain, and extend.
+
+## Key Design Patterns
+
+### Singleton Pattern
+
+The Singleton pattern ensures that a class has only one instance and provides a global point of access to it. This is useful in scenarios where you need to manage shared resources, such as a configuration manager or a logging service. By using the Singleton pattern, you can ensure that there is only one instance of the class throughout the application, preventing conflicts and ensuring consistent behavior.
+This pattern is implemented by making the class constructor private, providing a static method to access the instance, and using a static variable to hold the instance. When the static method is called, it checks if the instance already exists; if not, it creates a new instance and returns it.
+
+```sql title="Singleton Pattern Example in SQL"
+CREATE TABLE SingletonExample (
+    id INT PRIMARY KEY,
+    value VARCHAR(255)
+);
+CREATE OR REPLACE FUNCTION get_singleton_instance()
+RETURNS SETOF SingletonExample AS $$
+DECLARE
+    instance SingletonExample;
+BEGIN
+    SELECT * INTO instance FROM SingletonExample WHERE id = 1;
+    IF NOT FOUND THEN
+        INSERT INTO SingletonExample (id, value) VALUES (1, 'Initial Value');
+        SELECT * INTO instance FROM SingletonExample WHERE id = 1;
+    END IF;
+    RETURN NEXT instance;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+### Factory Pattern
+
+The Factory pattern provides a way to create objects without specifying the exact class of the object that will be created. It defines an interface for creating objects, but allows subclasses to alter the type of objects that will be created. This pattern is useful when you want to encapsulate the instantiation logic and provide a flexible way to create objects based on specific conditions or configurations.
+
+```sql title="Factory Pattern Example in SQL"
+CREATE OR REPLACE FUNCTION create_shape(shape_type VARCHAR)
+RETURNS SETOF Shape AS $$
+DECLARE
+    new_shape Shape;
+BEGIN
+    IF shape_type = 'Circle' THEN
+        INSERT INTO Shape (type, radius) VALUES ('Circle', 5) RETURNING * INTO new_shape;
+    ELSIF shape_type = 'Square' THEN
+        INSERT INTO Shape (type, side_length) VALUES ('Square', 4) RETURNING * INTO new_shape;
+    ELSE
+        RAISE EXCEPTION 'Unknown shape type: %', shape_type;
+    END IF;
+    RETURN NEXT new_shape;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+### Observer Pattern
+
+The Observer pattern defines a one-to-many dependency between objects, allowing one object (the subject) to notify multiple dependent objects (observers) about changes in its state. This pattern is commonly used in event-driven systems, where you want to decouple the components that produce events from those that consume them. Observers can subscribe to the subject and receive updates whenever the subject's state changes, enabling a flexible and extensible architecture.
+
+```sql title="Observer Pattern Example in SQL"
+CREATE TABLE Subject (
+    id INT PRIMARY KEY,
+    state VARCHAR(255)
+);
+CREATE TABLE Observer (
+    id INT PRIMARY KEY,
+    name VARCHAR(255),
+    subject_id INT REFERENCES Subject(id)
+);
+CREATE OR REPLACE FUNCTION notify_observers(subject_id INT)
+RETURNS VOID AS $$
+DECLARE
+    observer Observer%ROWTYPE;
+BEGIN
+    FOR observer IN SELECT * FROM Observer WHERE subject_id = subject_id LOOP
+        RAISE NOTICE 'Notifying observer %: Subject state changed to %', observer.name, (SELECT state FROM Subject WHERE id = subject_id);
+    END LOOP;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+### Builder Pattern
+
+The Builder pattern separates the construction of a complex object from its representation, allowing the same construction process to create different representations. This pattern is useful when you want to create an object step by step, especially when the object has many optional parameters or configurations. By using a builder, you can create a fluent interface that makes it easy to construct objects with varying configurations without cluttering the constructor with numerous parameters.
+
+```sql title="Builder Pattern Example in SQL"
+CREATE TYPE ComplexObject AS (
+    part1 VARCHAR(255),
+    part2 VARCHAR(255),
+    part3 VARCHAR(255)
+);
+CREATE OR REPLACE FUNCTION build_complex_object(part1 VARCHAR, part2 VARCHAR, part3 VARCHAR)
+RETURNS ComplexObject AS $$
+BEGIN
+    RETURN ROW(part1, part2, part3)::ComplexObject;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+### Prototype Pattern
+
+The Prototype pattern allows you to create new objects by copying an existing object, known as the prototype. This pattern is useful when the cost of creating a new instance of an object is more expensive than copying an existing one. By using prototypes, you can create new objects without needing to know their concrete classes, promoting flexibility and reducing dependencies.
+
+```sql title="Prototype Pattern Example in SQL"
+CREATE TYPE Prototype AS (
+    id INT,
+    name VARCHAR(255)
+);
+CREATE OR REPLACE FUNCTION clone_prototype(original Prototype)
+RETURNS Prototype AS $$
+BEGIN
+    RETURN ROW(original.id, original.name)::Prototype;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+### Composite Pattern
+
+The Composite pattern allows you to compose objects into tree structures to represent part-whole hierarchies. This pattern is useful when you want to treat individual objects and compositions of objects uniformly. By using the Composite pattern, you can create complex structures where clients can interact with both individual objects and groups of objects in a consistent manner.
+
+```sql title="Composite Pattern Example in SQL"
+CREATE TABLE Component (
+    id INT PRIMARY KEY,
+    name VARCHAR(255),
+    parent_id INT REFERENCES Component(id)
+);
+CREATE OR REPLACE FUNCTION add_component(name VARCHAR, parent_id INT)
+RETURNS VOID AS $$
+BEGIN
+    INSERT INTO Component (name, parent_id) VALUES (name, parent_id);
+END;
+$$ LANGUAGE plpgsql;
+```
+
+### Facade Pattern
+
+The Facade pattern provides a simplified interface to a complex subsystem, making it easier to use. This pattern is useful when you want to hide the complexities of a system and provide a more straightforward interface for clients. By using a facade, you can encapsulate the interactions with multiple subsystems and expose only the necessary methods, promoting ease of use and reducing dependencies.
+
+```sql title="Facade Pattern Example in SQL"
+CREATE TABLE SubsystemA (
+    id INT PRIMARY KEY,
+    data VARCHAR(255)
+);
+CREATE TABLE SubsystemB (
+    id INT PRIMARY KEY,
+    info VARCHAR(255)
+);
+CREATE OR REPLACE FUNCTION facade_method(data VARCHAR, info VARCHAR)
+RETURNS VOID AS $$
+BEGIN
+    INSERT INTO SubsystemA (data) VALUES (data);
+    INSERT INTO SubsystemB (info) VALUES (info);
+END;
+$$ LANGUAGE plpgsql;
+```
+
+### Decorator Pattern
+
+The Decorator pattern allows you to add new functionality to existing objects without modifying their structure. It involves creating a set of decorator classes that are used to wrap concrete components. This pattern is useful when you want to enhance the behavior of an object dynamically, without altering its original code. By using decorators, you can create a flexible and reusable design that allows for easy extension and modification of object behavior.
+
+```sql title="Decorator Pattern Example in SQL"
+CREATE TABLE Component (
+    id INT PRIMARY KEY,
+    name VARCHAR(255)
+);
+CREATE TABLE Decorator (
+    id INT PRIMARY KEY,
+    component_id INT REFERENCES Component(id),
+    additional_behavior VARCHAR(255)
+);
+CREATE OR REPLACE FUNCTION add_decorator(component_id INT, behavior VARCHAR)
+RETURNS VOID AS $$
+BEGIN
+    INSERT INTO Decorator (component_id, additional_behavior) VALUES (component_id, behavior);
+END;
+$$ LANGUAGE plpgsql;
+```
+
+### Template Method Pattern
+
+The Template Method pattern defines the skeleton of an algorithm in a base class, allowing subclasses to override specific steps without changing the overall structure. This pattern is useful when you have a common algorithm that can be customized by subclasses. By using the Template Method pattern, you can promote code reuse and maintainability while allowing for flexibility in the implementation of specific steps.
+
+```sql title="Template Method Pattern Example in SQL"
+CREATE OR REPLACE FUNCTION template_method(param1 VARCHAR, param2 VARCHAR)
+RETURNS VOID AS $$
+BEGIN
+    -- Step 1: Common logic
+    RAISE NOTICE 'Executing common logic with parameters: %, %', param1, param2;
+    -- Step 2: Call subclass-specific logic
+    PERFORM subclass_specific_logic(param1, param2);
+END;
+$$ LANGUAGE plpgsql;
+CREATE OR REPLACE FUNCTION subclass_specific_logic(param1 VARCHAR, param2 VARCHAR)
+RETURNS VOID AS $$
+BEGIN
+    -- Subclass-specific logic implementation
+    RAISE NOTICE 'Executing subclass-specific logic with parameters: %, %', param1, param2;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+### Strategy Pattern
+
+The Strategy pattern defines a family of algorithms, encapsulates each one, and makes them interchangeable. This pattern allows you to select an algorithm at runtime, promoting flexibility and enabling the client to choose the appropriate algorithm based on specific conditions or requirements. The Strategy pattern is useful when you have multiple algorithms that can be applied to a problem, and you want to decouple the algorithm selection from the client code.
+
+### Command Pattern
+
+The Command pattern encapsulates a request as an object, allowing you to parameterize clients with queues, requests, and operations. This pattern is useful for implementing undo/redo functionality, logging operations, or queuing requests for execution. By using the Command pattern, you can decouple the sender of a request from the receiver, enabling more flexible and extensible designs.
+
+### Adapter Pattern
+
+The Adapter pattern allows incompatible interfaces to work together by converting the interface of one class into another that the client expects. This pattern is useful when you want to integrate existing classes with a new interface without modifying their code. By using an adapter, you can create a bridge between the incompatible interfaces, enabling them to collaborate seamlessly.
+
+### Proxy Pattern
+
+The Proxy pattern provides a surrogate or placeholder for another object to control access to it. This pattern is useful when you want to add an additional layer of control or functionality to an existing object, such as lazy loading, access control, or logging. By using a proxy, you can intercept requests to the real object and provide additional behavior without modifying the original object's code.
+
+<BackToTop />
