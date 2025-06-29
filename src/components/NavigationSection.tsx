@@ -59,7 +59,7 @@ export default function NavigationSection({
         </svg>
       </button>
       <div
-        className={`overflow-hidden transition-all duration-300 ease-in-out scrollbar-hide ${
+        className={`overflow-hidden transition-all duration-300 ease-in-out ${
           isOpen ? "max-h-screen opacity-100" : "max-h-0 opacity-0"
         }`}
       >
@@ -151,7 +151,7 @@ function NavigationItem({
           </svg>
         </button>
         <div
-          className={`overflow-hidden transition-all duration-300 ease-in-out max-w-full w-[94%] scrollbar-hide ${
+          className={`overflow-hidden transition-all duration-300 ease-in-out max-w-full w-[94%] ${
             isExpanded ? "max-h-screen opacity-100 ml-5" : "max-h-0 opacity-0 "
           }`}
         >

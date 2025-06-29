@@ -96,12 +96,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         id="sidebar"
         className={`
         bg-sidebar-bg border-border text-sidebar-text fixed top-0 left-0 z-50 w-96 h-full border-r
-        transform transition-transform duration-300 ease-in-out
+        transform transition-transform duration-300 ease-in-out overflow-hidden
         ${isOpen ? "translate-x-0" : "-translate-x-full"}
         lg:${isOpen ? "translate-x-0" : "-translate-x-full"}
       `}
       >
-        <div className="flex flex-col">
+        <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="flex items-center justify-between p-4 border-b border-border h-16">
             <Link href="/" className="flex items-center space-x-2">
@@ -149,28 +149,30 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 p-4 overflow-y-auto">
-            <div className="space-y-6">
-              {loading ? (
-                <div className="animate-pulse">
-                  <div className="bg-sidebar-hover-bg mb-3 rounded h-4"></div>
-                  <div className="space-y-2 bg-sidebar-hover-bg">
-                    <div className="bg-sidebar-hover-bg rounded h-3"></div>
-                    <div className="bg-sidebar-hover-bg rounded h-3"></div>
-                    <div className="bg-sidebar-hover-bg rounded h-3"></div>
+          <nav className="flex-1 overflow-x-hidden overflow-y-auto">
+            <div className="p-4">
+              <div className="space-y-6">
+                {loading ? (
+                  <div className="animate-pulse">
+                    <div className="bg-sidebar-hover-bg mb-3 rounded h-4"></div>
+                    <div className="space-y-2 bg-sidebar-hover-bg">
+                      <div className="bg-sidebar-hover-bg rounded h-3"></div>
+                      <div className="bg-sidebar-hover-bg rounded h-3"></div>
+                      <div className="bg-sidebar-hover-bg rounded h-3"></div>
+                    </div>
                   </div>
-                </div>
-              ) : (
-                navigation.map((section) => (
-                  <NavigationSection
-                    key={section.title}
-                    title={section.title}
-                    items={section.items}
-                    isOpen={openSection === section.title}
-                    onToggle={() => handleSectionToggle(section.title)}
-                  />
-                ))
-              )}
+                ) : (
+                  navigation.map((section) => (
+                    <NavigationSection
+                      key={section.title}
+                      title={section.title}
+                      items={section.items}
+                      isOpen={openSection === section.title}
+                      onToggle={() => handleSectionToggle(section.title)}
+                    />
+                  ))
+                )}
+              </div>
             </div>
           </nav>
 
