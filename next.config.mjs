@@ -46,10 +46,16 @@ const rehypeExpressiveCodeOptions = {
     wrap: true,
     // Disable wrapped line indentation for terminal languages
     overridesByLang: {
-      "bash,ps,sh,http,txt,plaintext": {
+      "ps,sh,http,txt,plaintext": {
         preserveIndent: false,
         frame: "none",
         showLineNumbers: false,
+        preserveIndent: false,
+      },
+      bash: {
+        preserveIndent: false, // Disable indentation for bash scripts
+        frame: "terminal", // No frame around bash code blocks
+        showLineNumbers: false, // Hide line numbers for bash scripts
       },
     },
     // Allows re-collapsing sections

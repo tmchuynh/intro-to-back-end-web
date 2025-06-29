@@ -1,4 +1,5 @@
 import type { MDXComponents } from "mdx/types";
+import Image from "next/image";
 import { JSX } from "react";
 import Button from "./src/components/Button";
 import Guides from "./src/components/Guides";
@@ -94,7 +95,7 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
         );
       }
       // For markdown-generated paragraphs, use a span with block display to avoid HTML nesting issues
-      return <span className="block mb-4 leading-relaxed">{children}</span>;
+      return <span className="block leading-relaxed">{children}</span>;
     },
     ul: ({ children }) => (
       <ul className="space-y-1 list-disc list-outside">{children}</ul>
@@ -147,7 +148,14 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
       <td className="px-6 py-4 border-b-1 border-border text-sm">{children}</td>
     ),
     img: ({ src, alt, ...props }) => (
-      <img src={src} alt={alt} className="mx-auto my-6 rounded-lg" {...props} />
+      <Image
+        src={src as string}
+        alt={alt as string}
+        className="mx-auto my-6 rounded-lg"
+        {...props}
+        width={props.width || 800}
+        height={props.height || 600}
+      />
     ),
     blockquote: ({ children }) => <blockquote>{children}</blockquote>,
     // Custom components
