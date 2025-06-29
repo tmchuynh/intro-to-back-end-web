@@ -1,0 +1,567 @@
+import BackToTop from "@/components/BackToTop";
+
+# Basic Commands
+
+## Table of Contents
+
+## Overview
+
+This page covers the basic commands for interacting with a MySQL database. These commands are essential for managing databases, tables, and data within MySQL.
+
+## Data Define Language (DDL) Commands
+
+### Create a Database
+
+This command creates a new database in your MySQL server. You can replace `my_database` with your desired database name.
+
+```sql frame="terminal" showLineNumbers=false title="Create a new database"
+CREATE DATABASE my_database;
+```
+
+### Drop a Database
+
+This command deletes an existing database. Be cautious when using this command, as it will permanently remove all data within the database. Replace `my_database` with the name of the database you want to drop.
+
+```sql frame="terminal" showLineNumbers=false title="Drop a database"
+DROP DATABASE my_database;
+```
+
+### Use a Specific Database
+
+This command selects the database you want to work with. Replace `my_database` with the name of the database you created or want to use.
+
+```sql frame="terminal" showLineNumbers=false title="Use a specific database"
+USE my_database;
+```
+
+## Data Manipulation Language (DML) Commands
+
+### Show All Databases
+
+This command lists all databases available in your MySQL server. This will be useful to check if your installation was successful and if you have any existing databases.
+
+```sql frame="terminal" showLineNumbers=false title="Show all databases"
+SHOW DATABASES;
+```
+
+You can filter the databases shown by using a `LIKE` clause. This is useful if you have many databases and want to find specific ones.
+
+```sql frame="terminal" showLineNumbers=false title="Show specific databases"
+SHOW DATABASES LIKE 'my_database%';
+```
+
+### Show All Tables
+
+This command lists all tables in the currently selected database. It helps you see what data structures are available for querying.
+
+```sql frame="terminal" showLineNumbers=false title="Show all tables"
+SHOW TABLES;
+```
+
+### Show Table Structure
+
+This command displays the structure of a specific table, including its columns, data types, and constraints. Replace `my_table` with the name of the table you want to inspect.
+
+```sql frame="terminal" showLineNumbers=false title="Show table structure"
+SHOW COLUMNS FROM my_table;
+```
+
+### Create a Table
+
+This command creates a new table within the currently selected database. You can define the columns and their data types. Replace `my_table` with your desired table name and adjust the columns as needed.
+
+```sql frame="terminal" showLineNumbers=false title="Create a new table"
+CREATE TABLE my_table (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    age INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+This command creates a table named `my_table` with four columns: `id`, `name`, `age`, and `created_at`. The `id` column is an auto-incrementing primary key, while the `name` column is a required string field, and the `created_at` column automatically records the timestamp when a row is created.
+
+```txt
++----+------------+-----+---------------------+
+| id | name       | age | created_at          |
++----+------------+-----+---------------------+
+|  1 | John Doe   |  30 | 2023-10-01 12:00:00 |
+|  2 | Alice      |  25 | 2023-10-01 12:05:00 |
+|  3 | Bob        |  28 | 2023-10-01 12:10:00 |
+|  4 | Charlie    |  22 | 2023-10-01 12:15:00 |
+|  5 | Jane Doe   |  27 | 2023-10-01 12:20:00 |
++----+------------+-----+---------------------+
+```
+
+### Drop a Table
+
+This command deletes an existing table. Be cautious when using this command, as it will permanently remove all data within the table. Replace `my_table` with the name of the table you want to drop.
+
+```sql frame="terminal" showLineNumbers=false title="Drop a table"
+DROP TABLE my_table;
+```
+
+### Insert Data into a Table
+
+This command inserts a new row of data into a table. Replace `my_table` with the name of your table and adjust the values as needed.
+
+```sql frame="terminal" showLineNumbers=false title="Insert data into a table"
+INSERT INTO my_table (name, age) VALUES ('John Doe', 30);
+```
+
+### Insert Multiple Rows
+
+This command inserts multiple rows of data into a table in a single query. Replace `my_table` with the name of your table and adjust the values as needed.
+
+```sql frame="terminal" showLineNumbers=false title="Insert multiple rows into a table"
+INSERT INTO my_table (name, age) VALUES
+('Alice', 25),
+('Bob', 28),
+('Charlie', 22);
+```
+
+### Insert Data with Specific Columns
+
+This command inserts data into specific columns of a table. You can specify which columns to insert values into. Replace `my_table` with your table name and adjust the columns and values as needed.
+
+```sql frame="terminal" showLineNumbers=false title="Insert data with specific columns"
+INSERT INTO my_table (name) VALUES ('Jane Doe');
+```
+
+```txt
++----+------------+-----+---------------------+
+| id | name       | age | created_at          |
++----+------------+-----+---------------------+
+|  1 | John Doe   |  30 | 2023-10-01 12:00:00 |
+|  2 | Alice      |  25 | 2023-10-01 12:05:00 |
+|  3 | Bob        |  28 | 2023-10-01 12:10:00 |
+|  4 | Charlie    |  22 | 2023-10-01 12:15:00 |
+|  5 | Jane Doe   | NULL | 2023-10-01 12:20:00 |
++----+------------+-----+---------------------+
+```
+
+### Altering a Table
+
+This command modifies the structure of an existing table. You can add, drop, or modify columns. Replace `my_table` with your table name and adjust the changes as needed.
+
+```sql frame="terminal" showLineNumbers=false title="Alter a table"
+ALTER TABLE my_table ADD COLUMN email VARCHAR(255);
+```
+
+You can also add a `CHECK` constraint to ensure that the `age` column only contains values greater than 0.
+
+```sql frame="terminal" showLineNumbers=false title="Add a CHECK constraint"
+ALTER TABLE my_table ADD CONSTRAINT chk_age CHECK (age > 0);
+```
+
+### Rename a Table
+
+This command renames an existing table. Replace `old_table_name` with the current name of the table and `new_table_name` with the desired new name.
+
+```sql frame="terminal" showLineNumbers=false title="Rename a table"
+ALTER TABLE old_table_name RENAME TO new_table_name;
+```
+
+### Update Data in a Table
+
+This command updates existing data in a table. You can specify which rows to update using a `WHERE` clause. Replace `my_table` with your table name and adjust the values as needed.
+
+```sql frame="terminal" showLineNumbers=false title="Update data in a table"
+UPDATE my_table SET age = 31 WHERE name = 'John Doe';
+```
+
+```txt
++----+------------+-----+---------------------+
+| id | name       | age | created_at          |
++----+------------+-----+---------------------+
+|  1 | John Doe   |  31 | 2023-10-01 12:00:00 |
+|  2 | Alice      |  25 || 2023-10-01 12:05:00 |
+|  3 | Bob        |  28 | 2023-10-01 12:10:00 |
+|  4 | Charlie    |  22 | 2023-10-01 12:15:00 |
+|  5 | Jane Doe   |  27 || 2023-10-01 12:20:00 |
++----+------------++-----+---------------------+
+```
+
+### Delete Data from a Table
+
+This command deletes rows from a table. Be cautious when using this command, as it will permanently remove data. You can specify which rows to delete using a `WHERE` clause. Replace `my_table` with your table name.
+
+```sql frame="terminal" showLineNumbers=false title="Delete data from a table"
+DELETE FROM my_table WHERE name = 'John Doe';
+```
+
+```txt
++----+------------+-----+---------------------+
+| id | name       | age | created_at          |
++----+------------+-----+---------------------+
+|  1 | Alice      |  25 | 2023-10-01 12:05:00 |
+|  2 | Bob        |  28 || 2023-10-01 12:10:00 |
+|  3 | Charlie    |  22 | 2023-10-01 12:15:00 |
+|  4 | Jane Doe   |  27 | 2023-10-01 12:20:00 |
++----+------------+-----+---------------------+
+```
+
+### Truncate a Table
+
+This command removes all rows from a table without logging individual row deletions. It is faster than using `DELETE` without a `WHERE` clause. Replace `my_table` with your table name.
+
+```sql frame="terminal" showLineNumbers=false title="Truncate a table"
+TRUNCATE TABLE my_table;
+```
+
+This command removes all rows from `my_table`, resetting the table to an empty state without logging individual row deletions. It is a more efficient way to clear a table compared to using `DELETE` without a `WHERE` clause.
+
+### Select Data from a Table
+
+This command retrieves data from a table. You can specify which columns to select and apply filters using a `WHERE` clause. Replace `my_table` with your table name and adjust the columns as needed.
+
+```sql frame="terminal" showLineNumbers=false title="Select data from a table"
+SELECT * FROM my_table WHERE age > 25;
+```
+
+```txt
++----+------------+-----+---------------------+
+| id | name       | age | created_at          |
++----+------------+-----+---------------------+
+|  1 | John Doe   |  30 | 2023-10-01 12:00:00 |
+|  2 | Alice      |  25 | 2023-10-01 12:05:00 |
+|  3 | Bob        |  28 | 2023-10-01 12:10:00 |
+|  4 | Charlie    |  22 || 2023-10-01 12:15:00 |
++----+------------++-----+---------------------+
+```
+
+This command retrieves all rows from `my_table` where the `age` is greater than 25. The results include all columns from the table.
+You can also select specific columns instead of all columns by specifying them in the `SELECT` statement. For example, to select only the `name` and `age` columns, you can use the following command:
+
+```sql frame="terminal" showLineNumbers=false title="Select specific columns from a table"
+SELECT name, age FROM my_table WHERE age > 25;
+```
+
+```txt
++------------+-----+
+| name       | age |
++------------+-----+
+| John Doe   |  30 |
+| Alice      |  25 |
+| Bob        |  28 |
+| Charlie    |  22 |
++------------+-----+
+```
+
+This command retrieves the names and ages of individuals older than 25 from `my_table`. The results include only the specified columns.
+
+### Select Specific Columns
+
+This command retrieves specific columns from a table. You can specify which columns to select and apply filters using a `WHERE` clause. Replace `my_table` with your table name and adjust the columns as needed.
+
+```sql frame="terminal" showLineNumbers=false title="Select specific columns from a table"
+SELECT name, age FROM my_table WHERE age > 25;
+```
+
+```txt
++------------+-----+
+| name       | age |
++------------+-----+
+| John Doe   |  30 |
+| Alice      |  25 |
+| Bob        |  28 |
+| Charlie    |  22 |
++------------+-----+
+```
+
+This command retrieves the names and ages of individuals older than 25 from `my_table`. The results include only the specified columns.
+
+### Combining Select with Conditions
+
+This command retrieves data from a table with specific conditions. You can use logical operators like `AND`, `OR`, and `NOT` to filter results. Replace `my_table` with your table name and adjust the conditions as needed.
+
+```sql frame="terminal" showLineNumbers=false title="Select with AND and LIKE conditions"
+SELECT * FROM my_table WHERE age > 25 AND name LIKE 'John%';
+```
+
+```txt
++----+------------+-----+---------------------+
+| id | name       | age | created_at          |
++----+------------+-----+---------------------+
+|  1 | John Doe   |  30 | 2023-10-01 12:00:00 |
+|  2 | John Smith |  28 | 2023-10-01 12:05:00 |
++----+------------+----------+
+```
+
+This command retrieves all rows from `my_table` where the `age` is greater than 25 and the `name` starts with 'John'. The results include all columns from the table.
+
+### Sorting and Filtering
+
+This command retrieves data from a table and applies sorting and filtering. You can specify which columns to select, apply filters using a `WHERE` clause, and order the results. Replace `my_table` with your table name and adjust the columns and conditions as needed.
+
+```sql frame="terminal" showLineNumbers=false title="Select with sorting and filtering"
+SELECT name, age FROM my_table WHERE age > 25 ORDER BY age DESC;
+```
+
+```txt
++------------+-----+
+| name       | age |
++------------+-----+
+| John Doe   |  30 |
+| Alice      |  25 |
+| Bob        |  28 |
+| Charlie    |  22 |
++------------+-----+
+```
+
+This command retrieves the names and ages of individuals older than 25, sorting the results in descending order by age.
+
+### Select Distinct Values
+
+This command retrieves distinct values from a specific column in a table. It helps eliminate duplicate entries. Replace `my_table` with your table name and adjust the column as needed.
+
+```sql frame="terminal" showLineNumbers=false title="Select distinct values from a table"
+SELECT DISTINCT age FROM my_table;
+```
+
+```txt
++-----+
+| age |
++-----+
+|  22 |
+|  25 |
+|  27 |
+|  29 |
+|  30 |
+|  32 |
+|  35 |
+|  40 |
++-----+
+```
+
+This command retrieves distinct values from the `age` column in the `my_table`, showing only unique ages without duplicates.
+
+#### Select Distinct Values with Conditions
+
+This command retrieves distinct values from specific columns in a table, applying conditions to filter the results. Replace `student` with your table name and adjust the columns and conditions as needed.
+
+```sql frame="terminal" showLineNumbers=false title="Select distinct values with conditions"
+SELECT studentID, FirstName, LastName, FirstName + ' ' + LastName AS FullName
+FROM student;
+```
+
+This will return distinct combinations of `studentID`, `FirstName`, and `LastName`, along with a concatenated `FullName` column.
+
+```txt
++-----------+-------------------+------------+------------------------+
+| studentID | FirstName         | LastName   | FullName               |
++-----------+-------------------+------------+------------------------+
+|         1 | Monique           | Davis      | Monique Davis          |
+|         2 | Teri              | Gutierrez  | Teri Gutierrez         |
+|         3 | Spencer           | Pautier    | Spencer Pautier        |
+|         4 | Louis             | Ramsey     | Louis Ramsey           |
+|         5 | Alvin             | Greene     | Alvin Greene           |
+|         6 | Sophie            | Freeman    | Sophie Freeman         |
+|         7 | Edgar Frank "Ted" | Codd       | Edgar Frank "Ted" Codd |
+|         8 | Donald D.         | Chamberlin | Donald D. Chamberlin   |
+|         9 | Raymond F.        | Boyce      | Raymond F. Boyce       |
++-----------+-------------------+------------+------------------------+
+```
+
+### Select with Aggregate Functions
+
+This command retrieves data from a table and applies aggregate functions like `COUNT`, `SUM`, `AVG`, etc. You can group results using the `GROUP BY` clause. Replace `my_table` with your table name and adjust the columns as needed.
+
+```sql frame="terminal" showLineNumbers=false title="Select with aggregate functions"
+SELECT user_only_num1 AS AgeOfServer, (user_only_num1 - warranty_period) AS NonWarrantyPeriod FROM server_table
+WHERE user_only_num1 > 0 AND warranty_period > 0;
+```
+
+```txt
++----------------+---------------------+
+| AgeOfServer    | NonWarrantyPeriod   |
++----------------+---------------------+
+| 5              | 2                   |
+| 3              | 1                   |
+| 7              | 4                   |
++----------------+---------------------+
+```
+
+This command retrieves the age of servers and calculates the non-warranty period by subtracting the warranty period from the age of the server. The results are filtered to include only servers with a positive age and warranty period.
+
+### Limit Results
+
+This command retrieves a limited number of rows from a table. You can specify how many rows to return. Replace `my_table` with your table name and adjust the limit as needed.
+
+```sql frame="terminal" showLineNumbers=false title="Limit results from a table"
+SELECT * FROM my_table LIMIT 10;
+```
+
+```txt
++----+------------+-----+---------------------+
+| id | name       | age | created_at          |
++----+------------+-----+---------------------+
+|  1 | John Doe   |  30 | 2023-10-01 12:00:00 |
+|  2 | Alice      |  25 | 2023-10-01 12:05:00 |
+|  3 | Bob        |  28 | 2023-10-01 12:10:00 |
+|  4 | Charlie    |  22 | 2023-10-01 12:15:00 |
+|  5 | Jane Doe   |  27 || 2023-10-01 12:20:00 |
+|  6 |Sophie     |  29 | 2023-10-01 12:25:00 |
+|  7 | Edgar Frank |  35 | 2023-10-01 12:30:00 |
+|  8 | Donald D.   | |  40 | 2023-10-01 12:35:00 |
+|  9 | Raymond F.  |  32 | 2023-10-01 12:40:00 |
+| 10 | Louis      |  31 | 2023-10-01 12:45:00 |
++----+------------+-----+---------------------+
+```
+
+### Select with Offset
+
+This command retrieves a limited number of rows from a table, starting from a specific offset. You can specify how many rows to skip before returning the results. Replace `my_table` with your table name and adjust the limit and offset as needed.
+
+```sql frame="terminal" showLineNumbers=false title="Select with offset"
+SELECT * FROM my_table LIMIT 10 OFFSET 5;
+```
+
+```txt
++----+------------+-----+---------------------+
+| id | name       | age | created_at          |
++----+------------+-----+---------------------+
+|  6 | Sophie     |  29 | 2023-10-01 12:25:00 |
+|  7 | Edgar Frank |  35 | 2023-10-01 12:30:00 |
+|  8 | Donald D.   |  40 | 2023-10-01 12:35:00 |
+|  9 | Raymond F.  |  32 | 2023-10-01 12:40:00 |
+| 10 | Louis      |  31 | 2023-10-01 12:45:00 |
++----+------------++-----+---------------------+
+```
+
+### Group By Clause
+
+This command groups rows that have the same values in specified columns into summary rows. You can use aggregate functions like `COUNT`, `SUM`, `AVG`, etc., on grouped data. Replace `my_table` with your table name and adjust the columns as needed.
+
+```sql frame="terminal" showLineNumbers=false title="Group by clause"
+SELECT age, COUNT(*) AS count FROM my_table GROUP BY age;
+```
+
+```txt
++-----+-------+
+| age | count |
++-----+-------+
+|  22 |     1 |
+|  25 |     1 |
+|  27 |     1 |
+|  28 |     1 |
+|  29 |     1 |
+|  30 |     1 |
+|  31 |     1 |
+|  32 |     1 |
+|  35 |     1 |
+|  40 |     1 |
++-----+-------+
+```
+
+This command retrieves the count of rows for each distinct age in the `my_table`. The results are grouped by the `age` column, showing how many entries exist for each age value.
+
+### Having Clause
+
+This command filters the results of a `GROUP BY` query based on a condition. It is used to specify conditions on aggregated data. Replace `my_table` with your table name and adjust the columns and conditions as needed.
+
+```sql frame="terminal" showLineNumbers=false title="Having clause"
+SELECT age, COUNT(*) AS count FROM my_table GROUP BY age HAVING count > 1;
+```
+
+```txt
++-----+-------+
+| age | count |
++-----+-------+
+|  22 |     1 |
+|  25 |     1 |
+|  27 |     1 |
+|  28 |     1 |
+|  29 |     1 |
+|  30 |     1 |
+|  31 |     1 |
+|  32 |     1 |
+|  35 |     1 |
+|  40 |     1 |
++-----+-------+
+```
+
+This command retrieves the count of rows for each distinct age in the `my_table`, but only includes groups where the count is greater than 1. The results are grouped by the `age` column, showing how many entries exist for each age value that meets the condition.
+
+### Count Rows in a Table
+
+This command counts the number of rows in a table. You can apply filters using a `WHERE` clause. Replace `my_table` with your table name.
+
+```sql frame="terminal" showLineNumbers=false title="Count rows in a table"
+SELECT COUNT(*) FROM my_table WHERE age > 25;
+```
+
+```txt
++----------+
+| COUNT(*) |
++----------+
+|       5  |
++----------+
+```
+
+This command counts the number of rows in the `my_table` where the `age` is greater than 25. The result shows the total count of rows that meet this condition.
+
+## Data Control Language (DCL) Commands
+
+### Grant Privileges
+
+This command grants specific privileges to a user on a database or table. Replace `my_user` with the username and `my_database` with the database name.
+
+```sql frame="terminal" showLineNumbers=false title="Grant privileges"
+GRANT ALL PRIVILEGES ON my_database.* TO 'my_user'@'localhost';
+```
+
+This command grants all privileges on the specified database to the user `my_user` connecting from `localhost`. You can specify different privileges like `SELECT`, `INSERT`, `UPDATE`, etc., instead of `ALL PRIVILEGES`.
+
+### Revoke Privileges
+
+This command revokes specific privileges from a user. Replace `my_user` with the username and `my_database` with the database name.
+
+```sql frame="terminal" showLineNumbers=false title="Revoke privileges"
+REVOKE ALL PRIVILEGES ON my_database.* FROM 'my_user'@'localhost';
+```
+
+This command revokes all privileges on the specified database from the user `my_user` connecting from `localhost`. You can specify different privileges to revoke, such as `SELECT`, `INSERT`, `UPDATE`, etc.
+
+## Transaction Control Language (TCL) Commands
+
+### Start a Transaction
+
+This command begins a new transaction. It allows you to group multiple SQL statements into a single unit of work.
+
+```sql frame="terminal" showLineNumbers=false title="Start a transaction"
+START TRANSACTION;
+```
+
+This command initiates a transaction, allowing you to execute multiple SQL statements that can be committed or rolled back as a single unit.
+
+### Commit a Transaction
+
+This command commits the current transaction, making all changes made during the transaction permanent.
+
+```sql frame="terminal" showLineNumbers=false title="Commit a transaction"
+COMMIT;
+```
+
+This command saves all changes made during the transaction to the database. After executing this command, the changes cannot be undone.
+If you want to commit changes made in a specific transaction, you can use the `COMMIT` command. This will make all changes made during the transaction permanent.
+
+### Rollback a Transaction
+
+This command rolls back the current transaction, undoing all changes made during the transaction.
+
+```sql frame="terminal" showLineNumbers=false title="Rollback a transaction"
+ROLLBACK;
+```
+
+This command undoes all changes made during the transaction, reverting the database to its state before the transaction began. After executing this command, any changes made during the transaction are lost.
+
+## Next Steps
+
+### Immediate Actions
+
+| Action                                | Purpose                                                                          |
+| ------------------------------------- | -------------------------------------------------------------------------------- |
+| [SQL Queries](/sql-mySQL/SQL-queries) | Learn how to write and execute SQL queries to interact with your MySQL database. |
+
+<BackToTop />
