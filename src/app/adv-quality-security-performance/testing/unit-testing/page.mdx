@@ -55,13 +55,14 @@ This pattern makes tests easier to read and understand, as it clearly separates 
 - **Description**: A widely used testing framework for Java applications, providing annotations and assertions to write and run tests easily.
 - **Documentation**: [JUnit Documentation](https://junit.org/junit5/docs/current/user-guide/)
 
-```java
+```java title="src/main/java/Calculator.java"
 class Calculator {
     public int add(int a, int b) {
         return a + b;
     }
 }
 
+```java title="src/test/java/CalculatorTest.java"
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 public class CalculatorTest {
@@ -80,7 +81,7 @@ public class CalculatorTest {
 - **Description**: A powerful testing framework for Python that supports fixtures, parameterized tests, and plugins, making it easy to write and run tests.
 - **Documentation**: [pytest Documentation](https://docs.pytest.org/en/stable/)
 
-```python
+```python title="src/calculator.py"
 import pytest
 def add(a, b):
     return a + b
@@ -95,7 +96,7 @@ def test_add():
 - **Description**: The built-in testing framework for Python, providing a rich set of tools for writing and running tests, including test discovery and fixtures.
 - **Documentation**: [unittest Documentation](https://docs.python.org/3/library/unittest.html)
 
-```python
+```python title="test_calculator_unittest.py"
 import unittest
 def add(a, b):
     return a + b
@@ -114,7 +115,7 @@ if __name__ == "__main__":
 - **Description**: A popular framework for automating web browsers, allowing developers to write tests that interact with web applications and verify their behavior.
 - **Documentation**: [Selenium Documentation](https://www.selenium.dev/documentation/en/)
 
-```python
+```python title="tests/selenium/test_google_search.py"
 from selenium import webdriver
 def test_google_search():
     driver = webdriver.Chrome()
@@ -127,7 +128,7 @@ def test_google_search():
     driver.quit()
 ```
 
-```java
+```java title="src/test/java/GoogleSearchTest.java"
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.By;
@@ -148,7 +149,7 @@ public class GoogleSearchTest {
 }
 ```
 
-```javascript
+```javascript title="tests/selenium/google-search.test.js"
 const { Builder, By, Key } = require("selenium-webdriver");
 async function testGoogleSearch() {
   let driver = await new Builder().forBrowser("chrome").build();
@@ -176,7 +177,7 @@ testGoogleSearch();
 - **Description**: A tool for behavior-driven development (BDD) that allows developers to write tests in a human-readable format using Gherkin syntax, promoting collaboration between developers and non-technical stakeholders.
 - **Documentation**: [Cucumber Documentation](https://cucumber.io/docs/guides/overview/)
 
-```javascript
+```javascript title="tests/cucumber/step-definitions/calculator-steps.js"
 // This code is intended to be used in a Cucumber.js step definition file.
 const { Given, When, Then } = require("@cucumber/cucumber");
 const assert = require("assert");
@@ -195,7 +196,7 @@ Then("the result should be {int}", function (expected) {
 });
 ```
 
-```java
+```java title="src/test/java/CalculatorSteps.java"
 class Calculator {
     public int add(int a, int b) {
         return a + b;
@@ -224,7 +225,7 @@ public class CalculatorSteps {
 }
 ```
 
-```ruby
+```ruby title="features/step_definitions/calculator_steps.rb"
 Given("I have a calculator") do
   @calculator = Calculator.new
 end
@@ -242,7 +243,7 @@ end
 - **Description**: A flexible testing framework for Node.js and browser applications, allowing developers to write tests in a variety of styles (BDD, TDD) and providing support for asynchronous testing.
 - **Documentation**: [Mocha Documentation](https://mochajs.org/)
 
-```javascript
+```javascript title="test/add.test.js"
 // Save this code in a file named add.test.js and run it using the 'mocha' command.
 const assert = require("assert");
 
@@ -263,7 +264,7 @@ describe("add", function () {
 - **Description**: A delightful JavaScript testing framework with a focus on simplicity, providing built-in assertions, mocking, and code coverage.
 - **Documentation**: [Jest Documentation](https://jestjs.io/)
 
-```javascript
+```javascript title="__tests__/sum.test.js"
 // This code is intended to be run with Jest, where 'test' and 'expect' are available globally.
 function sum(a, b) {
   return a + b;
@@ -279,7 +280,7 @@ test("adds 1 + 2 to equal 3", () => {
 - **Description**: A modern end-to-end testing framework for web applications, providing a powerful API for writing tests and a user-friendly interface for debugging.
 - **Documentation**: [Cypress Documentation](https://docs.cypress.io/guides/overview/why-cypress)
 
-```javascript
+```javascript title="cypress/e2e/my-first-test.cy.js"
 describe("My First Test", () => {
   it("Visits the Kitchen Sink", () => {
     cy.visit("https://example.cypress.io");
@@ -297,7 +298,7 @@ describe("My First Test", () => {
 - **Description**: A powerful end-to-end testing framework for web applications, supporting multiple browsers and providing a rich API for writing tests.
 - **Documentation**: [Playwright Documentation](https://playwright.dev/docs/intro)
 
-```javascript
+```javascript title="tests/basic-test.spec.js"
 const { test, expect } = require("@playwright/test");
 test("basic test", async ({ page }) => {
   await page.goto("https://example.com");
@@ -306,7 +307,7 @@ test("basic test", async ({ page }) => {
 });
 ```
 
-```python
+```python title="tests/playwright_test.py"
 from playwright.sync_api import sync_playwright
 def run(playwright):
     browser = playwright.chromium.launch()
@@ -318,7 +319,7 @@ with sync_playwright() as playwright:
     run(playwright)
 ```
 
-```java
+```java title="src/test/java/PlaywrightExample.java"
 import com.microsoft.playwright.*;
 import com.microsoft.playwright.Page;
 public class Example {
@@ -340,7 +341,7 @@ public class Example {
 - **Description**: A behavior-driven development (BDD) framework for testing JavaScript code, providing a clean syntax for writing tests and built-in assertions.
 - **Documentation**: [Jasmine Documentation](https://jasmine.github.io/)
 
-```javascript
+```javascript title="spec/add-spec.js"
 function add(a, b) {
   return a + b;
 }
