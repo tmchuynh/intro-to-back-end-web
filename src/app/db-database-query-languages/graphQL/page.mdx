@@ -1,0 +1,350 @@
+import BackToTop from "@/components/BackToTop";
+
+# GraphQL Query Language
+
+## Table of Contents
+
+## Introduction
+
+GraphQL is a query language for APIs that allows clients to request only the data they need. It was developed by Facebook in 2012 and has since become a popular alternative to RESTful APIs. GraphQL provides a more flexible and efficient way to interact with APIs, enabling developers to define the structure of the response they want.
+
+GraphQL is not a database query language but rather a specification for building APIs. It allows clients to specify the shape of the data they want, and the server responds with exactly that data. This eliminates over-fetching and under-fetching of data, making it more efficient than traditional REST APIs.
+
+## Key Features
+
+- **Declarative Data Fetching**: Clients can specify exactly what data they need, reducing the amount of data transferred over the network.
+- **Single Endpoint**: GraphQL APIs typically expose a single endpoint, simplifying the API structure and reducing the number of requests needed to fetch related data.
+- **Strongly Typed Schema**: GraphQL uses a schema to define the types of data available in the API, providing a clear contract between the client and server.
+- **Real-time Capabilities**: GraphQL supports subscriptions, allowing clients to receive real-time updates when data changes on the server.
+
+## Getting Started with GraphQL
+
+To get started with GraphQL, you need to set up a GraphQL server. There are several libraries available for different programming languages that can help you build a GraphQL server, such as Apollo Server for Node.js, Graphene for Python, and GraphQL.js for JavaScript.
+Once you have your server set up, you can define your GraphQL schema, which describes the types of data available in your API and the relationships between them. The schema is written in the GraphQL Schema Definition Language (SDL) and serves as a contract between the client and server.
+
+## Basic Syntax
+
+GraphQL queries are written in a syntax that resembles JSON. A query consists of fields that specify the data you want to retrieve. Here’s a simple example of a GraphQL query:
+
+```graphql
+query {
+  user(id: "1") {
+    name
+    email
+  }
+}
+```
+
+This query retrieves the `name` and `email` fields of a user with the ID of "1". The server responds with a JSON object containing only the requested fields, like this:
+
+```json
+{
+  "data": {
+    "user": {
+      "name": "John Doe",
+      "email": "john_doe@sample.com"
+    }
+  }
+}
+```
+
+## Queries
+
+There are three main types of operations in GraphQL: queries, mutations, and subscriptions. Queries are used to fetch data from the server. They can be simple or complex, depending on the structure of the data you want to retrieve.
+
+### Fields
+
+In GraphQL, fields are the basic building blocks of queries. Each field corresponds to a specific piece of data in your schema. You can nest fields to retrieve related data. For example, if you have a `user` type with a `posts` field that returns a list of posts, you can query it like this:
+
+```graphql
+query {
+  user(id: "1") {
+    name
+    posts {
+      title
+      content
+    }
+  }
+}
+```
+
+This query retrieves the `name` of the user and the `title` and `content` of their posts. The server responds with a JSON object containing the requested data.
+
+### Variables
+
+GraphQL supports variables, which allow you to parameterize your queries. This is useful for dynamic queries where the input values may change. Here’s an example of a query with variables:
+
+```graphql
+query GetUser($id: ID!) {
+  user(id: $id) {
+    name
+    email
+  }
+}
+```
+
+You can pass the variable `id` when executing the query, allowing you to reuse the same query structure with different values.
+
+### Fragments
+
+Fragments are reusable pieces of a query that can be shared across multiple queries. They help reduce duplication and make your queries more maintainable. Here’s an example of a fragment:
+
+```graphql
+fragment UserFields on User {
+  name
+  email
+}
+query {
+  user(id: "1") {
+    ...UserFields
+  }
+}
+```
+
+This query uses the `UserFields` fragment to retrieve the `name` and `email` fields of a user. Fragments can be defined once and reused in multiple queries, making your code cleaner and more efficient.
+
+### Aliases
+
+Aliases allow you to rename fields in your query, which is useful when you want to retrieve the same field multiple times with different parameters. Here’s an example of using aliases:
+
+```graphql
+query {
+  user1: user(id: "1") {
+    name
+    email
+  }
+  user2: user(id: "2") {
+    name
+    email
+  }
+}
+```
+
+In this query, we retrieve the `name` and `email` of two different users, but we use aliases (`user1` and `user2`) to differentiate between them in the response. The server responds with a JSON object containing both users' data under their respective aliases.
+
+### Directives
+
+Directives are special instructions that can be added to fields in a query to modify their behavior. The most common directives are `@include` and `@skip`, which control whether a field should be included or skipped based on a condition. Here’s an example:
+
+```graphql
+query GetUser($includeEmail: Boolean!) {
+  user(id: "1") {
+    name
+    email @include(if: $includeEmail)
+  }
+}
+```
+
+In this query, the `email` field will only be included in the response if the variable `includeEmail` is set to `true`. This allows you to conditionally include or exclude fields based on your requirements.
+
+### Nested Queries
+
+GraphQL allows you to nest queries to retrieve related data in a single request. This is particularly useful when dealing with complex data structures. For example, if you have a `user` type with a `posts` field that returns a list of posts, you can query it like this:
+
+```graphql
+query {
+  user(id: "1") {
+    name
+    posts {
+      title
+      comments {
+        content
+      }
+    }
+  }
+}
+```
+
+This query retrieves the `name` of the user, the `title` of their posts, and the `content` of the comments on those posts. The server responds with a JSON object containing all the requested data in a nested structure.
+
+## Schema Definition
+
+In GraphQL, the schema defines the types of data available in your API and the relationships between them. The schema is written in the GraphQL Schema Definition Language (SDL) and serves as a contract between the client and server. Here’s an example of a simple schema:
+
+```graphql
+type User {
+  id: ID!
+  name: String!
+  email: String!
+  posts: [Post!]!
+}
+type Post {
+  id: ID!
+  title: String!
+  content: String!
+}
+```
+
+This schema defines two types: `User` and `Post`. The `User` type has fields for `id`, `name`, `email`, and a list of `posts`. The `Post` type has fields for `id`, `title`, and `content`. The exclamation mark (`!`) indicates that the field is non-nullable, meaning it must always have a value.
+
+## Mutations
+
+Mutations are used to modify data on the server, such as creating, updating, or deleting records. They are similar to queries but are designed for operations that change the state of the data.
+
+### Creating a Mutation
+
+To create a mutation, you define a mutation type in your schema. Here’s an example of a mutation to create a new user:
+
+```graphql
+type Mutation {
+  createUser(name: String!, email: String!): User!
+}
+```
+
+This mutation takes `name` and `email` as input parameters and returns the newly created `User` object. The exclamation mark (`!`) indicates that the mutation will always return a `User` object.
+
+### Executing a Mutation
+
+To execute a mutation, you use the `mutation` keyword followed by the mutation name and the input parameters. Here’s an example of executing the `createUser` mutation:
+
+```graphql
+mutation {
+  createUser(name: "Jane Doe", email: "jane_doe@sample.com") {
+    id
+    name
+    email
+  }
+}
+```
+
+This mutation creates a new user with the specified `name` and `email`, and it returns the `id`, `name`, and `email` of the newly created user. The server responds with a JSON object containing the created user's data.
+
+### Updating a Mutation
+
+To update an existing record, you can define a mutation that takes the record's ID and the fields to be updated. Here’s an example of an update mutation for a user:
+
+```graphql
+type Mutation {
+  updateUser(id: ID!, name: String, email: String): User!
+}
+```
+
+This mutation takes the `id` of the user to be updated and optional `name` and `email` fields. It returns the updated `User` object.
+
+### Executing an Update Mutation
+
+To execute the update mutation, you can use the following syntax:
+
+```graphql
+mutation {
+  updateUser(id: "1", name: "John Smith") {
+    id
+    name
+    email
+  }
+}
+```
+
+This mutation updates the user with ID "1" to have the new name "John Smith". It returns the `id`, `name`, and `email` of the updated user. The server responds with a JSON object containing the updated user's data.
+
+### Deleting a Mutation
+
+To delete a record, you can define a mutation that takes the record's ID as input. Here’s an example of a delete mutation for a user:
+
+```graphql
+type Mutation {
+  deleteUser(id: ID!): User!
+}
+```
+
+This mutation takes the `id` of the user to be deleted and returns the deleted `User` object.
+
+### Executing a Delete Mutation
+
+To execute the delete mutation, you can use the following syntax:
+
+```graphql
+mutation {
+  deleteUser(id: "1") {
+    id
+    name
+    email
+  }
+}
+```
+
+This mutation deletes the user with ID "1" and returns the `id`, `name`, and `email` of the deleted user. The server responds with a JSON object containing the deleted user's data.
+
+### Multiple Mutations
+
+GraphQL allows you to execute multiple mutations in a single request. This is useful when you need to perform several related operations at once. You can group multiple mutations within a single `mutation` block. Here’s an example:
+
+```graphql
+mutation {
+  createUser(name: "Alice", email: "alice_d@sample.com") {
+    id
+    name
+    email
+  }
+  updateUser(id: "2", name: "Bob Smith") {
+    id
+    name
+    email
+  }
+  deleteUser(id: "3") {
+    id
+    name
+    email
+  }
+}
+```
+
+This mutation creates a new user, updates an existing user, and deletes another user in a single request. The server responds with a JSON object containing the results of all three operations.
+
+## Subscriptions
+
+Subscriptions allow clients to receive real-time updates from the server when data changes. This is useful for applications that require live updates, such as chat applications or collaborative tools. Subscriptions are defined in the schema and can be executed using the `subscription` keyword. Here’s an example of a subscription to receive updates when a new user is created:
+
+```graphql
+type Subscription {
+  userCreated: User!
+}
+```
+
+This subscription listens for events when a new user is created and returns the newly created `User` object.
+
+### Executing a Subscription
+
+To execute a subscription, you can use the following syntax:
+
+```graphql
+subscription {
+  userCreated {
+    id
+    name
+    email
+  }
+}
+```
+
+This subscription listens for the `userCreated` event and returns the `id`, `name`, and `email` of the newly created user. When a new user is created on the server, the client will receive real-time updates with the user's data.
+
+## Validations
+
+GraphQL provides built-in validation mechanisms to ensure that queries and mutations conform to the schema. When a query is executed, the server checks if the requested fields exist in the schema and if the input parameters are of the correct type. If any validation errors occur, the server responds with an error message indicating the issue.
+
+### Common Validation Errors
+
+- **Field Not Found**: If a requested field does not exist in the schema, the server returns an error indicating that the field is not found.
+- **Invalid Input Type**: If the input parameters do not match the expected types defined in the schema, the server returns an error indicating the type mismatch.
+- **Required Fields Missing**: If a required field is missing in a mutation, the server returns an error indicating that the required field is not provided.
+- **Unauthorized Access**: If a user tries to access a field or perform an operation they are not authorized for, the server returns an error indicating insufficient permissions.
+
+## Best Practices
+
+- **Use Fragments**: Fragments help reduce duplication in queries and make your code more maintainable. Define reusable fragments for common fields and use them across multiple queries.
+- **Use Aliases**: Aliases allow you to retrieve the same field multiple times with different parameters. This is useful when you need to fetch related data in a single query.
+- **Use Variables**: Variables allow you to parameterize your queries, making them more dynamic and reusable. Use variables for input parameters in queries and mutations.
+- **Optimize Queries**: Avoid over-fetching and under-fetching data by carefully designing your queries. Only request the fields you need to minimize the amount of data transferred over the network.
+- **Use Directives**: Directives allow you to conditionally include or exclude fields based on certain conditions. Use directives like `@include` and `@skip` to control the behavior of your queries.
+
+## Conclusion
+
+GraphQL is a powerful query language for APIs that provides a flexible and efficient way to interact with data. It allows clients to specify exactly what data they need, reducing over-fetching and under-fetching of data. With its declarative syntax, strong typing, and real-time capabilities, GraphQL has become a popular choice for building modern APIs.
+
+## Further Reading
+
+- [GraphQL Official Documentation](https://graphql.org/learn/)
+- [GraphQL Best Practices](https://graphql.org/learn/best-practices/)
+
+<BackToTop />
