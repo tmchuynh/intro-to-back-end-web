@@ -1,0 +1,169 @@
+import BackToTop from "@/components/BackToTop";
+
+# MongoDB Setup and Configuration
+
+## Introduction
+
+In this module, we'll set up MongoDB for our online learning platform. MongoDB is a NoSQL document database that will store our courses, user data, progress tracking, and more. Its flexible schema design makes it ideal for an educational platform where content structures might evolve over time.
+
+## Installing MongoDB
+
+Depending on your operating system, there are different ways to install MongoDB. Here are instructions for the major platforms:
+
+### Option 1: Local Installation
+
+#### For Ubuntu/Debian Linux:
+
+```bash
+# Import MongoDB public GPG key
+wget -qO - https://www.mongodb.org/static/pgp/server-6.0.asc | sudo apt-key add -
+
+# Create a list file for MongoDB
+echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/6.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-6.0.list
+
+# Update the package list
+sudo apt-get update
+
+# Install MongoDB
+sudo apt-get install -y mongodb-org
+
+# Start MongoDB
+sudo systemctl start mongod
+
+# Enable MongoDB to start on boot
+sudo systemctl enable mongod
+```
+
+#### For macOS (using Homebrew):
+
+```bash
+# Install MongoDB
+brew tap mongodb/brew
+brew install mongodb-community
+
+# Start MongoDB
+brew services start mongodb-community
+```
+
+#### For Windows:
+
+1. Download the MongoDB Community Server installer from the [MongoDB Download Center](https://www.mongodb.com/try/download/community)
+2. Run the installer and follow the installation wizard
+3. Choose "Complete" installation
+4. Install MongoDB Compass (the GUI for MongoDB) when prompted
+5. MongoDB will be installed as a Windows service that starts automatically
+
+### Option 2: MongoDB Atlas (Cloud Service)
+
+For production or if you prefer not to install MongoDB locally, you can use MongoDB Atlas, a fully managed cloud database:
+
+1. Go to [MongoDB Atlas](https://www.mongodb.com/cloud/atlas/register)
+2. Create a free account and sign in
+3. Create a new cluster (the free tier is sufficient for development)
+4. Configure your cluster (choose a cloud provider and region)
+5. Create a database user with password authentication
+6. Configure network access (whitelist your IP address)
+7. Once your cluster is created, click "Connect" to get your connection string
+
+<BackToTop />
+
+## MongoDB Configuration
+
+### Configuring a Local MongoDB Instance
+
+If you're using a local MongoDB installation, you may want to configure it for development. The configuration file is typically located at:
+
+- Linux: `/etc/mongod.conf`
+- macOS: `/usr/local/etc/mongod.conf`
+- Windows: `C:\Program Files\MongoDB\Server\6.0\bin\mongod.cfg`
+
+For our learning platform, the default configuration should be sufficient, but here are some common settings you might adjust:
+
+```yaml title="mongod.conf"
+# Where data is stored
+storage:
+  dbPath: /var/lib/mongodb
+
+# Network interfaces
+net:
+  port: 27017
+  bindIp: 127.0.0.1
+
+# Security
+security:
+  authorization: enabled
+```
+
+### Creating a Database for Our Project
+
+Now, let's create a database for our learning platform. We'll use the MongoDB shell for this:
+
+```bash
+# Connect to MongoDB
+mongosh
+
+# Create and switch to our database
+use learning_platform_db
+
+# Create a collection (similar to tables in SQL databases)
+db.createCollection("users")
+db.createCollection("courses")
+db.createCollection("lessons")
+db.createCollection("enrollments")
+```
+
+### Setting Up a Database User
+
+For better security, let's create a dedicated user for our application:
+
+```javascript title="MongoDB Shell"
+// In MongoDB shell
+use admin
+db.createUser({
+  user: "learning_platform_user",
+  pwd: "secure_password", // Use a strong password in production
+  roles: [
+    { role: "readWrite", db: "learning_platform_db" }
+  ]
+})
+```
+
+## MongoDB Compass (GUI Tool)
+
+MongoDB Compass is a powerful GUI for MongoDB that allows you to:
+
+- Visualize your schema
+- Create, query, update, and delete documents
+- Optimize queries
+- View performance metrics
+
+If you haven't installed it yet:
+
+- For Windows: It's included in the MongoDB installer
+- For macOS/Linux: Download from [MongoDB Compass](https://www.mongodb.com/try/download/compass)
+
+## Connecting to MongoDB from Spring Boot
+
+In the next module, we'll configure Spring Boot to connect to our MongoDB database, but here's a preview of what we'll need:
+
+### Connection String Format
+
+For a local MongoDB:
+
+```
+mongodb://username:password@localhost:27017/learning_platform_db
+```
+
+For MongoDB Atlas:
+
+```
+mongodb+srv://username:password@cluster0.mongodb.net/learning_platform_db
+```
+
+## Next Steps
+
+Now that we have MongoDB set up, we'll design our database schema in the next module. We'll define the structure for users, courses, lessons, and other entities in our learning platform.
+
+[Next: MongoDB Schema Design →](/proj-online-learning-platform-website/03-mongodb-schema-design)
+
+<BackToTop />
