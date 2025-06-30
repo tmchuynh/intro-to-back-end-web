@@ -1,0 +1,116 @@
+import BackToTop from "@/components/BackToTop";
+
+# Structured Query Language (SQL)
+
+## Table of Contents
+
+## Introduction
+
+Structured Query Language (SQL) is a powerful, standardized programming language designed specifically for managing and manipulating relational databases. Developed in the 1970s at IBM, SQL has become the universal language for database interaction, enabling users to perform various operations such as querying data, updating records, creating database structures, and controlling access to data.
+
+SQL is essential for anyone working with databases, as it provides a standardized way to interact with data across different database management systems. Whether you're working with MySQL, PostgreSQL, Oracle, or SQL Server, the core SQL syntax remains largely consistent, making it a valuable skill that transfers across platforms.
+
+SQL is widely used in various applications, from small personal projects to large enterprise systems powering major corporations. Understanding SQL is crucial for developers, data analysts, database administrators, and anyone involved in data management.
+
+### Real-World Applications
+
+SQL powers many aspects of modern technology and business operations:
+
+- **E-commerce**: Product catalogs, customer accounts, order processing, inventory management
+- **Social Media**: User management, content storage, activity tracking, recommendation systems
+- **Banking**: Transaction processing, account management, fraud detection, compliance reporting
+- **Healthcare**: Patient records, medical history, appointment scheduling, regulatory compliance
+- **Business Intelligence**: Data analysis, reporting, dashboard creation, performance metrics
+
+### Key Concepts
+
+Understanding these fundamental concepts is essential for working effectively with SQL:
+
+- **Database**: A structured collection of data stored electronically. It can be thought of as an organized set of tables that hold related information.
+- **Tables**: Structured collections of data organized into rows and columns, similar to spreadsheets
+- **Row**: A single record in a table, representing a specific instance of the entity. For example, a row in a customer table might contain information about a specific customer.
+- **Column**: A specific attribute of the entity represented by the table. For example, a customer table might have columns for customer ID, name, and email address.
+- **Schemas**: Logical groupings of database objects (tables, views, indexes) that define the structure of the database
+- **Query**: A request for data or information from a database. Queries are written in SQL and can retrieve, insert, update, or delete data.
+- **Primary Keys**: Unique identifiers for each row in a table, ensuring data integrity
+- **Foreign Keys**: References to primary keys in other tables, establishing relationships between data
+- **Indexes**: Performance optimization structures that speed up data retrieval operations
+- **SQL Statement**: A command written in SQL to perform a specific operation on a database. Common SQL statements include `SELECT`, `INSERT`, `UPDATE`, and `DELETE`.
+- **Data Manipulation Language (DML): **A subset of SQL used to manipulate data within a database. It includes commands like `SELECT`, `INSERT`, `UPDATE`, and `DELETE`.
+- **Data Definition Language (DDL): **A subset of SQL used to define and manage database structures. It includes commands like `CREATE`, `ALTER`, and `DROP` to create, modify, or delete database objects.
+- **Data Control Language (DCL): **A subset of SQL used to control access to data in a database. It includes commands like `GRANT` and `REVOKE` to manage user permissions.
+- **Normalization**: The process of organizing data in a database to reduce redundancy and improve data integrity. It involves dividing large tables into smaller, related tables and defining relationships between them.
+- **View**: A virtual table that is based on the result of a SQL query. Views allow users to simplify complex queries and present data in a specific format without storing it physically.
+- **Stored Procedures**: Predefined SQL code that can be executed with parameters, encapsulating complex logic
+- **Trigger**: A special type of stored procedure that automatically executes in response to certain events on a table, such as `INSERT`, `UPDATE`, or `DELETE`. Triggers are used to enforce business rules and maintain data integrity.
+
+### Benefits of SQL
+
+SQL offers numerous advantages that make it the preferred choice for relational database management:
+
+- **Standardization**: Consistent syntax across different database systems enables portability and reduces learning curve
+- **Declarative Nature**: Focus on what data you want rather than how to retrieve it, simplifying query development
+- **Data Integrity**: Built-in constraints and validation rules maintain data quality and consistency
+- **Performance**: Optimized query execution plans and indexing strategies ensure efficient data access
+- **Security**: Robust user authentication, access control, and encryption capabilities protect sensitive data
+- **Scalability**: Handles everything from small applications to enterprise-scale systems with millions of records
+- **Community Support**: Extensive documentation, tutorials, and community resources available worldwide
+
+## SQL Syntax
+
+SQL syntax is the set of rules that define how SQL statements are written and structured. Understanding SQL syntax is essential for writing effective queries and interacting with databases. Here are some key components of SQL syntax:
+
+- Keywords: SQL statements are composed of keywords that define the operation to be performed. Common keywords include `SELECT`, `FROM`, `WHERE`, `INSERT`, `UPDATE`, and `DELETE`. Keywords are typically written in uppercase, but SQL is case-insensitive.
+- Identifiers: Identifiers are names used to refer to database objects such as tables, columns, and databases. Identifiers can be alphanumeric and may include underscores. They should be unique within their scope. For example, a table name like `customers` or a column name like `customer_id`.
+- Literals: Literals are fixed values used in SQL statements. They can be strings, numbers, or dates. Strings are enclosed in single quotes (e.g., `'John Doe'`), while numbers and dates do not require quotes (e.g., `123` or `2023-10-01`).
+- Operators: SQL includes various operators for performing operations on data. Common operators include comparison operators (`=`, `!=`, `<`, `>`, `<=`, `>=`), logical operators (`AND`, `OR`, `NOT`), and arithmetic operators (`+`, `-`, `*`, `/`). These operators are used to filter and manipulate data in SQL queries.
+- Clauses: SQL statements are often composed of multiple clauses that define different parts of the query. Common clauses include:
+  - `SELECT`: Specifies the columns to retrieve from a table.
+  - `FROM`: Specifies the table(s) from which to retrieve data.
+  - `WHERE`: Filters the results based on specified conditions.
+  - `ORDER BY`: Sorts the results based on specified columns.
+  - `GROUP BY`: Groups the results based on specified columns for aggregation.
+  - `HAVING`: Filters the results of a `GROUP BY` clause based on specified conditions.
+  - `JOIN`: Combines rows from two or more tables based on a related column.
+- Comments: SQL allows for comments to be included in the code for documentation purposes. Comments can be single-line (using `--`) or multi-line (using `/* ... */`).
+- Semicolon: SQL statements are typically terminated with a semicolon (`;`). This is especially important when executing multiple statements in a single script or batch.
+
+### SQL Statement Types
+
+#### Data Query Language (DQL)
+
+Data Query Language (DQL) is the subset of SQL used for retrieving data from databases. The primary statement in DQL is the `SELECT` statement, which allows you to specify exactly which columns and rows to extract from one or more tables.
+
+```sql title="Retrieving data"
+SELECT product_name, price
+FROM products
+WHERE category = 'Electronics';
+```
+
+In this example, the `SELECT` statement retrieves the `product_name` and `price` columns from the `products` table, filtering results to only include products in the 'Electronics' category.
+
+#### Data Manipulation Language (DML)
+
+Data Manipulation Language (DML) is used to modify data within database tables. It includes operations for inserting new records, updating existing records, and deleting records.
+
+```sql title="Modifying data"
+INSERT INTO customers (name, email) VALUES ('John Doe', 'john@email.com');
+UPDATE products SET price = 99.99 WHERE product_id = 1;
+DELETE FROM orders WHERE order_date < '2023-01-01';
+```
+
+In these examples, the `INSERT` statement adds a new customer, the `UPDATE` statement changes the price of a product, and the `DELETE` statement removes orders older than January 1, 2023.
+
+#### Data Definition Language (DDL)
+
+Data Definition Language (DDL) is used to define and manage the structure of database objects such as tables, indexes, and schemas. It includes commands for creating, altering, and dropping database objects.
+
+```sql title="Defining structure"
+CREATE TABLE customers (
+    id INT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(255) UNIQUE
+);
+```
+
+In this example, the `CREATE TABLE` statement defines a new table named `customers` with three columns: `id`, `name`, and `email`. The `id` column is defined as the primary key, ensuring each record is unique.
