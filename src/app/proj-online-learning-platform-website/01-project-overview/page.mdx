@@ -1,0 +1,116 @@
+import BackToTop from "@/components/BackToTop";
+
+# Online Learning Platform Project Overview
+
+## Introduction
+
+In this comprehensive project, we'll build a full-stack online learning platform using MongoDB, Spring Boot, and a modern frontend with TailwindCSS. This platform will allow instructors to create and manage courses, and students to enroll in courses, track their progress, participate in discussions, and complete assessments.
+
+## Technologies Used
+
+### Frontend
+
+- **React.js**: A JavaScript library for building user interfaces
+- **TailwindCSS**: A utility-first CSS framework for custom designs
+- **Axios**: For HTTP requests to the backend API
+
+### Backend
+
+- **Spring Boot**: A Java-based framework for building robust backend applications
+- **Spring Data MongoDB**: For MongoDB data access and repositories
+- **MongoDB**: A NoSQL document database for storing course content, user data, and more
+- **Spring Security**: For authentication and authorization
+- **Argon2**: A secure password hashing algorithm
+- **JWT**: For stateless authentication
+
+## Prerequisites
+
+Before starting, ensure you have the following installed:
+
+- Java Development Kit (JDK) 17 or later
+- Maven
+- MongoDB (local installation or cloud service like MongoDB Atlas)
+- Node.js and npm
+- Git
+
+## Project Components
+
+Our online learning platform will include the following key components:
+
+1. **User Management**
+   - Registration and authentication with Argon2 password hashing
+   - User profiles (students, instructors, administrators)
+   - Role-based access control
+
+2. **Course Management**
+   - Course creation and editing
+   - Curriculum organization (modules, lessons, topics)
+   - Course metadata (descriptions, learning objectives, prerequisites)
+
+3. **Content Delivery**
+   - Video lectures
+   - Reading materials
+   - Downloadable resources
+
+4. **Learning Experience**
+   - Progress tracking
+   - Bookmarking
+   - Notes taking
+
+5. **Assessment System**
+   - Quizzes and tests
+   - Assignments
+   - Grading and feedback
+
+6. **Interaction**
+   - Discussion forums
+   - Comments
+   - Direct messaging
+
+7. **Administration**
+   - User management
+   - Content moderation
+   - Analytics and reporting
+
+## Project Structure Overview
+
+We'll organize our project with a clear separation between the backend and frontend:
+
+```
+learning-platform/
+├── backend/                 # Spring Boot application
+│   ├── src/
+│   │   ├── main/
+│   │   │   ├── java/       # Java source files
+│   │   │   └── resources/  # Configuration files
+│   │   └── test/           # Test files
+│   └── pom.xml             # Maven configuration
+│
+└── frontend/               # React application
+    ├── public/             # Static files
+    ├── src/                # React source files
+    │   ├── components/     # UI components
+    │   ├── pages/          # Page components
+    │   ├── services/       # API services
+    │   └── utils/          # Utility functions
+    ├── package.json        # npm configuration
+    └── tailwind.config.js  # TailwindCSS configuration
+```
+
+## Next Steps
+
+In the following modules, we'll step through each phase of development:
+
+1. Setting up MongoDB
+2. Designing our database schema
+3. Creating the Spring Boot application
+4. Integrating Spring Boot with MongoDB
+5. Implementing data models and repositories
+6. Building RESTful APIs
+7. Adding authentication with Argon2
+8. Developing the frontend with React and TailwindCSS
+9. And much more...
+
+[Next: MongoDB Setup →](/proj-online-learning-platform-website/02-mongodb-setup)
+
+<BackToTop />
