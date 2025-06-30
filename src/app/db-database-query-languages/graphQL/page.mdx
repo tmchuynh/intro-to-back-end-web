@@ -6,7 +6,80 @@ import BackToTop from "@/components/BackToTop";
 
 ## Introduction
 
-GraphQL is a query language for APIs that allows clients to request only the data they need. It was developed by Facebook in 2012 and has since become a popular alternative to RESTful APIs. GraphQL provides a more flexible and efficient way to interact with APIs, enabling developers to define the structure of the response they want.
+GraphQL is a query language for APIs that allows clients to request only the data they need. I### Variables
+
+GraphQL supports variables, which allow you to parameterize your queries. This is useful for dynamic queries where the input values may change. Here's an example of a query with variables:
+
+```graphql
+query GetUser($id: ID!) {
+  user(id: $id) {
+    name
+    email
+  }
+}
+```
+
+You can pass the variable `id` when executing the query, allowing you to reuse the same query structure with different values.
+
+#### Using Variables in a Client Application
+
+Here's how you would use variables in a client application using Apollo Client:
+
+```javascript
+import { useQuery, gql } from "@apollo/client";
+
+const GET_USER = gql`
+  query GetUser($id: ID!) {
+    user(id: $id) {
+      name
+      email
+      posts {
+        title
+      }
+    }
+  }
+`;
+
+function UserProfile({ userId }) {
+  const { loading, error, data } = useQuery(GET_USER, {
+    variables: { id: userId },
+  });
+
+  if (loading) return <p>Loading...</p>;
+  if (error) return <p>Error: {error.message}</p>;
+
+  return (
+    <div>
+      <h2>{data.user.name}</h2>
+      <p>{data.user.email}</p>
+      <h3>Posts</h3>
+      <ul>
+        {data.user.posts.map((post) => (
+          <li key={post.title}>{post.title}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+```
+
+#### Variables with Default Values
+
+You can also define default values for variables:
+
+```graphql
+query GetPosts($status: String = "PUBLISHED", $limit: Int = 10) {
+  posts(status: $status, limit: $limit) {
+    id
+    title
+    publishedAt
+  }
+}
+```
+
+This query will fetch 10 published posts by default, but you can override these values when executing the query.
+
+### Fragmentsby Facebook in 2012 and has since become a popular alternative to RESTful APIs. GraphQL provides a more flexible and efficient way to interact with APIs, enabling developers to define the structure of the response they want.
 
 GraphQL is not a database query language but rather a specification for building APIs. It allows clients to specify the shape of the data they want, and the server responds with exactly that data. This eliminates over-fetching and under-fetching of data, making it more efficient than traditional REST APIs.
 
@@ -22,6 +95,68 @@ GraphQL is not a database query language but rather a specification for building
 To get started with GraphQL, you need to set up a GraphQL server. There are several libraries available for different programming languages that can help you build a GraphQL server, such as Apollo Server for Node.js, Graphene for Python, and GraphQL.js for JavaScript.
 Once you have your server set up, you can define your GraphQL schema, which describes the types of data available in your API and the relationships between them. The schema is written in the GraphQL Schema Definition Language (SDL) and serves as a contract between the client and server.
 
+### Example of Setting Up a Simple GraphQL Server with Apollo Server
+
+Here's an example of setting up a basic GraphQL server using Apollo Server in Node.js:
+
+```javascript
+// Import required packages
+const { ApolloServer } = require("apollo-server");
+
+// Define your GraphQL schema
+const typeDefs = `
+  type User {
+    id: ID!
+    name: String!
+    email: String!
+  }
+  
+  type Query {
+    users: [User]
+    user(id: ID!): User
+  }
+  
+  type Mutation {
+    createUser(name: String!, email: String!): User
+  }
+`;
+
+// Sample data
+const users = [
+  { id: "1", name: "John Doe", email: "john_doe@sample.com" },
+  { id: "2", name: "Jane Smith", email: "jane_smith@sample.com" },
+];
+
+// Define resolvers
+const resolvers = {
+  Query: {
+    users: () => users,
+    user: (_, { id }) => users.find((user) => user.id === id),
+  },
+  Mutation: {
+    createUser: (_, { name, email }) => {
+      const newUser = {
+        id: String(users.length + 1),
+        name,
+        email,
+      };
+      users.push(newUser);
+      return newUser;
+    },
+  },
+};
+
+// Create Apollo Server instance
+const server = new ApolloServer({ typeDefs, resolvers });
+
+// Start the server
+server.listen().then(({ url }) => {
+  console.log(`🚀 Server ready at ${url}`);
+});
+```
+
+This example demonstrates a minimal GraphQL server that provides queries to fetch users and mutations to create new users.
+
 ## Basic Syntax
 
 GraphQL queries are written in a syntax that resembles JSON. A query consists of fields that specify the data you want to retrieve. Here’s a simple example of a GraphQL query:
@@ -35,6 +170,8 @@ query {
 }
 ```
 
+This query requests the `name` and `email` fields of a user with the ID of "1". The server responds with a JSON object containing the requested data.
+
 This query retrieves the `name` and `email` fields of a user with the ID of "1". The server responds with a JSON object containing only the requested fields, like this:
 
 ```json
@@ -43,6 +180,84 @@ This query retrieves the `name` and `email` fields of a user with the ID of "1".
     "user": {
       "name": "John Doe",
       "email": "john_doe@sample.com"
+    }
+  }
+}
+```
+
+This response contains only the fields specified in the query, demonstrating GraphQL's ability to return exactly the data requested by the client.
+
+### More Query Examples
+
+Let's explore a few more query examples to better understand GraphQL's flexibility:
+
+#### Querying Multiple Resources at Once
+
+One of GraphQL's strengths is the ability to request multiple resources in a single query:
+
+```graphql
+query {
+  user(id: "1") {
+    name
+    email
+  }
+  allPosts {
+    title
+    published
+  }
+}
+```
+
+This query requests both user information and a list of posts in a single request. The response would look like:
+
+```json
+{
+  "data": {
+    "user": {
+      "name": "John Doe",
+      "email": "john_doe@sample.com"
+    },
+    "allPosts": [
+      { "title": "Introduction to GraphQL", "published": true },
+      { "title": "Advanced GraphQL Techniques", "published": false }
+    ]
+  }
+}
+```
+
+#### Querying Nested Data with Arguments
+
+GraphQL allows you to pass arguments to any field to filter or customize results:
+
+```graphql
+query {
+  user(id: "1") {
+    name
+    posts(status: "PUBLISHED", limit: 2) {
+      title
+      createdAt
+    }
+  }
+}
+```
+
+This query requests a user and their 2 most recent published posts. The response might be:
+
+```json
+{
+  "data": {
+    "user": {
+      "name": "John Doe",
+      "posts": [
+        {
+          "title": "GraphQL Best Practices",
+          "createdAt": "2025-05-15T12:00:00Z"
+        },
+        {
+          "title": "Understanding REST vs GraphQL",
+          "createdAt": "2025-04-10T09:30:00Z"
+        }
+      ]
     }
   }
 }
@@ -247,7 +462,7 @@ type Mutation {
 }
 ```
 
-This mutation takes the `id` of the user to be deleted and returns the deleted `User` object.
+This mutation takes the `id` of the user to be deleted and returns the deleted `User` object. The exclamation mark (`!`) indicates that the mutation will always return a `User` object, even if it is deleted.
 
 ### Executing a Delete Mutation
 
@@ -291,6 +506,81 @@ mutation {
 
 This mutation creates a new user, updates an existing user, and deletes another user in a single request. The server responds with a JSON object containing the results of all three operations.
 
+### Mutations with Input Types
+
+For complex mutations with many input fields, it's common to use input types to organize the parameters:
+
+```graphql
+# Schema definition
+type Mutation {
+  createPost(input: PostInput!): Post!
+}
+
+input PostInput {
+  title: String!
+  content: String!
+  authorId: ID!
+  tags: [String]
+  published: Boolean = false
+}
+
+# Mutation execution
+mutation {
+  createPost(
+    input: {
+      title: "GraphQL Mutations Explained"
+      content: "This is a detailed post about GraphQL mutations..."
+      authorId: "1"
+      tags: ["GraphQL", "API", "Tutorial"]
+      published: true
+    }
+  ) {
+    id
+    title
+    author {
+      name
+    }
+  }
+}
+```
+
+This approach makes mutations more maintainable and easier to extend when you need to add new fields.
+
+### File Upload Mutations
+
+GraphQL can also handle file uploads with the right server setup (like apollo-server-express with graphql-upload):
+
+```graphql
+# Schema
+type Mutation {
+  uploadProfilePicture(userId: ID!, file: Upload!): User!
+}
+
+# Client code (using Apollo Client)
+import { useMutation, gql } from '@apollo/client';
+
+const UPLOAD_FILE = gql`
+  mutation UploadFile($userId: ID!, $file: Upload!) {
+    uploadProfilePicture(userId: $userId, file: $file) {
+      id
+      name
+      profilePictureUrl
+    }
+  }
+`;
+
+function ProfileUploader() {
+  const [uploadFile] = useMutation(UPLOAD_FILE);
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    uploadFile({ variables: { userId: "1", file } });
+  };
+
+  return <input type="file" onChange={handleFileChange} />;
+}
+```
+
 ## Subscriptions
 
 Subscriptions allow clients to receive real-time updates from the server when data changes. This is useful for applications that require live updates, such as chat applications or collaborative tools. Subscriptions are defined in the schema and can be executed using the `subscription` keyword. Here’s an example of a subscription to receive updates when a new user is created:
@@ -319,6 +609,125 @@ subscription {
 
 This subscription listens for the `userCreated` event and returns the `id`, `name`, and `email` of the newly created user. When a new user is created on the server, the client will receive real-time updates with the user's data.
 
+### Filtered Subscriptions
+
+You can also filter subscriptions to only receive updates for specific events. Here's an example of a subscription that only listens for posts created by a specific user:
+
+```graphql
+# Schema
+type Subscription {
+  postCreated(authorId: ID): Post!
+}
+
+# Subscription
+subscription {
+  postCreated(authorId: "1") {
+    id
+    title
+    content
+    author {
+      name
+    }
+  }
+}
+```
+
+### Implementing Subscriptions with Apollo Server
+
+Here's a simple example of how to implement subscriptions using Apollo Server:
+
+```javascript
+const { ApolloServer, PubSub } = require("apollo-server");
+
+// Create a PubSub instance
+const pubsub = new PubSub();
+const POST_CREATED = "POST_CREATED";
+
+// Define your schema
+const typeDefs = `
+  type Post {
+    id: ID!
+    title: String!
+    content: String!
+    author: User!
+  }
+  
+  type User {
+    id: ID!
+    name: String!
+  }
+  
+  type Query {
+    posts: [Post]
+  }
+  
+  type Mutation {
+    createPost(title: String!, content: String!, authorId: ID!): Post
+  }
+  
+  type Subscription {
+    postCreated(authorId: ID): Post
+  }
+`;
+
+// Sample data
+const users = [
+  { id: "1", name: "John Doe" },
+  { id: "2", name: "Jane Smith" },
+];
+
+const posts = [];
+
+// Define resolvers
+const resolvers = {
+  Query: {
+    posts: () => posts,
+  },
+  Mutation: {
+    createPost: (_, { title, content, authorId }) => {
+      const post = {
+        id: String(posts.length + 1),
+        title,
+        content,
+        author: users.find((user) => user.id === authorId),
+      };
+      posts.push(post);
+
+      // Publish the event
+      pubsub.publish(POST_CREATED, { postCreated: post });
+
+      return post;
+    },
+  },
+  Subscription: {
+    postCreated: {
+      subscribe: (_, { authorId }) => {
+        return pubsub.asyncIterator([POST_CREATED]);
+      },
+      resolve: (payload, { authorId }) => {
+        // Filter subscriptions if authorId is provided
+        if (authorId && payload.postCreated.author.id !== authorId) {
+          return null;
+        }
+        return payload.postCreated;
+      },
+    },
+  },
+};
+
+// Create the server
+const server = new ApolloServer({
+  typeDefs,
+  resolvers,
+});
+
+// Start the server
+server.listen().then(({ url, subscriptionsUrl }) => {
+  console.log(`🚀 Server ready at ${url}`);
+  console.log(`🚀 Subscriptions ready at ${subscriptionsUrl}`);
+});
+```
+
 ## Validations
 
 GraphQL provides built-in validation mechanisms to ensure that queries and mutations conform to the schema. When a query is executed, the server checks if the requested fields exist in the schema and if the input parameters are of the correct type. If any validation errors occur, the server responds with an error message indicating the issue.
@@ -330,7 +739,145 @@ GraphQL provides built-in validation mechanisms to ensure that queries and mutat
 - **Required Fields Missing**: If a required field is missing in a mutation, the server returns an error indicating that the required field is not provided.
 - **Unauthorized Access**: If a user tries to access a field or perform an operation they are not authorized for, the server returns an error indicating insufficient permissions.
 
+## Error Handling
+
+GraphQL provides a standardized way to handle errors in queries and mutations. When an error occurs, the server responds with an error object that contains information about the error, including a message and optional details. Here’s an example of an error response:
+
+```json
+{
+  "errors": [
+    {
+      "message": "Field 'email' is not defined in type 'User'",
+      "locations": [
+        {
+          "line": 2,
+          "column": 3
+        }
+      ]
+    }
+  ],
+  "data": null
+}
+```
+
+This response indicates that the requested field `email` is not defined in the `User` type. The `locations` field provides information about where the error occurred in the query.
+
+### Custom Error Handling in GraphQL
+
+GraphQL servers can provide custom error handling to make debugging easier and provide more context to clients. Here's an example of a resolver with custom error handling:
+
+```javascript
+const resolvers = {
+  Query: {
+    user: (parent, { id }, context, info) => {
+      try {
+        // Check if user is authenticated
+        if (!context.isAuthenticated) {
+          throw new AuthenticationError(
+            "You must be logged in to view user data"
+          );
+        }
+
+        // Check if user has permission to access this data
+        if (!context.hasPermission("READ_USER")) {
+          throw new ForbiddenError(
+            "You do not have permission to view this user data"
+          );
+        }
+
+        const user = getUserById(id);
+
+        if (!user) {
+          throw new UserInputError("User not found", {
+            invalidArgs: ["id"],
+          });
+        }
+
+        return user;
+      } catch (error) {
+        // Log the error for internal tracking
+        console.error(`Error fetching user ${id}:`, error);
+
+        // Re-throw Apollo errors, wrap other errors
+        if (error instanceof ApolloError) {
+          throw error;
+        } else {
+          throw new ApolloError(
+            "An unexpected error occurred",
+            "INTERNAL_SERVER_ERROR",
+            {
+              originalError: error,
+            }
+          );
+        }
+      }
+    },
+  },
+};
+```
+
+### Handling Errors on the Client Side
+
+Here's an example of how to handle errors on the client side using Apollo Client:
+
+```javascript
+import { useQuery, gql } from "@apollo/client";
+
+const GET_USER = gql`
+  query GetUser($id: ID!) {
+    user(id: $id) {
+      id
+      name
+      profilePicture
+    }
+  }
+`;
+
+function UserProfile({ userId }) {
+  const { loading, error, data } = useQuery(GET_USER, {
+    variables: { id: userId },
+    onError: (error) => {
+      // Log the error to a monitoring service
+      logErrorToService(error);
+    },
+  });
+
+  if (loading) return <p>Loading...</p>;
+
+  if (error) {
+    // Check for specific error types
+    if (error.graphQLErrors) {
+      return error.graphQLErrors.map(({ message, extensions }, i) => {
+        if (extensions?.code === "UNAUTHENTICATED") {
+          // Redirect to login page
+          return <p key={i}>Please log in to view this content</p>;
+        } else if (extensions?.code === "FORBIDDEN") {
+          return <p key={i}>You don't have permission to view this content</p>;
+        } else {
+          return <p key={i}>Error: {message}</p>;
+        }
+      });
+    }
+
+    if (error.networkError) {
+      return <p>Network error: Please check your connection</p>;
+    }
+
+    return <p>An unexpected error occurred</p>;
+  }
+
+  return (
+    <div>
+      <h1>{data.user.name}</h1>
+      <img src={data.user.profilePicture} alt={`${data.user.name}'s profile`} />
+    </div>
+  );
+}
+```
+
 ## Best Practices
+
+When working with GraphQL, there are several best practices to follow to ensure your queries and mutations are efficient and maintainable:
 
 - **Use Fragments**: Fragments help reduce duplication in queries and make your code more maintainable. Define reusable fragments for common fields and use them across multiple queries.
 - **Use Aliases**: Aliases allow you to retrieve the same field multiple times with different parameters. This is useful when you need to fetch related data in a single query.
