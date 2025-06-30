@@ -1,3 +1,5 @@
+import BackToTop from "@/components/BackToTop";
+
 # Deployment
 
 ## Introduction
@@ -61,6 +63,8 @@ Create a `tsconfig.server.json` file for the backend:
   "include": ["src/server/**/*.ts", "src/models/**/*.ts"]
 }
 ```
+
+<BackToTop />
 
 ## Deployment Options
 
@@ -162,6 +166,8 @@ Steps for setting up a MySQL database on Amazon RDS:
 7. Note the endpoint, username, and password
 8. Update your environment variables with the database connection details
 
+<BackToTop />
+
 ### Option 2: Unified Deployment
 
 For a unified deployment, you can use platforms like:
@@ -205,6 +211,8 @@ app.use(
 );
 ```
 
+<BackToTop />
+
 ## Security Best Practices for Production
 
 1. **HTTPS**: Ensure your application uses HTTPS
@@ -232,6 +240,8 @@ Install Helmet:
 ```bash
 npm install helmet
 ```
+
+<BackToTop />
 
 ## Monitoring and Analytics
 
@@ -265,6 +275,8 @@ app.use(Sentry.Handlers.requestHandler());
 
 app.use(Sentry.Handlers.errorHandler());
 ```
+
+<BackToTop />
 
 ## Continuous Integration/Continuous Deployment (CI/CD)
 
@@ -365,3 +377,5 @@ Here are some ideas for further improving your To-Do List application:
 10. Create a public API for third-party integrations
 
 Happy coding!
+
+<BackToTop />
