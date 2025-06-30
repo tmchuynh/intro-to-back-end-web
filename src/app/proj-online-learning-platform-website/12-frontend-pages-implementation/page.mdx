@@ -1,0 +1,1730 @@
+import BackToTop from "@/components/BackToTop";
+
+# Frontend Pages Implementation
+
+## Introduction
+
+In this module, we'll implement the key pages of our learning platform. We'll start with the authentication pages (Login and Register), then move on to the home page, course listings, and course details. We'll also implement the instructor's course management pages and the student's enrolled courses view.
+
+## Authentication Pages
+
+### Login Page
+
+Let's start by creating the Login page:
+
+```jsx
+// src/pages/LoginPage.jsx
+import React, { useState } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { useFormik } from "formik";
+import * as Yup from "yup";
+import { FaSignInAlt } from "react-icons/fa";
+import { useAuth } from "../context/AuthContext";
+import Input from "../components/common/Input";
+import Button from "../components/common/Button";
+import Card from "../components/common/Card";
+
+const LoginPage = () => {
+  const { login } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Get the redirect path from location state or default to home
+  const from = location.state?.from?.pathname || "/";
+
+  const formik = useFormik({
+    initialValues: {
+      usernameOrEmail: "",
+      password: "",
+    },
+    validationSchema: Yup.object({
+      usernameOrEmail: Yup.string().required("Username or email is required"),
+      password: Yup.string().required("Password is required"),
+    }),
+    onSubmit: async (values) => {
+      try {
+        setIsLoading(true);
+        setError("");
+        await login(values);
+        navigate(from, { replace: true });
+      } catch (err) {
+        setError(
+          err.response?.data?.message ||
+            "Failed to login. Please check your credentials."
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    },
+  });
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+          Sign in to your account
+        </h2>
+        <p className="mt-2 text-center text-sm text-gray-600">
+          Or{" "}
+          <Link
+            to="/register"
+            className="font-medium text-primary-600 hover:text-primary-500"
+          >
+            create a new account
+          </Link>
+        </p>
+      </div>
+
+      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+        <Card>
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-md border border-red-200">
+              {error}
+            </div>
+          )}
+
+          <form className="space-y-6" onSubmit={formik.handleSubmit}>
+            <Input
+              id="usernameOrEmail"
+              name="usernameOrEmail"
+              type="text"
+              label="Username or Email"
+              placeholder="Enter your username or email"
+              value={formik.values.usernameOrEmail}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              error={
+                formik.touched.usernameOrEmail && formik.errors.usernameOrEmail
+              }
+              touched={formik.touched.usernameOrEmail}
+              required
+            />
+
+            <Input
+              id="password"
+              name="password"
+              type="password"
+              label="Password"
+              placeholder="Enter your password"
+              value={formik.values.password}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              error={formik.touched.password && formik.errors.password}
+              touched={formik.touched.password}
+              required
+            />
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <input
+                  id="remember_me"
+                  name="remember_me"
+                  type="checkbox"
+                  className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                />
+                <label
+                  htmlFor="remember_me"
+                  className="ml-2 block text-sm text-gray-900"
+                >
+                  Remember me
+                </label>
+              </div>
+
+              <div className="text-sm">
+                <Link
+                  to="/forgot-password"
+                  className="font-medium text-primary-600 hover:text-primary-500"
+                >
+                  Forgot your password?
+                </Link>
+              </div>
+            </div>
+
+            <Button
+              type="submit"
+              variant="primary"
+              fullWidth
+              disabled={isLoading}
+            >
+              <div className="flex items-center justify-center">
+                <FaSignInAlt className="mr-2" />
+                {isLoading ? "Signing in..." : "Sign in"}
+              </div>
+            </Button>
+          </form>
+        </Card>
+      </div>
+    </div>
+  );
+};
+
+export default LoginPage;
+```
+
+<BackToTop />
+
+### Register Page
+
+Now, let's create the Register page:
+
+```jsx
+// src/pages/RegisterPage.jsx
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useFormik } from "formik";
+import * as Yup from "yup";
+import { FaUserPlus } from "react-icons/fa";
+import { useAuth } from "../context/AuthContext";
+import Input from "../components/common/Input";
+import Button from "../components/common/Button";
+import Card from "../components/common/Card";
+
+const RegisterPage = () => {
+  const { register } = useAuth();
+  const navigate = useNavigate();
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  const formik = useFormik({
+    initialValues: {
+      name: "",
+      username: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+    },
+    validationSchema: Yup.object({
+      name: Yup.string().required("Name is required"),
+      username: Yup.string()
+        .required("Username is required")
+        .min(3, "Username must be at least 3 characters")
+        .max(20, "Username must be at most 20 characters")
+        .matches(
+          /^[a-zA-Z0-9_]+$/,
+          "Username can only contain letters, numbers and underscores"
+        ),
+      email: Yup.string()
+        .email("Invalid email address")
+        .required("Email is required"),
+      password: Yup.string()
+        .required("Password is required")
+        .min(8, "Password must be at least 8 characters")
+        .matches(
+          /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
+          "Password must contain at least one uppercase letter, one lowercase letter, one number and one special character"
+        ),
+      confirmPassword: Yup.string()
+        .oneOf([Yup.ref("password"), null], "Passwords must match")
+        .required("Confirm Password is required"),
+    }),
+    onSubmit: async (values) => {
+      try {
+        setIsLoading(true);
+        setError("");
+
+        // Remove confirmPassword from values
+        const { confirmPassword, ...registrationData } = values;
+
+        await register(registrationData);
+        navigate("/login", {
+          state: { success: "Registration successful! Please sign in." },
+        });
+      } catch (err) {
+        setError(
+          err.response?.data?.message || "Failed to register. Please try again."
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    },
+  });
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+          Create your account
+        </h2>
+        <p className="mt-2 text-center text-sm text-gray-600">
+          Or{" "}
+          <Link
+            to="/login"
+            className="font-medium text-primary-600 hover:text-primary-500"
+          >
+            sign in to your existing account
+          </Link>
+        </p>
+      </div>
+
+      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+        <Card>
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-md border border-red-200">
+              {error}
+            </div>
+          )}
+
+          <form className="space-y-6" onSubmit={formik.handleSubmit}>
+            <Input
+              id="name"
+              name="name"
+              type="text"
+              label="Full Name"
+              placeholder="Enter your full name"
+              value={formik.values.name}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              error={formik.touched.name && formik.errors.name}
+              touched={formik.touched.name}
+              required
+            />
+
+            <Input
+              id="username"
+              name="username"
+              type="text"
+              label="Username"
+              placeholder="Choose a username"
+              value={formik.values.username}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              error={formik.touched.username && formik.errors.username}
+              touched={formik.touched.username}
+              required
+            />
+
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              label="Email Address"
+              placeholder="Enter your email address"
+              value={formik.values.email}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              error={formik.touched.email && formik.errors.email}
+              touched={formik.touched.email}
+              required
+            />
+
+            <Input
+              id="password"
+              name="password"
+              type="password"
+              label="Password"
+              placeholder="Create a password"
+              value={formik.values.password}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              error={formik.touched.password && formik.errors.password}
+              touched={formik.touched.password}
+              required
+            />
+
+            <Input
+              id="confirmPassword"
+              name="confirmPassword"
+              type="password"
+              label="Confirm Password"
+              placeholder="Confirm your password"
+              value={formik.values.confirmPassword}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              error={
+                formik.touched.confirmPassword && formik.errors.confirmPassword
+              }
+              touched={formik.touched.confirmPassword}
+              required
+            />
+
+            <div className="flex items-center">
+              <input
+                id="terms"
+                name="terms"
+                type="checkbox"
+                className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                required
+              />
+              <label
+                htmlFor="terms"
+                className="ml-2 block text-sm text-gray-900"
+              >
+                I agree to the{" "}
+                <Link
+                  to="/terms"
+                  className="font-medium text-primary-600 hover:text-primary-500"
+                >
+                  Terms of Service
+                </Link>{" "}
+                and{" "}
+                <Link
+                  to="/privacy"
+                  className="font-medium text-primary-600 hover:text-primary-500"
+                >
+                  Privacy Policy
+                </Link>
+              </label>
+            </div>
+
+            <Button
+              type="submit"
+              variant="primary"
+              fullWidth
+              disabled={isLoading}
+            >
+              <div className="flex items-center justify-center">
+                <FaUserPlus className="mr-2" />
+                {isLoading ? "Creating account..." : "Create account"}
+              </div>
+            </Button>
+          </form>
+        </Card>
+      </div>
+    </div>
+  );
+};
+
+export default RegisterPage;
+```
+
+<BackToTop />
+
+## Home Page
+
+Let's create the home page for our platform:
+
+```jsx
+// src/pages/HomePage.jsx
+import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import {
+  FaGraduationCap,
+  FaUsers,
+  FaLaptopCode,
+  FaCertificate,
+} from "react-icons/fa";
+import CourseService from "../services/courseService";
+import Button from "../components/common/Button";
+import Card from "../components/common/Card";
+
+const HomePage = () => {
+  const [featuredCourses, setFeaturedCourses] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchFeaturedCourses = async () => {
+      try {
+        const courses = await CourseService.getAllCourses();
+        // Get first 3 courses as featured
+        setFeaturedCourses(courses.slice(0, 3));
+      } catch (error) {
+        console.error("Error fetching courses:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchFeaturedCourses();
+  }, []);
+
+  const features = [
+    {
+      icon: <FaGraduationCap className="h-10 w-10 text-primary-600" />,
+      title: "Quality Education",
+      description:
+        "Access high-quality courses taught by expert instructors in various fields.",
+    },
+    {
+      icon: <FaUsers className="h-10 w-10 text-primary-600" />,
+      title: "Community Learning",
+      description:
+        "Join a community of learners and collaborate with peers from around the world.",
+    },
+    {
+      icon: <FaLaptopCode className="h-10 w-10 text-primary-600" />,
+      title: "Hands-on Experience",
+      description:
+        "Practice with real-world projects and interactive assignments.",
+    },
+    {
+      icon: <FaCertificate className="h-10 w-10 text-primary-600" />,
+      title: "Certifications",
+      description:
+        "Earn certificates to showcase your skills and knowledge to employers.",
+    },
+  ];
+
+  return (
+    <div>
+      {/* Hero Section */}
+      <section className="bg-primary-700 text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+            <div>
+              <h1 className="text-4xl md:text-5xl font-bold mb-6">
+                Expand Your Knowledge and Grow Your Skills
+              </h1>
+              <p className="text-xl mb-8">
+                Our online learning platform provides courses in various fields
+                to help you advance your career and achieve your goals.
+              </p>
+              <div className="flex flex-wrap gap-4">
+                <Button as={Link} to="/courses" variant="secondary" size="lg">
+                  Browse Courses
+                </Button>
+                <Button
+                  as={Link}
+                  to="/register"
+                  variant="outline"
+                  size="lg"
+                  className="bg-white text-primary-700 hover:bg-gray-100"
+                >
+                  Sign Up Free
+                </Button>
+              </div>
+            </div>
+            <div className="hidden md:block">
+              <img
+                src="/images/hero-image.svg"
+                alt="Online Learning"
+                className="w-full h-auto"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section className="py-16 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-bold text-gray-900">
+              Why Choose Our Platform
+            </h2>
+            <p className="mt-4 text-xl text-gray-600">
+              We provide the tools and resources you need to succeed in your
+              learning journey.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {features.map((feature, index) => (
+              <div
+                key={index}
+                className="bg-white p-8 rounded-lg shadow-md text-center"
+              >
+                <div className="flex justify-center mb-4">{feature.icon}</div>
+                <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
+                <p className="text-gray-600">{feature.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Featured Courses Section */}
+      <section className="py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-bold text-gray-900">
+              Featured Courses
+            </h2>
+            <p className="mt-4 text-xl text-gray-600">
+              Explore our most popular courses and start learning today.
+            </p>
+          </div>
+
+          {isLoading ? (
+            <div className="flex justify-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {featuredCourses.map((course) => (
+                <Card
+                  key={course.id}
+                  title={course.title}
+                  className="h-full flex flex-col"
+                >
+                  <div className="aspect-w-16 aspect-h-9 mb-4">
+                    <img
+                      src={course.thumbnail || "/images/course-placeholder.jpg"}
+                      alt={course.title}
+                      className="object-cover w-full h-48 rounded-md"
+                    />
+                  </div>
+                  <h3 className="text-xl font-semibold mb-2">{course.title}</h3>
+                  <p className="text-gray-600 mb-4 flex-grow">
+                    {course.description.substring(0, 120)}...
+                  </p>
+                  <div className="flex justify-between items-center mt-4">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
+                      {course.level}
+                    </span>
+                    <Button
+                      as={Link}
+                      to={`/courses/${course.id}`}
+                      variant="outline"
+                      size="sm"
+                    >
+                      View Course
+                    </Button>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          <div className="text-center mt-12">
+            <Button as={Link} to="/courses" variant="primary" size="lg">
+              View All Courses
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials Section */}
+      <section className="py-16 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-bold text-gray-900">
+              What Our Students Say
+            </h2>
+            <p className="mt-4 text-xl text-gray-600">
+              Hear from our students about their learning experiences.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="bg-white p-8 rounded-lg shadow-md">
+              <div className="flex items-center mb-4">
+                <div className="h-12 w-12 rounded-full bg-primary-100 flex items-center justify-center text-primary-700">
+                  <span className="text-xl font-bold">JD</span>
+                </div>
+                <div className="ml-4">
+                  <h4 className="text-lg font-semibold">John Doe</h4>
+                  <p className="text-gray-600">Software Developer</p>
+                </div>
+              </div>
+              <p className="text-gray-600 italic">
+                "The courses on this platform have been instrumental in
+                advancing my career. The instructors are knowledgeable and the
+                content is up-to-date with industry standards."
+              </p>
+            </div>
+
+            <div className="bg-white p-8 rounded-lg shadow-md">
+              <div className="flex items-center mb-4">
+                <div className="h-12 w-12 rounded-full bg-primary-100 flex items-center justify-center text-primary-700">
+                  <span className="text-xl font-bold">JS</span>
+                </div>
+                <div className="ml-4">
+                  <h4 className="text-lg font-semibold">Jane Smith</h4>
+                  <p className="text-gray-600">Data Scientist</p>
+                </div>
+              </div>
+              <p className="text-gray-600 italic">
+                "I've tried many online learning platforms, but this one stands
+                out for its quality and the support provided. The hands-on
+                projects really helped me apply what I learned."
+              </p>
+            </div>
+
+            <div className="bg-white p-8 rounded-lg shadow-md">
+              <div className="flex items-center mb-4">
+                <div className="h-12 w-12 rounded-full bg-primary-100 flex items-center justify-center text-primary-700">
+                  <span className="text-xl font-bold">RJ</span>
+                </div>
+                <div className="ml-4">
+                  <h4 className="text-lg font-semibold">Robert Johnson</h4>
+                  <p className="text-gray-600">UX Designer</p>
+                </div>
+              </div>
+              <p className="text-gray-600 italic">
+                "The interactive nature of the courses and the community support
+                make learning enjoyable. I've gained valuable skills that I use
+                daily in my work."
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-16 bg-primary-700 text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-3xl font-bold mb-6">Ready to Start Learning?</h2>
+          <p className="text-xl mb-8 max-w-3xl mx-auto">
+            Join thousands of students who are already advancing their careers
+            with our courses.
+          </p>
+          <Button as={Link} to="/register" variant="secondary" size="lg">
+            Get Started Today
+          </Button>
+        </div>
+      </section>
+    </div>
+  );
+};
+
+export default HomePage;
+```
+
+<BackToTop />
+
+## Course Components
+
+Let's create some components for displaying courses:
+
+### CourseCard Component
+
+```jsx
+// src/components/course/CourseCard.jsx
+import React from "react";
+import PropTypes from "prop-types";
+import { Link } from "react-router-dom";
+import { FaStar, FaUser, FaClock } from "react-icons/fa";
+import Card from "../common/Card";
+import Button from "../common/Button";
+
+const CourseCard = ({ course }) => {
+  return (
+    <Card className="h-full flex flex-col">
+      <div className="relative">
+        <img
+          src={course.thumbnail || "/images/course-placeholder.jpg"}
+          alt={course.title}
+          className="w-full h-48 object-cover rounded-t-lg"
+        />
+        <div className="absolute top-2 right-2 bg-white px-2 py-1 rounded-full text-sm font-medium text-primary-700">
+          {course.level}
+        </div>
+      </div>
+
+      <div className="p-4 flex-grow">
+        <h3 className="text-xl font-semibold mb-2 hover:text-primary-600">
+          <Link to={`/courses/${course.id}`}>{course.title}</Link>
+        </h3>
+
+        <p className="text-gray-600 mb-4 line-clamp-3">{course.description}</p>
+
+        <div className="flex items-center text-sm text-gray-500 mb-4">
+          <div className="flex items-center mr-4">
+            <FaUser className="mr-1" />
+            <span>{course.instructorName}</span>
+          </div>
+
+          <div className="flex items-center">
+            <FaClock className="mr-1" />
+            <span>{course.duration || "Self-paced"}</span>
+          </div>
+        </div>
+
+        {course.rating && (
+          <div className="flex items-center mb-4">
+            <div className="flex items-center text-yellow-400 mr-1">
+              {[...Array(5)].map((_, i) => (
+                <FaStar
+                  key={i}
+                  className={
+                    i < Math.floor(course.rating)
+                      ? "text-yellow-400"
+                      : "text-gray-300"
+                  }
+                />
+              ))}
+            </div>
+            <span className="text-gray-600 text-sm">
+              ({course.ratingCount || 0} ratings)
+            </span>
+          </div>
+        )}
+      </div>
+
+      <div className="p-4 border-t border-gray-200 mt-auto">
+        <div className="flex items-center justify-between">
+          <div className="text-lg font-bold text-gray-900">
+            {course.price ? `$${course.price.toFixed(2)}` : "Free"}
+          </div>
+
+          <Button
+            as={Link}
+            to={`/courses/${course.id}`}
+            variant="primary"
+            size="sm"
+          >
+            View Details
+          </Button>
+        </div>
+      </div>
+    </Card>
+  );
+};
+
+CourseCard.propTypes = {
+  course: PropTypes.shape({
+    id: PropTypes.string.isRequired,
+    title: PropTypes.string.isRequired,
+    description: PropTypes.string.isRequired,
+    thumbnail: PropTypes.string,
+    instructorName: PropTypes.string,
+    level: PropTypes.string,
+    duration: PropTypes.string,
+    rating: PropTypes.number,
+    ratingCount: PropTypes.number,
+    price: PropTypes.number,
+  }).isRequired,
+};
+
+export default CourseCard;
+```
+
+<BackToTop />
+
+### CourseList Component
+
+```jsx
+// src/components/course/CourseList.jsx
+import React from "react";
+import PropTypes from "prop-types";
+import CourseCard from "./CourseCard";
+
+const CourseList = ({ courses, isLoading, error }) => {
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-red-600">{error}</p>
+      </div>
+    );
+  }
+
+  if (!courses || courses.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-gray-600">No courses found.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {courses.map((course) => (
+        <CourseCard key={course.id} course={course} />
+      ))}
+    </div>
+  );
+};
+
+CourseList.propTypes = {
+  courses: PropTypes.array.isRequired,
+  isLoading: PropTypes.bool,
+  error: PropTypes.string,
+};
+
+export default CourseList;
+```
+
+<BackToTop />
+
+## Course Pages
+
+### CoursesPage
+
+```jsx
+// src/pages/CoursesPage.jsx
+import React, { useState, useEffect } from "react";
+import { FaSearch, FaFilter } from "react-icons/fa";
+import CourseService from "../services/courseService";
+import CourseList from "../components/course/CourseList";
+import Input from "../components/common/Input";
+import Button from "../components/common/Button";
+
+const CoursesPage = () => {
+  const [courses, setCourses] = useState([]);
+  const [filteredCourses, setFilteredCourses] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState({
+    level: "",
+    sortBy: "newest",
+  });
+
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        setIsLoading(true);
+        const response = await CourseService.getAllCourses();
+        setCourses(response);
+        setFilteredCourses(response);
+      } catch (err) {
+        setError("Failed to load courses. Please try again later.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCourses();
+  }, []);
+
+  useEffect(() => {
+    // Apply filters and search
+    let result = [...courses];
+
+    // Apply search
+    if (searchTerm) {
+      result = result.filter(
+        (course) =>
+          course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          course.description.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Apply level filter
+    if (filters.level) {
+      result = result.filter((course) => course.level === filters.level);
+    }
+
+    // Apply sorting
+    if (filters.sortBy === "newest") {
+      result.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    } else if (filters.sortBy === "popular") {
+      result.sort(
+        (a, b) => (b.enrollmentCount || 0) - (a.enrollmentCount || 0)
+      );
+    } else if (filters.sortBy === "rating") {
+      result.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+    }
+
+    setFilteredCourses(result);
+  }, [courses, searchTerm, filters]);
+
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+  };
+
+  const handleFilterChange = (e) => {
+    const { name, value } = e.target;
+    setFilters({
+      ...filters,
+      [name]: value,
+    });
+  };
+
+  const resetFilters = () => {
+    setSearchTerm("");
+    setFilters({
+      level: "",
+      sortBy: "newest",
+    });
+  };
+
+  const toggleFilters = () => {
+    setShowFilters(!showFilters);
+  };
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="mb-12">
+        <h1 className="text-3xl font-bold text-gray-900 mb-4">
+          Explore Courses
+        </h1>
+        <p className="text-lg text-gray-600">
+          Browse our collection of courses to find the perfect one for your
+          learning journey.
+        </p>
+      </div>
+
+      <div className="mb-8">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="relative flex-grow">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <FaSearch className="text-gray-400" />
+            </div>
+            <input
+              type="text"
+              placeholder="Search courses..."
+              value={searchTerm}
+              onChange={handleSearchChange}
+              className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            />
+          </div>
+
+          <Button
+            onClick={toggleFilters}
+            variant="outline"
+            className="flex items-center justify-center"
+          >
+            <FaFilter className="mr-2" />
+            Filters
+          </Button>
+        </div>
+
+        {showFilters && (
+          <div className="mt-4 p-4 bg-gray-50 rounded-md">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label
+                  htmlFor="level"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Level
+                </label>
+                <select
+                  id="level"
+                  name="level"
+                  value={filters.level}
+                  onChange={handleFilterChange}
+                  className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md"
+                >
+                  <option value="">All Levels</option>
+                  <option value="BEGINNER">Beginner</option>
+                  <option value="INTERMEDIATE">Intermediate</option>
+                  <option value="ADVANCED">Advanced</option>
+                </select>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="sortBy"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Sort By
+                </label>
+                <select
+                  id="sortBy"
+                  name="sortBy"
+                  value={filters.sortBy}
+                  onChange={handleFilterChange}
+                  className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md"
+                >
+                  <option value="newest">Newest</option>
+                  <option value="popular">Most Popular</option>
+                  <option value="rating">Highest Rated</option>
+                </select>
+              </div>
+
+              <div className="flex items-end">
+                <Button
+                  onClick={resetFilters}
+                  variant="outline"
+                  className="w-full"
+                >
+                  Reset Filters
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="mb-4">
+        <p className="text-gray-600">
+          {filteredCourses.length}{" "}
+          {filteredCourses.length === 1 ? "course" : "courses"} found
+        </p>
+      </div>
+
+      <CourseList
+        courses={filteredCourses}
+        isLoading={isLoading}
+        error={error}
+      />
+    </div>
+  );
+};
+
+export default CoursesPage;
+```
+
+<BackToTop />
+
+### CourseDetailsPage
+
+```jsx
+// src/pages/CourseDetailsPage.jsx
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import {
+  FaUser,
+  FaClock,
+  FaChalkboardTeacher,
+  FaBook,
+  FaAward,
+  FaCheck,
+  FaLock,
+} from "react-icons/fa";
+import CourseService from "../services/courseService";
+import { useAuth } from "../context/AuthContext";
+import Button from "../components/common/Button";
+import Card from "../components/common/Card";
+
+const CourseDetailsPage = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const { isAuthenticated, currentUser } = useAuth();
+
+  const [course, setCourse] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [isEnrolled, setIsEnrolled] = useState(false);
+  const [enrollmentLoading, setEnrollmentLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchCourseDetails = async () => {
+      try {
+        setIsLoading(true);
+        const courseData = await CourseService.getCourseById(id);
+        setCourse(courseData);
+
+        // Check if user is enrolled
+        if (isAuthenticated) {
+          const enrollments = await CourseService.getUserEnrollments();
+          const enrolled = enrollments.some(
+            (enrollment) => enrollment.courseId === id
+          );
+          setIsEnrolled(enrolled);
+        }
+      } catch (err) {
+        setError("Failed to load course details. Please try again later.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCourseDetails();
+  }, [id, isAuthenticated]);
+
+  const handleEnroll = async () => {
+    if (!isAuthenticated) {
+      navigate("/login", { state: { from: { pathname: `/courses/${id}` } } });
+      return;
+    }
+
+    try {
+      setEnrollmentLoading(true);
+      await CourseService.enrollInCourse(id);
+      setIsEnrolled(true);
+    } catch (err) {
+      setError("Failed to enroll in the course. Please try again later.");
+    } finally {
+      setEnrollmentLoading(false);
+    }
+  };
+
+  const handleStartLearning = () => {
+    navigate(`/courses/${id}/learn`);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-16">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
+
+  if (error || !course) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
+        <h2 className="text-2xl font-bold text-red-600 mb-4">Error</h2>
+        <p className="text-gray-600">{error || "Course not found"}</p>
+        <Button
+          onClick={() => navigate("/courses")}
+          variant="primary"
+          className="mt-8"
+        >
+          Browse Courses
+        </Button>
+      </div>
+    );
+  }
+
+  const isInstructor = currentUser && course.instructorId === currentUser.id;
+
+  return (
+    <div className="bg-gray-50 py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Course Header */}
+        <div className="bg-white shadow-md rounded-lg overflow-hidden mb-8">
+          <div className="relative h-64">
+            <img
+              src={course.thumbnail || "/images/course-placeholder.jpg"}
+              alt={course.title}
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end">
+              <div className="p-6 text-white">
+                <div className="mb-2">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
+                    {course.level}
+                  </span>
+                </div>
+                <h1 className="text-3xl font-bold mb-2">{course.title}</h1>
+                <div className="flex flex-wrap items-center text-sm">
+                  <div className="flex items-center mr-4">
+                    <FaChalkboardTeacher className="mr-1" />
+                    <span>{course.instructorName}</span>
+                  </div>
+                  <div className="flex items-center mr-4">
+                    <FaBook className="mr-1" />
+                    <span>{course.modulesCount || 0} modules</span>
+                  </div>
+                  <div className="flex items-center mr-4">
+                    <FaClock className="mr-1" />
+                    <span>{course.duration || "Self-paced"}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <FaUser className="mr-1" />
+                    <span>{course.enrollmentCount || 0} students</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Course Content */}
+          <div className="lg:col-span-2">
+            <Card title="About This Course" className="mb-8">
+              <div className="prose max-w-none">
+                <p>{course.description}</p>
+              </div>
+            </Card>
+
+            <Card title="What You'll Learn" className="mb-8">
+              <ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {course.learningObjectives &&
+                  course.learningObjectives.map((objective, index) => (
+                    <li key={index} className="flex items-start">
+                      <FaCheck className="text-green-500 mt-1 mr-2 flex-shrink-0" />
+                      <span>{objective}</span>
+                    </li>
+                  ))}
+              </ul>
+            </Card>
+
+            <Card title="Course Content" className="mb-8">
+              {course.modules && course.modules.length > 0 ? (
+                <div className="space-y-4">
+                  {course.modules.map((module, index) => (
+                    <div
+                      key={index}
+                      className="border rounded-md overflow-hidden"
+                    >
+                      <div className="bg-gray-50 px-4 py-3 flex justify-between items-center">
+                        <h3 className="font-medium">
+                          Module {index + 1}: {module.title}
+                        </h3>
+                        <span className="text-sm text-gray-500">
+                          {module.duration ||
+                            `${module.lessons?.length || 0} lessons`}
+                        </span>
+                      </div>
+
+                      <ul className="divide-y divide-gray-200">
+                        {module.lessons &&
+                          module.lessons.map((lesson, lessonIndex) => (
+                            <li
+                              key={lessonIndex}
+                              className="px-4 py-3 flex justify-between items-center"
+                            >
+                              <div className="flex items-center">
+                                {isEnrolled ? (
+                                  <FaBook className="text-primary-600 mr-2" />
+                                ) : (
+                                  <FaLock className="text-gray-400 mr-2" />
+                                )}
+                                <span>{lesson.title}</span>
+                              </div>
+                              <span className="text-sm text-gray-500">
+                                {lesson.duration}
+                              </span>
+                            </li>
+                          ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-600">
+                  No modules available for this course yet.
+                </p>
+              )}
+            </Card>
+
+            <Card title="Requirements" className="mb-8">
+              <ul className="list-disc pl-5 space-y-2">
+                {course.requirements &&
+                  course.requirements.map((requirement, index) => (
+                    <li key={index}>{requirement}</li>
+                  ))}
+              </ul>
+            </Card>
+
+            <Card title="Instructor" className="mb-8">
+              <div className="flex items-start">
+                <div className="h-16 w-16 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 mr-4">
+                  <FaUser className="h-8 w-8" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold">
+                    {course.instructorName}
+                  </h3>
+                  <p className="text-gray-600 mt-1">
+                    {course.instructorTitle || "Instructor"}
+                  </p>
+                  <p className="mt-2">
+                    {course.instructorBio || "No bio available."}
+                  </p>
+                </div>
+              </div>
+            </Card>
+          </div>
+
+          {/* Course Sidebar */}
+          <div className="lg:col-span-1">
+            <div className="sticky top-8">
+              <Card className="mb-8">
+                <div className="text-center mb-6">
+                  <div className="text-3xl font-bold mb-4">
+                    {course.price ? `$${course.price.toFixed(2)}` : "Free"}
+                  </div>
+
+                  {isInstructor ? (
+                    <Button
+                      as="link"
+                      to={`/instructor/courses/edit/${course.id}`}
+                      variant="outline"
+                      fullWidth
+                    >
+                      Edit Course
+                    </Button>
+                  ) : isEnrolled ? (
+                    <Button
+                      onClick={handleStartLearning}
+                      variant="primary"
+                      fullWidth
+                    >
+                      Continue Learning
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={handleEnroll}
+                      variant="primary"
+                      fullWidth
+                      disabled={enrollmentLoading}
+                    >
+                      {enrollmentLoading ? "Enrolling..." : "Enroll Now"}
+                    </Button>
+                  )}
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-center">
+                    <FaAward className="text-primary-600 mr-3" />
+                    <span>Certificate of completion</span>
+                  </div>
+                  <div className="flex items-center">
+                    <FaClock className="text-primary-600 mr-3" />
+                    <span>Full lifetime access</span>
+                  </div>
+                  <div className="flex items-center">
+                    <FaUser className="text-primary-600 mr-3" />
+                    <span>Access on mobile and desktop</span>
+                  </div>
+                </div>
+              </Card>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default CourseDetailsPage;
+```
+
+<BackToTop />
+
+## Student Pages
+
+### MyCoursesPage
+
+```jsx
+// src/pages/MyCoursesPage.jsx
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { FaBook, FaCalendarAlt, FaCheck, FaClock } from "react-icons/fa";
+import CourseService from "../services/courseService";
+import Card from "../components/common/Card";
+import Button from "../components/common/Button";
+
+const MyCoursesPage = () => {
+  const [enrollments, setEnrollments] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const fetchEnrollments = async () => {
+      try {
+        setIsLoading(true);
+        const data = await CourseService.getUserEnrollments();
+        setEnrollments(data);
+      } catch (err) {
+        setError("Failed to load your courses. Please try again later.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchEnrollments();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-16">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
+        <h2 className="text-2xl font-bold text-red-600 mb-4">Error</h2>
+        <p className="text-gray-600">{error}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="mb-12">
+        <h1 className="text-3xl font-bold text-gray-900 mb-4">My Learning</h1>
+        <p className="text-lg text-gray-600">
+          Track your progress and continue learning where you left off.
+        </p>
+      </div>
+
+      {enrollments.length === 0 ? (
+        <div className="text-center py-16 bg-white rounded-lg shadow-md">
+          <h2 className="text-2xl font-bold text-gray-700 mb-4">
+            You haven't enrolled in any courses yet
+          </h2>
+          <p className="text-gray-600 mb-8">
+            Explore our catalog and find courses that match your interests.
+          </p>
+          <Button as={Link} to="/courses" variant="primary">
+            Browse Courses
+          </Button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {enrollments.map((enrollment) => (
+            <Card key={enrollment.id} className="h-full flex flex-col">
+              <div className="relative">
+                <img
+                  src={
+                    enrollment.course.thumbnail ||
+                    "/images/course-placeholder.jpg"
+                  }
+                  alt={enrollment.course.title}
+                  className="w-full h-48 object-cover rounded-t-lg"
+                />
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-white font-medium">
+                      Progress: {enrollment.progress || 0}%
+                    </span>
+                    <div className="w-24 bg-gray-200 rounded-full h-2.5">
+                      <div
+                        className="bg-primary-600 h-2.5 rounded-full"
+                        style={{ width: `${enrollment.progress || 0}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 flex-grow">
+                <h3 className="text-xl font-semibold mb-2 hover:text-primary-600">
+                  <Link to={`/courses/${enrollment.course.id}/learn`}>
+                    {enrollment.course.title}
+                  </Link>
+                </h3>
+
+                <div className="flex items-center text-sm text-gray-500 mb-4">
+                  <FaCalendarAlt className="mr-1" />
+                  <span>
+                    Enrolled:{" "}
+                    {new Date(enrollment.enrollmentDate).toLocaleDateString()}
+                  </span>
+                </div>
+
+                <div className="flex items-center text-sm mb-4">
+                  <FaClock className="mr-1 text-primary-600" />
+                  <span>
+                    {enrollment.lastAccessDate
+                      ? `Last accessed: ${new Date(enrollment.lastAccessDate).toLocaleDateString()}`
+                      : "Not started yet"}
+                  </span>
+                </div>
+
+                {enrollment.completedLessons > 0 && (
+                  <div className="flex items-center text-sm text-green-600">
+                    <FaCheck className="mr-1" />
+                    <span>
+                      {enrollment.completedLessons} of {enrollment.totalLessons}{" "}
+                      lessons completed
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div className="p-4 border-t border-gray-200 mt-auto">
+                <Button
+                  as={Link}
+                  to={`/courses/${enrollment.course.id}/learn`}
+                  variant="primary"
+                  fullWidth
+                >
+                  <div className="flex items-center justify-center">
+                    <FaBook className="mr-2" />
+                    {enrollment.progress > 0
+                      ? "Continue Learning"
+                      : "Start Learning"}
+                  </div>
+                </Button>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default MyCoursesPage;
+```
+
+<BackToTop />
+
+## Instructor Pages
+
+### InstructorCoursesPage
+
+```jsx
+// src/pages/InstructorCoursesPage.jsx
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { FaPlus, FaEdit, FaTrash, FaEye, FaUsers } from "react-icons/fa";
+import CourseService from "../services/courseService";
+import Button from "../components/common/Button";
+import Card from "../components/common/Card";
+
+const InstructorCoursesPage = () => {
+  const [courses, setCourses] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const fetchInstructorCourses = async () => {
+      try {
+        setIsLoading(true);
+        const data = await CourseService.getInstructorCourses();
+        setCourses(data);
+      } catch (err) {
+        setError("Failed to load your courses. Please try again later.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchInstructorCourses();
+  }, []);
+
+  const handleDeleteCourse = async (courseId) => {
+    if (
+      window.confirm(
+        "Are you sure you want to delete this course? This action cannot be undone."
+      )
+    ) {
+      try {
+        await CourseService.deleteCourse(courseId);
+        setCourses(courses.filter((course) => course.id !== courseId));
+      } catch (err) {
+        alert("Failed to delete the course. Please try again later.");
+      }
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-16">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
+        <h2 className="text-2xl font-bold text-red-600 mb-4">Error</h2>
+        <p className="text-gray-600">{error}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="flex justify-between items-center mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">My Courses</h1>
+          <p className="text-lg text-gray-600">
+            Manage your courses and create new content for your students.
+          </p>
+        </div>
+
+        <Button as={Link} to="/instructor/courses/create" variant="primary">
+          <div className="flex items-center">
+            <FaPlus className="mr-2" />
+            Create New Course
+          </div>
+        </Button>
+      </div>
+
+      {courses.length === 0 ? (
+        <div className="text-center py-16 bg-white rounded-lg shadow-md">
+          <h2 className="text-2xl font-bold text-gray-700 mb-4">
+            You haven't created any courses yet
+          </h2>
+          <p className="text-gray-600 mb-8">
+            Start creating your first course and share your knowledge with
+            students around the world.
+          </p>
+          <Button as={Link} to="/instructor/courses/create" variant="primary">
+            <div className="flex items-center">
+              <FaPlus className="mr-2" />
+              Create Your First Course
+            </div>
+          </Button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-6">
+          {courses.map((course) => (
+            <Card key={course.id}>
+              <div className="flex flex-col md:flex-row">
+                <div className="md:w-48 flex-shrink-0">
+                  <img
+                    src={course.thumbnail || "/images/course-placeholder.jpg"}
+                    alt={course.title}
+                    className="w-full h-32 md:h-full object-cover rounded-t-lg md:rounded-l-lg md:rounded-t-none"
+                  />
+                </div>
+
+                <div className="p-4 flex-grow">
+                  <div className="flex justify-between">
+                    <h3 className="text-xl font-semibold mb-2">
+                      {course.title}
+                    </h3>
+                    <span
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        course.published
+                          ? "bg-green-100 text-green-800"
+                          : "bg-yellow-100 text-yellow-800"
+                      }`}
+                    >
+                      {course.published ? "Published" : "Draft"}
+                    </span>
+                  </div>
+
+                  <p className="text-gray-600 mb-4 line-clamp-2">
+                    {course.description}
+                  </p>
+
+                  <div className="flex items-center text-sm text-gray-500 mb-4">
+                    <div className="flex items-center mr-4">
+                      <FaUsers className="mr-1" />
+                      <span>
+                        {course.enrollmentCount || 0} students enrolled
+                      </span>
+                    </div>
+
+                    <div className="flex items-center">
+                      <span>
+                        Created:{" "}
+                        {new Date(course.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      as={Link}
+                      to={`/instructor/courses/edit/${course.id}`}
+                      variant="outline"
+                      size="sm"
+                    >
+                      <div className="flex items-center">
+                        <FaEdit className="mr-1" />
+                        Edit
+                      </div>
+                    </Button>
+
+                    <Button
+                      as={Link}
+                      to={`/courses/${course.id}`}
+                      variant="outline"
+                      size="sm"
+                    >
+                      <div className="flex items-center">
+                        <FaEye className="mr-1" />
+                        Preview
+                      </div>
+                    </Button>
+
+                    <Button
+                      onClick={() => handleDeleteCourse(course.id)}
+                      variant="danger"
+                      size="sm"
+                    >
+                      <div className="flex items-center">
+                        <FaTrash className="mr-1" />
+                        Delete
+                      </div>
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default InstructorCoursesPage;
+```
+
+## Next Steps
+
+In the next module, we'll implement course creation and editing functionality for instructors, including module and lesson management. We'll also set up the learning interface for students to access course content.
+
+[Next: Instructor Course Editor →](/proj-online-learning-platform-website/13-instructor-course-editor)
+
+<BackToTop />
