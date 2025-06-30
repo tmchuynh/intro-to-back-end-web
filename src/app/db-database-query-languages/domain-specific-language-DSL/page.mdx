@@ -1,0 +1,1822 @@
+import BackToTop from "@/components/BackToTop";
+
+# Elasticsearch Query DSL (Domain Specific Language)
+
+## Table of Contents
+
+## Introduction
+
+Elasticsearch Query DSL (Domain Specific Language) is a powerful, JSON-based query language designed specifically for searching, filtering, and aggregating data in Elasticsearch clusters. Developed by Elastic as part of the Elasticsearch search engine, the Query DSL provides a comprehensive and flexible way to construct complex search queries, from simple text searches to sophisticated analytical operations. Unlike traditional SQL which operates on structured tables, Elasticsearch DSL works with JSON documents stored in indices, making it ideal for full-text search, real-time analytics, and complex data exploration.
+
+Elasticsearch Query DSL is essential for developers building modern search applications, analytics platforms, and observability systems. It enables users to leverage Elasticsearch's distributed architecture for near real-time search across massive datasets. Whether you're building e-commerce search functionality, log analysis systems, business intelligence dashboards, or recommendation engines, the Query DSL provides the tools to efficiently query, filter, aggregate, and analyze data at scale.
+
+The DSL is designed to be both human-readable and machine-generated, making it suitable for direct API calls, application integration, and automated query generation. Its JSON-based structure allows for easy composition of complex queries, combining multiple search criteria, filters, aggregations, and scoring mechanisms to deliver precise and relevant results.
+
+### Real-World Applications
+
+Elasticsearch Query DSL powers many critical applications across various industries:
+
+- E-commerce platforms use DSL for product search, faceted navigation, recommendations, and inventory analytics
+- Log management systems leverage DSL for real-time log analysis, monitoring, and alerting across distributed infrastructure
+- Content management platforms employ DSL for full-text search, content discovery, and personalization engines
+- Financial services use DSL for fraud detection, risk analysis, and real-time transaction monitoring
+- Healthcare systems utilize DSL for patient record searches, medical research, and clinical data analysis
+- Media companies rely on DSL for content recommendation, user behavior analysis, and content performance metrics
+- Security operations centers use DSL for threat detection, incident investigation, and security analytics
+- Business intelligence platforms leverage DSL for real-time dashboards, data exploration, and trend analysis
+
+### Key Concepts
+
+- **Index**: A collection of documents with similar characteristics, analogous to a database in relational systems.
+- **Document**: A JSON object that contains the actual data being indexed and searched, similar to a row in a relational database.
+- **Field**: A key-value pair within a document, equivalent to a column in relational databases but with flexible schema.
+- **Mapping**: The schema definition that describes the fields and their data types within an index.
+- **Shard**: A horizontal partition of an index that enables distributed storage and parallel processing.
+- **Replica**: A copy of a shard that provides redundancy and increases search throughput.
+- **Cluster**: A collection of nodes that together hold the entire data and provide distributed search capabilities.
+- **Node**: A single server that is part of the cluster, storing data and participating in indexing and search operations.
+- **Query Context**: Determines how well documents match a query, affecting relevance scoring.
+- **Filter Context**: Determines whether documents match specific criteria without affecting relevance scores.
+- **Relevance Score**: A numerical value indicating how well a document matches a search query.
+- **Analyzer**: A component that processes text during indexing and search, including tokenization and normalization.
+- **Tokenizer**: Breaks text into individual terms or tokens for indexing and searching.
+- **Aggregation**: Operations that group and summarize data, similar to GROUP BY operations in SQL.
+- **Bucket Aggregation**: Groups documents into buckets based on field values, ranges, or other criteria.
+- **Metric Aggregation**: Calculates metrics like sum, average, min, max over groups of documents.
+- **Pipeline Aggregation**: Aggregations that operate on the output of other aggregations.
+- **Faceted Search**: Search interface that provides multiple filters or facets for refining search results.
+- **Multi-tenancy**: Ability to separate data logically within the same cluster using indices or routing.
+
+### Benefits of Elasticsearch Query DSL
+
+- **Powerful Search Capabilities**: Advanced full-text search with relevance scoring, fuzzy matching, and complex query composition.
+- **Real-time Performance**: Near real-time search and analytics across massive datasets with sub-second response times.
+- **Flexible Schema**: Schema-optional design allows for dynamic field mapping and evolving data structures.
+- **Distributed Architecture**: Horizontal scaling across multiple nodes with automatic sharding and replication.
+- **Rich Analytics**: Comprehensive aggregation framework for real-time analytics, reporting, and data visualization.
+- **JSON-based Syntax**: Human-readable and machine-friendly query structure that integrates easily with modern applications.
+- **Relevance Tuning**: Sophisticated scoring mechanisms and boosting capabilities for fine-tuning search relevance.
+- **Multi-language Support**: Built-in analyzers and tokenizers for multiple languages and text processing needs.
+- **Geospatial Queries**: Native support for geographic data types and location-based searches.
+- **Time-series Optimization**: Specialized features for time-series data analysis and time-based aggregations.
+- **Faceted Navigation**: Built-in support for faceted search interfaces with dynamic filter generation.
+- **Suggestion and Autocomplete**: Advanced suggestion engines for search-as-you-type and query completion.
+- **Machine Learning Integration**: Built-in anomaly detection and machine learning capabilities for advanced analytics.
+- **Monitoring and Observability**: Comprehensive monitoring capabilities for cluster health, performance, and query analysis.
+- **Ecosystem Integration**: Rich ecosystem of tools, clients, and integrations with popular frameworks and platforms.
+
+## Query DSL Fundamentals
+
+Elasticsearch Query DSL is structured around JSON syntax with specific query types, filters, and aggregations that can be combined to create powerful search operations.
+
+### Basic Query Structure
+
+- **Query Context**: Affects relevance scoring and determines how well documents match
+- **Filter Context**: Boolean matching without relevance scoring for better performance
+- **Must**: Documents must match these clauses (affects scoring)
+- **Should**: Documents should match these clauses (boosts scoring)
+- **Must Not**: Documents must not match these clauses (filter context)
+- **Filter**: Documents must match these clauses (filter context, no scoring)
+
+```json title="Basic Elasticsearch Query DSL structure"
+{
+  "query": {
+    "bool": {
+      "must": [{ "match": { "title": "elasticsearch" } }],
+      "filter": [
+        { "term": { "status": "published" } },
+        { "range": { "publish_date": { "gte": "2024-01-01" } } }
+      ],
+      "should": [{ "match": { "tags": "tutorial" } }],
+      "must_not": [{ "term": { "draft": true } }]
+    }
+  },
+  "size": 20,
+  "from": 0,
+  "sort": [{ "publish_date": { "order": "desc" } }]
+}
+```
+
+### Query Types Overview
+
+```json title="Common query types and their usage"
+// Match query - full-text search with analysis
+{
+  "query": {
+    "match": {
+      "content": {
+        "query": "elasticsearch search engine",
+        "operator": "and",
+        "fuzziness": "AUTO"
+      }
+    }
+  }
+}
+
+// Term query - exact match without analysis
+{
+  "query": {
+    "term": {
+      "status.keyword": "published"
+    }
+  }
+}
+
+// Range query - numeric or date ranges
+{
+  "query": {
+    "range": {
+      "price": {
+        "gte": 100,
+        "lte": 500
+      }
+    }
+  }
+}
+
+// Wildcard query - pattern matching
+{
+  "query": {
+    "wildcard": {
+      "product_code": "ELEC-*"
+    }
+  }
+}
+
+// Exists query - check field presence
+{
+  "query": {
+    "exists": {
+      "field": "email"
+    }
+  }
+}
+```
+
+## Text Search and Analysis
+
+Elasticsearch excels at full-text search with sophisticated text analysis and relevance scoring capabilities.
+
+### Full-Text Search Queries
+
+```json title="Advanced text search patterns"
+// Multi-field search with boosting
+{
+  "query": {
+    "multi_match": {
+      "query": "machine learning tutorial",
+      "fields": [
+        "title^3",
+        "description^2",
+        "content",
+        "tags"
+      ],
+      "type": "best_fields",
+      "fuzziness": "AUTO",
+      "prefix_length": 2
+    }
+  }
+}
+
+// Phrase matching with slop
+{
+  "query": {
+    "match_phrase": {
+      "content": {
+        "query": "data science techniques",
+        "slop": 2
+      }
+    }
+  }
+}
+
+// Boolean text search with operators
+{
+  "query": {
+    "query_string": {
+      "query": "(elasticsearch OR solr) AND tutorial NOT deprecated",
+      "fields": ["title", "content"],
+      "default_operator": "AND"
+    }
+  }
+}
+
+// Simple query string for user input
+{
+  "query": {
+    "simple_query_string": {
+      "query": "python +tutorial -beginner",
+      "fields": ["title", "description"],
+      "default_operator": "and"
+    }
+  }
+}
+```
+
+### Fuzzy and Proximity Matching
+
+```json title="Handling typos and approximate matching"
+// Fuzzy query for typo tolerance
+{
+  "query": {
+    "fuzzy": {
+      "title": {
+        "value": "elasticsarch",
+        "fuzziness": 2,
+        "prefix_length": 3,
+        "max_expansions": 50
+      }
+    }
+  }
+}
+
+// Match with fuzziness
+{
+  "query": {
+    "match": {
+      "product_name": {
+        "query": "iphone 13 pro",
+        "fuzziness": "AUTO",
+        "operator": "and"
+      }
+    }
+  }
+}
+
+// Phrase prefix for autocomplete
+{
+  "query": {
+    "match_phrase_prefix": {
+      "title": {
+        "query": "machine learn",
+        "max_expansions": 10
+      }
+    }
+  }
+}
+
+// More like this for content similarity
+{
+  "query": {
+    "more_like_this": {
+      "fields": ["title", "description"],
+      "like": [
+        {
+          "_index": "articles",
+          "_id": "1"
+        }
+      ],
+      "min_term_freq": 1,
+      "max_query_terms": 12
+    }
+  }
+}
+```
+
+### Custom Scoring and Boosting
+
+```json title="Advanced relevance tuning and scoring"
+// Function score for custom relevance
+{
+  "query": {
+    "function_score": {
+      "query": {
+        "match": {
+          "content": "elasticsearch tutorial"
+        }
+      },
+      "functions": [
+        {
+          "filter": { "match": { "tags": "beginner" } },
+          "weight": 1.5
+        },
+        {
+          "field_value_factor": {
+            "field": "popularity_score",
+            "factor": 1.2,
+            "modifier": "sqrt",
+            "missing": 1
+          }
+        },
+        {
+          "gauss": {
+            "publish_date": {
+              "origin": "now",
+              "scale": "30d",
+              "decay": 0.5
+            }
+          }
+        }
+      ],
+      "score_mode": "multiply",
+      "boost_mode": "multiply"
+    }
+  }
+}
+
+// Boosting query for negative boosting
+{
+  "query": {
+    "boosting": {
+      "positive": {
+        "match": {
+          "content": "python programming"
+        }
+      },
+      "negative": {
+        "match": {
+          "content": "deprecated"
+        }
+      },
+      "negative_boost": 0.2
+    }
+  }
+}
+
+// Constant score for consistent scoring
+{
+  "query": {
+    "constant_score": {
+      "filter": {
+        "term": { "category": "tutorial" }
+      },
+      "boost": 1.2
+    }
+  }
+}
+```
+
+## Filtering and Structured Queries
+
+Filtering provides efficient, cacheable queries for structured data without affecting relevance scores.
+
+### Term-level Queries
+
+```json title="Exact matching and structured data queries"
+// Multiple term values
+{
+  "query": {
+    "terms": {
+      "category.keyword": ["electronics", "computers", "mobile"]
+    }
+  }
+}
+
+// Term set query with minimum matches
+{
+  "query": {
+    "terms_set": {
+      "tags": {
+        "terms": ["python", "tutorial", "beginner"],
+        "minimum_should_match_field": "required_tags_count"
+      }
+    }
+  }
+}
+
+// Prefix matching
+{
+  "query": {
+    "prefix": {
+      "product_code": "ELEC"
+    }
+  }
+}
+
+// Regular expression matching
+{
+  "query": {
+    "regexp": {
+      "email": {
+        "value": ".*@(gmail|yahoo)\\.com",
+        "flags": "INTERSECTION|COMPLEMENT|EMPTY"
+      }
+    }
+  }
+}
+```
+
+### Range and Numeric Queries
+
+```json title="Numeric, date, and range filtering"
+// Numeric range with multiple conditions
+{
+  "query": {
+    "bool": {
+      "filter": [
+        {
+          "range": {
+            "price": {
+              "gte": 50,
+              "lt": 200
+            }
+          }
+        },
+        {
+          "range": {
+            "stock_quantity": {
+              "gt": 0
+            }
+          }
+        }
+      ]
+    }
+  }
+}
+
+// Date range with relative dates
+{
+  "query": {
+    "range": {
+      "created_at": {
+        "gte": "now-30d/d",
+        "lt": "now/d"
+      }
+    }
+  }
+}
+
+// Date histogram for time-based analysis
+{
+  "query": {
+    "bool": {
+      "filter": [
+        {
+          "range": {
+            "timestamp": {
+              "gte": "2024-01-01",
+              "lte": "2024-12-31"
+            }
+          }
+        }
+      ]
+    }
+  }
+}
+
+// Numeric range with boost
+{
+  "query": {
+    "range": {
+      "rating": {
+        "gte": 4.0,
+        "boost": 2.0
+      }
+    }
+  }
+}
+```
+
+### Geo-spatial Queries
+
+```json title="Location-based search and filtering"
+// Geo distance query
+{
+  "query": {
+    "geo_distance": {
+      "distance": "10km",
+      "location": {
+        "lat": 40.7128,
+        "lon": -74.0060
+      }
+    }
+  }
+}
+
+// Geo bounding box
+{
+  "query": {
+    "geo_bounding_box": {
+      "location": {
+        "top_left": {
+          "lat": 40.8,
+          "lon": -74.1
+        },
+        "bottom_right": {
+          "lat": 40.7,
+          "lon": -73.9
+        }
+      }
+    }
+  }
+}
+
+// Geo polygon for complex shapes
+{
+  "query": {
+    "geo_polygon": {
+      "location": {
+        "points": [
+          { "lat": 40.8, "lon": -74.1 },
+          { "lat": 40.8, "lon": -73.9 },
+          { "lat": 40.6, "lon": -73.9 },
+          { "lat": 40.6, "lon": -74.1 }
+        ]
+      }
+    }
+  }
+}
+
+// Geo shape query for complex geometries
+{
+  "query": {
+    "geo_shape": {
+      "location": {
+        "shape": {
+          "type": "envelope",
+          "coordinates": [[-74.1, 40.8], [-73.9, 40.6]]
+        },
+        "relation": "within"
+      }
+    }
+  }
+}
+```
+
+## Aggregations and Analytics
+
+Elasticsearch aggregations provide powerful analytics capabilities for summarizing and analyzing large datasets.
+
+### Bucket Aggregations
+
+```json title="Grouping and categorizing data"
+// Terms aggregation for category analysis
+{
+  "aggs": {
+    "product_categories": {
+      "terms": {
+        "field": "category.keyword",
+        "size": 10,
+        "order": { "_count": "desc" }
+      },
+      "aggs": {
+        "avg_price": {
+          "avg": {
+            "field": "price"
+          }
+        },
+        "price_ranges": {
+          "range": {
+            "field": "price",
+            "ranges": [
+              { "to": 50 },
+              { "from": 50, "to": 200 },
+              { "from": 200 }
+            ]
+          }
+        }
+      }
+    }
+  }
+}
+
+// Date histogram for time-series analysis
+{
+  "aggs": {
+    "sales_over_time": {
+      "date_histogram": {
+        "field": "order_date",
+        "calendar_interval": "month",
+        "format": "yyyy-MM",
+        "min_doc_count": 1
+      },
+      "aggs": {
+        "monthly_revenue": {
+          "sum": {
+            "field": "total_amount"
+          }
+        },
+        "unique_customers": {
+          "cardinality": {
+            "field": "customer_id"
+          }
+        }
+      }
+    }
+  }
+}
+
+// Histogram for numeric distribution
+{
+  "aggs": {
+    "price_distribution": {
+      "histogram": {
+        "field": "price",
+        "interval": 50,
+        "min_doc_count": 1
+      }
+    }
+  }
+}
+
+// Filter aggregation for conditional analysis
+{
+  "aggs": {
+    "high_value_orders": {
+      "filter": {
+        "range": {
+          "total_amount": { "gte": 1000 }
+        }
+      },
+      "aggs": {
+        "avg_high_value": {
+          "avg": {
+            "field": "total_amount"
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+### Metric Aggregations
+
+```json title="Statistical calculations and metrics"
+// Multiple metrics in single aggregation
+{
+  "aggs": {
+    "price_stats": {
+      "stats": {
+        "field": "price"
+      }
+    },
+    "extended_price_stats": {
+      "extended_stats": {
+        "field": "price"
+      }
+    },
+    "price_percentiles": {
+      "percentiles": {
+        "field": "price",
+        "percents": [25, 50, 75, 95, 99]
+      }
+    }
+  }
+}
+
+// Cardinality for unique counts
+{
+  "aggs": {
+    "unique_customers": {
+      "cardinality": {
+        "field": "customer_id",
+        "precision_threshold": 1000
+      }
+    },
+    "unique_products": {
+      "cardinality": {
+        "field": "product_id"
+      }
+    }
+  }
+}
+
+// Top hits for sample documents
+{
+  "aggs": {
+    "top_sales_by_category": {
+      "terms": {
+        "field": "category.keyword"
+      },
+      "aggs": {
+        "top_products": {
+          "top_hits": {
+            "sort": [
+              { "sales_count": { "order": "desc" } }
+            ],
+            "size": 3,
+            "_source": ["product_name", "price", "sales_count"]
+          }
+        }
+      }
+    }
+  }
+}
+
+// Value count for non-null values
+{
+  "aggs": {
+    "products_with_reviews": {
+      "value_count": {
+        "field": "review_score"
+      }
+    }
+  }
+}
+```
+
+### Advanced Aggregations
+
+```json title="Complex analytical operations"
+// Pipeline aggregations for derived metrics
+{
+  "aggs": {
+    "monthly_sales": {
+      "date_histogram": {
+        "field": "order_date",
+        "calendar_interval": "month"
+      },
+      "aggs": {
+        "total_sales": {
+          "sum": {
+            "field": "amount"
+          }
+        }
+      }
+    },
+    "sales_growth": {
+      "derivative": {
+        "buckets_path": "monthly_sales>total_sales"
+      }
+    },
+    "cumulative_sales": {
+      "cumulative_sum": {
+        "buckets_path": "monthly_sales>total_sales"
+      }
+    }
+  }
+}
+
+// Moving average for trend analysis
+{
+  "aggs": {
+    "daily_orders": {
+      "date_histogram": {
+        "field": "order_date",
+        "calendar_interval": "day"
+      },
+      "aggs": {
+        "order_count": {
+          "value_count": {
+            "field": "_id"
+          }
+        },
+        "order_trend": {
+          "moving_avg": {
+            "buckets_path": "order_count",
+            "window": 7,
+            "model": "linear"
+          }
+        }
+      }
+    }
+  }
+}
+
+// Scripted metrics for custom calculations
+{
+  "aggs": {
+    "profit_analysis": {
+      "scripted_metric": {
+        "init_script": "state.total_profit = 0; state.total_cost = 0;",
+        "map_script": "state.total_profit += doc['selling_price'].value; state.total_cost += doc['cost_price'].value;",
+        "combine_script": "return ['profit': state.total_profit, 'cost': state.total_cost]",
+        "reduce_script": "double total_profit = 0; double total_cost = 0; for (state in states) { total_profit += state.profit; total_cost += state.cost; } return ['profit_margin': (total_profit - total_cost) / total_profit]"
+      }
+    }
+  }
+}
+```
+
+## Complex Query Composition
+
+Advanced Elasticsearch queries combine multiple query types, filters, and aggregations for sophisticated search and analytics.
+
+### Nested and Parent-Child Queries
+
+```json title="Handling complex document relationships"
+// Nested query for nested objects
+{
+  "query": {
+    "nested": {
+      "path": "reviews",
+      "query": {
+        "bool": {
+          "must": [
+            { "range": { "reviews.rating": { "gte": 4 } } },
+            { "match": { "reviews.comment": "excellent" } }
+          ]
+        }
+      },
+      "inner_hits": {
+        "size": 3,
+        "sort": [
+          { "reviews.date": { "order": "desc" } }
+        ]
+      }
+    }
+  }
+}
+
+// Nested aggregation for complex analytics
+{
+  "aggs": {
+    "reviews_analysis": {
+      "nested": {
+        "path": "reviews"
+      },
+      "aggs": {
+        "avg_rating": {
+          "avg": {
+            "field": "reviews.rating"
+          }
+        },
+        "rating_distribution": {
+          "histogram": {
+            "field": "reviews.rating",
+            "interval": 1
+          }
+        }
+      }
+    }
+  }
+}
+
+// Parent-child relationships
+{
+  "query": {
+    "has_child": {
+      "type": "comment",
+      "query": {
+        "match": {
+          "text": "elasticsearch"
+        }
+      },
+      "score_mode": "avg"
+    }
+  }
+}
+
+// Child to parent queries
+{
+  "query": {
+    "has_parent": {
+      "parent_type": "article",
+      "query": {
+        "bool": {
+          "must": [
+            { "match": { "title": "search" } },
+            { "range": { "publish_date": { "gte": "2024-01-01" } } }
+          ]
+        }
+      },
+      "score": true
+    }
+  }
+}
+```
+
+### Multi-index and Cross-cluster Search
+
+```json title="Searching across multiple indices and clusters"
+// Multi-index search with different weights
+{
+  "index": ["products_v1", "products_v2"],
+  "query": {
+    "function_score": {
+      "query": {
+        "multi_match": {
+          "query": "laptop",
+          "fields": ["name^2", "description"]
+        }
+      },
+      "functions": [
+        {
+          "filter": { "term": { "_index": "products_v2" } },
+          "weight": 2.0
+        }
+      ]
+    }
+  }
+}
+
+// Cross-cluster search
+{
+  "index": "local_logs,cluster_remote:logs-*",
+  "query": {
+    "bool": {
+      "must": [
+        { "range": { "@timestamp": { "gte": "now-1h" } } },
+        { "match": { "level": "ERROR" } }
+      ]
+    }
+  },
+  "aggs": {
+    "by_cluster": {
+      "terms": {
+        "field": "_index"
+      }
+    }
+  }
+}
+
+// Index patterns with exclusions
+{
+  "index": ["logs-*", "-logs-debug-*"],
+  "query": {
+    "match_all": {}
+  }
+}
+```
+
+### Search Templates and Stored Queries
+
+```json title="Reusable query templates and parameterization"
+// Create search template
+{
+  "script": {
+    "lang": "mustache",
+    "source": {
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "match": {
+                "{{field}}": "{{query}}"
+              }
+            }
+          ],
+          "filter": [
+            {
+              "range": {
+                "{{date_field}}": {
+                  "gte": "{{start_date}}",
+                  "lte": "{{end_date}}"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "size": "{{size}}",
+      "from": "{{from}}"
+    }
+  }
+}
+
+// Use search template with parameters
+{
+  "id": "product_search_template",
+  "params": {
+    "field": "name",
+    "query": "laptop computer",
+    "date_field": "created_date",
+    "start_date": "2024-01-01",
+    "end_date": "2024-12-31",
+    "size": 20,
+    "from": 0
+  }
+}
+
+// Conditional logic in templates
+{
+  "script": {
+    "lang": "mustache",
+    "source": {
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "match": {
+                "content": "{{query}}"
+              }
+            }
+            {{#category}},
+            {
+              "term": {
+                "category.keyword": "{{category}}"
+              }
+            }
+            {{/category}}
+          ]
+        }
+      }
+    }
+  }
+}
+```
+
+## Real-World Elasticsearch Applications
+
+Understanding practical applications demonstrates Elasticsearch DSL's versatility across different domains and use cases.
+
+### E-commerce Search and Recommendations
+
+```json title="Advanced e-commerce search platform"
+// Product search with faceted navigation
+{
+  "query": {
+    "function_score": {
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "multi_match": {
+                "query": "wireless bluetooth headphones",
+                "fields": [
+                  "name^3",
+                  "brand^2",
+                  "description",
+                  "features"
+                ],
+                "type": "cross_fields",
+                "operator": "and"
+              }
+            }
+          ],
+          "filter": [
+            { "terms": { "category.keyword": ["Electronics", "Audio"] } },
+            { "range": { "price": { "gte": 50, "lte": 300 } } },
+            { "term": { "in_stock": true } },
+            { "range": { "rating": { "gte": 3.5 } } }
+          ]
+        }
+      },
+      "functions": [
+        {
+          "filter": { "match": { "brand": "Sony" } },
+          "weight": 1.5
+        },
+        {
+          "field_value_factor": {
+            "field": "popularity_score",
+            "factor": 1.2,
+            "modifier": "log1p"
+          }
+        },
+        {
+          "gauss": {
+            "price": {
+              "origin": 150,
+              "scale": "50",
+              "decay": 0.6
+            }
+          }
+        }
+      ],
+      "score_mode": "multiply"
+    }
+  },
+  "aggs": {
+    "categories": {
+      "terms": {
+        "field": "category.keyword",
+        "size": 10
+      }
+    },
+    "brands": {
+      "terms": {
+        "field": "brand.keyword",
+        "size": 20
+      }
+    },
+    "price_ranges": {
+      "range": {
+        "field": "price",
+        "ranges": [
+          { "key": "Under $50", "to": 50 },
+          { "key": "$50 - $100", "from": 50, "to": 100 },
+          { "key": "$100 - $200", "from": 100, "to": 200 },
+          { "key": "Over $200", "from": 200 }
+        ]
+      }
+    },
+    "rating_distribution": {
+      "histogram": {
+        "field": "rating",
+        "interval": 0.5,
+        "min_doc_count": 1
+      }
+    }
+  },
+  "suggest": {
+    "product_suggest": {
+      "prefix": "wireless",
+      "completion": {
+        "field": "suggest",
+        "size": 5,
+        "contexts": {
+          "category": ["Electronics"]
+        }
+      }
+    }
+  }
+}
+
+// Personalized recommendations based on user behavior
+{
+  "query": {
+    "function_score": {
+      "query": {
+        "bool": {
+          "should": [
+            {
+              "more_like_this": {
+                "fields": ["name", "description", "features"],
+                "like": [
+                  { "_index": "products", "_id": "user_recent_purchase_1" },
+                  { "_index": "products", "_id": "user_recent_purchase_2" }
+                ],
+                "min_term_freq": 1,
+                "max_query_terms": 15
+              }
+            },
+            {
+              "terms": {
+                "category.keyword": ["user_favorite_category_1", "user_favorite_category_2"]
+              }
+            }
+          ]
+        }
+      },
+      "functions": [
+        {
+          "filter": { "terms": { "brand.keyword": ["user_preferred_brands"] } },
+          "weight": 2.0
+        },
+        {
+          "script_score": {
+            "script": {
+              "source": "Math.log(2 + doc['sales_count'].value)"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "size": 12
+}
+```
+
+### Log Analysis and Monitoring
+
+```json title="Real-time log analysis and alerting system"
+// Error detection and analysis
+{
+  "query": {
+    "bool": {
+      "must": [
+        { "term": { "log_level": "ERROR" } },
+        {
+          "range": {
+            "@timestamp": {
+              "gte": "now-15m"
+            }
+          }
+        }
+      ],
+      "should": [
+        { "match": { "message": "OutOfMemoryError" } },
+        { "match": { "message": "ConnectionTimeout" } },
+        { "match": { "message": "DatabaseException" } }
+      ]
+    }
+  },
+  "aggs": {
+    "error_trends": {
+      "date_histogram": {
+        "field": "@timestamp",
+        "fixed_interval": "1m"
+      }
+    },
+    "top_errors": {
+      "terms": {
+        "field": "exception_class.keyword",
+        "size": 10
+      },
+      "aggs": {
+        "error_details": {
+          "top_hits": {
+            "size": 3,
+            "_source": ["message", "stack_trace", "host"],
+            "sort": [{ "@timestamp": { "order": "desc" } }]
+          }
+        }
+      }
+    },
+    "affected_services": {
+      "terms": {
+        "field": "service_name.keyword"
+      }
+    }
+  }
+}
+
+// Performance monitoring and alerting
+{
+  "query": {
+    "bool": {
+      "filter": [
+        {
+          "range": {
+            "@timestamp": {
+              "gte": "now-5m"
+            }
+          }
+        },
+        {
+          "range": {
+            "response_time": {
+              "gte": 1000
+            }
+          }
+        }
+      ]
+    }
+  },
+  "aggs": {
+    "slow_endpoints": {
+      "terms": {
+        "field": "endpoint.keyword",
+        "size": 20
+      },
+      "aggs": {
+        "avg_response_time": {
+          "avg": {
+            "field": "response_time"
+          }
+        },
+        "max_response_time": {
+          "max": {
+            "field": "response_time"
+          }
+        },
+        "request_count": {
+          "value_count": {
+            "field": "request_id"
+          }
+        }
+      }
+    },
+    "performance_percentiles": {
+      "percentiles": {
+        "field": "response_time",
+        "percents": [50, 90, 95, 99]
+      }
+    }
+  }
+}
+
+// Security event detection
+{
+  "query": {
+    "bool": {
+      "should": [
+        {
+          "bool": {
+            "must": [
+              { "term": { "event_type": "login_failed" } },
+              {
+                "range": {
+                  "failed_attempts": {
+                    "gte": 5
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "bool": {
+            "must": [
+              { "term": { "event_type": "suspicious_activity" } },
+              { "match": { "description": "unusual location" } }
+            ]
+          }
+        },
+        {
+          "bool": {
+            "must": [
+              { "range": { "data_transfer_mb": { "gte": 1000 } } },
+              { "term": { "after_hours": true } }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "aggs": {
+    "security_incidents_by_type": {
+      "terms": {
+        "field": "incident_type.keyword"
+      }
+    },
+    "high_risk_users": {
+      "terms": {
+        "field": "user_id.keyword",
+        "size": 50
+      },
+      "aggs": {
+        "incident_count": {
+          "value_count": {
+            "field": "incident_id"
+          }
+        },
+        "risk_score": {
+          "sum": {
+            "field": "risk_score"
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+### Business Intelligence and Analytics
+
+```json title="Real-time business analytics and KPI monitoring"
+// Sales performance dashboard
+{
+  "query": {
+    "bool": {
+      "filter": [
+        {
+          "range": {
+            "order_date": {
+              "gte": "2024-01-01",
+              "lte": "2024-12-31"
+            }
+          }
+        },
+        {
+          "term": {
+            "status": "completed"
+          }
+        }
+      ]
+    }
+  },
+  "aggs": {
+    "monthly_performance": {
+      "date_histogram": {
+        "field": "order_date",
+        "calendar_interval": "month",
+        "format": "yyyy-MM"
+      },
+      "aggs": {
+        "total_revenue": {
+          "sum": {
+            "field": "total_amount"
+          }
+        },
+        "order_count": {
+          "value_count": {
+            "field": "order_id"
+          }
+        },
+        "avg_order_value": {
+          "avg": {
+            "field": "total_amount"
+          }
+        },
+        "unique_customers": {
+          "cardinality": {
+            "field": "customer_id"
+          }
+        }
+      }
+    },
+    "revenue_growth": {
+      "derivative": {
+        "buckets_path": "monthly_performance>total_revenue"
+      }
+    },
+    "top_performing_regions": {
+      "terms": {
+        "field": "shipping_region.keyword",
+        "size": 10
+      },
+      "aggs": {
+        "regional_revenue": {
+          "sum": {
+            "field": "total_amount"
+          }
+        }
+      }
+    },
+    "product_category_performance": {
+      "nested": {
+        "path": "order_items"
+      },
+      "aggs": {
+        "categories": {
+          "terms": {
+            "field": "order_items.category.keyword",
+            "size": 20
+          },
+          "aggs": {
+            "category_revenue": {
+              "sum": {
+                "script": {
+                  "source": "doc['order_items.quantity'].value * doc['order_items.unit_price'].value"
+                }
+              }
+            },
+            "units_sold": {
+              "sum": {
+                "field": "order_items.quantity"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+// Customer behavior and segmentation analysis
+{
+  "aggs": {
+    "customer_segments": {
+      "range": {
+        "field": "lifetime_value",
+        "ranges": [
+          { "key": "Bronze", "to": 500 },
+          { "key": "Silver", "from": 500, "to": 2000 },
+          { "key": "Gold", "from": 2000, "to": 10000 },
+          { "key": "Platinum", "from": 10000 }
+        ]
+      },
+      "aggs": {
+        "segment_metrics": {
+          "stats": {
+            "field": "lifetime_value"
+          }
+        },
+        "avg_order_frequency": {
+          "avg": {
+            "field": "order_frequency_days"
+          }
+        },
+        "preferred_categories": {
+          "nested": {
+            "path": "purchase_history"
+          },
+          "aggs": {
+            "top_categories": {
+              "terms": {
+                "field": "purchase_history.category.keyword",
+                "size": 5
+              }
+            }
+          }
+        }
+      }
+    },
+    "churn_risk_analysis": {
+      "filter": {
+        "range": {
+          "last_purchase_date": {
+            "lte": "now-90d"
+          }
+        }
+      },
+      "aggs": {
+        "at_risk_customers": {
+          "cardinality": {
+            "field": "customer_id"
+          }
+        },
+        "risk_by_segment": {
+          "terms": {
+            "field": "customer_segment.keyword"
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+### Content and Media Search
+
+```json title="Advanced content discovery and recommendation system"
+// Multi-modal content search
+{
+  "query": {
+    "bool": {
+      "should": [
+        {
+          "multi_match": {
+            "query": "artificial intelligence machine learning",
+            "fields": [
+              "title^3",
+              "description^2",
+              "content",
+              "transcript",
+              "tags^1.5"
+            ],
+            "type": "cross_fields"
+          }
+        },
+        {
+          "more_like_this": {
+            "fields": ["content", "description"],
+            "like": [
+              {
+                "_index": "articles",
+                "_id": "user_bookmarked_article"
+              }
+            ],
+            "min_term_freq": 2,
+            "max_query_terms": 20
+          }
+        }
+      ],
+      "filter": [
+        {
+          "terms": {
+            "content_type": ["article", "video", "podcast"]
+          }
+        },
+        {
+          "range": {
+            "publish_date": {
+              "gte": "now-2y"
+            }
+          }
+        },
+        {
+          "term": {
+            "status": "published"
+          }
+        }
+      ]
+    }
+  },
+  "post_filter": {
+    "bool": {
+      "should": [
+        { "term": { "language": "en" } },
+        { "term": { "has_subtitles": true } }
+      ]
+    }
+  },
+  "aggs": {
+    "content_types": {
+      "terms": {
+        "field": "content_type.keyword"
+      }
+    },
+    "topics": {
+      "significant_terms": {
+        "field": "topics.keyword",
+        "size": 15
+      }
+    },
+    "duration_ranges": {
+      "range": {
+        "field": "duration_minutes",
+        "ranges": [
+          { "key": "Short (< 10 min)", "to": 10 },
+          { "key": "Medium (10-30 min)", "from": 10, "to": 30 },
+          { "key": "Long (> 30 min)", "from": 30 }
+        ]
+      }
+    },
+    "trending_authors": {
+      "terms": {
+        "field": "author.keyword",
+        "size": 10
+      },
+      "aggs": {
+        "recent_content": {
+          "filter": {
+            "range": {
+              "publish_date": {
+                "gte": "now-30d"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "highlight": {
+    "fields": {
+      "title": {},
+      "description": {},
+      "content": {
+        "fragment_size": 150,
+        "number_of_fragments": 3
+      }
+    }
+  },
+  "suggest": {
+    "content_suggest": {
+      "text": "artificial intelligence",
+      "term": {
+        "field": "title"
+      }
+    }
+  }
+}
+```
+
+## Performance Optimization and Best Practices
+
+### Query Optimization Strategies
+
+```json title="Performance-optimized query patterns"
+// Use filters for exact matches (cached and faster)
+{
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "match": {
+            "content": "elasticsearch tutorial"
+          }
+        }
+      ],
+      "filter": [
+        { "term": { "status": "published" } },
+        { "range": { "created_date": { "gte": "2024-01-01" } } },
+        { "terms": { "category": ["tutorial", "guide"] } }
+      ]
+    }
+  }
+}
+
+// Optimize aggregations with filters
+{
+  "aggs": {
+    "recent_products": {
+      "filter": {
+        "range": {
+          "created_date": {
+            "gte": "now-30d"
+          }
+        }
+      },
+      "aggs": {
+        "categories": {
+          "terms": {
+            "field": "category.keyword",
+            "size": 10
+          }
+        }
+      }
+    }
+  }
+}
+
+// Use constant_score for consistent performance
+{
+  "query": {
+    "constant_score": {
+      "filter": {
+        "bool": {
+          "must": [
+            { "term": { "status": "active" } },
+            { "range": { "price": { "gte": 100 } } }
+          ]
+        }
+      },
+      "boost": 1.0
+    }
+  }
+}
+
+// Limit result size and use pagination
+{
+  "query": {
+    "match_all": {}
+  },
+  "size": 50,
+  "from": 0,
+  "sort": [
+    { "created_date": { "order": "desc" } }
+  ],
+  "track_total_hits": false
+}
+```
+
+### Index Design and Mapping Optimization
+
+```json title="Optimized index configuration for performance"
+// Efficient mapping design
+{
+  "mappings": {
+    "properties": {
+      "title": {
+        "type": "text",
+        "analyzer": "standard",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "category": {
+        "type": "keyword"
+      },
+      "price": {
+        "type": "scaled_float",
+        "scaling_factor": 100
+      },
+      "created_date": {
+        "type": "date",
+        "format": "strict_date_optional_time||epoch_millis"
+      },
+      "content": {
+        "type": "text",
+        "analyzer": "standard",
+        "store": false
+      },
+      "tags": {
+        "type": "keyword",
+        "normalizer": "lowercase"
+      }
+    }
+  },
+  "settings": {
+    "number_of_shards": 3,
+    "number_of_replicas": 1,
+    "refresh_interval": "30s",
+    "analysis": {
+      "normalizer": {
+        "lowercase": {
+          "type": "custom",
+          "char_filter": [],
+          "filter": ["lowercase"]
+        }
+      }
+    }
+  }
+}
+
+// Index template for consistent configuration
+{
+  "index_patterns": ["logs-*"],
+  "template": {
+    "settings": {
+      "number_of_shards": 1,
+      "number_of_replicas": 0,
+      "refresh_interval": "5s",
+      "index.lifecycle.name": "logs-policy"
+    },
+    "mappings": {
+      "properties": {
+        "@timestamp": {
+          "type": "date"
+        },
+        "level": {
+          "type": "keyword"
+        },
+        "message": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 1024
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+### Monitoring and Performance Analysis
+
+```json title="Query performance monitoring and analysis"
+// Profile API for query analysis
+{
+  "profile": true,
+  "query": {
+    "bool": {
+      "must": [
+        { "match": { "content": "elasticsearch" } }
+      ],
+      "filter": [
+        { "range": { "created_date": { "gte": "2024-01-01" } } }
+      ]
+    }
+  }
+}
+
+// Search slow log configuration
+{
+  "settings": {
+    "index.search.slowlog.threshold.query.warn": "10s",
+    "index.search.slowlog.threshold.query.info": "5s",
+    "index.search.slowlog.threshold.query.debug": "2s",
+    "index.search.slowlog.threshold.fetch.warn": "1s",
+    "index.indexing.slowlog.threshold.index.warn": "10s"
+  }
+}
+
+// Hot threads analysis for performance issues
+// GET /_nodes/hot_threads?type=cpu&interval=500ms&snapshots=5
+
+// Cluster stats monitoring
+// GET /_cluster/stats
+// GET /_nodes/stats/indices/search,indices/indexing
+```
+
+<BackToTop />
