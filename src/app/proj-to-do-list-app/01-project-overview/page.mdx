@@ -1,0 +1,108 @@
+# Project Overview and Setup
+
+## Introduction
+
+In this module, we'll set up the foundation for our full-stack To-Do List application. We'll create a new Next.js project with TypeScript and Tailwind CSS, and organize our project structure to accommodate both frontend and backend code.
+
+## Technologies Used
+
+### Frontend
+- **Next.js**: A React framework that enables server-side rendering and static site generation
+- **TypeScript**: A strongly typed programming language that builds on JavaScript
+- **Tailwind CSS**: A utility-first CSS framework for rapidly building custom user interfaces
+
+### Backend
+- **Node.js**: A JavaScript runtime built on Chrome's V8 JavaScript engine
+- **Express**: A minimal and flexible Node.js web application framework
+- **MySQL**: An open-source relational database management system
+- **Sequelize**: A promise-based Node.js ORM for MySQL
+
+## Prerequisites
+
+Before starting, ensure you have the following installed:
+- Node.js (v14 or later)
+- npm or yarn
+- MySQL (v5.7 or later)
+
+## Setting Up the Next.js Project
+
+1. Create a new Next.js project with TypeScript:
+
+```bash
+npx create-next-app@latest todo-app --typescript
+cd todo-app
+```
+
+2. Install additional dependencies:
+
+```bash
+npm install tailwindcss postcss autoprefixer
+npm install -D @types/node @types/react @types/react-dom
+npm install express mysql2 sequelize dotenv jsonwebtoken bcrypt cors
+npm install -D @types/express @types/jsonwebtoken @types/bcrypt @types/cors
+```
+
+3. Set up Tailwind CSS:
+
+```bash
+npx tailwindcss init -p
+```
+
+4. Update your `tailwind.config.js` file:
+
+```javascript
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: [
+    './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/components/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/app/**/*.{js,ts,jsx,tsx,mdx}',
+  ],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+}
+```
+
+5. Create a basic project structure:
+
+```
+todo-app/
+├── public/
+├── src/
+│   ├── app/               # Next.js app router
+│   ├── components/        # React components
+│   ├── lib/               # Shared utilities
+│   ├── models/            # Sequelize models
+│   ├── server/            # Express server code
+│   └── types/             # TypeScript type definitions
+├── .env                   # Environment variables (create this)
+├── .gitignore
+├── next.config.js
+├── package.json
+├── README.md
+├── tailwind.config.js
+└── tsconfig.json
+```
+
+6. Create a `.env` file in the root directory to store environment variables:
+
+```
+# Database Configuration
+DB_HOST=localhost
+DB_USER=root
+DB_PASS=your_password
+DB_NAME=todo_app_db
+
+# JWT Secret
+JWT_SECRET=your_jwt_secret_key
+```
+
+**Note**: Never commit your `.env` file to version control. Add it to your `.gitignore` file.
+
+## Next Steps
+
+Now that we have our project set up, we can move on to setting up our database in the next module. We'll create our MySQL database and configure Sequelize to connect to it.
+
+[Next: Database Setup →](/proj-to-do-list-app/02-database-setup)
