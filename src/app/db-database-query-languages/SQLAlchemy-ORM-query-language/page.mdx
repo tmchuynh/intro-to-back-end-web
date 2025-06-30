@@ -1,0 +1,587 @@
+import BackToTop from "@/components/BackToTop";
+
+# SQLAlchemy ORM Query Language
+
+## Table of Contents
+
+## Introduction
+
+SQLAlchemy is a powerful Object Relational Mapper (ORM) for Python that allows developers to interact with databases using Python objects instead of SQL queries. It provides a high-level abstraction over SQL, enabling developers to work with database records as if they were regular Python objects. This approach simplifies database interactions and enhances code readability and maintainability.
+
+While SQLAlchemy is based off of SQL, it provides a Pythonic interface for constructing queries and managing database schema. Instead of writing raw SQL statements, you use Python classes and methods to define tables, relationships, and queries. This abstraction helps prevent SQL injection attacks, improves code portability across different database backends, and integrates seamlessly with Python applications.
+
+## Key Features of SQLAlchemy ORM
+
+- **Object-Oriented Interface**: SQLAlchemy allows you to define database tables as Python classes, making it easier to work with data in an object-oriented manner.
+- **Query Construction**: You can build complex queries using Python expressions, which are translated into SQL statements under the hood.
+- **Session Management**: SQLAlchemy provides a session object that manages database connections and transactions, allowing you to commit or rollback changes easily.
+- **Schema Definition**: You can define database schemas using Python classes, which helps maintain consistency between your application code and the database structure.
+- **Relationships**: SQLAlchemy supports defining relationships between tables, allowing you to navigate and query related data easily.
+- **Migration Support**: SQLAlchemy integrates with migration tools like Alembic, enabling you to manage database schema changes over time.
+- **Cross-Database Compatibility**: SQLAlchemy abstracts away database-specific details, allowing you to write code that works with multiple database backends (e.g., SQLite, PostgreSQL, MySQL) without modification.
+- **Eager and Lazy Loading**: You can control how related data is loaded, optimizing performance based on your application's needs.
+
+## Installing SQLAlchemy
+
+To get started with SQLAlchemy, you need to install the library. You can do this using pip:
+
+```bash
+pip install sqlalchemy
+```
+
+Verify the installation by checking the version:
+
+```bash
+python -c "import sqlalchemy; print(sqlalchemy.__version__)"
+```
+
+This will display the installed version of SQLAlchemy, confirming that the installation was successful.
+
+## Setting Up a Project Structure
+
+To effectively use SQLAlchemy in your Python projects, it's a good practice to organize your code into a structured directory layout. Here’s a recommended project structure:
+
+```txt
+my_sqlalchemy_app/
+├── app.py
+├── __init__.py
+├── models/
+│   ├── __init__.py
+│   ├── user.py
+│   └── item.py
+├── crud/
+│   ├── __init__.py
+│   ├── user_crud.py
+│   └── item_crud.py
+├── alembic/
+│   ├── versions/
+│   └── env.py
+└── tests/
+    ├── __init__.py
+    └── test_models.py
+```
+
+This structure separates your application logic, models, CRUD operations, migration scripts, and tests, making it easier to manage and maintain your codebase.
+
+## Getting Connected to a Database
+
+### Defining the Database URL
+
+When creating an engine, you need to specify the database URL. The format of the URL depends on the database you are using. Here are some common examples:
+
+```python title="app.py"
+# SQLite database
+engine = create_engine('sqlite:///example.db')
+# PostgreSQL database
+engine = create_engine('postgresql://user:password@localhost/mydatabase')
+# MySQL database
+engine = create_engine('mysql+pymysql://user:password@localhost/mydatabase')
+```
+
+This code shows how to create an engine for different databases. Replace `user`, `password`, `localhost`, and `mydatabase` with your actual database credentials and names.
+
+### Creating an Engine
+
+To connect to a database using SQLAlchemy, you need to create an engine that specifies the database URL. Here’s how you can do it:
+
+```python title="app.py"
+from sqlalchemy import create_engine
+# Create an engine to connect to a SQLite database
+engine = create_engine('sqlite:///example.db')
+```
+
+This example creates a connection to a SQLite database named `example.db`. You can replace the URL with the appropriate connection string for other databases like PostgreSQL or MySQL.
+
+### Creating a Declarative Base
+
+To define models in SQLAlchemy, you need to create a declarative base class. This base class is used to define your models and their mappings to database tables.
+
+```python title="models/__init__.py"
+from sqlalchemy.orm import declarative_base
+Base = declarative_base()
+```
+
+This code imports the `declarative_base` function from SQLAlchemy and creates a base class named `Base`. All your model classes will inherit from this base class, allowing SQLAlchemy to map them to database tables.
+
+### Creating a Session
+
+To interact with the database, you need to create a session. A session is used to manage database transactions and allows you to add, query, update, and delete records.
+
+```python title="app.py"
+from sqlalchemy.orm import sessionmaker
+# Create a session factory
+Session = sessionmaker(bind=engine)
+# Create a new session
+session = Session()
+```
+
+This code imports the `sessionmaker` function from SQLAlchemy and creates a session factory bound to the engine. You can then create a new session using this factory, which will be used for all database operations.
+
+## Defining Models and Schemas
+
+To define models in SQLAlchemy, you create Python classes that inherit from `Base`, which is a declarative base class provided by SQLAlchemy. Each class represents a table in the database, and class attributes represent columns.
+
+```python title="models/user.py"
+from sqlalchemy import Column, Integer, String
+from sqlalchemy.ext.declarative import declarative_base
+Base = declarative_base()
+class User(Base):
+    __tablename__ = 'users'
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False)
+    email = Column(String, unique=True, nullable=False)
+
+    def __repr__(self):
+        return f"<User(name={self.name}, email={self.email})>"
+```
+
+This example defines a `User` model with three columns: `id`, `name`, and `email`. The `__tablename__` attribute specifies the name of the table in the database.
+
+To create the database schema based on your defined models, you can use the `create_all` method of the engine. This will create all tables defined in your models.
+
+```python title="app.py"
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from models.user import Base
+# Create an engine to connect to a SQLite database
+engine = create_engine('sqlite:///example.db')
+# Create all tables defined in the models
+Base.metadata.create_all(engine)
+```
+
+This code connects to the SQLite database and creates the `users` table based on the `User` model defined earlier.
+
+## Basic CRUD Operations
+
+CRUD stands for Create, Read, Update, and Delete, which are the four basic operations you can perform on a database. SQLAlchemy provides a simple and intuitive way to perform these operations using Python objects.
+
+### Using add() vs session.add_all()
+
+To add records to the database, you create instances of your model classes and add them to the session. After adding the records, you need to commit the session to save the changes to the database.
+
+```python title="app.py"
+from models.user import User
+# Create a new user instance
+new_user = User(name='John Doe',email="john@sample.com")
+# Add the user to the session
+session.add(new_user)
+# Commit the session to save changes
+session.commit()
+```
+
+This code creates a new `User` instance, adds it to the session. This marks the object for persistence, meaning its state will be written to the database during the next `flush` operation, which typically occurs automatically before a `commit` or when `session.flush()` is explicity called. Finally, it commits the session to save the changes to the database.
+
+`session.flush()` is an important method that synchronizes the in-memory state of the session with the database, ensuring that all pending changes are written to the database. This is particularly useful when you want to ensure that your changes are reflected in the database before performing further operations.
+
+You can also add multiple records at once using the `session.add_all()` method, which takes a list of model instances:
+
+```python title="app.py"
+# Create multiple user instances
+users = [
+    User(name='Alice Smith', name='Janie Bowers', name='Bob Johnson')
+]
+# Add multiple users to the session
+session.add_all(users)
+# Commit the session to save changes
+session.commit()
+```
+
+### Using insert()
+
+To insert records into the database, you can use the `insert()` method provided by SQLAlchemy. This method allows you to construct an insert statement and execute it directly.
+
+```python title="app.py"
+from sqlalchemy import insert
+# Create an insert statement for the User table
+stmt = insert(User).values(name='Jane Doe',name="Lucas Ellis", name="Eula Guerrero", name="Ryan Santos", name="Lydia Mcclain")
+# Execute the insert statement
+session.execute(stmt)
+# Commit the session to save changes
+session.commit()
+```
+
+This code constructs an insert statement for the `User` table and executes it using the session. The `values()` method is used to specify the values to be inserted into the table.
+
+### Querying Records
+
+To retrieve records from the database, you can use the `session.query()` method. This method allows you to perform queries on your models and retrieve results as Python objects.
+
+```python title="app.py"
+# Query all users
+users = session.query(User).all()
+for user in users:
+    print(user)
+```
+
+This code retrieves all users from the database and prints their details. The `session.query()` method provides a more concise way to perform queries, especially for simple cases.
+
+### Updating Records
+
+To update existing records, you first retrieve the record you want to update, modify its attributes, and then commit the session to save the changes.
+
+```python title="app.py"
+# Retrieve a user by ID
+user_to_update = session.query(User).filter(User.id == 1).first()
+if user_to_update:
+    user_to_update.name = 'Jane Doe'  # Update the name
+    session.commit()  # Commit the changes
+```
+
+This code retrieves a user with ID 1, updates their name to "Jane Doe", and commits the changes to the database.
+
+### Deleting Records
+
+To delete records from the database, you can retrieve the record you want to delete and then call the `delete` method on the session.
+
+```python title="app.py"
+# Retrieve a user by ID
+user_to_delete = session.query(User).filter(User.id == 1).first()
+if user_to_delete:
+    session.delete(user_to_delete)  # Delete the user
+    session.commit()  # Commit the changes
+```
+
+This code retrieves a user with ID 1 and deletes them from the database, committing the changes to finalize the deletion.
+
+## Filtering Data
+
+### Using filter() vs filter_by()
+
+To query records from the database, you can use the `filter()` method to apply conditions to your queries. This allows you to retrieve specific records based on certain criteria.
+
+```python title="app.py"
+from sqlalchemy import select
+# Create a select statement for the User table
+stmt = select(User).filter(User.name == 'John Doe')
+# Execute the select statement
+result = session.execute(stmt)
+# Fetch all matching users
+users = result.scalars().all()
+for user in users:
+    print(user)
+```
+
+This code constructs a select statement to retrieve users with the name "John Doe" and executes it. The `scalars()` method is used to extract the results, and `all()` retrieves all matching records.
+
+You can also use the `filter_by()` method for simpler queries, which allows you to specify conditions using keyword arguments:
+
+```python title="app.py"
+# Query users by name using filter_by
+users = session.query(User).filter_by(name='John Doe').all()
+for user in users:
+    print(user)
+```
+
+This code retrieves users with the name "John Doe" using the `filter_by()` method, which is a shorthand for simple equality conditions.
+
+### Using where()
+
+To filter records using the `where()` method, you can construct a select statement with specific conditions. This method is similar to `filter()`, but it allows for more complex conditions and expressions.
+
+```python title="app.py"
+from sqlalchemy import select
+# Create a select statement with a where condition
+stmt = select(User).where(User.age > 30)
+# Execute the select statement
+result = session.execute(stmt)
+# Fetch all matching users
+users = result.scalars().all()
+for user in users:
+    print(user)
+```
+
+This code constructs a select statement that retrieves users with an age greater than 30 using the `where()` method. The `scalars()` method is used to extract the results, and `all()` retrieves all matching records.
+
+### Using Operators
+
+SQLAlchemy provides a rich set of operators that you can use to build complex queries. You can use comparison operators like `==`, `!=`, `<`, `>`, `<=`, and `>=` to filter records based on specific conditions.
+
+```python title="app.py"
+from sqlalchemy import and_, or_, not_
+# Create a select statement with multiple conditions
+stmt = select(User).filter(
+    and_(
+        User.name == 'John Doe',
+        User.age > 30
+    )
+)
+# Execute the select statement
+result = session.execute(stmt)
+# Fetch all matching users
+users = result.scalars().all()
+for user in users:
+    print(user)
+```
+
+This code constructs a select statement that retrieves users with the name "John Doe" and an age greater than 30 using the `and_()` operator. You can also use `or_()` and `not_()` operators to build more complex conditions.
+
+### Using having()
+
+To filter grouped results, you can use the `having()` method. This allows you to apply conditions to aggregated data after grouping.
+
+```python title="app.py"
+# Create a select statement to group users by name and filter those with more than one user
+stmt = select(User.name, func.count(User.id).label('user_count')).group_by(User.name).having(func.count(User.id) > 1)
+# Execute the select statement
+result = session.execute(stmt)
+# Fetch all users grouped by name with their counts greater than 1
+users_with_multiple_names = result.all()
+for name, user_count in users_with_multiple_names:
+    print(f"Name: {name}, Count: {user_count}")  # Print name and user count
+```
+
+This code constructs a select statement that groups users by their names and filters the results to include only those names with more than one user. The results are printed, showing the name and the count of users with that name.
+
+### Using Unions
+
+To combine results from multiple queries, you can use the `union()` method. This allows you to perform set operations on query results, such as combining results from different tables or conditions.
+
+```python title="app.py"
+from sqlalchemy import union
+# Create two select statements for different conditions
+stmt1 = select(User).filter(User.name == 'John Doe')
+stmt2 = select(User).filter(User.name == 'Jane Doe')
+# Combine the two statements using union
+combined_stmt = stmt1.union(stmt2)
+# Execute the combined statement
+result = session.execute(combined_stmt)
+# Fetch all matching users
+users = result.scalars().all()
+for user in users:
+    print(user)
+```
+
+This code constructs two select statements for users with names "John Doe" and "Jane Doe", combines them using the `union()` method, and executes the combined statement to retrieve all matching users.
+
+### Using Distinct
+
+To retrieve unique records from a query, you can use the `distinct()` method. This allows you to eliminate duplicate records based on specific columns.
+
+```python title="app.py"
+# Create a select statement to retrieve distinct user names
+stmt = select(User.name).distinct()
+# Execute the select statement
+result = session.execute(stmt)
+# Fetch all distinct user names
+distinct_user_names = result.scalars().all()
+for name in distinct_user_names:
+    print(name)  # Print distinct user names
+```
+
+This code constructs a select statement that retrieves distinct user names from the `User` table. The `distinct()` method ensures that only unique names are returned, and the results are printed.
+
+### Using Limit and Offset
+
+To limit the number of records returned by a query, you can use the `limit()` method. This allows you to specify the maximum number of records to retrieve.
+
+```python title="app.py"
+# Create a select statement to limit the number of users to 10
+stmt = select(User).limit(10)
+# Execute the select statement
+result = session.execute(stmt)
+# Fetch the first 10 users
+users_limited = result.scalars().all()
+for user in users_limited:
+    print(user)  # Print user details
+```
+
+This code constructs a select statement that limits the number of users retrieved to 10. The `limit()` method is used to specify the maximum number of records, and the results are printed.
+
+To skip a certain number of records before starting to return results, you can use the `offset()` method. This is useful for pagination scenarios.
+
+```python title="app.py"
+# Create a select statement to skip the first 5 users and return the next 5
+stmt = select(User).offset(5).limit(5)
+# Execute the select statement
+result = session.execute(stmt)
+# Fetch the next 5 users after skipping the first 5
+users_offset = result.scalars().all()
+for user in users_offset:
+    print(user)  # Print user details
+```
+
+This code constructs a select statement that skips the first 5 users and retrieves the next 5 users. The `offset()` method is used to specify how many records to skip, and the `limit()` method is used to specify the maximum number of records to return.
+
+## Sorting Data
+
+### Using Order By
+
+To sort query results, you can use the `order_by()` method. This allows you to specify the order in which records should be returned based on one or more columns.
+
+```python title="app.py"
+# Create a select statement with descending order
+stmt = select(User).order_by(desc(User.name))  # Descending order by name
+# Execute the select statement
+result = session.execute(stmt)
+# Fetch all users sorted by name in descending order
+users_sorted_by_name_desc = result.scalars().all()
+for user in users_sorted_by_name_desc:
+    print(user)  # Print user details
+```
+
+This code constructs a select statement that retrieves users sorted by their names in descending order.
+
+### Using Group By
+
+To group query results based on one or more columns, you can use the `group_by()` method. This allows you to aggregate data based on specific criteria.
+
+```python title="app.py"
+# Create a select statement to group users by their names and count them
+stmt = select(User.name, func.count(User.id).label('user_count')).group_by(User.name)
+# Execute the select statement
+result = session.execute(stmt)
+# Fetch all users grouped by name with their counts
+users_grouped_by_name = result.all()
+for name, user_count in users_grouped_by_name:
+    print(f"Name: {name}, Count: {user_count}")  # Print name and user count
+```
+
+This code constructs a select statement that groups users by their names and counts the number of users with each name. The results are printed, showing the name and the count of users with that name.
+
+## Using Joins
+
+To retrieve related records from multiple tables, you can use joins. SQLAlchemy provides methods to perform inner joins, outer joins, and more.
+
+### Inner Joins
+
+To perform an inner join between two tables, you can use the `join()` method. This allows you to retrieve records that have matching values in both tables.
+
+```python title="app.py"
+from sqlalchemy.orm import joinedload
+# Assuming you have another model called Item
+from models.item import Item
+# Create a select statement with an inner join
+stmt = select(User).join(Item).filter(Item.user_id == User.id)
+# Execute the select statement
+result = session.execute(stmt)
+# Fetch all users with their items
+users_with_items = result.scalars().all()
+for user in users_with_items:
+    print(user)  # Print user details
+```
+
+This code performs an inner join between the `User` and `Item` tables, retrieving users who have associated items. The `join()` method specifies the relationship between the two tables.
+
+### Outer Joins
+
+To perform an outer join, you can use the `outerjoin()` method. This allows you to retrieve records from one table even if there are no matching records in the other table.
+
+```python title="app.py"
+# Create a select statement with an outer join
+stmt = select(User).outerjoin(Item).filter(User.id == Item.user_id)
+# Execute the select statement
+result = session.execute(stmt)
+# Fetch all users with their items, including those without items
+users_with_items = result.scalars().all()
+for user in users_with_items:
+    print(user)  # Print user details
+```
+
+This code performs an outer join between the `User` and `Item` tables, retrieving all users, including those who do not have associated items. The `outerjoin()` method ensures that users without items are still included in the results.
+
+### Chaining Multiple Joins
+
+To chain multiple joins, you can use the `join()` method multiple times in a single query. This allows you to retrieve records from multiple related tables in one go.
+
+```python title="app.py"
+# Assuming you have another model called Order
+from models.order import Order
+# Create a select statement with multiple joins
+stmt = select(User).join(Item).join(Order).filter(User.id == Item.user_id, Item.id == Order.item_id)
+# Execute the select statement
+result = session.execute(stmt)
+# Fetch all users with their items and orders
+users_with_items_and_orders = result.scalars().all()
+for user in users_with_items_and_orders:
+    print(user)  # Print user details
+```
+
+This code performs multiple joins between the `User`, `Item`, and `Order` tables, retrieving users along with their associated items and orders. The `join()` method is used to specify the relationships between the tables.
+
+### Joins with an ON Clause
+
+To specify custom join conditions, you can use the `onclause` parameter in the `join()` method. This allows you to define how the tables should be joined based on specific conditions.
+
+```python title="app.py"
+# Create a select statement with a custom join condition
+stmt = select(User).join(Item, User.id == Item.user_id)
+# Execute the select statement
+result = session.execute(stmt)
+# Fetch all users with their items based on custom join condition
+users_with_items = result.scalars().all()
+for user in users_with_items:
+    print(user)  # Print user details
+```
+
+This code performs a join between the `User` and `Item` tables using a custom condition specified in the `onclause` parameter. This allows you to control how the tables are joined based on specific criteria.
+
+## Using Aggregations
+
+To perform aggregations, such as counting records or calculating averages, you can use functions like `count()`, `sum()`, `avg()`, etc. SQLAlchemy provides a way to use these functions in your queries.
+
+```python title="app.py"
+# Create a select statement to calculate the average age of users
+stmt = select(func.avg(User.age).label('average_age'))
+# Execute the select statement
+result = session.execute(stmt)
+# Fetch the average age of users
+average_age = result.scalar()
+print(f"Average age of users: {average_age}")  # Print the average age
+```
+
+This code constructs a select statement that calculates the average age of users in the `User` table using the `avg()` function. The result is labeled as `average_age`, and the average age is printed.
+
+## Using Subqueries
+
+To perform subqueries, you can use the `subquery()` method. This allows you to nest queries within other queries, enabling complex data retrieval scenarios.
+
+```python title="app.py"
+from sqlalchemy import select, func
+# Create a subquery to count users
+subquery = select(func.count(User.id).label('user_count')).subquery()
+# Create a main query that uses the subquery
+stmt = select(User, subquery.c.user_count)
+result = session.execute(stmt)
+# Fetch all users with their user count
+users = result.all()
+for user, user_count in users:
+    print(user, user_count)  # Print user and their user count
+```
+
+This code creates a subquery to count the number of users and then uses that subquery in the main query to retrieve users along with their user count. The `subquery()` method allows you to nest queries effectively.
+
+## Using Transactions
+
+To manage transactions in SQLAlchemy, you can use the `begin()` method to start a transaction and the `commit()` or `rollback()` methods to finalize or revert changes.
+
+```python title="app.py"
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+# Create an engine to connect to a SQLite database
+engine = create_engine('sqlite:///example.db')
+# Create a session factory
+Session = sessionmaker(bind=engine)
+# Create a new session
+session = Session()
+# Start a transaction
+with session.begin():
+    try:
+        # Perform some database operations
+        new_user = User(name='Alice Smith',email="smith_a@sample.com")
+        session.add(new_user)
+        # Commit the transaction
+        session.commit()
+    except Exception as e:
+        # Rollback the transaction in case of an error
+        session.rollback()
+        print(f"Transaction failed: {e}")
+```
+
+This code demonstrates how to manage transactions in SQLAlchemy. It starts a transaction using the `begin()` method, performs some database operations, and commits the transaction if successful. If an error occurs, it rolls back the transaction to revert any changes made during the transaction.
+
+## Conclusion
+
+SQLAlchemy ORM provides a powerful and flexible way to interact with databases using Python objects. By abstracting away the complexities of SQL, it allows developers to focus on building applications without worrying about low-level database details. With its rich set of features, including query construction, session management, and schema definition, SQLAlchemy is a valuable tool for any Python developer working with databases.
+
+<BackToTop />
