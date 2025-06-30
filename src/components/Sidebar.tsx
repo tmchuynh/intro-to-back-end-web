@@ -109,7 +109,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 <span className="font-bold text-lg text-white">W</span>
               </div>
               <span className="font-bold text-sidebar-text text-xl">
-                Web Intro
+                Database Intro
               </span>
             </Link>
             <button

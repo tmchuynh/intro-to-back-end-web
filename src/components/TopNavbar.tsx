@@ -144,7 +144,7 @@ export default function TopNavbar({
               <div className="flex items-center justify-center bg-primary rounded-md h-6 w-6">
                 <span className="font-bold text-sm text-white">W</span>
               </div>
-              <span className="font-bold text-lg">Web Intro</span>
+              <span className="font-bold text-lg">Database Intro</span>
             </div>
           </div>
 
@@ -156,7 +156,7 @@ export default function TopNavbar({
                   <span className="font-bold text-lg text-white">W</span>
                 </div>
                 <span className="font-bold text-sidebar-text text-xl">
-                  Web Intro
+                  Database Intro
                 </span>
               </div>
             </div>
