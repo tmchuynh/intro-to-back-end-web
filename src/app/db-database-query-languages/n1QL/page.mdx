@@ -1,0 +1,1145 @@
+import BackToTop from "@/components/BackToTop";
+
+# N1QL (Non-First Normal Form Query Language)
+
+## Table of Contents
+
+## Introduction
+
+N1QL (pronounced "nickel") is Couchbase's powerful SQL-like query language designed specifically for querying JSON documents in NoSQL databases. As the first SQL-based query language for JSON, N1QL bridges the gap between traditional relational database querying and modern document-oriented data storage. The language extends familiar SQL syntax to work naturally with nested JSON structures, arrays, and flexible schemas, making it accessible to developers with SQL backgrounds while providing the flexibility needed for modern applications.
+
+N1QL stands for "Non-First Normal Form Query Language," reflecting its ability to work with denormalized, nested data structures that don't conform to traditional relational database normal forms. This approach enables developers to store and query complex, hierarchical data in a single document while maintaining the expressiveness and power of SQL. The language supports standard SQL operations like SELECT, INSERT, UPDATE, DELETE, and JOIN, but extends them with JSON-specific operators and functions.
+
+The design philosophy of N1QL emphasizes developer productivity by providing a familiar syntax that scales from simple key-value lookups to complex analytical queries. Unlike traditional NoSQL query languages that require learning entirely new paradigms, N1QL allows SQL-proficient developers to immediately start working with JSON data using familiar concepts like WHERE clauses, GROUP BY operations, and aggregate functions, while gradually adopting JSON-specific features as needed.
+
+### Real-World Applications
+
+N1QL powers diverse applications across industries where flexible JSON data models and SQL-like querying are essential:
+
+- Financial services use N1QL for real-time fraud detection, customer 360 views, and regulatory reporting with complex nested financial data
+- Gaming platforms leverage N1QL for player analytics, leaderboards, and real-time game state queries with nested player statistics
+- E-commerce systems utilize N1QL for product catalogs, personalized recommendations, and customer behavior analysis with flexible product attributes
+- Content management platforms employ N1QL for dynamic content querying, metadata management, and multi-language content delivery
+- IoT applications use N1QL for sensor data analysis, device management, and real-time monitoring with nested telemetry data
+- Healthcare systems leverage N1QL for patient records, clinical research, and healthcare analytics with complex medical data structures
+- Travel and hospitality use N1QL for booking systems, inventory management, and customer preference tracking with nested itinerary data
+- Telecommunications companies employ N1QL for network monitoring, customer analytics, and billing systems with hierarchical service data
+- Media and entertainment platforms use N1QL for content recommendation engines, user engagement tracking, and content metadata management
+
+### Key Concepts
+
+- **Bucket**: The primary data container in Couchbase, equivalent to a database or table, containing JSON documents with flexible schemas.
+- **Document**: A JSON object stored in a bucket, identified by a unique key and containing arbitrary nested data structures.
+- **Keyspace**: A logical namespace that can refer to buckets, scopes, or collections within the Couchbase cluster.
+- **Scope**: A logical grouping of collections within a bucket, providing organizational structure for related documents.
+- **Collection**: A logical grouping of documents within a scope, similar to tables but with flexible schemas.
+- **Document Key**: A unique identifier for each document within a bucket, used for direct document access and joins.
+- **Primary Index**: A global index on document keys that enables full bucket scans and ad-hoc queries without predefined indexes.
+- **Secondary Index**: Custom indexes on document fields or expressions that optimize specific query patterns and improve performance.
+- **Array Index**: Specialized indexes for querying elements within JSON arrays, enabling efficient array-based filtering and joins.
+- **Covering Index**: An index that contains all fields needed by a query, eliminating the need to fetch documents from storage.
+- **Expression**: N1QL constructs that can include field references, functions, operators, and nested expressions for complex data manipulation.
+- **Subquery**: Nested queries within larger queries that enable complex data relationships and conditional logic.
+- **NEST Operation**: N1QL-specific operation that creates nested document structures by combining data from multiple sources.
+- **UNNEST Operation**: Flattens array elements into individual rows, enabling SQL-like operations on array data.
+- **Document Versioning**: Metadata tracking changes to documents over time, enabling conflict resolution and data consistency.
+- **Mutation**: Any operation that modifies data, including INSERT, UPDATE, DELETE, and UPSERT operations.
+- **Analytics**: Specialized querying capabilities for complex analytical workloads using columnar storage and parallel processing.
+- **Full-Text Search**: Built-in search capabilities with text indexing, ranking, and relevance scoring for document content.
+- **Eventing**: Real-time event processing that triggers functions based on data changes and mutations.
+
+### Benefits of N1QL
+
+- **SQL Familiarity**: Leverages existing SQL knowledge while extending capabilities for JSON document querying and manipulation.
+- **JSON-Native Operations**: Built-in support for nested objects, arrays, and dynamic schemas without complex transformations.
+- **Flexible Schema Design**: Query documents with varying structures within the same collection without rigid schema constraints.
+- **Horizontal Scalability**: Distributed query execution across cluster nodes with automatic load balancing and parallel processing.
+- **Rich Indexing Options**: Comprehensive indexing strategies including partial, functional, and array indexes for optimal performance.
+- **ACID Transactions**: Multi-document transactions ensuring data consistency across complex operations and business logic.
+- **Real-Time Analytics**: Support for both operational and analytical workloads with specialized analytics service and columnar storage.
+- **Developer Productivity**: Reduced development time through familiar syntax, comprehensive tooling, and extensive documentation.
+- **Performance Optimization**: Query planner optimization, index advisor recommendations, and execution plan analysis for efficient operations.
+- **Enterprise Features**: Role-based security, audit logging, backup and recovery, and enterprise-grade monitoring capabilities.
+- **Multi-Model Support**: Integration with key-value, full-text search, and analytics capabilities within a unified platform.
+- **Cloud-Native Architecture**: Seamless deployment across cloud platforms with auto-scaling and managed service options.
+- **Community and Ecosystem**: Active community support, extensive libraries, and integration with popular development frameworks.
+- **Standards Compliance**: Adherence to SQL standards where applicable while extending capabilities for modern application requirements.
+- **Operational Simplicity**: Unified query interface for diverse data access patterns reducing operational complexity and maintenance overhead.
+
+## N1QL Fundamentals
+
+N1QL provides a comprehensive SQL-like syntax specifically designed for querying and manipulating JSON documents with powerful extensions for modern application needs.
+
+### Basic Query Structure
+
+- **SELECT Clause**: Specifies which data to retrieve, supporting field selection, calculations, and transformations
+- **FROM Clause**: Identifies the data source (bucket, scope, collection) and optional aliases
+- **WHERE Clause**: Filters documents based on conditions, supporting complex boolean logic and JSON-specific operators
+- **GROUP BY Clause**: Aggregates data by specified fields or expressions with support for nested grouping
+- **HAVING Clause**: Filters grouped results based on aggregate conditions
+- **ORDER BY Clause**: Sorts results by specified fields or expressions with ascending/descending options
+- **LIMIT/OFFSET**: Controls result pagination and data retrieval volume
+
+```sql title="Basic N1QL query structure and syntax"
+-- Simple document retrieval
+SELECT *
+FROM `travel-sample`.`inventory`.`airline`
+WHERE country = "United States"
+LIMIT 10;
+
+-- Field selection with aliases
+SELECT name AS airline_name,
+       iata,
+       icao,
+       country
+FROM `travel-sample`.`inventory`.`airline`
+WHERE country = "United States"
+ORDER BY name;
+
+-- Complex WHERE conditions
+SELECT name, callsign, country
+FROM `travel-sample`.`inventory`.`airline`
+WHERE country IN ["United States", "United Kingdom"]
+  AND name IS NOT NULL
+  AND callsign IS NOT MISSING
+ORDER BY country, name;
+
+-- Aggregation queries
+SELECT country,
+       COUNT(*) AS airline_count,
+       ARRAY_AGG(name) AS airline_names
+FROM `travel-sample`.`inventory`.`airline`
+WHERE country IS NOT NULL
+GROUP BY country
+HAVING COUNT(*) > 5
+ORDER BY airline_count DESC;
+
+-- Subqueries and expressions
+SELECT a.name,
+       a.country,
+       (SELECT COUNT(*)
+        FROM `travel-sample`.`inventory`.`route` r
+        WHERE r.airline = a.iata) AS route_count
+FROM `travel-sample`.`inventory`.`airline` a
+WHERE a.country = "United States"
+ORDER BY route_count DESC;
+```
+
+### JSON-Specific Operators and Functions
+
+```sql title="Working with JSON data structures and nested fields"
+-- Nested field access
+SELECT name,
+       address.street,
+       address.city,
+       address.state,
+       contact.phone,
+       contact.email
+FROM `travel-sample`.`inventory`.`hotel`
+WHERE address.country = "United States"
+  AND address.state = "California";
+
+-- Array operations
+SELECT name,
+       ARRAY_LENGTH(reviews) AS review_count,
+       ARRAY_AVG(r.rating FOR r IN reviews END) AS avg_rating,
+       ARRAY_MAX(r.rating FOR r IN reviews END) AS max_rating
+FROM `travel-sample`.`inventory`.`hotel`
+WHERE ARRAY_LENGTH(reviews) > 0;
+
+-- Array filtering and transformation
+SELECT name,
+       ARRAY r.content FOR r IN reviews
+             WHEN r.rating >= 4 END AS positive_reviews,
+       ARRAY r.author FOR r IN reviews
+             WHEN r.rating < 3 END AS negative_reviewers
+FROM `travel-sample`.`inventory`.`hotel`
+WHERE ARRAY_LENGTH(reviews) > 5;
+
+-- JSON object manipulation
+SELECT name,
+       OBJECT_ADD(address, "full_address",
+                  address.street || ", " ||
+                  address.city || ", " ||
+                  address.state) AS enhanced_address
+FROM `travel-sample`.`inventory`.`hotel`
+WHERE address IS NOT NULL;
+
+-- Dynamic field access
+SELECT META().id,
+       name,
+       OBJECT_NAMES(geo) AS geo_fields,
+       OBJECT_VALUES(geo) AS geo_values
+FROM `travel-sample`.`inventory`.`hotel`
+WHERE geo IS NOT NULL
+LIMIT 5;
+
+-- Type checking and conversion
+SELECT name,
+       CASE
+         WHEN ISNUM(price) THEN TONUMBER(price)
+         WHEN ISSTR(price) THEN TONUMBER(price)
+         ELSE 0
+       END AS numeric_price,
+       TYPE(amenities) AS amenities_type
+FROM `travel-sample`.`inventory`.`hotel`
+WHERE price IS NOT NULL;
+```
+
+## Advanced N1QL Operations
+
+N1QL provides sophisticated operations for complex data manipulation, joins, and analytical processing that extend beyond traditional SQL capabilities.
+
+### UNNEST and Array Processing
+
+```sql title="Flattening arrays and processing array elements"
+-- Basic UNNEST operation
+SELECT h.name AS hotel_name,
+       r.author AS reviewer,
+       r.rating,
+       r.date
+FROM `travel-sample`.`inventory`.`hotel` h
+UNNEST h.reviews AS r
+WHERE h.country = "United States"
+  AND r.rating >= 4
+ORDER BY r.date DESC;
+
+-- Multiple UNNEST operations
+SELECT l.name AS landmark_name,
+       a.name AS activity_name,
+       t.name AS tip_title,
+       t.content AS tip_content
+FROM `travel-sample`.`inventory`.`landmark` l
+UNNEST l.activity AS a
+UNNEST a.tips AS t
+WHERE l.country = "France";
+
+-- UNNEST with position
+SELECT h.name,
+       pos AS review_position,
+       review.rating,
+       review.content
+FROM `travel-sample`.`inventory`.`hotel` h
+UNNEST h.reviews AS review AT pos
+WHERE h.city = "San Francisco"
+ORDER BY h.name, pos;
+
+-- Complex array aggregation
+SELECT country,
+       COUNT(*) AS hotel_count,
+       AVG(review_stats.avg_rating) AS country_avg_rating,
+       SUM(review_stats.total_reviews) AS total_reviews
+FROM (
+  SELECT h.country,
+         h.name,
+         {
+           "avg_rating": ARRAY_AVG(r.rating FOR r IN h.reviews END),
+           "total_reviews": ARRAY_LENGTH(h.reviews)
+         } AS review_stats
+  FROM `travel-sample`.`inventory`.`hotel` h
+  WHERE ARRAY_LENGTH(h.reviews) > 0
+) AS hotel_reviews
+GROUP BY country
+HAVING COUNT(*) >= 10
+ORDER BY country_avg_rating DESC;
+
+-- Array aggregation with filtering
+SELECT city,
+       ARRAY_AGG(DISTINCT h.name) AS hotels,
+       ARRAY_AGG({
+         "name": h.name,
+         "high_ratings": ARRAY_COUNT(r FOR r IN h.reviews
+                                   WHEN r.rating >= 4 END),
+         "total_reviews": ARRAY_LENGTH(h.reviews)
+       }) AS hotel_stats
+FROM `travel-sample`.`inventory`.`hotel` h
+WHERE h.country = "United States"
+GROUP BY city
+HAVING COUNT(*) >= 3;
+```
+
+### JOIN Operations and Document Relationships
+
+```sql title="Connecting related documents across collections"
+-- Basic JOIN operation
+SELECT a.name AS airline_name,
+       r.sourceairport,
+       r.destinationairport,
+       r.distance
+FROM `travel-sample`.`inventory`.`airline` a
+JOIN `travel-sample`.`inventory`.`route` r ON r.airline = a.iata
+WHERE a.country = "United States"
+  AND r.distance > 1000
+ORDER BY r.distance DESC
+LIMIT 20;
+
+-- LEFT JOIN with aggregation
+SELECT a.name AS airline_name,
+       a.country,
+       COUNT(r.id) AS route_count,
+       AVG(r.distance) AS avg_distance,
+       MAX(r.distance) AS max_distance
+FROM `travel-sample`.`inventory`.`airline` a
+LEFT JOIN `travel-sample`.`inventory`.`route` r ON r.airline = a.iata
+WHERE a.country IN ["United States", "United Kingdom"]
+GROUP BY a.name, a.country
+ORDER BY route_count DESC;
+
+-- Multiple JOINs with complex conditions
+SELECT ap.airportname AS airport,
+       ap.city,
+       ap.country,
+       COUNT(DISTINCT r.airline) AS airlines_serving,
+       COUNT(*) AS total_routes,
+       ARRAY_AGG(DISTINCT a.name) AS airline_names
+FROM `travel-sample`.`inventory`.`airport` ap
+JOIN `travel-sample`.`inventory`.`route` r
+  ON r.sourceairport = ap.faa OR r.destinationairport = ap.faa
+JOIN `travel-sample`.`inventory`.`airline` a ON r.airline = a.iata
+WHERE ap.country = "United States"
+  AND ap.city IS NOT NULL
+GROUP BY ap.airportname, ap.city, ap.country
+HAVING COUNT(*) >= 50
+ORDER BY total_routes DESC;
+
+-- NEST operation for hierarchical results
+SELECT a.name AS airline,
+       a.country,
+       ARRAY_AGG({
+         "route_id": r.id,
+         "from": r.sourceairport,
+         "to": r.destinationairport,
+         "distance": r.distance
+       }) AS routes
+FROM `travel-sample`.`inventory`.`airline` a
+NEST `travel-sample`.`inventory`.`route` r ON r.airline = a.iata
+WHERE a.country = "France"
+GROUP BY a.name, a.country;
+
+-- Self-referencing queries
+SELECT r1.sourceairport AS hub,
+       COUNT(*) AS connection_count,
+       ARRAY_AGG(DISTINCT r1.destinationairport) AS destinations,
+       ARRAY_AGG(DISTINCT r2.destinationairport) AS connecting_flights
+FROM `travel-sample`.`inventory`.`route` r1
+JOIN `travel-sample`.`inventory`.`route` r2
+  ON r1.destinationairport = r2.sourceairport
+WHERE r1.sourceairport IN ["SFO", "LAX", "JFK"]
+GROUP BY r1.sourceairport
+ORDER BY connection_count DESC;
+```
+
+### Window Functions and Advanced Analytics
+
+```sql title="Advanced analytical queries with window functions"
+-- Ranking and row numbering
+SELECT name,
+       country,
+       callsign,
+       ROW_NUMBER() OVER (PARTITION BY country ORDER BY name) AS rank_in_country,
+       RANK() OVER (ORDER BY name) AS global_rank,
+       DENSE_RANK() OVER (PARTITION BY country ORDER BY name) AS dense_rank
+FROM `travel-sample`.`inventory`.`airline`
+WHERE country IS NOT NULL
+ORDER BY country, rank_in_country;
+
+-- Running totals and moving averages
+SELECT r.airline,
+       r.sourceairport,
+       r.destinationairport,
+       r.distance,
+       SUM(r.distance) OVER (
+         PARTITION BY r.airline
+         ORDER BY r.distance
+         ROWS UNBOUNDED PRECEDING
+       ) AS running_total_distance,
+       AVG(r.distance) OVER (
+         PARTITION BY r.airline
+         ORDER BY r.distance
+         ROWS BETWEEN 2 PRECEDING AND CURRENT ROW
+       ) AS moving_avg_distance
+FROM `travel-sample`.`inventory`.`route` r
+WHERE r.airline = "AA"
+ORDER BY r.distance;
+
+-- Percentile and statistical functions
+SELECT country,
+       name,
+       route_count,
+       PERCENT_RANK() OVER (ORDER BY route_count) AS percentile_rank,
+       CUME_DIST() OVER (ORDER BY route_count) AS cumulative_distribution,
+       NTILE(4) OVER (ORDER BY route_count) AS quartile
+FROM (
+  SELECT a.country,
+         a.name,
+         COUNT(r.id) AS route_count
+  FROM `travel-sample`.`inventory`.`airline` a
+  LEFT JOIN `travel-sample`.`inventory`.`route` r ON r.airline = a.iata
+  WHERE a.country IS NOT NULL
+  GROUP BY a.country, a.name
+) AS airline_stats
+ORDER BY route_count DESC;
+
+-- Lead and lag functions for trend analysis
+SELECT
+  DATE_PART_STR(booking_date, "year") AS year,
+  DATE_PART_STR(booking_date, "month") AS month,
+  COUNT(*) AS bookings,
+  LAG(COUNT(*), 1) OVER (ORDER BY DATE_PART_STR(booking_date, "year"),
+                                  DATE_PART_STR(booking_date, "month")) AS prev_month_bookings,
+  LEAD(COUNT(*), 1) OVER (ORDER BY DATE_PART_STR(booking_date, "year"),
+                                   DATE_PART_STR(booking_date, "month")) AS next_month_bookings,
+  COUNT(*) - LAG(COUNT(*), 1) OVER (ORDER BY DATE_PART_STR(booking_date, "year"),
+                                             DATE_PART_STR(booking_date, "month")) AS month_over_month_change
+FROM `travel-sample`.`inventory`.`booking`
+WHERE booking_date >= "2024-01-01"
+GROUP BY DATE_PART_STR(booking_date, "year"), DATE_PART_STR(booking_date, "month")
+ORDER BY year, month;
+```
+
+## Data Manipulation Operations
+
+N1QL provides comprehensive data manipulation capabilities including INSERT, UPDATE, DELETE, and UPSERT operations with JSON-specific enhancements.
+
+### INSERT Operations
+
+```sql title="Document creation with various patterns"
+-- Basic INSERT
+INSERT INTO `travel-sample`.`inventory`.`airline`
+(KEY, VALUE)
+VALUES
+("airline_tech_air", {
+  "id": "airline_tech_air",
+  "type": "airline",
+  "name": "Tech Air",
+  "iata": "TA",
+  "icao": "TCA",
+  "callsign": "TECH AIR",
+  "country": "United States",
+  "founded": 2024,
+  "fleet": {
+    "total": 0,
+    "boeing": 0,
+    "airbus": 0
+  },
+  "routes": [],
+  "status": "active",
+  "created_at": NOW_STR()
+});
+
+-- INSERT with subquery
+INSERT INTO `travel-sample`.`inventory`.`airline_summary`
+(KEY, VALUE)
+SELECT "summary_" || a.iata AS key,
+       {
+         "airline_code": a.iata,
+         "airline_name": a.name,
+         "country": a.country,
+         "route_count": route_stats.route_count,
+         "avg_distance": route_stats.avg_distance,
+         "generated_at": NOW_STR()
+       } AS value
+FROM `travel-sample`.`inventory`.`airline` a
+JOIN (
+  SELECT airline,
+         COUNT(*) AS route_count,
+         AVG(distance) AS avg_distance
+  FROM `travel-sample`.`inventory`.`route`
+  GROUP BY airline
+) AS route_stats ON route_stats.airline = a.iata
+WHERE a.country = "United States";
+
+-- Bulk INSERT with array data
+INSERT INTO `travel-sample`.`inventory`.`flight_schedule`
+(KEY, VALUE)
+VALUES
+("schedule_ta_001", {
+  "airline": "TA",
+  "flight_number": "TA001",
+  "route": {
+    "origin": "SFO",
+    "destination": "LAX"
+  },
+  "schedule": [
+    {
+      "day": "monday",
+      "departure": "08:00",
+      "arrival": "09:30",
+      "aircraft": "A320"
+    },
+    {
+      "day": "wednesday",
+      "departure": "14:00",
+      "arrival": "15:30",
+      "aircraft": "A320"
+    },
+    {
+      "day": "friday",
+      "departure": "18:00",
+      "arrival": "19:30",
+      "aircraft": "A320"
+    }
+  ],
+  "active": true,
+  "created_at": NOW_STR()
+});
+
+-- INSERT with conditional logic
+INSERT INTO `travel-sample`.`inventory`.`route_analysis`
+(KEY, VALUE)
+SELECT "analysis_" || r.id AS key,
+       {
+         "route_id": r.id,
+         "airline": r.airline,
+         "route": r.sourceairport || "-" || r.destinationairport,
+         "distance": r.distance,
+         "category": CASE
+           WHEN r.distance < 500 THEN "short_haul"
+           WHEN r.distance < 2000 THEN "medium_haul"
+           ELSE "long_haul"
+         END,
+         "popularity_score": CASE
+           WHEN r.distance > 3000 THEN r.distance * 0.8
+           WHEN r.distance > 1000 THEN r.distance * 1.0
+           ELSE r.distance * 1.2
+         END,
+         "analysis_date": NOW_STR()
+       } AS value
+FROM `travel-sample`.`inventory`.`route` r
+WHERE r.distance IS NOT NULL
+  AND r.airline IS NOT NULL;
+```
+
+### UPDATE Operations
+
+```sql title="Document modification with JSON-specific operations"
+-- Simple field updates
+UPDATE `travel-sample`.`inventory`.`airline`
+SET name = "Tech Air International",
+    callsign = "TECH INTL",
+    updated_at = NOW_STR()
+WHERE META().id = "airline_tech_air";
+
+-- Nested field updates
+UPDATE `travel-sample`.`inventory`.`airline`
+SET fleet.total = 25,
+    fleet.boeing = 15,
+    fleet.airbus = 10,
+    fleet.last_updated = NOW_STR()
+WHERE iata = "TA";
+
+-- Array manipulation
+UPDATE `travel-sample`.`inventory`.`airline`
+SET routes = ARRAY_APPEND(routes, {
+      "route_id": "ta_sfo_lax",
+      "origin": "SFO",
+      "destination": "LAX",
+      "frequency": "daily"
+    }),
+    updated_at = NOW_STR()
+WHERE iata = "TA";
+
+-- Conditional updates with CASE
+UPDATE `travel-sample`.`inventory`.`hotel`
+SET pricing_tier = CASE
+    WHEN price < 100 THEN "budget"
+    WHEN price < 250 THEN "mid_range"
+    WHEN price < 500 THEN "luxury"
+    ELSE "ultra_luxury"
+  END,
+  last_categorized = NOW_STR()
+WHERE price IS NOT NULL
+  AND type = "hotel";
+
+-- Array element updates
+UPDATE `travel-sample`.`inventory`.`hotel`
+SET reviews = ARRAY v FOR v IN reviews
+              WHEN v.rating IS NOT NULL
+              END,
+    review_summary = {
+      "total_reviews": ARRAY_LENGTH(reviews),
+      "avg_rating": ARRAY_AVG(r.rating FOR r IN reviews END),
+      "last_updated": NOW_STR()
+    }
+WHERE ARRAY_LENGTH(reviews) > 0;
+
+-- Complex nested object updates
+UPDATE `travel-sample`.`inventory`.`hotel`
+SET contact = OBJECT_PUT(contact, "social_media", {
+      "facebook": "facebook.com/" || LOWER(REPLACE(name, " ", "")),
+      "twitter": "@" || LOWER(REPLACE(name, " ", "")),
+      "instagram": "@" || LOWER(REPLACE(name, " ", ""))
+    }),
+    marketing = {
+      "digital_presence": true,
+      "updated_at": NOW_STR()
+    }
+WHERE contact IS NOT NULL
+  AND name IS NOT NULL;
+
+-- Atomic increment operations
+UPDATE `travel-sample`.`inventory`.`airline`
+SET metrics = OBJECT_PUT(
+      OBJECT_PUT(
+        IFMISSINGORNULL(metrics, {}),
+        "view_count",
+        IFMISSINGORNULL(metrics.view_count, 0) + 1
+      ),
+      "last_viewed",
+      NOW_STR()
+    )
+WHERE META().id = "airline_tech_air";
+```
+
+### UPSERT and MERGE Operations
+
+```sql title="Insert or update operations with conflict resolution"
+-- Basic UPSERT
+UPSERT INTO `travel-sample`.`inventory`.`airline`
+(KEY, VALUE)
+VALUES ("airline_future_air", {
+  "id": "airline_future_air",
+  "type": "airline",
+  "name": "Future Air",
+  "iata": "FA",
+  "icao": "FTA",
+  "callsign": "FUTURE AIR",
+  "country": "United States",
+  "founded": 2024,
+  "status": "active",
+  "created_at": NOW_STR(),
+  "updated_at": NOW_STR()
+});
+
+-- UPSERT with conditional logic
+UPSERT INTO `travel-sample`.`inventory`.`user_preferences`
+(KEY, VALUE)
+SELECT "pref_" || user_id AS key,
+       {
+         "user_id": user_id,
+         "preferences": {
+           "airline": preferred_airline,
+           "seat_type": preferred_seat,
+           "meal": dietary_restrictions,
+           "notification": {
+             "email": true,
+             "sms": false,
+             "push": true
+           }
+         },
+         "booking_history": booking_stats,
+         "loyalty_tier": CASE
+           WHEN booking_stats.total_bookings >= 50 THEN "platinum"
+           WHEN booking_stats.total_bookings >= 20 THEN "gold"
+           WHEN booking_stats.total_bookings >= 5 THEN "silver"
+           ELSE "bronze"
+         END,
+         "last_updated": NOW_STR()
+       } AS value
+FROM `travel-sample`.`inventory`.`user_activity`
+WHERE user_id IS NOT NULL;
+
+-- MERGE operation with complex matching
+MERGE INTO `travel-sample`.`inventory`.`route_metrics` AS target
+USING (
+  SELECT r.id,
+         r.airline,
+         r.sourceairport,
+         r.destinationairport,
+         COUNT(b.id) AS booking_count,
+         AVG(b.price) AS avg_price,
+         SUM(b.price) AS total_revenue
+  FROM `travel-sample`.`inventory`.`route` r
+  LEFT JOIN `travel-sample`.`inventory`.`booking` b ON b.route_id = r.id
+  WHERE b.booking_date >= DATE_ADD_STR(NOW_STR(), -30, "day")
+  GROUP BY r.id, r.airline, r.sourceairport, r.destinationairport
+) AS source ON target.route_id = source.id
+WHEN MATCHED THEN
+  UPDATE SET
+    booking_count = source.booking_count,
+    avg_price = source.avg_price,
+    total_revenue = source.total_revenue,
+    last_updated = NOW_STR()
+WHEN NOT MATCHED THEN
+  INSERT (KEY, VALUE) VALUES (
+    "metrics_" || source.id,
+    {
+      "route_id": source.id,
+      "airline": source.airline,
+      "source_airport": source.sourceairport,
+      "destination_airport": source.destinationairport,
+      "booking_count": source.booking_count,
+      "avg_price": source.avg_price,
+      "total_revenue": source.total_revenue,
+      "created_at": NOW_STR(),
+      "last_updated": NOW_STR()
+    }
+  );
+
+-- Conditional UPSERT with version control
+UPSERT INTO `travel-sample`.`inventory`.`airline_config`
+(KEY, VALUE)
+SELECT "config_" || a.iata AS key,
+       {
+         "airline_code": a.iata,
+         "configuration": {
+           "api_endpoint": "https://api." || LOWER(a.name) || ".com",
+           "webhook_url": "https://webhooks." || LOWER(a.name) || ".com",
+           "rate_limit": 1000,
+           "timeout": 30,
+           "retry_attempts": 3
+         },
+         "features": {
+           "real_time_tracking": true,
+           "automated_notifications": true,
+           "loyalty_integration": a.country = "United States"
+         },
+         "version": IFMISSINGORNULL(existing.version, 0) + 1,
+         "last_modified": NOW_STR()
+       } AS value
+FROM `travel-sample`.`inventory`.`airline` a
+LEFT JOIN `travel-sample`.`inventory`.`airline_config` existing
+  ON existing.airline_code = a.iata
+WHERE a.status = "active";
+```
+
+## Real-World N1QL Applications
+
+Practical implementations demonstrate N1QL's effectiveness in solving complex business problems across various industries.
+
+### Travel and Hospitality Analytics
+
+```sql title="Comprehensive travel industry data analysis"
+-- Customer journey analysis
+WITH customer_touchpoints AS (
+  SELECT b.customer_id,
+         b.booking_date,
+         b.travel_date,
+         b.total_amount,
+         h.name AS hotel_name,
+         h.city,
+         h.country,
+         a.name AS airline_name,
+         ARRAY_LENGTH(b.passengers) AS passenger_count,
+         DATEDIFF_STR(b.travel_date, b.booking_date, "day") AS booking_lead_time
+  FROM `travel-sample`.`inventory`.`booking` b
+  JOIN `travel-sample`.`inventory`.`hotel` h ON b.hotel_id = h.id
+  LEFT JOIN `travel-sample`.`inventory`.`airline` a ON b.airline_id = a.iata
+  WHERE b.booking_date >= DATE_ADD_STR(NOW_STR(), -365, "day")
+),
+customer_behavior AS (
+  SELECT customer_id,
+         COUNT(*) AS total_bookings,
+         SUM(total_amount) AS lifetime_value,
+         AVG(total_amount) AS avg_booking_value,
+         AVG(booking_lead_time) AS avg_lead_time,
+         COUNT(DISTINCT country) AS countries_visited,
+         COUNT(DISTINCT city) AS cities_visited,
+         ARRAY_AGG(DISTINCT country) AS visited_countries,
+         MIN(booking_date) AS first_booking,
+         MAX(booking_date) AS last_booking
+  FROM customer_touchpoints
+  GROUP BY customer_id
+)
+SELECT
+  cb.customer_id,
+  cb.total_bookings,
+  cb.lifetime_value,
+  cb.avg_booking_value,
+  cb.avg_lead_time,
+  cb.countries_visited,
+  cb.cities_visited,
+  CASE
+    WHEN cb.lifetime_value >= 10000 THEN "VIP"
+    WHEN cb.lifetime_value >= 5000 THEN "Premium"
+    WHEN cb.lifetime_value >= 1000 THEN "Regular"
+    ELSE "New"
+  END AS customer_tier,
+  CASE
+    WHEN cb.countries_visited >= 5 THEN "International Traveler"
+    WHEN cb.cities_visited >= 10 THEN "Domestic Explorer"
+    WHEN cb.total_bookings >= 5 THEN "Frequent Traveler"
+    ELSE "Occasional Traveler"
+  END AS traveler_profile,
+  DATEDIFF_STR(NOW_STR(), cb.last_booking, "day") AS days_since_last_booking
+FROM customer_behavior cb
+WHERE cb.total_bookings >= 2
+ORDER BY cb.lifetime_value DESC;
+
+-- Dynamic pricing analysis
+SELECT
+  h.city,
+  h.country,
+  DATE_PART_STR(b.travel_date, "month") AS travel_month,
+  COUNT(*) AS booking_count,
+  AVG(b.total_amount) AS avg_price,
+  STDDEV(b.total_amount) AS price_volatility,
+  MIN(b.total_amount) AS min_price,
+  MAX(b.total_amount) AS max_price,
+  PERCENTILE(b.total_amount, 50) AS median_price,
+  PERCENTILE(b.total_amount, 95) AS price_95th_percentile,
+  AVG(CASE WHEN DATEDIFF_STR(b.travel_date, b.booking_date, "day") <= 7
+           THEN b.total_amount END) AS last_minute_avg_price,
+  AVG(CASE WHEN DATEDIFF_STR(b.travel_date, b.booking_date, "day") >= 30
+           THEN b.total_amount END) AS advance_booking_avg_price
+FROM `travel-sample`.`inventory`.`booking` b
+JOIN `travel-sample`.`inventory`.`hotel` h ON b.hotel_id = h.id
+WHERE b.booking_date >= DATE_ADD_STR(NOW_STR(), -365, "day")
+  AND b.status = "confirmed"
+GROUP BY h.city, h.country, DATE_PART_STR(b.travel_date, "month")
+HAVING COUNT(*) >= 10
+ORDER BY h.country, h.city, travel_month;
+
+-- Seasonal demand forecasting
+WITH monthly_trends AS (
+  SELECT
+    destination.country,
+    destination.city,
+    DATE_PART_STR(b.travel_date, "year") AS year,
+    DATE_PART_STR(b.travel_date, "month") AS month,
+    COUNT(*) AS bookings,
+    SUM(b.total_amount) AS revenue,
+    AVG(b.total_amount) AS avg_booking_value,
+    COUNT(DISTINCT b.customer_id) AS unique_customers
+  FROM `travel-sample`.`inventory`.`booking` b
+  NEST `travel-sample`.`inventory`.`hotel` destination ON b.hotel_id = destination.id
+  WHERE b.travel_date >= DATE_ADD_STR(NOW_STR(), -730, "day")
+    AND b.status = "confirmed"
+  GROUP BY destination.country, destination.city,
+           DATE_PART_STR(b.travel_date, "year"),
+           DATE_PART_STR(b.travel_date, "month")
+)
+SELECT
+  country,
+  city,
+  month,
+  AVG(bookings) AS avg_monthly_bookings,
+  AVG(revenue) AS avg_monthly_revenue,
+  STDDEV(bookings) AS booking_volatility,
+  MAX(bookings) AS peak_bookings,
+  MIN(bookings) AS low_bookings,
+  (MAX(bookings) - MIN(bookings)) / AVG(bookings) * 100 AS seasonality_index,
+  ARRAY_AGG({
+    "year": year,
+    "bookings": bookings,
+    "revenue": revenue
+  } ORDER BY year) AS yearly_data
+FROM monthly_trends
+GROUP BY country, city, month
+HAVING COUNT(*) >= 2  -- At least 2 years of data
+ORDER BY country, city, month;
+```
+
+### E-commerce Product Analytics
+
+```sql title="Advanced product performance and customer insights"
+-- Product performance dashboard
+WITH product_metrics AS (
+  SELECT p.id AS product_id,
+         p.name,
+         p.category,
+         p.brand,
+         p.price,
+         COUNT(oi.id) AS total_orders,
+         SUM(oi.quantity) AS units_sold,
+         SUM(oi.quantity * oi.unit_price) AS total_revenue,
+         AVG(oi.unit_price) AS avg_selling_price,
+         COUNT(DISTINCT o.customer_id) AS unique_customers,
+         ARRAY_AGG(DISTINCT o.customer_id) AS customer_list
+  FROM `ecommerce`.`inventory`.`product` p
+  LEFT JOIN `ecommerce`.`inventory`.`order_item` oi ON oi.product_id = p.id
+  LEFT JOIN `ecommerce`.`inventory`.`order` o ON o.id = oi.order_id
+  WHERE o.order_date >= DATE_ADD_STR(NOW_STR(), -90, "day")
+    AND o.status = "completed"
+  GROUP BY p.id, p.name, p.category, p.brand, p.price
+),
+review_metrics AS (
+  SELECT product_id,
+         COUNT(*) AS review_count,
+         AVG(rating) AS avg_rating,
+         STDDEV(rating) AS rating_variance,
+         ARRAY_AGG({
+           "rating": rating,
+           "sentiment": sentiment_score,
+           "date": review_date
+         } ORDER BY review_date DESC) AS recent_reviews
+  FROM `ecommerce`.`inventory`.`product_review`
+  WHERE review_date >= DATE_ADD_STR(NOW_STR(), -90, "day")
+  GROUP BY product_id
+)
+SELECT
+  pm.product_id,
+  pm.name,
+  pm.category,
+  pm.brand,
+  pm.price,
+  pm.total_orders,
+  pm.units_sold,
+  pm.total_revenue,
+  pm.avg_selling_price,
+  pm.unique_customers,
+  IFNULL(rm.review_count, 0) AS review_count,
+  IFNULL(rm.avg_rating, 0) AS avg_rating,
+  CASE
+    WHEN pm.units_sold = 0 THEN "No Sales"
+    WHEN pm.units_sold < 10 THEN "Low Performance"
+    WHEN pm.units_sold < 50 THEN "Moderate Performance"
+    WHEN pm.units_sold < 100 THEN "Good Performance"
+    ELSE "High Performance"
+  END AS performance_category,
+  pm.total_revenue / NULLIF(pm.units_sold, 0) AS revenue_per_unit,
+  pm.unique_customers / NULLIF(pm.total_orders, 0) AS customer_retention_rate,
+  ARRAY_SLICE(rm.recent_reviews, 0, 5) AS top_recent_reviews
+FROM product_metrics pm
+LEFT JOIN review_metrics rm ON rm.product_id = pm.product_id
+ORDER BY pm.total_revenue DESC;
+
+-- Customer segmentation and lifetime value
+WITH customer_orders AS (
+  SELECT o.customer_id,
+         COUNT(*) AS order_count,
+         SUM(o.total_amount) AS total_spent,
+         AVG(o.total_amount) AS avg_order_value,
+         MIN(o.order_date) AS first_order_date,
+         MAX(o.order_date) AS last_order_date,
+         ARRAY_AGG(DISTINCT oi.product_id) AS purchased_products,
+         ARRAY_AGG(DISTINCT p.category) AS purchased_categories,
+         COUNT(DISTINCT p.category) AS category_diversity,
+         COUNT(DISTINCT p.brand) AS brand_diversity
+  FROM `ecommerce`.`inventory`.`order` o
+  JOIN `ecommerce`.`inventory`.`order_item` oi ON oi.order_id = o.id
+  JOIN `ecommerce`.`inventory`.`product` p ON p.id = oi.product_id
+  WHERE o.status = "completed"
+  GROUP BY o.customer_id
+),
+customer_behavior AS (
+  SELECT customer_id,
+         order_count,
+         total_spent,
+         avg_order_value,
+         first_order_date,
+         last_order_date,
+         purchased_products,
+         purchased_categories,
+         category_diversity,
+         brand_diversity,
+         DATEDIFF_STR(last_order_date, first_order_date, "day") AS customer_lifetime_days,
+         DATEDIFF_STR(NOW_STR(), last_order_date, "day") AS days_since_last_order,
+         total_spent / NULLIF(DATEDIFF_STR(last_order_date, first_order_date, "day"), 0) * 365 AS annualized_value
+  FROM customer_orders
+  WHERE order_count > 0
+)
+SELECT
+  customer_id,
+  order_count,
+  total_spent,
+  avg_order_value,
+  customer_lifetime_days,
+  days_since_last_order,
+  category_diversity,
+  brand_diversity,
+  annualized_value,
+  CASE
+    WHEN total_spent >= 5000 AND order_count >= 20 THEN "VIP"
+    WHEN total_spent >= 2000 AND order_count >= 10 THEN "High Value"
+    WHEN total_spent >= 500 AND order_count >= 5 THEN "Regular"
+    WHEN order_count > 1 THEN "Repeat"
+    ELSE "New"
+  END AS customer_segment,
+  CASE
+    WHEN days_since_last_order <= 30 THEN "Active"
+    WHEN days_since_last_order <= 90 THEN "At Risk"
+    WHEN days_since_last_order <= 180 THEN "Dormant"
+    ELSE "Churned"
+  END AS engagement_status,
+  CASE
+    WHEN category_diversity >= 5 THEN "Cross-Category Buyer"
+    WHEN brand_diversity >= 5 THEN "Brand Explorer"
+    WHEN avg_order_value >= 200 THEN "High Spender"
+    ELSE "Standard Buyer"
+  END AS buying_behavior
+FROM customer_behavior
+ORDER BY total_spent DESC;
+
+-- Inventory optimization analysis
+SELECT
+  p.category,
+  p.brand,
+  COUNT(*) AS product_count,
+  SUM(p.current_stock) AS total_inventory,
+  SUM(sales_data.units_sold) AS total_units_sold,
+  AVG(sales_data.units_sold) AS avg_units_sold_per_product,
+  SUM(p.current_stock * p.cost_price) AS inventory_value,
+  SUM(sales_data.total_revenue) AS total_revenue,
+  (SUM(sales_data.total_revenue) - SUM(p.current_stock * p.cost_price)) /
+    NULLIF(SUM(p.current_stock * p.cost_price), 0) * 100 AS roi_percentage,
+  AVG(sales_data.units_sold / NULLIF(p.current_stock, 0)) AS avg_turnover_rate,
+  ARRAY_AGG(
+    CASE WHEN (p.current_stock / NULLIF(sales_data.units_sold, 0) * 30) <= 7
+         THEN p.name END
+  ) AS low_stock_products,
+  ARRAY_AGG(
+    CASE WHEN (p.current_stock / NULLIF(sales_data.units_sold, 0) * 30) >= 90
+         THEN p.name END
+  ) AS overstocked_products
+FROM `ecommerce`.`inventory`.`product` p
+LEFT JOIN (
+  SELECT oi.product_id,
+         SUM(oi.quantity) AS units_sold,
+         SUM(oi.quantity * oi.unit_price) AS total_revenue
+  FROM `ecommerce`.`inventory`.`order_item` oi
+  JOIN `ecommerce`.`inventory`.`order` o ON o.id = oi.order_id
+  WHERE o.order_date >= DATE_ADD_STR(NOW_STR(), -30, "day")
+    AND o.status = "completed"
+  GROUP BY oi.product_id
+) AS sales_data ON sales_data.product_id = p.id
+WHERE p.status = "active"
+GROUP BY p.category, p.brand
+ORDER BY total_revenue DESC;
+```
+
+## Performance Optimization and Best Practices
+
+### Indexing Strategies and Query Optimization
+
+```sql title="Strategic indexing for optimal N1QL performance"
+-- Create primary index for ad-hoc queries
+CREATE PRIMARY INDEX ON `travel-sample`.`inventory`.`airline`;
+
+-- Composite index for common query patterns
+CREATE INDEX idx_airline_country_name
+ON `travel-sample`.`inventory`.`airline`(country, name, iata)
+WHERE type = "airline";
+
+-- Partial index with filter expression
+CREATE INDEX idx_active_routes
+ON `travel-sample`.`inventory`.`route`(airline, sourceairport, destinationairport)
+WHERE distance IS NOT NULL AND stops = 0;
+
+-- Array index for querying array elements
+CREATE INDEX idx_hotel_amenities
+ON `travel-sample`.`inventory`.`hotel`(DISTINCT ARRAY a FOR a IN amenities END)
+WHERE type = "hotel";
+
+-- Functional index on expressions
+CREATE INDEX idx_hotel_price_range
+ON `travel-sample`.`inventory`.`hotel`(
+  CASE
+    WHEN price < 100 THEN "budget"
+    WHEN price < 250 THEN "mid_range"
+    ELSE "luxury"
+  END,
+  city, country
+) WHERE type = "hotel";
+
+-- Covering index for query optimization
+CREATE INDEX idx_route_covering
+ON `travel-sample`.`inventory`.`route`(airline, sourceairport, destinationairport, distance, stops)
+WHERE type = "route";
+
+-- Index for date-based queries
+CREATE INDEX idx_booking_date_customer
+ON `travel-sample`.`inventory`.`booking`(
+  DATE_PART_STR(booking_date, "year"),
+  DATE_PART_STR(booking_date, "month"),
+  customer_id,
+  total_amount
+) WHERE status = "confirmed";
+
+-- Analyze query performance
+EXPLAIN SELECT a.name, a.country, COUNT(r.id) as route_count
+FROM `travel-sample`.`inventory`.`airline` a
+LEFT JOIN `travel-sample`.`inventory`.`route` r ON r.airline = a.iata
+WHERE a.country = "United States"
+GROUP BY a.name, a.country
+ORDER BY route_count DESC;
+
+-- Index advisor query
+SELECT * FROM system:indexes
+WHERE keyspace_id = "travel-sample"
+  AND is_primary = false;
+
+-- Monitor index usage
+SELECT name, index_key, condition, state,
+       num_requests, num_rows_returned,
+       scan_bytes, scan_duration
+FROM system:indexes
+WHERE keyspace_id = "travel-sample"
+ORDER BY num_requests DESC;
+```
+
+### Query Optimization Patterns
+
+```sql title="Efficient query patterns and performance best practices"
+-- Efficient pagination using OFFSET/LIMIT with ORDER BY
+SELECT name, country, iata
+FROM `travel-sample`.`inventory`.`airline`
+WHERE country IS NOT NULL
+ORDER BY country, name
+LIMIT 20 OFFSET 0;
+
+-- Use covering indexes to avoid document fetches
+SELECT airline, sourceairport, destinationairport, distance
+FROM `travel-sample`.`inventory`.`route`
+WHERE airline = "AA" AND sourceairport = "SFO"
+ORDER BY distance;
+
+-- Optimize aggregation with early filtering
+SELECT country, COUNT(*) as airline_count
+FROM `travel-sample`.`inventory`.`airline`
+WHERE type = "airline" AND country IS NOT NULL
+GROUP BY country
+HAVING COUNT(*) > 5
+ORDER BY airline_count DESC;
+
+-- Use UNNEST instead of multiple subqueries
+SELECT h.name, h.city, r.rating, r.content
+FROM `travel-sample`.`inventory`.`hotel` h
+UNNEST h.reviews AS r
+WHERE h.country = "United States"
+  AND r.rating >= 4
+ORDER BY h.name, r.rating DESC;
+
+-- Efficient JOIN with proper index usage
+SELECT a.name AS airline_name,
+       COUNT(r.id) AS route_count,
+       AVG(r.distance) AS avg_distance
+FROM `travel-sample`.`inventory`.`airline` a
+USE INDEX (idx_airline_country_name)
+JOIN `travel-sample`.`inventory`.`route` r
+USE INDEX (idx_route_covering)
+ON r.airline = a.iata
+WHERE a.country = "United States"
+GROUP BY a.name
+ORDER BY route_count DESC;
+
+-- Use prepared statements for repeated queries
+PREPARE route_by_airline AS
+SELECT sourceairport, destinationairport, distance
+FROM `travel-sample`.`inventory`.`route`
+WHERE airline = $airline
+ORDER BY distance;
+
+EXECUTE route_by_airline USING {"airline": "AA"};
+
+-- Optimize memory usage with streaming
+SELECT name, city, country
+FROM `travel-sample`.`inventory`.`hotel`
+WHERE country = "United States"
+ORDER BY name
+LIMIT 1000;
+
+-- Use appropriate USE KEYS for key-based access
+SELECT *
+FROM `travel-sample`.`inventory`.`airline`
+USE KEYS ["airline_10", "airline_137", "airline_1355"];
+
+-- Batch operations for bulk data processing
+UPDATE `travel-sample`.`inventory`.`airline`
+USE KEYS ["airline_10", "airline_137"]
+SET last_updated = NOW_STR(),
+    status = "verified"
+WHERE type = "airline";
+```
+
+<BackToTop />
