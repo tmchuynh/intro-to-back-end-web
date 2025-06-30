@@ -114,3 +114,1454 @@ CREATE TABLE customers (
 ```
 
 In this example, the `CREATE TABLE` statement defines a new table named `customers` with three columns: `id`, `name`, and `email`. The `id` column is defined as the primary key, ensuring each record is unique.
+
+<BackToTop/>
+
+## SQL Data Types
+
+SQL supports various data types to define the nature of data stored in each column of a table. Choosing the appropriate data type is crucial for ensuring data integrity and optimizing storage. Here are some common SQL data types:
+
+### Numeric Data Types
+
+- **`INT`**: Represents integer values, typically used for whole numbers. It can vary in size depending on the database system (e.g., `TINYINT`, `SMALLINT`, `MEDIUMINT`, `BIGINT`).
+- **`DECIMAL`**: Represents fixed-point numbers with a specified precision and scale. Useful for financial calculations where exact decimal representation is required.
+- **`FLOAT`**: Represents floating-point numbers, allowing for a wider range of values but with potential precision loss. Suitable for scientific calculations.
+- **`NUMERIC`**: Similar to `DECIMAL`, it represents fixed-point numbers but may have different precision and scale requirements depending on the database system.
+- **`REAL`**: Represents single-precision floating-point numbers, typically used for approximate numeric values.
+- **`DOUBLE`**: Represents double-precision floating-point numbers, providing greater precision than `REAL`.
+
+### Character Data Types
+
+- **`CHAR`**: Represents fixed-length character strings. If the string is shorter than the defined length, it is padded with spaces.
+- **`VARCHAR`**: Represents variable-length character strings. It can store strings of varying lengths up to a specified maximum.
+- **`TEXT`**: Represents large variable-length character strings, suitable for storing long text data such as articles or descriptions.
+- **`NCHAR`**: Represents fixed-length Unicode character strings, allowing for international character sets.
+- **`NVARCHAR`**: Represents variable-length Unicode character strings, similar to `VARCHAR` but supporting a wider range of characters.
+- **`NTEXT`**: Represents large variable-length Unicode character strings, similar to `TEXT` but supporting international characters.
+
+### Date and Time Data Types
+
+- **`DATE`**: Represents calendar dates (year, month, day) without time information. Useful for storing birthdates, event dates, etc.
+- **`TIME`**: Represents time values (hours, minutes, seconds) without date information. Useful for storing time of day.
+- **`DATETIME`**: Represents both date and time values, allowing for precise timestamping of events. It includes year, month, day, hour, minute, and second.
+- **`TIMESTAMP`**: Similar to `DATETIME`, but often includes time zone information. It is used for tracking changes in data over time.
+- **`INTERVAL`**: Represents a duration of time, allowing for calculations involving time differences (e.g., adding or subtracting time).
+
+### Binary Data Types
+
+- **`BINARY`**: Represents fixed-length binary data, such as images or files. It stores raw binary data without any character encoding.
+- **`VARBINARY`**: Represents variable-length binary data, similar to `BINARY` but allowing for varying sizes.
+- **`BLOB`**: Represents large binary objects, such as images or multimedia files. It can store significant amounts of binary data.
+
+### JSON Data Types
+
+- **`JSON`**: Represents JSON (JavaScript Object Notation) data, allowing for flexible storage of structured data. It is commonly used for storing semi-structured data in NoSQL databases.
+- **`JSONB`**: Represents binary JSON data, providing efficient storage and indexing for JSON documents. It is often used in databases like PostgreSQL for performance optimization.
+
+### XML Data Types
+
+- **`XML`**: Represents XML (eXtensible Markup Language) data, allowing for structured storage of hierarchical data. It is commonly used for storing configuration files or data with complex relationships.
+
+### Spatial Data Types
+
+- **`GEOMETRY`**: Represents geometric data, such as points, lines, and polygons. It is used in geographic information systems (GIS) for spatial analysis.
+
+### UUID Data Type
+
+- **`UUID`**: Represents universally unique identifiers, often used for generating unique keys across distributed systems. It ensures that each identifier is globally unique, making it suitable for scenarios where data is created in multiple locations.
+
+### Choosing the Right Data Type
+
+When designing a database schema, it's essential to choose the appropriate data type for each column based on the nature of the data being stored. Consider factors such as:
+
+- **Data Range**: Choose a numeric type that can accommodate the expected range of values without overflow.
+- **Precision**: For financial data, use fixed-point types like `DECIMAL` or `NUMERIC` to ensure exact representation.
+- **Storage Requirements**: Use variable-length types like `VARCHAR` or `TEXT` for strings to optimize storage space.
+- **Performance**: Consider the performance implications of different data types, especially for indexing and querying.
+
+<BackToTop/>
+
+## Displaying Database Information Using SHOW
+
+The `SHOW` statement is used to display information about database objects, such as tables, columns, and indexes. It provides a way to inspect the structure and properties of the database.
+
+### Database Information
+
+```sql title="Displaying database information"
+SHOW DATABASES;
+```
+
+In this example, the `SHOW DATABASES` statement retrieves a list of all databases available in the SQL server. This is useful for understanding the databases you can work with.
+
+```sql title="Displaying current database"
+SHOW CURRENT_DATABASE;
+```
+
+In this example, the `SHOW CURRENT_DATABASE` statement retrieves the name of the currently selected database. This is useful for confirming which database you are working with, especially in environments with multiple databases.
+
+### Table Information
+
+```sql title="Displaying tables in a database"
+SHOW TABLES;
+```
+
+In this example, the `SHOW TABLES` statement retrieves a list of all tables in the currently selected database. This helps you see what data structures are available for querying.
+
+```sql title="Displaying columns in a table"
+SHOW COLUMNS FROM customers;
+```
+
+In this example, the `SHOW COLUMNS FROM customers` statement retrieves a list of all columns in the `customers` table, including their data types and constraints. This is useful for understanding the structure of the table and how to interact with its data.
+
+```sql title="Describing a table structure with DESCRIBE"
+DESCRIBE products;
+```
+
+In this example, the `DESCRIBE products` statement retrieves the structure of the `products` table, providing information about its columns and their properties.
+
+```sql title="Displaying indexes on a table"
+SHOW INDEXES FROM products;
+```
+
+In this example, the `SHOW INDEXES FROM products` statement retrieves a list of all indexes defined on the `products` table. This helps you understand how the table is optimized for query performance.
+
+### Server Information
+
+```sql title="Displaying server version"
+SHOW SERVER VERSION;
+```
+
+In this example, the `SHOW SERVER VERSION` statement retrieves the version of the SQL server you are connected to. This is useful for understanding compatibility and features available in your SQL environment.
+
+```sql title="Displaying server status"
+SHOW SERVER STATUS;
+```
+
+In this example, the `SHOW SERVER STATUS` statement retrieves the current status of the SQL server, including information about connections, queries, and performance metrics. This is useful for monitoring the health and performance of the server.
+
+```sql title="Displaying user privileges"
+SHOW GRANTS FOR current_user;
+```
+
+In this example, the `SHOW GRANTS FOR current_user` statement retrieves the privileges granted to the current user. This is useful for understanding what actions the user can perform on the database and its objects.
+
+```sql title="Displaying active connections"
+SHOW PROCESSLIST;
+```
+
+In this example, the `SHOW PROCESSLIST` statement retrieves a list of currently active connections to the SQL server. This helps you monitor ongoing queries and identify any long-running or problematic processes.
+
+```sql title="Displaying server configuration"
+SHOW VARIABLES;
+```
+
+In this example, the `SHOW VARIABLES` statement retrieves the current configuration settings of the SQL server. This is useful for understanding how the server is configured and what options are available for tuning performance or behavior.
+
+```sql title="Displaying server logs"
+SHOW LOGS;
+```
+
+In this example, the `SHOW LOGS` statement retrieves the server logs, which can include error messages, warnings, and informational messages. This is useful for troubleshooting issues and monitoring server activity.
+
+```sql title="Displaying replication status"
+SHOW REPLICATION STATUS;
+```
+
+In this example, the `SHOW REPLICATION STATUS` statement retrieves the status of database replication, including information about master and slave servers. This is useful for monitoring replication health and ensuring data consistency across distributed databases.
+
+```sql title="Displaying server uptime"
+SHOW UPTIME;
+```
+
+In this example, the `SHOW UPTIME` statement retrieves the amount of time the SQL server has been running since its last restart. This is useful for understanding server stability and performance over time.
+
+```sql title="Displaying server character set"
+SHOW CHARACTER SET;
+```
+
+In this example, the `SHOW CHARACTER SET` statement retrieves the character sets supported by the SQL server. This is useful for understanding how text data is stored and ensuring proper encoding for internationalization.
+
+```sql title="Displaying server collation"
+SHOW COLLATION;
+```
+
+In this example, the `SHOW COLLATION` statement retrieves the collations supported by the SQL server. Collations define how string comparison and sorting are performed, which is important for handling text data in different languages and character sets.
+
+```sql title="Displaying server time zone"
+SHOW TIME ZONE;
+```
+
+In this example, the `SHOW TIME ZONE` statement retrieves the current time zone setting of the SQL server. This is useful for understanding how date and time values are interpreted and displayed, especially in applications that require time zone awareness.
+
+```sql title="Displaying server storage engines"
+SHOW ENGINES;
+```
+
+In this example, the `SHOW ENGINES` statement retrieves a list of storage engines available in the SQL server. Storage engines define how data is stored and managed, and different engines may offer varying features and performance characteristics.
+
+<BackToTop/>
+
+## Database Manipulation Statements
+
+### CREATE DATABASE Statement
+
+The `CREATE DATABASE` statement is used to create a new database in the SQL server. It allows you to define the name and properties of the new database.
+
+```sql title="Creating a new database with CREATE DATABASE"
+CREATE DATABASE sales_data;
+```
+
+In this example, the `CREATE DATABASE sales_data` statement creates a new database named `sales_data`. After executing this statement, you can use the `USE` statement to select this database and start creating tables and inserting data.
+
+### USE Statement
+
+The `USE` statement is used to select a specific database for subsequent operations. It sets the context for all SQL statements that follow, allowing you to work with the specified database without needing to qualify table names.
+
+```sql title="Selecting a database with USE"
+USE sales_db;
+```
+
+In this example, the `USE sales_db` statement selects the `sales_db` database as the current context, allowing you to perform operations on its tables without needing to specify the database name.
+
+### DROP DATABASE Statement
+
+The `DROP DATABASE` statement is used to remove an existing database from the SQL server. This operation deletes the database and all its associated data, so it should be used with caution.
+
+```sql title="Dropping a database with DROP DATABASE"
+DROP DATABASE sales_archive;
+```
+
+In this example, the `DROP DATABASE sales_archive` statement removes the `sales_archive` database from the SQL server. After executing this statement, all tables and data within that database will be permanently deleted.
+
+## Table Manipulation Statements
+
+### CREATE TABLE Statement
+
+The `CREATE TABLE` statement is used to define a new table in the database. It allows you to specify the table name, columns, data types, and constraints.
+
+```sql title="Creating a new table"
+CREATE TABLE customers (
+    id INT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(255) UNIQUE
+);
+```
+
+In this example, the `CREATE TABLE` statement defines a new table named `customers` with three columns: `id`, `name`, and `email`. The `id` column is defined as the primary key, ensuring each record is unique, while the `name` column is required (`NOT NULL`), and the `email` column must be unique across all records.
+
+### ALTER TABLE Statement
+
+The `ALTER TABLE` statement is used to modify the structure of an existing table. It allows you to add, drop, or modify columns and constraints.
+
+```sql title="Altering an existing table"
+ALTER TABLE customers
+ADD COLUMN phone VARCHAR(15);
+```
+
+In this example, the `ALTER TABLE` statement adds a new column named `phone` to the existing `customers` table. The new column is defined as a variable-length character string with a maximum length of 15 characters.
+
+### DROP TABLE Statement
+
+The `DROP TABLE` statement is used to remove an entire table from the database, including all its data and structure.
+
+```sql title="Dropping a table"
+DROP TABLE customers;
+```
+
+In this example, the `DROP TABLE` statement removes the `customers` table from the database, along with all its data and structure. This operation is irreversible, so it should be used with caution.
+
+<BackToTop/>
+
+## Constraints
+
+Constraints are rules applied to table columns to enforce data integrity and ensure that the data stored in the database meets specific criteria. They help maintain the accuracy and reliability of the data by preventing invalid or inconsistent entries. Here are some common types of constraints in SQL:
+
+### NOT NULL Constraint
+
+The `NOT NULL` constraint ensures that a column cannot contain NULL values. It is used to enforce that a column must always have a value when a new record is inserted or an existing record is updated.
+
+```sql title="Not null constraint example"
+CREATE TABLE customers (
+    id INT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(255) UNIQUE
+);
+```
+
+In this example, the `name` column in the `customers` table is defined with the `NOT NULL` constraint, meaning that every customer must have a name when a record is created or updated.
+
+### UNIQUE Constraint
+
+The `UNIQUE` constraint ensures that all values in a column are distinct, meaning no two rows can have the same value in that column. It is used to enforce uniqueness across a column or a combination of columns.
+
+```sql title="Unique constraint example"
+CREATE TABLE products (
+    product_id INT PRIMARY KEY,
+    product_name VARCHAR(100) NOT NULL,
+    price DECIMAL(10, 2) NOT NULL,
+    UNIQUE (product_name)
+);
+```
+
+In this example, the `product_name` column in the `products` table is defined with the `UNIQUE` constraint, ensuring that no two products can have the same name. This helps maintain data integrity by preventing duplicate entries.
+
+### PRIMARY KEY Constraint
+
+The `PRIMARY KEY` constraint uniquely identifies each row in a table. It combines the `NOT NULL` and `UNIQUE` constraints, ensuring that the column(s) designated as the primary key cannot contain NULL values and must have unique values across all rows.
+
+```sql title="Primary key constraint example"
+CREATE TABLE orders (
+    order_id INT PRIMARY KEY,
+    customer_id INT NOT NULL,
+    order_date DATE NOT NULL
+);
+```
+
+In this example, the `order_id` column in the `orders` table is defined as the primary key, ensuring that each order has a unique identifier. The `customer_id` and `order_date` columns are also defined with the `NOT NULL` constraint, meaning they must have values for every order.
+
+### FOREIGN KEY Constraint
+
+The `FOREIGN KEY` constraint establishes a relationship between two tables by linking a column in one table to the primary key of another table. It ensures referential integrity, meaning that values in the foreign key column must match values in the referenced primary key column.
+
+```sql title="Foreign key constraint example"
+CREATE TABLE order_items (
+    item_id INT PRIMARY KEY,
+    order_id INT NOT NULL,
+    product_id INT NOT NULL,
+    quantity INT NOT NULL,
+    FOREIGN KEY (order_id) REFERENCES orders(order_id),
+    FOREIGN KEY (product_id) REFERENCES products(product_id)
+);
+```
+
+In this example, the `order_items` table has two foreign key constraints: one linking `order_id` to the `orders` table and another linking `product_id` to the `products` table. This ensures that every order item is associated with a valid order and product, maintaining data integrity across related tables.
+
+### CHECK Constraint
+
+The `CHECK` constraint is used to enforce specific conditions on the values in a column. It allows you to define rules that must be satisfied for data to be inserted or updated in the table.
+
+```sql title="Check constraint example"
+CREATE TABLE products (
+    product_id INT PRIMARY KEY,
+    product_name VARCHAR(100) NOT NULL,
+    price DECIMAL(10, 2) NOT NULL CHECK (price > 0)
+);
+```
+
+In this example, the `CHECK` constraint on the `price` column ensures that the price of a product must be greater than zero. If an attempt is made to insert or update a product with a price of zero or less, the database will reject the operation, maintaining data integrity.
+
+### DEFAULT Constraint
+
+The `DEFAULT` constraint is used to provide a default value for a column when no value is specified during an `INSERT` operation. It ensures that the column will have a predefined value if no explicit value is provided.
+
+```sql title="Default constraint example"
+CREATE TABLE customers (
+    id INT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(255) UNIQUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+In this example, the `created_at` column in the `customers` table is defined with a `DEFAULT` constraint that sets the current timestamp as the default value. If a new customer is inserted without specifying a value for `created_at`, it will automatically be set to the current date and time.
+
+### AUTO_INCREMENT Constraint
+
+The `AUTO_INCREMENT` constraint is used to automatically generate unique values for a column, typically used for primary keys. It ensures that each new record receives a unique identifier without requiring manual input.
+
+```sql title="Auto increment constraint example"
+CREATE TABLE products (
+    product_id INT AUTO_INCREMENT PRIMARY KEY,
+    product_name VARCHAR(100) NOT NULL,
+    price DECIMAL(10, 2) NOT NULL
+);
+```
+
+In this example, the `product_id` column in the `products` table is defined with the `AUTO_INCREMENT` constraint, meaning that each time a new product is inserted, the database will automatically generate a unique value for `product_id`. This simplifies the process of adding new records without needing to specify a unique identifier manually.
+
+<BackToTop/>
+
+## Indexes
+
+Indexes are special database objects that improve the speed of data retrieval operations on a table. They allow the database to quickly locate rows based on indexed columns, significantly enhancing query performance, especially for large datasets.
+
+### CREATE INDEX Statement
+
+The `CREATE INDEX` statement is used to create an index on one or more columns of a table to improve query performance. Indexes speed up data retrieval operations by allowing the database to quickly locate rows based on indexed columns.
+
+```sql title="Creating an index"
+CREATE INDEX idx_product_name ON products (product_name);
+```
+
+In this example, the `CREATE INDEX` statement creates an index named `idx_product_name` on the `product_name` column of the `products` table. This index will improve the performance of queries that filter or sort by product name.
+
+### DROP INDEX Statement
+
+The `DROP INDEX` statement is used to remove an existing index from a table. This operation can help reduce storage space and improve write performance if the index is no longer needed.
+
+```sql title="Dropping an index"
+DROP INDEX idx_product_name ON products;
+```
+
+In this example, the `DROP INDEX` statement removes the `idx_product_name` index from the `products` table. After this operation, queries that previously benefited from this index may experience slower performance.
+
+## Data Manipulation Statements
+
+### SELECT Statement
+
+The `SELECT` statement is used to retrieve data from one or more tables in a database. It allows you to specify which columns to return, filter results, and sort the output.
+
+```sql title="Retrieving data from a table"
+SELECT product_name, price
+FROM products
+WHERE category = 'Electronics'
+ORDER BY price DESC;
+```
+
+In this example, the `SELECT` statement retrieves the `product_name` and `price` columns from the `products` table, filtering results to only include products in the 'Electronics' category and sorting them by price in descending order.
+
+### SELECT from a View
+
+The `SELECT` statement can be used to query data from a view just like you would from a regular table. This allows you to retrieve the results defined by the view's underlying query.
+
+```sql title="Selecting from a view"
+SELECT * FROM electronics_products;
+```
+
+In this example, the `SELECT * FROM electronics_products` statement retrieves all columns from the `electronics_products` view. The results will include only products in the 'Electronics' category, as defined by the view's underlying query.
+
+### SELECT with Indexes
+
+When you perform a `SELECT` query on a table with an index, the database can use the index to quickly locate the relevant rows, improving query performance.
+
+```sql title="Selecting data using an index"
+SELECT product_name, price
+FROM products
+WHERE product_name = 'Laptop';
+```
+
+In this example, the `SELECT` statement retrieves the `product_name` and `price` columns from the `products` table, filtering results to only include products with the name 'Laptop'. If an index exists on the `product_name` column, the database can quickly find matching rows, enhancing query performance.
+
+### INSERT Statement
+
+The `INSERT` statement is used to add new rows to a table. It allows you to specify the values for each column in the new record.
+
+```sql title="Inserting data into a table"
+INSERT INTO customers (name, email)
+VALUES ('John Doe', 'soguleor@uvu.small');
+```
+
+In this example, the `INSERT` statement adds a new customer with the name 'John Doe' and the email 'soguleor@uvu.small' to the `customers` table. The column names are specified in parentheses, followed by the corresponding values in the `VALUES` clause.
+
+### UPDATE Statement
+
+The `UPDATE` statement is used to modify existing records in a table. It allows you to change the values of one or more columns based on specified conditions.
+
+```sql title="Updating data in a table"
+UPDATE products
+SET price = 99.99
+WHERE product_id = 1;
+```
+
+In this example, the `UPDATE` statement changes the price of the product with `product_id` 1 to 99.99 in the `products` table. The `SET` clause specifies the column to update, and the `WHERE` clause filters which records to modify.
+
+### DELETE Statement
+
+The `DELETE` statement is used to remove one or more rows from a table. It allows you to specify conditions to determine which records to delete.
+
+```sql title="Deleting data from a table"
+DELETE FROM orders
+WHERE order_date < '2023-01-01';
+```
+
+In this example, the `DELETE` statement removes all orders from the `orders` table that have an `order_date` earlier than January 1, 2023. The `WHERE` clause filters which records to delete.
+
+<BackToTop/>
+
+## Stored Procedures
+
+Stored procedures are precompiled SQL code that can be executed with parameters. They encapsulate complex logic and can be reused across multiple applications or queries, improving code organization and performance.
+
+```sql title="Creating a stored procedure"
+CREATE PROCEDURE GetElectronicsProducts()
+BEGIN
+    SELECT product_name, price
+    FROM products
+    WHERE category = 'Electronics';
+END;
+```
+
+In this example, the `CREATE PROCEDURE` statement defines a stored procedure named `GetElectronicsProducts`. When executed, this procedure retrieves the `product_name` and `price` columns from the `products` table, filtering results to only include products in the 'Electronics' category. You can call this procedure using the `CALL` statement.
+
+```sql title="Calling a stored procedure"
+CALL GetElectronicsProducts();
+```
+
+In this example, the `CALL GetElectronicsProducts()` statement executes the previously defined stored procedure, retrieving the list of electronics products from the `products` table.
+
+## Triggers
+
+Triggers are special types of stored procedures that automatically execute in response to certain events on a table, such as `INSERT`, `UPDATE`, or `DELETE`. They are used to enforce business rules, maintain data integrity, and perform automated actions when specific conditions are met.
+
+```sql title="Creating a trigger"
+CREATE TRIGGER before_insert_customers
+BEFORE INSERT ON customers
+FOR EACH ROW
+BEGIN
+    SET NEW.created_at = NOW();
+END;
+```
+
+In this example, the `CREATE TRIGGER` statement defines a trigger named `before_insert_customers` that executes before a new record is inserted into the `customers` table. The trigger sets the `created_at` column to the current timestamp (`NOW()`) for each new customer record, ensuring that the creation time is automatically recorded.
+
+```sql title="Dropping a trigger"
+DROP TRIGGER before_insert_customers;
+```
+
+In this example, the `DROP TRIGGER` statement removes the `before_insert_customers` trigger from the database. After this operation, the trigger will no longer execute when new records are inserted into the `customers` table.
+
+```sql title="Inserting data with a trigger"
+INSERT INTO customers (name, email)
+VALUES ('Jane Smith', 'ut@he.ge');
+```
+
+In this example, the `INSERT` statement adds a new customer named 'Jane Smith' with the email 'ut@he.ge' to the `customers` table. The `before_insert_customers` trigger will automatically set the `created_at` column to the current timestamp for this new record, ensuring that the creation time is recorded without requiring explicit input.
+
+## Views
+
+Views are virtual tables that are based on the result of a SQL query. They allow you to simplify complex queries and present data in a specific format without storing it physically. Views can be used to encapsulate complex logic, provide a simplified interface for users, or restrict access to certain columns or rows of a table.
+
+### CREATE VIEW Statement
+
+The `CREATE VIEW` statement is used to create a virtual table based on the result of a SQL query. Views allow you to simplify complex queries and present data in a specific format without storing it physically.
+
+```sql title="Creating a view"
+CREATE VIEW electronics_products AS
+SELECT product_name, price
+FROM products
+WHERE category = 'Electronics';
+```
+
+In this example, the `CREATE VIEW` statement creates a view named `electronics_products` that retrieves the `product_name` and `price` columns from the `products` table, filtering results to only include products in the 'Electronics' category. You can query this view as if it were a regular table.
+
+### DROP VIEW Statement
+
+The `DROP VIEW` statement is used to remove an existing view from the database. This operation does not affect the underlying tables; it simply removes the virtual table definition.
+
+```sql title="Dropping a view"
+DROP VIEW electronics_products;
+```
+
+In this example, the `DROP VIEW` statement removes the `electronics_products` view from the database. After this operation, you can no longer query this view, but the underlying `products` table remains intact.
+
+<BackToTop/>
+
+## Permissions and Access Control
+
+Permissions and access control are essential aspects of database security, allowing you to manage who can access and modify data in the database. SQL provides statements to grant and revoke privileges to users or roles, ensuring that only authorized individuals can perform specific actions.
+
+### GRANT Statement
+
+The `GRANT` statement is used to assign specific privileges to users or roles in the database. It allows you to control access to database objects and operations.
+
+```sql title="Granting privileges"
+GRANT SELECT, INSERT ON products TO user1;
+```
+
+In this example, the `GRANT` statement assigns the `SELECT` and `INSERT` privileges on the `products` table to the user `user1`. This means that `user1` can read data from and insert new records into the `products` table.
+
+### GRANT ALL PRIVILEGES Statement
+
+The `GRANT ALL PRIVILEGES` statement is used to assign all available privileges on a database object to a user or role. This provides full access to the specified object.
+
+```sql title="Granting all privileges"
+GRANT ALL PRIVILEGES ON sales_data.* TO user1;
+```
+
+In this example, the `GRANT ALL PRIVILEGES` statement assigns all privileges on all tables in the `sales_data` database to the user `user1`. This means that `user1` can perform any operation (SELECT, INSERT, UPDATE, DELETE, etc.) on all tables within the `sales_data` database.
+
+### GRANT OPTION
+
+The `GRANT OPTION` allows a user to grant the privileges they have received to other users. This is useful for delegating access control.
+
+```sql title="Granting privileges with GRANT OPTION"
+GRANT SELECT ON products TO user1 WITH GRANT OPTION;
+```
+
+In this example, the `GRANT` statement assigns the `SELECT` privilege on the `products` table to the user `user1`, along with the `WITH GRANT OPTION`. This means that `user1` can not only read data from the `products` table but also grant the `SELECT` privilege to other users.
+
+### REVOKE Statement
+
+The `REVOKE` statement is used to remove specific privileges from users or roles in the database. It allows you to restrict access to database objects and operations.
+
+```sql title="Revoking privileges"
+REVOKE INSERT ON products FROM user1;
+```
+
+In this example, the `REVOKE` statement removes the `INSERT` privilege on the `products` table from the user `user1`. After this operation, `user1` can no longer insert new records into the `products` table but can still read data if they have the `SELECT` privilege.
+
+### REVOKE ALL PRIVILEGES Statement
+
+The `REVOKE ALL PRIVILEGES` statement is used to remove all privileges granted to a user or role on a database object. This effectively revokes all access rights.
+
+```sql title="Revoking all privileges"
+REVOKE ALL PRIVILEGES ON sales_data.* FROM user1;
+```
+
+In this example, the `REVOKE ALL PRIVILEGES` statement removes all privileges on all tables in the `sales_data` database from the user `user1`. After this operation, `user1` will no longer have any access to the `sales_data` database.
+
+### REVOKE SELECT Statement
+
+The `REVOKE SELECT` statement is used to remove the `SELECT` privilege from a user or role, preventing them from reading data from a specific table.
+
+```sql title="Revoking SELECT privilege"
+REVOKE SELECT ON products FROM user1;
+```
+
+In this example, the `REVOKE SELECT` statement removes the `SELECT` privilege on the `products` table from the user `user1`. After this operation, `user1` can no longer read data from the `products` table but can still perform other operations if they have additional privileges.
+
+<BackToTop/>
+
+## SQL Operators
+
+SQL operators are special symbols or keywords used to perform operations on data within SQL statements. They allow you to manipulate and compare values, filter results, and perform calculations. Here are some common SQL operators:
+
+### Comparison Operators
+
+Comparison operators are used to compare two values and return a boolean result (true or false). They are commonly used in the `WHERE` clause to filter results based on specific conditions.
+
+- **`=`**: Equal to operator, checks if two values are equal.
+- **`!=` or `<>`**: Not equal to operator, checks if two values are not equal.
+- **`<`**: Less than operator, checks if the left value is less than the right value.
+- **`>`**: Greater than operator, checks if the left value is greater than the right value.
+- **`<=`**: Less than or equal to operator, checks if the left value is less than or equal to the right value.
+- **`>=`**: Greater than or equal to operator, checks if the left value is greater than or equal to the right value.
+
+```sql title="Comparison operators example"
+-- Equal to operator
+SELECT * FROM products WHERE price = 100.00;
+
+-- Not equal to operator
+SELECT * FROM products WHERE price != 100.00;
+
+-- Less than operator
+SELECT * FROM products WHERE price < 50.00;
+
+-- Greater than operator
+SELECT * FROM products WHERE price > 50.00;
+
+-- Less than or equal to operator
+SELECT * FROM products WHERE price <= 100.00;
+
+-- Greater than or equal to operator
+SELECT * FROM products WHERE price >= 100.00;
+```
+
+### Logical Operators
+
+Logical operators are used to combine multiple conditions in a SQL statement. They allow you to create complex filters by combining comparison results.
+
+- **`AND`**: Returns true if both conditions are true. Used to combine multiple conditions that must all be satisfied.
+- **`OR`**: Returns true if at least one of the conditions is true. Used to combine multiple conditions where only one needs to be satisfied.
+- **`NOT`**: Negates a condition, returning true if the condition is false. Used to exclude specific results from a query.
+
+```sql title="Logical operators example"
+-- AND operator
+SELECT * FROM products WHERE category = 'Electronics' AND price < 100.00;
+
+-- OR operator
+SELECT * FROM products WHERE category = 'Electronics' OR category = 'Books';
+
+-- NOT operator
+SELECT * FROM products WHERE NOT category = 'Electronics';
+```
+
+### Arithmetic Operators
+
+Arithmetic operators are used to perform mathematical calculations on numeric values. They allow you to perform addition, subtraction, multiplication, and division directly within SQL queries.
+
+- **`+`**: Addition operator, adds two numeric values.
+- **`-`**: Subtraction operator, subtracts the right value from the left value.
+- **`*`**: Multiplication operator, multiplies two numeric values.
+- **`/`**: Division operator, divides the left value by the right value.
+
+```sql title="Arithmetic operators example"
+-- Addition operator
+SELECT product_name, price + 10 AS new_price FROM products;
+
+-- Subtraction operator
+SELECT product_name, price - 5 AS discounted_price FROM products;
+
+-- Multiplication operator
+SELECT product_name, price * 1.2 AS increased_price FROM products;
+
+-- Division operator
+SELECT product_name, price / 2 AS half_price FROM products;
+```
+
+### String Operators
+
+String operators are used to manipulate and compare string values. They allow you to perform operations such as concatenation, pattern matching, and case sensitivity.
+
+- **`||`**: Concatenation operator, combines two or more strings into one. Some databases use the `+` operator for concatenation.
+- **`LIKE`**: Pattern matching operator, used to search for a specified pattern in a string. It supports wildcard characters such as `%` (matches any sequence of characters) and `_` (matches a single character).
+
+```sql title="String operators example"
+-- Concatenation operator
+SELECT first_name || ' ' || last_name AS full_name FROM customers;
+
+-- Pattern matching operator
+SELECT * FROM products WHERE product_name LIKE 'Electronics%';
+
+-- Pattern matching with wildcard
+SELECT * FROM products WHERE product_name LIKE '%Phone%';
+
+-- Pattern matching with single character wildcard
+SELECT * FROM products WHERE product_name LIKE 'E_e_tronics';
+```
+
+### Set Operators
+
+Set operators are used to combine the results of two or more SQL queries. They allow you to perform operations such as union, intersection, and difference on the result sets.
+
+- **`UNION`**: Combines the results of two or more queries, removing duplicate rows. The queries must have the same number of columns and compatible data types.
+- **`UNION ALL`**: Combines the results of two or more queries, including duplicate rows. The queries must have the same number of columns and compatible data types.
+- **`INTERSECT`**: Returns only the rows that are present in both result sets. The queries must have the same number of columns and compatible data types.
+- **`EXCEPT`** (or `MINUS` in some databases): Returns the rows from the first result set that are not present in the second result set. The queries must have the same number of columns and compatible data types.
+
+```sql title="Set operators example"
+-- UNION operator
+SELECT product_name FROM products WHERE category = 'Electronics'
+UNION
+SELECT product_name FROM products WHERE category = 'Books';
+
+-- UNION ALL operator
+SELECT product_name FROM products WHERE category = 'Electronics'
+UNION ALL
+SELECT product_name FROM products WHERE category = 'Books';
+
+-- INTERSECT operator
+SELECT product_name FROM products WHERE category = 'Electronics'
+INTERSECT
+SELECT product_name FROM products WHERE price < 100.00;
+
+-- EXCEPT operator
+SELECT product_name FROM products WHERE category = 'Electronics'
+EXCEPT
+SELECT product_name FROM products WHERE price < 50.00;
+```
+
+<BackToTop/>
+
+## SQL Operations
+
+### JOIN Operations
+
+The `JOIN` operation is used to combine rows from two or more tables based on a related column between them. It allows you to retrieve data from multiple tables in a single query, enabling complex data retrieval and analysis.
+
+#### INNER JOIN
+
+The `INNER JOIN` operation retrieves rows from both tables that have matching values in the specified columns. It returns only the rows where there is a match in both tables.
+
+```sql title="Inner join example"
+SELECT customers.name, orders.order_date
+FROM customers
+INNER JOIN orders ON customers.id = orders.customer_id
+WHERE orders.order_date >= '2023-01-01';
+```
+
+In this example, the `INNER JOIN` operation combines the `customers` and `orders` tables based on the matching `customer_id` column. It retrieves the names of customers and their order dates for orders placed on or after January 1, 2023.
+
+#### LEFT JOIN
+
+The `LEFT JOIN` operation retrieves all rows from the left table and the matching rows from the right table. If there is no match, NULL values are returned for columns from the right table.
+
+```sql title="Left join example"
+SELECT customers.name, orders.order_date
+FROM customers
+LEFT JOIN orders ON customers.id = orders.customer_id
+WHERE customers.name LIKE 'John%';
+```
+
+In this example, the `LEFT JOIN` operation retrieves all customers whose names start with 'John', along with their order dates. If a customer has no orders, the `order_date` column will contain NULL values.
+
+#### RIGHT JOIN
+
+The `RIGHT JOIN` operation retrieves all rows from the right table and the matching rows from the left table. If there is no match, NULL values are returned for columns from the left table.
+
+```sql title="Right join example"
+SELECT orders.order_id, customers.name
+FROM orders
+RIGHT JOIN customers ON orders.customer_id = customers.id
+WHERE orders.order_id IS NOT NULL;
+```
+
+In this example, the `RIGHT JOIN` operation retrieves all orders along with the names of customers who placed those orders. If an order has no associated customer, the `name` column will contain NULL values.
+
+#### FULL OUTER JOIN
+
+The `FULL OUTER JOIN` operation retrieves all rows from both tables, returning NULL values for columns where there is no match in either table. It combines the results of both `LEFT JOIN` and `RIGHT JOIN`.
+
+```sql title="Full outer join example"
+SELECT customers.name, orders.order_date
+FROM customers
+FULL OUTER JOIN orders ON customers.id = orders.customer_id
+WHERE customers.name IS NOT NULL OR orders.order_date IS NOT NULL;
+```
+
+In this example, the `FULL OUTER JOIN` operation retrieves all customers and their order dates, including those customers who have not placed any orders and those orders that do not have associated customers. If there is no match, NULL values are returned for the missing data.
+
+#### CROSS JOIN
+
+The `CROSS JOIN` operation produces a Cartesian product of two tables, returning all possible combinations of rows from both tables. It does not require a condition to match rows.
+
+```sql title="Cross join example"
+SELECT customers.name, products.product_name
+FROM customers
+CROSS JOIN products
+WHERE customers.name LIKE 'John%';
+```
+
+In this example, the `CROSS JOIN` operation retrieves all combinations of customers whose names start with 'John' and products from the `products` table. Each customer will be paired with every product, resulting in a potentially large result set.
+
+### Subqueries
+
+A subquery is a nested query that is used within another SQL statement. It allows you to perform operations on the results of another query, enabling complex data retrieval and manipulation. Subqueries can be used in various clauses, such as `SELECT`, `WHERE`, and `FROM`.
+
+```sql title="Subquery example"
+SELECT product_name
+FROM products
+WHERE price > (
+    SELECT AVG(price)
+    FROM products
+    WHERE category = 'Electronics'
+);
+```
+
+In this example, the subquery calculates the average price of products in the 'Electronics' category. The outer query retrieves the names of products whose prices are greater than this average price. Subqueries can be used to filter results, perform calculations, or retrieve related data.
+
+<BackToTop/>
+
+## SQL Functions
+
+SQL functions are built-in operations that allow you to perform calculations, manipulate strings, and work with dates and times directly within SQL queries. These functions can simplify complex operations and enhance the functionality of your SQL statements. Here are some common types of SQL functions:
+
+### Aggregate Functions
+
+Aggregate functions perform calculations on a set of values and return a single value. They are often used in conjunction with the `GROUP BY` clause to summarize data.
+
+#### COUNT
+
+The `COUNT` function returns the number of rows that match a specified condition. It can count all rows or only distinct values.
+
+```sql title="Count example"
+SELECT COUNT(*) AS total_products
+FROM products
+WHERE category = 'Electronics';
+```
+
+In this example, the `COUNT(*)` function counts all products in the 'Electronics' category and returns the total number of matching rows.
+
+#### SUM
+
+The `SUM` function calculates the total of a numeric column for all rows that match a specified condition.
+
+```sql title="Sum example"
+SELECT SUM(price) AS total_revenue
+FROM orders
+WHERE order_date >= '2023-01-01';
+```
+
+In this example, the `SUM(price)` function calculates the total revenue from orders placed on or after January 1, 2023.
+
+#### AVG
+
+The `AVG` function calculates the average value of a numeric column for all rows that match a specified condition.
+
+```sql title="Average example"
+SELECT AVG(price) AS average_price
+FROM products
+WHERE category = 'Electronics';
+```
+
+In this example, the `AVG(price)` function calculates the average price of products in the 'Electronics' category.
+
+#### MAX
+
+The `MAX` function returns the maximum value of a specified column for all rows that match a condition.
+
+```sql title="Max example"
+SELECT MAX(price) AS highest_price
+FROM products
+WHERE category = 'Electronics';
+```
+
+In this example, the `MAX(price)` function retrieves the highest price of products in the 'Electronics' category.
+
+#### MIN
+
+The `MIN` function returns the minimum value of a specified column for all rows that match a condition.
+
+```sql title="Min example"
+SELECT MIN(price) AS lowest_price
+FROM products
+WHERE category = 'Electronics';
+```
+
+In this example, the `MIN(price)` function retrieves the lowest price of products in the 'Electronics' category.
+
+<BackToTop/>
+
+### String Functions
+
+String functions allow you to manipulate and analyze character data within SQL queries. They can be used to perform operations such as concatenation, substring extraction, and case conversion.
+
+#### CONCAT
+
+The `CONCAT` function concatenates two or more strings into a single string.
+
+```sql title="Concatenation example"
+SELECT CONCAT(first_name, ' ', last_name) AS full_name
+FROM customers;
+```
+
+In this example, the `CONCAT` function combines the `first_name` and `last_name` columns from the `customers` table into a single `full_name` column.
+
+#### SUBSTRING
+
+The `SUBSTRING` function extracts a portion of a string based on specified starting position and length.
+
+```sql title="Substring example"
+SELECT SUBSTRING(product_name, 1, 10) AS short_name
+FROM products;
+```
+
+In this example, the `SUBSTRING` function extracts the first 10 characters from the `product_name` column in the `products` table, creating a new column called `short_name`.
+
+#### UPPER
+
+The `UPPER` function converts a string to uppercase.
+
+```sql title="Uppercase example"
+SELECT UPPER(product_name) AS uppercase_name
+FROM products;
+```
+
+In this example, the `UPPER` function converts the `product_name` column values to uppercase, creating a new column called `uppercase_name`.
+
+#### LOWER
+
+The `LOWER` function converts a string to lowercase.
+
+```sql title="Lowercase example"
+SELECT LOWER(product_name) AS lowercase_name
+FROM products;
+```
+
+In this example, the `LOWER` function converts the `product_name` column values to lowercase, creating a new column called `lowercase_name`.
+
+#### TRIM
+
+The `TRIM` function removes leading and trailing spaces from a string.
+
+```sql title="Trim example"
+SELECT TRIM(product_name) AS trimmed_name
+FROM products;
+```
+
+In this example, the `TRIM` function removes any leading or trailing spaces from the `product_name` column values, creating a new column called `trimmed_name`.
+
+<BackToTop/>
+
+### Date and Time Functions
+
+Date and time functions allow you to manipulate and analyze date and time values within SQL queries. They can be used to perform operations such as extracting parts of a date, calculating differences, and formatting dates.
+
+#### NOW
+
+The `NOW` function returns the current date and time.
+
+```sql title="Current date and time example"
+SELECT NOW() AS current_datetime;
+```
+
+In this example, the `NOW` function retrieves the current date and time from the database server, creating a new column called `current_datetime`.
+
+#### DATE
+
+The `DATE` function extracts the date part from a datetime value.
+
+```sql title="Extracting date example"
+SELECT DATE(order_date) AS order_date_only
+FROM orders;
+```
+
+In this example, the `DATE` function extracts the date part from the `order_date` column in the `orders` table, creating a new column called `order_date_only`.
+
+#### YEAR
+
+The `YEAR` function extracts the year from a date value.
+
+```sql title="Extracting year example"
+SELECT YEAR(order_date) AS order_year
+FROM orders;
+```
+
+In this example, the `YEAR` function extracts the year from the `order_date` column in the `orders` table, creating a new column called `order_year`.
+
+#### MONTH
+
+The `MONTH` function extracts the month from a date value.
+
+```sql title="Extracting month example"
+SELECT MONTH(order_date) AS order_month
+FROM orders;
+```
+
+In this example, the `MONTH` function extracts the month from the `order_date` column in the `orders` table, creating a new column called `order_month`.
+
+#### DAY
+
+The `DAY` function extracts the day of the month from a date value.
+
+```sql title="Extracting day example"
+SELECT DAY(order_date) AS order_day
+FROM orders;
+```
+
+In this example, the `DAY` function extracts the day of the month from the `order_date` column in the `orders` table, creating a new column called `order_day`.
+
+#### DATEDIFF
+
+The `DATEDIFF` function calculates the difference between two date values, returning the result in days.
+
+```sql title="Calculating date difference example"
+SELECT DATEDIFF(NOW(), order_date) AS days_since_order
+FROM orders;
+```
+
+In this example, the `DATEDIFF` function calculates the number of days between the current date and the `order_date` column in the `orders` table, creating a new column called `days_since_order`.
+
+#### DATEADD
+
+The `DATEADD` function adds a specified interval to a date value, allowing you to manipulate dates by adding or subtracting time.
+
+```sql title="Adding days to a date example"
+SELECT DATEADD(DAY, 7, order_date) AS new_order_date
+FROM orders;
+```
+
+In this example, the `DATEADD` function adds 7 days to the `order_date` column in the `orders` table, creating a new column called `new_order_date`. This can be useful for calculating future dates based on existing data.
+
+### COALESCE Function
+
+The `COALESCE` function returns the first non-null value from a list of expressions. It is useful for handling NULL values in queries and providing default values when necessary.
+
+```sql title="Using COALESCE example"
+SELECT COALESCE(phone, 'N/A') AS contact_phone
+FROM customers;
+```
+
+In this example, the `COALESCE` function checks the `phone` column in the `customers` table. If the `phone` value is NULL, it returns 'N/A' as a default value, creating a new column called `contact_phone`. This ensures that you always have a valid phone number or a placeholder when the phone number is not available.
+
+### CASE Statement
+
+The `CASE` statement allows you to perform conditional logic within SQL queries. It enables you to return different values based on specified conditions, similar to an IF-THEN-ELSE structure in programming languages.
+
+```sql title="Using CASE example"
+SELECT product_name,
+       CASE
+           WHEN price < 50 THEN 'Affordable'
+           WHEN price BETWEEN 50 AND 100 THEN 'Moderate'
+           ELSE 'Expensive'
+       END AS price_category
+FROM products;
+```
+
+In this example, the `CASE` statement categorizes products based on their price. If the price is less than 50, it returns 'Affordable'; if the price is between 50 and 100, it returns 'Moderate'; otherwise, it returns 'Expensive'. The result is a new column called `price_category` that provides a clear classification of product prices.
+
+<BackToTop/>
+
+## Advanced SQL Concepts
+
+### Transactions
+
+Transactions are a sequence of one or more SQL operations that are executed as a single unit of work. They ensure data integrity and consistency by allowing you to group multiple operations together, so that either all operations succeed or none do. Transactions are typically used in scenarios where multiple related changes need to be made to the database.
+
+```sql title="Transaction example"
+BEGIN TRANSACTION;
+UPDATE accounts
+SET balance = balance - 100
+WHERE account_id = 1;
+UPDATE accounts
+SET balance = balance + 100
+WHERE account_id = 2;
+COMMIT;
+```
+
+In this example, the `BEGIN TRANSACTION` statement starts a new transaction. The subsequent `UPDATE` statements modify the balances of two accounts. If both updates succeed, the `COMMIT` statement is executed, making the changes permanent. If any error occurs during the transaction, you can use `ROLLBACK` to undo all changes made within the transaction.
+
+```sql title="Rolling back a transaction"
+ROLLBACK;
+```
+
+In this example, the `ROLLBACK` statement undoes all changes made within the current transaction. This is useful if an error occurs during the transaction, ensuring that the database remains in a consistent state.
+
+### Window Functions
+
+Window functions perform calculations across a set of rows related to the current row, allowing you to analyze data in a more flexible way. They are often used for ranking, running totals, and moving averages without collapsing the result set like aggregate functions do.
+
+```sql title="Using window functions example"
+SELECT product_name,
+       price,
+       RANK() OVER (ORDER BY price DESC) AS price_rank
+FROM products;
+```
+
+In this example, the `RANK()` window function assigns a rank to each product based on its price in descending order. The result includes the `product_name`, `price`, and the calculated `price_rank` for each product, allowing you to see how products compare in terms of price without aggregating the results.
+
+### Common Table Expressions (CTEs)
+
+Common Table Expressions (CTEs) are temporary result sets that can be referenced within a SQL statement. They provide a way to organize complex queries and improve readability by breaking down the query into smaller, manageable parts. CTEs are defined using the `WITH` clause.
+
+```sql title="CTE example"
+WITH ElectronicsProducts AS (
+    SELECT product_name, price
+    FROM products
+    WHERE category = 'Electronics'
+)
+SELECT product_name, price
+FROM ElectronicsProducts
+WHERE price > 100;
+```
+
+In this example, the CTE named `ElectronicsProducts` retrieves products in the 'Electronics' category. The outer query then selects product names and prices from this CTE where the price is greater than 100. CTEs can be recursive, allowing for hierarchical data retrieval and manipulation.
+
+### Recursive CTEs
+
+Recursive Common Table Expressions (CTEs) allow you to perform recursive queries, which are useful for working with hierarchical or tree-structured data. A recursive CTE consists of two parts: the anchor member (the initial query) and the recursive member (the query that references the CTE itself).
+
+```sql title="Recursive CTE example"
+WITH RECURSIVE EmployeeHierarchy AS (
+    SELECT employee_id, manager_id, name
+    FROM employees
+    WHERE manager_id IS NULL  -- Anchor member: top-level employees (no manager)
+
+    UNION ALL
+
+    SELECT e.employee_id, e.manager_id, e.name
+    FROM employees e
+    INNER JOIN EmployeeHierarchy eh ON e.manager_id = eh.employee_id  -- Recursive member: find subordinates
+)
+SELECT * FROM EmployeeHierarchy;
+```
+
+In this example, the recursive CTE named `EmployeeHierarchy` retrieves employees and their managers in a hierarchical structure. The anchor member selects top-level employees (those without a manager), while the recursive member joins the `employees` table to find subordinates of each employee. The final query retrieves the entire employee hierarchy.
+
+<BackToTop/>
+
+### JSON and XML Data Types
+
+Many modern databases support JSON and XML data types, allowing you to store and manipulate semi-structured data directly within SQL. These data types provide flexibility for handling complex data structures without requiring a fixed schema.
+
+#### JSON Data Type
+
+The JSON data type allows you to store JSON-formatted data in a column. You can use JSON functions to query and manipulate this data.
+
+```sql title="JSON example"
+CREATE TABLE products (
+    id INT PRIMARY KEY,
+    product_name VARCHAR(100),
+    details JSON
+);
+INSERT INTO products (id, product_name, details)
+VALUES (1, 'Laptop', '{"brand": "BrandA", "specs": {"ram": "16GB", "storage": "512GB SSD"}}');
+SELECT product_name, details->>'$.brand' AS brand
+FROM products
+WHERE details->>'$.specs.ram' = '16GB';
+```
+
+In this example, the `products` table has a `details` column of type JSON. The `INSERT` statement adds a product with JSON-formatted details. The `SELECT` statement retrieves the product name and brand from the JSON data, filtering results to only include products with 16GB of RAM.
+
+#### XML Data Type
+
+The XML data type allows you to store XML-formatted data in a column. You can use XML functions to query and manipulate this data.
+
+```sql title="XML example"
+CREATE TABLE products (
+    id INT PRIMARY KEY,
+    product_name VARCHAR(100),
+    details XML
+);
+INSERT INTO products (id, product_name, details)
+VALUES (1, 'Laptop', '<product><brand>BrandA</brand><specs><ram>16GB</ram><storage>512GB SSD</storage></specs></product>');
+SELECT product_name, details.value('(/product/brand)[1]', 'VARCHAR(100)') AS brand
+FROM products
+WHERE details.value('(/product/specs/ram)[1]', 'VARCHAR(10)') = '16GB';
+```
+
+In this example, the `products` table has a `details` column of type XML. The `INSERT` statement adds a product with XML-formatted details. The `SELECT` statement retrieves the product name and brand from the XML data, filtering results to only include products with 16GB of RAM.
+
+### Full-Text Search
+
+Full-text search allows you to perform advanced text searches on large volumes of text data stored in a database. It enables you to search for words or phrases within text columns, providing more powerful search capabilities than simple pattern matching.
+
+```sql title="Full-text search example"
+CREATE TABLE articles (
+    id INT PRIMARY KEY,
+    title VARCHAR(255),
+    content TEXT,
+    FULLTEXT (title, content)  -- Create a full-text index on title and content
+);
+INSERT INTO articles (id, title, content)
+VALUES (1, 'Introduction to SQL', 'SQL is a standard language for managing relational databases. It allows you to create, read, update, and delete data.');
+SELECT * FROM articles
+WHERE MATCH(title, content) AGAINST('SQL' IN NATURAL LANGUAGE MODE);
+```
+
+In this example, the `articles` table has a full-text index on the `title` and `content` columns. The `INSERT` statement adds an article about SQL. The `SELECT` statement performs a full-text search for the term 'SQL', retrieving articles that contain this term in either the title or content.
+
+### Partitioning
+
+Partitioning is a technique used to divide large tables into smaller, more manageable pieces called partitions. This can improve query performance and manageability by allowing you to work with subsets of data rather than the entire table. Partitioning can be based on various criteria, such as range, list, or hash.
+
+```sql title="Partitioning example"
+CREATE TABLE sales (
+    id INT PRIMARY KEY,
+    sale_date DATE,
+    amount DECIMAL(10, 2)
+) PARTITION BY RANGE (YEAR(sale_date)) (
+    PARTITION p2022 VALUES LESS THAN (2023),
+    PARTITION p2023 VALUES LESS THAN (2024)
+);
+INSERT INTO sales (id, sale_date, amount)
+VALUES (1, '2022-01-15', 100.00),
+       (2, '2023-03-10', 150.00);
+SELECT * FROM sales
+WHERE sale_date >= '2022-01-01' AND sale_date < '2024-01-01';
+```
+
+In this example, the `sales` table is partitioned by year based on the `sale_date` column. Two partitions are created: `p2022` for sales in 2022 and `p2023` for sales in 2023. The `INSERT` statement adds sales records to the appropriate partitions. The `SELECT` statement retrieves all sales records within the specified date range, benefiting from partitioning for improved performance.
+
+### Materialized Views
+
+Materialized views are precomputed views that store the results of a query in a physical table. They can improve query performance by allowing you to access precomputed data rather than executing complex queries on the fly. Materialized views can be refreshed periodically to keep the data up-to-date.
+
+```sql title="Materialized view example"
+CREATE MATERIALIZED VIEW sales_summary AS
+SELECT product_id, SUM(amount) AS total_sales
+FROM sales
+GROUP BY product_id;
+```
+
+In this example, the `CREATE MATERIALIZED VIEW` statement creates a materialized view named `sales_summary` that summarizes total sales for each product. The view stores the results of the query, allowing for faster access to aggregated sales data. You can refresh the materialized view periodically to update the stored results.
+
+```sql title="Refreshing materialized view"
+REFRESH MATERIALIZED VIEW sales_summary;
+```
+
+In this example, the `REFRESH MATERIALIZED VIEW` statement updates the `sales_summary` materialized view with the latest data from the `sales` table. This ensures that the view reflects any changes made to the underlying data since the last refresh.
+
+<BackToTop/>
+
+### Database Normalization
+
+Database normalization is the process of organizing data in a database to reduce redundancy and improve data integrity. It involves dividing large tables into smaller, related tables and defining relationships between them. Normalization typically follows a series of normal forms, each with specific rules to ensure data consistency.
+
+#### First Normal Form (1NF)
+
+First Normal Form (1NF) requires that each column in a table contains atomic values (indivisible values) and that each row is unique. This means that there should be no repeating groups or arrays within a single column.
+
+```sql title="First Normal Form example"
+CREATE TABLE orders (
+    order_id INT PRIMARY KEY,
+    customer_id INT,
+    order_date DATE,
+    product_name VARCHAR(100),
+    quantity INT
+);
+```
+
+In this example, the `orders` table is in First Normal Form (1NF) because each column contains atomic values, and there are no repeating groups. Each order has a unique `order_id`, and all relevant information about the order is stored in separate columns.
+
+#### Second Normal Form (2NF)
+
+Second Normal Form (2NF) builds on First Normal Form (1NF) by ensuring that all non-key attributes are fully functionally dependent on the primary key. This means that there should be no partial dependencies, where a non-key attribute depends only on part of a composite primary key.
+
+```sql title="Second Normal Form example"
+CREATE TABLE orders (
+    order_id INT PRIMARY KEY,
+    customer_id INT,
+    order_date DATE
+);
+CREATE TABLE order_items (
+    order_item_id INT PRIMARY KEY,
+    order_id INT,
+    product_name VARCHAR(100),
+    quantity INT,
+    FOREIGN KEY (order_id) REFERENCES orders(order_id)
+);
+```
+
+In this example, the `orders` table is in Second Normal Form (2NF) because all non-key attributes (`customer_id`, `order_date`) are fully functionally dependent on the primary key (`order_id`). The `order_items` table is created to store individual items for each order, ensuring that the `product_name` and `quantity` attributes depend on the entire primary key (`order_item_id` and `order_id`).
+
+#### Third Normal Form (3NF)
+
+Third Normal Form (3NF) builds on Second Normal Form (2NF) by ensuring that there are no transitive dependencies, where a non-key attribute depends on another non-key attribute rather than the primary key. This means that all non-key attributes should depend only on the primary key.
+
+```sql title="Third Normal Form example"
+CREATE TABLE customers (
+    customer_id INT PRIMARY KEY,
+    customer_name VARCHAR(100),
+    contact_email VARCHAR(100)
+);
+CREATE TABLE orders (
+    order_id INT PRIMARY KEY,
+    customer_id INT,
+    order_date DATE,
+    FOREIGN KEY (customer_id) REFERENCES customers(customer_id)
+);
+```
+
+In this example, the `customers` table is in Third Normal Form (3NF) because all non-key attributes (`customer_name`, `contact_email`) depend only on the primary key (`customer_id`). The `orders` table references the `customers` table through a foreign key, ensuring that order information is linked to the correct customer without introducing transitive dependencies.
+
+### Fourth Normal Form (4NF)
+
+Fourth Normal Form (4NF) addresses multi-valued dependencies, where a non-key attribute can have multiple independent values. It requires that no table contains two or more independent multi-valued facts about an entity.
+
+```sql title="Fourth Normal Form example"
+CREATE TABLE students (
+    student_id INT PRIMARY KEY,
+    student_name VARCHAR(100)
+);
+CREATE TABLE student_courses (
+    student_id INT,
+    course_id INT,
+    PRIMARY KEY (student_id, course_id),
+    FOREIGN KEY (student_id) REFERENCES students(student_id)
+);
+CREATE TABLE student_activities (
+    student_id INT,
+    activity_id INT,
+    PRIMARY KEY (student_id, activity_id),
+    FOREIGN KEY (student_id) REFERENCES students(student_id)
+);
+```
+
+In this example, the `students` table is in Fourth Normal Form (4NF) because it separates multi-valued facts into different tables. The `student_courses` table stores the courses each student is enrolled in, while the `student_activities` table stores extracurricular activities. This ensures that there are no multi-valued dependencies within a single table.
+
+### Fifth Normal Form (5NF)
+
+Fifth Normal Form (5NF), also known as Project-Join Normal Form (PJNF), addresses cases where a table can be decomposed into smaller tables without losing information. It ensures that all join dependencies are implied by the candidate keys.
+
+```sql title="Fifth Normal Form example"
+CREATE TABLE products (
+    product_id INT PRIMARY KEY,
+    product_name VARCHAR(100)
+);
+CREATE TABLE suppliers (
+    supplier_id INT PRIMARY KEY,
+    supplier_name VARCHAR(100)
+);
+CREATE TABLE product_suppliers (
+    product_id INT,
+    supplier_id INT,
+    PRIMARY KEY (product_id, supplier_id),
+    FOREIGN KEY (product_id) REFERENCES products(product_id),
+    FOREIGN KEY (supplier_id) REFERENCES suppliers(supplier_id)
+);
+```
+
+In this example, the `products` and `suppliers` tables are in Fifth Normal Form (5NF) because they can be decomposed into smaller tables without losing information. The `product_suppliers` table establishes a many-to-many relationship between products and suppliers, allowing for efficient management of product-supplier associations without introducing redundancy.
+
+<BackToTop />
+
+### Denormalization
+
+Denormalization is the process of intentionally introducing redundancy into a database design to improve query performance. It involves combining tables or adding redundant data to reduce the number of joins required for complex queries. Denormalization can be beneficial in read-heavy applications where query performance is critical.
+
+```sql title="Denormalization example"
+CREATE TABLE orders (
+    order_id INT PRIMARY KEY,
+    customer_id INT,
+    customer_name VARCHAR(100),  -- Redundant data
+    order_date DATE,
+    product_name VARCHAR(100),
+    quantity INT
+);
+```
+
+In this example, the `orders` table includes a redundant `customer_name` column alongside the `customer_id`. This denormalization allows for faster retrieval of order information without needing to join with the `customers` table. However, it also introduces redundancy, as the customer name may change and require updates in multiple places.
+
+### Data Warehousing
+
+Data warehousing is a technique used to store and manage large volumes of data from multiple sources in a centralized repository. It is designed for analytical processing and reporting, allowing organizations to perform complex queries and analysis on historical data. Data warehouses typically use a star or snowflake schema to organize data into fact and dimension tables.
+
+```sql title="Data warehousing example"
+CREATE TABLE sales_fact (
+    sale_id INT PRIMARY KEY,
+    product_id INT,
+    customer_id INT,
+    sale_date DATE,
+    amount DECIMAL(10, 2)
+);
+CREATE TABLE product_dimension (
+    product_id INT PRIMARY KEY,
+    product_name VARCHAR(100),
+    category VARCHAR(50)
+);
+CREATE TABLE customer_dimension (
+    customer_id INT PRIMARY KEY,
+    customer_name VARCHAR(100),
+    region VARCHAR(50)
+);
+```
+
+In this example, the `sales_fact` table stores sales transactions as a fact table, while the `product_dimension` and `customer_dimension` tables store related information about products and customers. This star schema allows for efficient querying and analysis of sales data by joining fact and dimension tables.
+
+### Data Lakes
+
+Data lakes are large, centralized repositories that store vast amounts of raw, unstructured, and semi-structured data. Unlike traditional databases, data lakes can handle diverse data types, including text, images, videos, and sensor data. They are designed for big data analytics and machine learning applications, allowing organizations to store and analyze data at scale.
+
+```sql title="Data lake example"
+CREATE TABLE sensor_data (
+    sensor_id INT,
+    timestamp TIMESTAMP,
+    temperature DECIMAL(5, 2),
+    humidity DECIMAL(5, 2),
+    PRIMARY KEY (sensor_id, timestamp)
+);
+```
+
+In this example, the `sensor_data` table stores raw sensor data with a composite primary key consisting of `sensor_id` and `timestamp`. This allows for efficient storage and retrieval of time-series data from various sensors. Data lakes can integrate with big data processing frameworks like Apache Spark or Hadoop for advanced analytics and machine learning tasks.
+
+### Data Governance
+
+Data governance refers to the management of data availability, usability, integrity, and security within an organization. It involves establishing policies, procedures, and standards for data management to ensure that data is accurate, consistent, and compliant with regulations. Effective data governance helps organizations maintain data quality and make informed decisions based on reliable data.
+
+```sql title="Data governance example"
+CREATE TABLE data_governance (
+    policy_id INT PRIMARY KEY,
+    policy_name VARCHAR(100),
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+```
+
+In this example, the `data_governance` table stores data governance policies with attributes such as `policy_id`, `policy_name`, and `description`. The `created_at` and `updated_at` columns track when the policy was created and last updated. This table can be used to manage and enforce data governance practices within an organization.
+
+## Conclusion
+
+Structured Query Language (SQL) is a powerful and versatile language for managing and manipulating relational databases. It provides a wide range of features, including data definition, data manipulation, querying, and advanced operations like transactions, window functions, and data warehousing. Understanding SQL is essential for anyone working with databases, as it enables efficient data retrieval, analysis, and management.
+SQL's capabilities extend beyond basic data operations, allowing for complex queries, data transformations, and performance optimizations. By mastering SQL, you can effectively interact with databases, extract valuable insights from data, and build robust applications that rely on structured data storage.
+
+## Additional Resources
+
+- [SQL Tutorial - W3Schools](https://www.w3schools.com/sql/)
+- [SQL for Data Science - Coursera](https://www.coursera.org/learn/sql-for-data-science)
+- [SQL Documentation - PostgreSQL](https://www.postgresql.org/docs/current/sql.html)
+- [SQL Documentation - MySQL](https://dev.mysql.com/doc/)
+- [SQL Documentation - Microsoft SQL Server](https://docs.microsoft.com/en-us/sql/sql-server/?view=sql-server-ver15)
+
+<BackToTop />
