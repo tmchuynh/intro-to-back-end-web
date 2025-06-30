@@ -1,0 +1,1696 @@
+import BackToTop from "@/components/BackToTop";
+
+# MongoDB Query Language (MQL)
+
+## Table of Contents
+
+## Introduction
+
+MongoDB Query Language (MQL) is a rich, expressive query language designed specifically for working with document-oriented databases. Unlike traditional SQL that operates on rows and columns, MQL works with flexible JSON-like documents called BSON (Binary JSON), enabling developers to query complex, nested data structures naturally and efficiently. MQL provides a comprehensive set of operators and methods for data retrieval, manipulation, and aggregation that align perfectly with modern application development patterns.
+
+MQL's document-centric approach allows developers to work with data in a format that closely resembles the objects used in programming languages, eliminating the need for complex object-relational mapping. The language supports dynamic schemas, meaning documents in the same collection can have different structures, providing unprecedented flexibility for evolving applications. This flexibility, combined with powerful querying capabilities, makes MQL particularly suitable for modern applications that handle diverse, semi-structured data.
+
+The language encompasses not only basic CRUD operations but also sophisticated aggregation pipelines, text search capabilities, geospatial queries, and real-time data processing. MQL's syntax is intuitive for developers familiar with JavaScript and JSON, featuring method chaining and operator-based filtering that feels natural in modern development environments. Whether you're building content management systems, real-time analytics platforms, or IoT applications, MQL provides the tools to efficiently query and manipulate your data.
+
+### Real-World Applications
+
+MQL powers diverse applications across industries where flexible data models and complex querying are essential:
+
+- Content management systems utilize MQL for dynamic content querying, categorization, and full-text search capabilities
+- E-commerce platforms leverage MQL for product catalogs, inventory management, and personalized recommendation engines
+- Social media applications use MQL for user feeds, activity tracking, and complex relationship queries
+- IoT and sensor networks employ MQL for time-series data analysis, real-time monitoring, and anomaly detection
+- Financial services utilize MQL for fraud detection, risk assessment, and regulatory reporting with complex data relationships
+- Gaming platforms leverage MQL for player statistics, leaderboards, and real-time game state management
+- Healthcare systems use MQL for patient records, clinical data analysis, and research data management
+- Logistics companies employ MQL for shipment tracking, route optimization, and supply chain analytics
+- Media streaming services utilize MQL for content metadata, user preferences, and viewing analytics
+
+### Key Concepts
+
+- **Document**: The fundamental unit of data in MongoDB, represented as BSON objects with field-value pairs, similar to JSON objects.
+- **Collection**: A group of MongoDB documents, equivalent to a table in relational databases but without enforced schema requirements.
+- **Field**: A name-value pair within a document, analogous to a column in relational databases but with flexible typing.
+- **BSON**: Binary JSON format used internally by MongoDB for document storage and network transfer, supporting additional data types beyond JSON.
+- **ObjectId**: A unique 12-byte identifier automatically generated for each document, serving as the default primary key.
+- **Embedded Documents**: Documents nested within other documents, enabling complex hierarchical data structures without joins.
+- **Arrays**: Ordered lists of values that can contain any BSON data type, including other documents and arrays.
+- **Index**: Data structure that improves query performance by creating efficient access paths to document fields.
+- **Compound Index**: Index that includes multiple fields, optimizing queries that filter on multiple criteria.
+- **Text Index**: Specialized index for full-text search capabilities across string content within documents.
+- **Geospatial Index**: Index optimized for location-based queries and geographic data operations.
+- **Aggregation Pipeline**: Multi-stage data processing framework for complex analytics and data transformation operations.
+- **Projection**: Specification of which fields to include or exclude in query results, optimizing data transfer and processing.
+- **Cursor**: Iterator object returned by queries that allows efficient traversal of result sets without loading all data into memory.
+- **Upsert**: Operation that updates an existing document or inserts a new one if no match is found, ensuring atomic data consistency.
+- **Replica Set**: Group of MongoDB processes that maintain identical data sets for high availability and data redundancy.
+- **Sharding**: Horizontal scaling technique that distributes data across multiple MongoDB instances for handling large datasets.
+- **GridFS**: Specification for storing and retrieving large files that exceed the BSON document size limit.
+- **Change Streams**: Real-time data change notification system that enables reactive applications and event-driven architectures.
+
+### Benefits of MongoDB Query Language
+
+- **Document-Native Querying**: Natural alignment with application data structures, eliminating object-relational impedance mismatch.
+- **Flexible Schema Design**: Dynamic document structures that evolve with application requirements without costly migrations.
+- **Rich Query Operators**: Comprehensive set of comparison, logical, element, evaluation, and array operators for complex filtering.
+- **Powerful Aggregation Framework**: Multi-stage pipeline processing for advanced analytics, reporting, and data transformation.
+- **Intuitive JavaScript-like Syntax**: Familiar language constructs that reduce learning curve for developers.
+- **Nested Data Support**: Native querying of embedded documents and arrays without complex join operations.
+- **Horizontal Scalability**: Built-in sharding capabilities for handling massive datasets across distributed systems.
+- **High Performance**: Optimized query execution with sophisticated indexing strategies and query planning.
+- **Real-time Capabilities**: Change streams and reactive queries for building responsive, event-driven applications.
+- **Geospatial Intelligence**: Native support for location-based queries, spatial indexing, and geographic data analysis.
+- **Full-Text Search**: Built-in text search capabilities with language-specific stemming and ranking algorithms.
+- **ACID Transactions**: Multi-document transactions ensuring data consistency across complex operations.
+- **Developer Productivity**: Rich ecosystem of drivers, ODMs, and tools that accelerate application development.
+- **Cloud-Native Architecture**: Seamless integration with cloud platforms and containerized environments.
+- **Open Source Flexibility**: Community-driven development with enterprise-grade features and extensive customization options.
+
+## MQL Fundamentals
+
+MongoDB Query Language operates on collections of documents using a rich set of methods and operators that provide powerful data manipulation capabilities.
+
+### Basic Query Structure
+
+- **Collection Methods**: Primary interface for data operations (find, insertOne, updateMany, etc.)
+- **Query Documents**: BSON objects that specify selection criteria using field-value pairs
+- **Projection Documents**: Objects that control which fields are returned in query results
+- **Option Documents**: Configuration objects for query behavior, sorting, and limits
+
+```javascript title="Basic MQL query structure and syntax"
+// Basic find operation
+db.users.find();
+
+// Query with filter criteria
+db.users.find({
+  age: { $gte: 25 },
+  status: "active",
+});
+
+// Query with projection
+db.users.find(
+  { department: "Engineering" },
+  { name: 1, email: 1, salary: 1, _id: 0 }
+);
+
+// Query with options
+db.users.find({ status: "active" }).sort({ createdAt: -1 }).limit(10).skip(20);
+
+// Method chaining for complex queries
+db.products
+  .find({ category: "Electronics" })
+  .sort({ price: 1, rating: -1 })
+  .limit(50)
+  .projection({ name: 1, price: 1, rating: 1 });
+
+// Count documents matching criteria
+db.orders.countDocuments({
+  status: "completed",
+  orderDate: { $gte: ISODate("2024-01-01") },
+});
+
+// Check if documents exist
+db.inventory.findOne({ productId: "ABC123", quantity: { $gt: 0 } });
+```
+
+### Query Operators and Expressions
+
+```javascript title="Essential MQL operators for filtering and comparison"
+// Comparison operators
+db.products.find({
+  price: { $gt: 100, $lt: 500 }, // Greater than, less than
+  rating: { $gte: 4.0 }, // Greater than or equal
+  category: { $ne: "Discontinued" }, // Not equal
+  tags: { $in: ["electronics", "gadgets"] }, // In array
+  brand: { $nin: ["Brand1", "Brand2"] }, // Not in array
+});
+
+// Logical operators
+db.users.find({
+  $and: [{ age: { $gte: 18 } }, { status: "active" }],
+});
+
+db.products.find({
+  $or: [
+    { category: "Electronics" },
+    { category: "Computers" },
+    { price: { $lt: 50 } },
+  ],
+});
+
+db.users.find({
+  $nor: [{ status: "banned" }, { emailVerified: false }],
+});
+
+db.products.find({
+  category: { $not: { $regex: /^temp/i } },
+});
+
+// Element operators
+db.users.find({
+  middleName: { $exists: true }, // Field exists
+  age: { $type: "number" }, // Field type check
+  tags: { $size: 3 }, // Array size
+});
+
+// Array operators
+db.posts.find({
+  tags: { $all: ["mongodb", "database"] }, // All elements match
+  comments: {
+    $elemMatch: {
+      author: "John",
+      rating: { $gte: 5 },
+    },
+  },
+});
+
+// Regular expressions
+db.users.find({
+  email: { $regex: /.*@company\.com$/i },
+  name: { $regex: "^John", $options: "i" },
+});
+
+// Text search
+db.articles.find({
+  $text: {
+    $search: "mongodb database tutorial",
+    $language: "english",
+    $caseSensitive: false,
+  },
+});
+```
+
+## CRUD Operations in Detail
+
+MongoDB provides comprehensive Create, Read, Update, and Delete operations with sophisticated options for handling complex data scenarios.
+
+### Create Operations (Insert)
+
+```javascript title="Document insertion with various patterns"
+// Insert single document
+db.users.insertOne({
+  name: "Alice Johnson",
+  email: "alice@example.com",
+  age: 29,
+  department: "Engineering",
+  skills: ["JavaScript", "MongoDB", "Node.js"],
+  address: {
+    street: "123 Tech Street",
+    city: "San Francisco",
+    zipCode: "94105",
+  },
+  createdAt: new Date(),
+  isActive: true,
+});
+
+// Insert multiple documents
+db.products.insertMany(
+  [
+    {
+      name: "Wireless Headphones",
+      category: "Electronics",
+      price: 199.99,
+      inStock: true,
+      specifications: {
+        battery: "30 hours",
+        connectivity: "Bluetooth 5.0",
+        weight: "250g",
+      },
+      tags: ["audio", "wireless", "portable"],
+    },
+    {
+      name: "Gaming Keyboard",
+      category: "Electronics",
+      price: 149.99,
+      inStock: false,
+      specifications: {
+        switches: "Mechanical Blue",
+        backlight: "RGB",
+        connectivity: "USB-C",
+      },
+      tags: ["gaming", "mechanical", "rgb"],
+    },
+  ],
+  { ordered: false }
+);
+
+// Insert with custom _id
+db.inventory.insertOne({
+  _id: "PROD-2024-001",
+  productName: "Premium Coffee Beans",
+  supplier: "Coffee Co",
+  quantity: 500,
+  pricePerUnit: 12.99,
+  lastRestocked: new Date(),
+});
+
+// Bulk insert with error handling
+try {
+  const result = db.orders.insertMany([
+    { customerId: "CUST001", items: ["item1", "item2"], total: 99.99 },
+    { customerId: "CUST002", items: ["item3"], total: 49.99 },
+  ]);
+  print(`Inserted ${result.insertedCount} documents`);
+} catch (error) {
+  print(`Insert failed: ${error.message}`);
+}
+```
+
+### Read Operations (Find and Query)
+
+```javascript title="Advanced querying techniques and patterns"
+// Complex filtering with nested conditions
+db.orders.find({
+  "customer.tier": "premium",
+  "items.quantity": { $gte: 2 },
+  orderDate: {
+    $gte: ISODate("2024-01-01"),
+    $lt: ISODate("2024-07-01"),
+  },
+  $or: [{ status: "completed" }, { status: "shipped" }],
+});
+
+// Querying arrays and embedded documents
+db.users.find({
+  skills: { $in: ["MongoDB", "Node.js"] },
+  "address.city": "San Francisco",
+  "projects.status": "active",
+  "projects.budget": { $gt: 10000 },
+});
+
+// Advanced projection techniques
+db.products.find(
+  { category: "Electronics" },
+  {
+    name: 1,
+    price: 1,
+    "specifications.battery": 1,
+    "reviews.rating": { $slice: 5 }, // First 5 reviews
+    inStock: 1,
+    _id: 0,
+  }
+);
+
+// Sorting and pagination
+db.articles
+  .find({ published: true })
+  .sort({
+    featured: -1, // Featured articles first
+    publishDate: -1, // Then by newest
+    viewCount: -1, // Then by popularity
+  })
+  .skip(20)
+  .limit(10);
+
+// Using cursors for large result sets
+const cursor = db.logs
+  .find({
+    timestamp: { $gte: ISODate("2024-06-01") },
+  })
+  .sort({ timestamp: 1 });
+
+cursor.forEach((doc) => {
+  // Process each document
+  processLogEntry(doc);
+});
+
+// Distinct values
+db.products.distinct("category");
+db.orders.distinct("customer.country", {
+  orderDate: { $gte: ISODate("2024-01-01") },
+});
+
+// Finding documents with specific array conditions
+db.posts.find({
+  comments: {
+    $elemMatch: {
+      author: "reviewer123",
+      rating: { $gte: 4 },
+      date: { $gte: ISODate("2024-06-01") },
+    },
+  },
+});
+```
+
+### Update Operations
+
+```javascript title="Comprehensive update operations and modifiers"
+// Update single document
+db.users.updateOne(
+  { email: "alice@example.com" },
+  {
+    $set: {
+      lastLogin: new Date(),
+      "preferences.theme": "dark",
+      status: "active",
+    },
+    $inc: { loginCount: 1 },
+    $push: {
+      recentActivity: {
+        action: "login",
+        timestamp: new Date(),
+      },
+    },
+  }
+);
+
+// Update multiple documents
+db.products.updateMany(
+  { category: "Electronics", inStock: false },
+  {
+    $set: {
+      inStock: true,
+      lastRestocked: new Date(),
+    },
+    $inc: { quantity: 100 },
+  }
+);
+
+// Upsert operation (update or insert)
+db.inventory.updateOne(
+  { productId: "PROD123" },
+  {
+    $set: {
+      productName: "New Product",
+      quantity: 50,
+      lastUpdated: new Date(),
+    },
+    $inc: { version: 1 },
+  },
+  { upsert: true }
+);
+
+// Array update operations
+db.posts.updateOne(
+  { _id: ObjectId("...") },
+  {
+    $push: {
+      tags: { $each: ["tutorial", "advanced"] },
+      comments: {
+        author: "John Doe",
+        text: "Great article!",
+        date: new Date(),
+      },
+    },
+    $pull: { tags: "draft" },
+    $addToSet: { categories: "Technical" },
+  }
+);
+
+// Positional updates for array elements
+db.students.updateOne(
+  { "grades.subject": "Math" },
+  { $set: { "grades.$.score": 95 } }
+);
+
+// Update all array elements
+db.products.updateMany(
+  { "reviews.verified": false },
+  { $set: { "reviews.$[].verified": true } }
+);
+
+// Filtered array updates
+db.products.updateOne(
+  { _id: ObjectId("...") },
+  { $set: { "reviews.$[elem].helpful": true } },
+  { arrayFilters: [{ "elem.rating": { $gte: 4 } }] }
+);
+
+// Complex nested document updates
+db.users.updateOne(
+  { _id: ObjectId("...") },
+  {
+    $set: {
+      "profile.personal.firstName": "John",
+      "profile.personal.lastName": "Doe",
+      "profile.professional.title": "Senior Developer",
+    },
+    $unset: { "profile.temporary": "" },
+  }
+);
+```
+
+### Delete Operations
+
+```javascript title="Document deletion with various conditions"
+// Delete single document
+db.users.deleteOne({
+  email: "inactive@example.com",
+  lastLogin: { $lt: ISODate("2023-01-01") },
+});
+
+// Delete multiple documents
+db.logs.deleteMany({
+  level: "debug",
+  timestamp: { $lt: ISODate("2024-06-01") },
+});
+
+// Delete with complex conditions
+db.orders.deleteMany({
+  $and: [
+    { status: "cancelled" },
+    { orderDate: { $lt: ISODate("2024-01-01") } },
+    { refundProcessed: true },
+  ],
+});
+
+// Conditional deletion based on array content
+db.posts.deleteMany({
+  tags: { $in: ["spam", "inappropriate"] },
+  reportCount: { $gte: 5 },
+});
+
+// Safe deletion with result checking
+const deleteResult = db.tempData.deleteMany({
+  expiryDate: { $lt: new Date() },
+});
+
+if (deleteResult.deletedCount > 0) {
+  print(`Cleaned up ${deleteResult.deletedCount} expired records`);
+}
+
+// Remove specific array elements (not deleting documents)
+db.users.updateMany(
+  {},
+  {
+    $pull: {
+      notifications: {
+        read: true,
+        date: { $lt: ISODate("2024-06-01") },
+      },
+    },
+  }
+);
+```
+
+## Advanced Querying Techniques
+
+MongoDB provides sophisticated querying capabilities for complex data analysis, pattern matching, and real-time operations.
+
+### Aggregation Pipeline
+
+```javascript title="Multi-stage data processing and analytics"
+// Complex aggregation pipeline
+db.orders.aggregate([
+  // Stage 1: Match recent orders
+  {
+    $match: {
+      orderDate: { $gte: ISODate("2024-01-01") },
+      status: "completed",
+    },
+  },
+
+  // Stage 2: Unwind items array
+  {
+    $unwind: "$items",
+  },
+
+  // Stage 3: Lookup product details
+  {
+    $lookup: {
+      from: "products",
+      localField: "items.productId",
+      foreignField: "_id",
+      as: "productInfo",
+    },
+  },
+
+  // Stage 4: Add calculated fields
+  {
+    $addFields: {
+      itemTotal: {
+        $multiply: ["$items.quantity", "$items.price"],
+      },
+      productCategory: {
+        $arrayElemAt: ["$productInfo.category", 0],
+      },
+    },
+  },
+
+  // Stage 5: Group by category
+  {
+    $group: {
+      _id: "$productCategory",
+      totalRevenue: { $sum: "$itemTotal" },
+      orderCount: { $sum: 1 },
+      avgOrderValue: { $avg: "$itemTotal" },
+      topProducts: {
+        $push: {
+          productId: "$items.productId",
+          quantity: "$items.quantity",
+          revenue: "$itemTotal",
+        },
+      },
+    },
+  },
+
+  // Stage 6: Sort by revenue
+  {
+    $sort: { totalRevenue: -1 },
+  },
+
+  // Stage 7: Add percentage calculations
+  {
+    $group: {
+      _id: null,
+      categories: { $push: "$$ROOT" },
+      totalRevenue: { $sum: "$totalRevenue" },
+    },
+  },
+
+  {
+    $unwind: "$categories",
+  },
+
+  {
+    $project: {
+      _id: "$categories._id",
+      totalRevenue: "$categories.totalRevenue",
+      orderCount: "$categories.orderCount",
+      avgOrderValue: "$categories.avgOrderValue",
+      revenuePercentage: {
+        $multiply: [
+          { $divide: ["$categories.totalRevenue", "$totalRevenue"] },
+          100,
+        ],
+      },
+      topProducts: {
+        $slice: [
+          {
+            $sortArray: {
+              input: "$categories.topProducts",
+              sortBy: { revenue: -1 },
+            },
+          },
+          5,
+        ],
+      },
+    },
+  },
+]);
+
+// Time-based aggregation with date operators
+db.sales.aggregate([
+  {
+    $match: {
+      saleDate: {
+        $gte: ISODate("2024-01-01"),
+        $lt: ISODate("2025-01-01"),
+      },
+    },
+  },
+  {
+    $group: {
+      _id: {
+        year: { $year: "$saleDate" },
+        month: { $month: "$saleDate" },
+        day: { $dayOfMonth: "$saleDate" },
+      },
+      dailyRevenue: { $sum: "$amount" },
+      transactionCount: { $sum: 1 },
+      avgTransactionAmount: { $avg: "$amount" },
+    },
+  },
+  {
+    $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1 },
+  },
+]);
+
+// Advanced aggregation with conditional logic
+db.customers.aggregate([
+  {
+    $addFields: {
+      customerTier: {
+        $switch: {
+          branches: [
+            {
+              case: { $gte: ["$totalSpent", 10000] },
+              then: "Platinum",
+            },
+            {
+              case: { $gte: ["$totalSpent", 5000] },
+              then: "Gold",
+            },
+            {
+              case: { $gte: ["$totalSpent", 1000] },
+              then: "Silver",
+            },
+          ],
+          default: "Bronze",
+        },
+      },
+    },
+  },
+  {
+    $group: {
+      _id: "$customerTier",
+      count: { $sum: 1 },
+      avgSpent: { $avg: "$totalSpent" },
+      totalRevenue: { $sum: "$totalSpent" },
+    },
+  },
+]);
+```
+
+### Text Search and Indexing
+
+```javascript title="Full-text search capabilities and optimization"
+// Create text index
+db.articles.createIndex(
+  {
+    title: "text",
+    content: "text",
+    tags: "text",
+  },
+  {
+    weights: {
+      title: 10,
+      content: 5,
+      tags: 1,
+    },
+    name: "article_text_index",
+  }
+);
+
+// Basic text search
+db.articles
+  .find({
+    $text: {
+      $search: "mongodb database tutorial",
+    },
+  })
+  .sort({ score: { $meta: "textScore" } });
+
+// Advanced text search with scoring
+db.articles
+  .find(
+    {
+      $text: {
+        $search: '"mongodb tutorial" -beginner',
+        $language: "english",
+        $caseSensitive: false,
+        $diacriticSensitive: false,
+      },
+    },
+    {
+      title: 1,
+      content: 1,
+      score: { $meta: "textScore" },
+    }
+  )
+  .sort({ score: { $meta: "textScore" } });
+
+// Text search with additional filters
+db.products.find(
+  {
+    $and: [
+      { $text: { $search: "wireless bluetooth headphones" } },
+      { price: { $lt: 200 } },
+      { inStock: true },
+    ],
+  },
+  {
+    name: 1,
+    price: 1,
+    rating: 1,
+    score: { $meta: "textScore" },
+  }
+);
+
+// Aggregation with text search
+db.articles.aggregate([
+  {
+    $match: {
+      $text: { $search: "mongodb aggregation pipeline" },
+    },
+  },
+  {
+    $addFields: {
+      searchScore: { $meta: "textScore" },
+    },
+  },
+  {
+    $match: {
+      searchScore: { $gt: 0.5 },
+    },
+  },
+  {
+    $sort: { searchScore: -1 },
+  },
+  {
+    $limit: 10,
+  },
+]);
+```
+
+### Geospatial Queries
+
+```javascript title="Location-based queries and spatial analysis"
+// Create geospatial index
+db.locations.createIndex({ coordinates: "2dsphere" });
+
+// Find nearby locations
+db.restaurants.find({
+  location: {
+    $near: {
+      $geometry: {
+        type: "Point",
+        coordinates: [-74.0059, 40.7128], // NYC coordinates
+      },
+      $maxDistance: 1000, // 1km radius
+    },
+  },
+});
+
+// Find locations within a polygon
+db.stores.find({
+  location: {
+    $geoWithin: {
+      $geometry: {
+        type: "Polygon",
+        coordinates: [
+          [
+            [-74.0, 40.7],
+            [-74.0, 40.8],
+            [-73.9, 40.8],
+            [-73.9, 40.7],
+            [-74.0, 40.7],
+          ],
+        ],
+      },
+    },
+  },
+});
+
+// Geospatial aggregation
+db.deliveries.aggregate([
+  {
+    $geoNear: {
+      near: {
+        type: "Point",
+        coordinates: [-74.0059, 40.7128],
+      },
+      distanceField: "distance",
+      maxDistance: 5000,
+      spherical: true,
+    },
+  },
+  {
+    $group: {
+      _id: {
+        $floor: { $divide: ["$distance", 1000] },
+      },
+      count: { $sum: 1 },
+      avgDeliveryTime: { $avg: "$deliveryTimeMinutes" },
+    },
+  },
+]);
+
+// Find intersecting areas
+db.zones.find({
+  area: {
+    $geoIntersects: {
+      $geometry: {
+        type: "Point",
+        coordinates: [-74.0059, 40.7128],
+      },
+    },
+  },
+});
+```
+
+## Real-World MQL Applications
+
+Practical examples demonstrate MongoDB's effectiveness across various industries and complex use cases.
+
+### Content Management System
+
+```javascript title="Dynamic content querying and management"
+// Complex content queries with multiple criteria
+db.articles
+  .find({
+    $and: [
+      { published: true },
+      { publishDate: { $lte: new Date() } },
+      {
+        $or: [
+          { featured: true },
+          {
+            $and: [{ viewCount: { $gte: 1000 } }, { rating: { $gte: 4.0 } }],
+          },
+        ],
+      },
+      { "author.verified": true },
+      { tags: { $in: ["technology", "tutorial", "guide"] } },
+    ],
+  })
+  .sort({
+    featured: -1,
+    publishDate: -1,
+    viewCount: -1,
+  })
+  .limit(20);
+
+// Content aggregation for homepage
+db.articles.aggregate([
+  {
+    $match: {
+      published: true,
+      publishDate: { $lte: new Date() },
+    },
+  },
+  {
+    $lookup: {
+      from: "authors",
+      localField: "authorId",
+      foreignField: "_id",
+      as: "authorDetails",
+    },
+  },
+  {
+    $lookup: {
+      from: "categories",
+      localField: "categoryId",
+      foreignField: "_id",
+      as: "categoryInfo",
+    },
+  },
+  {
+    $addFields: {
+      author: { $arrayElemAt: ["$authorDetails", 0] },
+      category: { $arrayElemAt: ["$categoryInfo", 0] },
+      engagementScore: {
+        $add: [
+          { $multiply: ["$viewCount", 0.4] },
+          { $multiply: ["$likeCount", 0.3] },
+          { $multiply: ["$commentCount", 0.3] },
+        ],
+      },
+    },
+  },
+  {
+    $group: {
+      _id: "$category.name",
+      articles: {
+        $push: {
+          _id: "$_id",
+          title: "$title",
+          excerpt: "$excerpt",
+          author: "$author.name",
+          publishDate: "$publishDate",
+          engagementScore: "$engagementScore",
+          featured: "$featured",
+        },
+      },
+      totalArticles: { $sum: 1 },
+      avgEngagement: { $avg: "$engagementScore" },
+    },
+  },
+  {
+    $project: {
+      _id: 1,
+      totalArticles: 1,
+      avgEngagement: 1,
+      topArticles: {
+        $slice: [
+          {
+            $sortArray: {
+              input: "$articles",
+              sortBy: { engagementScore: -1 },
+            },
+          },
+          5,
+        ],
+      },
+      featuredArticles: {
+        $filter: {
+          input: "$articles",
+          cond: { $eq: ["$$this.featured", true] },
+        },
+      },
+    },
+  },
+]);
+
+// Dynamic search with faceting
+db.articles.aggregate([
+  {
+    $match: {
+      $text: { $search: "mongodb database tutorial" },
+      published: true,
+    },
+  },
+  {
+    $facet: {
+      articles: [
+        { $sort: { score: { $meta: "textScore" } } },
+        { $limit: 20 },
+        {
+          $project: {
+            title: 1,
+            excerpt: 1,
+            author: 1,
+            publishDate: 1,
+            tags: 1,
+            score: { $meta: "textScore" },
+          },
+        },
+      ],
+      categoryFacets: [
+        {
+          $group: {
+            _id: "$category",
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { count: -1 } },
+      ],
+      authorFacets: [
+        {
+          $group: {
+            _id: "$author.name",
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { count: -1 } },
+        { $limit: 10 },
+      ],
+      tagFacets: [
+        { $unwind: "$tags" },
+        {
+          $group: {
+            _id: "$tags",
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { count: -1 } },
+        { $limit: 15 },
+      ],
+    },
+  },
+]);
+```
+
+### E-commerce Analytics
+
+```javascript title="Advanced e-commerce data analysis and insights"
+// Customer behavior analysis
+db.orders.aggregate([
+  {
+    $match: {
+      orderDate: {
+        $gte: ISODate("2024-01-01"),
+        $lt: ISODate("2024-07-01"),
+      },
+    },
+  },
+  {
+    $lookup: {
+      from: "customers",
+      localField: "customerId",
+      foreignField: "_id",
+      as: "customer",
+    },
+  },
+  {
+    $unwind: "$customer",
+  },
+  {
+    $unwind: "$items",
+  },
+  {
+    $lookup: {
+      from: "products",
+      localField: "items.productId",
+      foreignField: "_id",
+      as: "product",
+    },
+  },
+  {
+    $unwind: "$product",
+  },
+  {
+    $group: {
+      _id: {
+        customerId: "$customerId",
+        customerSegment: "$customer.segment",
+        productCategory: "$product.category",
+      },
+      totalSpent: {
+        $sum: { $multiply: ["$items.quantity", "$items.price"] },
+      },
+      itemsPurchased: { $sum: "$items.quantity" },
+      orderCount: { $sum: 1 },
+      avgOrderValue: { $avg: "$totalAmount" },
+      firstPurchase: { $min: "$orderDate" },
+      lastPurchase: { $max: "$orderDate" },
+    },
+  },
+  {
+    $group: {
+      _id: {
+        customerSegment: "$_id.customerSegment",
+        productCategory: "$_id.productCategory",
+      },
+      customerCount: { $sum: 1 },
+      totalRevenue: { $sum: "$totalSpent" },
+      avgSpentPerCustomer: { $avg: "$totalSpent" },
+      avgOrdersPerCustomer: { $avg: "$orderCount" },
+      avgItemsPerCustomer: { $avg: "$itemsPurchased" },
+    },
+  },
+  {
+    $sort: { totalRevenue: -1 },
+  },
+]);
+
+// Product recommendation engine data
+db.userInteractions.aggregate([
+  {
+    $match: {
+      timestamp: { $gte: ISODate("2024-06-01") },
+      action: { $in: ["view", "purchase", "add_to_cart"] },
+    },
+  },
+  {
+    $group: {
+      _id: {
+        userId: "$userId",
+        productId: "$productId",
+      },
+      interactions: {
+        $push: {
+          action: "$action",
+          timestamp: "$timestamp",
+          sessionId: "$sessionId",
+        },
+      },
+      viewCount: {
+        $sum: { $cond: [{ $eq: ["$action", "view"] }, 1, 0] },
+      },
+      cartAddCount: {
+        $sum: { $cond: [{ $eq: ["$action", "add_to_cart"] }, 1, 0] },
+      },
+      purchaseCount: {
+        $sum: { $cond: [{ $eq: ["$action", "purchase"] }, 1, 0] },
+      },
+    },
+  },
+  {
+    $addFields: {
+      interactionScore: {
+        $add: [
+          { $multiply: ["$viewCount", 1] },
+          { $multiply: ["$cartAddCount", 5] },
+          { $multiply: ["$purchaseCount", 10] },
+        ],
+      },
+    },
+  },
+  {
+    $lookup: {
+      from: "products",
+      localField: "_id.productId",
+      foreignField: "_id",
+      as: "product",
+    },
+  },
+  {
+    $unwind: "$product",
+  },
+  {
+    $group: {
+      _id: "$_id.userId",
+      preferences: {
+        $push: {
+          productId: "$_id.productId",
+          category: "$product.category",
+          brand: "$product.brand",
+          score: "$interactionScore",
+        },
+      },
+      topCategories: {
+        $push: {
+          category: "$product.category",
+          score: "$interactionScore",
+        },
+      },
+    },
+  },
+]);
+
+// Inventory optimization analysis
+db.products.aggregate([
+  {
+    $lookup: {
+      from: "orderItems",
+      localField: "_id",
+      foreignField: "productId",
+      pipeline: [
+        {
+          $match: {
+            orderDate: {
+              $gte: ISODate("2024-01-01"),
+            },
+          },
+        },
+      ],
+      as: "sales",
+    },
+  },
+  {
+    $addFields: {
+      totalSold: {
+        $sum: "$sales.quantity",
+      },
+      salesVelocity: {
+        $divide: [{ $sum: "$sales.quantity" }, { $dayOfYear: new Date() }],
+      },
+      daysOfInventory: {
+        $cond: {
+          if: { $gt: ["$salesVelocity", 0] },
+          then: { $divide: ["$currentStock", "$salesVelocity"] },
+          else: 9999,
+        },
+      },
+    },
+  },
+  {
+    $addFields: {
+      stockStatus: {
+        $switch: {
+          branches: [
+            {
+              case: { $lte: ["$daysOfInventory", 7] },
+              then: "Critical",
+            },
+            {
+              case: { $lte: ["$daysOfInventory", 14] },
+              then: "Low",
+            },
+            {
+              case: { $lte: ["$daysOfInventory", 30] },
+              then: "Normal",
+            },
+          ],
+          default: "Overstocked",
+        },
+      },
+    },
+  },
+  {
+    $group: {
+      _id: "$stockStatus",
+      products: {
+        $push: {
+          productId: "$_id",
+          name: "$name",
+          currentStock: "$currentStock",
+          daysOfInventory: "$daysOfInventory",
+          salesVelocity: "$salesVelocity",
+        },
+      },
+      totalProducts: { $sum: 1 },
+      totalValue: {
+        $sum: { $multiply: ["$currentStock", "$cost"] },
+      },
+    },
+  },
+]);
+```
+
+### IoT and Time-Series Data
+
+```javascript title="High-performance sensor data analysis"
+// Real-time sensor data aggregation
+db.sensorReadings.aggregate([
+  {
+    $match: {
+      timestamp: {
+        $gte: new Date(Date.now() - 3600000), // Last hour
+      },
+      deviceStatus: "active",
+    },
+  },
+  {
+    $group: {
+      _id: {
+        deviceId: "$deviceId",
+        minute: {
+          $dateToString: {
+            format: "%Y-%m-%d %H:%M",
+            date: "$timestamp",
+          },
+        },
+      },
+      avgTemperature: { $avg: "$sensors.temperature" },
+      avgHumidity: { $avg: "$sensors.humidity" },
+      avgPressure: { $avg: "$sensors.pressure" },
+      minTemperature: { $min: "$sensors.temperature" },
+      maxTemperature: { $max: "$sensors.temperature" },
+      readingCount: { $sum: 1 },
+      anomalies: {
+        $sum: {
+          $cond: [
+            {
+              $or: [
+                { $gt: ["$sensors.temperature", 40] },
+                { $lt: ["$sensors.temperature", -10] },
+                { $gt: ["$sensors.humidity", 95] },
+                { $lt: ["$sensors.humidity", 5] },
+              ],
+            },
+            1,
+            0,
+          ],
+        },
+      },
+    },
+  },
+  {
+    $addFields: {
+      tempVariance: {
+        $subtract: ["$maxTemperature", "$minTemperature"],
+      },
+      anomalyRate: {
+        $divide: ["$anomalies", "$readingCount"],
+      },
+    },
+  },
+  {
+    $match: {
+      $or: [{ anomalyRate: { $gt: 0.1 } }, { tempVariance: { $gt: 10 } }],
+    },
+  },
+  {
+    $sort: { "_id.minute": -1 },
+  },
+]);
+
+// Device health monitoring
+db.devices.aggregate([
+  {
+    $lookup: {
+      from: "sensorReadings",
+      let: { deviceId: "$_id" },
+      pipeline: [
+        {
+          $match: {
+            $expr: { $eq: ["$deviceId", "$$deviceId"] },
+            timestamp: {
+              $gte: new Date(Date.now() - 86400000), // Last 24 hours
+            },
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            lastReading: { $max: "$timestamp" },
+            readingCount: { $sum: 1 },
+            avgBatteryLevel: { $avg: "$batteryLevel" },
+            minBatteryLevel: { $min: "$batteryLevel" },
+            avgSignalStrength: { $avg: "$signalStrength" },
+            errorCount: {
+              $sum: {
+                $cond: [{ $ifNull: ["$error", false] }, 1, 0],
+              },
+            },
+          },
+        },
+      ],
+      as: "healthMetrics",
+    },
+  },
+  {
+    $unwind: {
+      path: "$healthMetrics",
+      preserveNullAndEmptyArrays: true,
+    },
+  },
+  {
+    $addFields: {
+      minutesSinceLastReading: {
+        $divide: [
+          {
+            $subtract: [
+              new Date(),
+              { $ifNull: ["$healthMetrics.lastReading", new Date(0)] },
+            ],
+          },
+          60000,
+        ],
+      },
+      healthScore: {
+        $multiply: [
+          {
+            $add: [
+              {
+                $cond: [{ $lt: ["$healthMetrics.avgBatteryLevel", 20] }, 0, 25],
+              },
+              {
+                $cond: [
+                  { $lt: ["$healthMetrics.avgSignalStrength", -80] },
+                  0,
+                  25,
+                ],
+              },
+              { $cond: [{ $gt: ["$healthMetrics.errorCount", 5] }, 0, 25] },
+              {
+                $cond: [
+                  {
+                    $gt: [{ $ifNull: ["$minutesSinceLastReading", 9999] }, 60],
+                  },
+                  0,
+                  25,
+                ],
+              },
+            ],
+          },
+          1,
+        ],
+      },
+    },
+  },
+  {
+    $addFields: {
+      deviceStatus: {
+        $switch: {
+          branches: [
+            { case: { $gte: ["$healthScore", 75] }, then: "Healthy" },
+            { case: { $gte: ["$healthScore", 50] }, then: "Warning" },
+            { case: { $gte: ["$healthScore", 25] }, then: "Critical" },
+          ],
+          default: "Offline",
+        },
+      },
+    },
+  },
+  {
+    $sort: { healthScore: 1 },
+  },
+]);
+
+// Predictive maintenance analysis
+db.equipmentLogs.aggregate([
+  {
+    $match: {
+      timestamp: {
+        $gte: new Date(Date.now() - 2592000000), // Last 30 days
+      },
+    },
+  },
+  {
+    $group: {
+      _id: {
+        equipmentId: "$equipmentId",
+        day: {
+          $dateToString: {
+            format: "%Y-%m-%d",
+            date: "$timestamp",
+          },
+        },
+      },
+      operatingHours: { $sum: "$operatingMinutes" },
+      avgVibration: { $avg: "$sensors.vibration" },
+      avgTemperature: { $avg: "$sensors.temperature" },
+      maxVibration: { $max: "$sensors.vibration" },
+      maxTemperature: { $max: "$sensors.temperature" },
+      maintenanceEvents: {
+        $sum: { $cond: ["$maintenancePerformed", 1, 0] },
+      },
+    },
+  },
+  {
+    $group: {
+      _id: "$_id.equipmentId",
+      dailyMetrics: {
+        $push: {
+          date: "$_id.day",
+          operatingHours: "$operatingHours",
+          avgVibration: "$avgVibration",
+          avgTemperature: "$avgTemperature",
+          maxVibration: "$maxVibration",
+          maxTemperature: "$maxTemperature",
+        },
+      },
+      totalOperatingHours: { $sum: "$operatingHours" },
+      avgDailyVibration: { $avg: "$avgVibration" },
+      avgDailyTemperature: { $avg: "$avgTemperature" },
+      peakVibration: { $max: "$maxVibration" },
+      peakTemperature: { $max: "$maxTemperature" },
+      totalMaintenanceEvents: { $sum: "$maintenanceEvents" },
+    },
+  },
+  {
+    $addFields: {
+      vibrationTrend: {
+        $let: {
+          vars: {
+            recent: {
+              $slice: ["$dailyMetrics", -7],
+            },
+            older: {
+              $slice: ["$dailyMetrics", 0, 7],
+            },
+          },
+          in: {
+            $subtract: [
+              { $avg: "$$recent.avgVibration" },
+              { $avg: "$$older.avgVibration" },
+            ],
+          },
+        },
+      },
+      temperatureTrend: {
+        $let: {
+          vars: {
+            recent: {
+              $slice: ["$dailyMetrics", -7],
+            },
+            older: {
+              $slice: ["$dailyMetrics", 0, 7],
+            },
+          },
+          in: {
+            $subtract: [
+              { $avg: "$$recent.avgTemperature" },
+              { $avg: "$$older.avgTemperature" },
+            ],
+          },
+        },
+      },
+    },
+  },
+  {
+    $addFields: {
+      riskScore: {
+        $add: [
+          { $cond: [{ $gt: ["$vibrationTrend", 0.5] }, 30, 0] },
+          { $cond: [{ $gt: ["$temperatureTrend", 5] }, 25, 0] },
+          { $cond: [{ $gt: ["$peakVibration", 10] }, 20, 0] },
+          { $cond: [{ $gt: ["$peakTemperature", 80] }, 15, 0] },
+          { $cond: [{ $gt: ["$totalOperatingHours", 2000] }, 10, 0] },
+        ],
+      },
+    },
+  },
+  {
+    $match: {
+      riskScore: { $gte: 20 },
+    },
+  },
+  {
+    $sort: { riskScore: -1 },
+  },
+]);
+```
+
+## Performance Optimization and Best Practices
+
+### Index Strategy and Query Optimization
+
+```javascript title="Strategic indexing for optimal query performance"
+// Compound index for common query patterns
+db.users.createIndex(
+  {
+    department: 1,
+    status: 1,
+    createdAt: -1,
+  },
+  {
+    name: "dept_status_created_idx",
+    background: true,
+  }
+);
+
+// Partial index for active users only
+db.users.createIndex(
+  { email: 1 },
+  {
+    partialFilterExpression: { status: "active" },
+    unique: true,
+    name: "active_users_email_idx",
+  }
+);
+
+// Sparse index for optional fields
+db.users.createIndex(
+  { socialSecurityNumber: 1 },
+  {
+    sparse: true,
+    name: "ssn_sparse_idx",
+  }
+);
+
+// TTL index for automatic document expiration
+db.sessions.createIndex(
+  { expiryDate: 1 },
+  {
+    expireAfterSeconds: 0,
+    name: "session_ttl_idx",
+  }
+);
+
+// Multikey index for arrays
+db.products.createIndex(
+  { tags: 1, category: 1 },
+  { name: "tags_category_idx" }
+);
+
+// Query performance analysis
+db.orders
+  .find({
+    "customer.tier": "premium",
+    orderDate: {
+      $gte: ISODate("2024-01-01"),
+    },
+    status: "completed",
+  })
+  .explain("executionStats");
+
+// Index usage monitoring
+db.products.aggregate([{ $indexStats: {} }]);
+
+// Query optimization with hint
+db.users
+  .find({
+    department: "Engineering",
+    status: "active",
+  })
+  .hint({ department: 1, status: 1, createdAt: -1 });
+
+// Covered query optimization
+db.users
+  .find(
+    {
+      department: "Sales",
+      status: "active",
+    },
+    {
+      name: 1,
+      email: 1,
+      _id: 0,
+    }
+  )
+  .hint({ department: 1, status: 1, name: 1, email: 1 });
+```
+
+### Query Performance Patterns
+
+```javascript title="Efficient query patterns and anti-patterns"
+// Efficient pagination with range queries
+// GOOD: Using indexed field for pagination
+db.products
+  .find({
+    _id: { $gt: ObjectId("last_seen_id") },
+    category: "Electronics",
+  })
+  .sort({ _id: 1 })
+  .limit(20);
+
+// AVOID: Skip-based pagination for large offsets
+// db.products.find({ category: "Electronics" })
+//   .skip(10000).limit(20)
+
+// Efficient date range queries
+// GOOD: Compound index supports this query
+db.orders
+  .find({
+    customerId: "CUST123",
+    orderDate: {
+      $gte: ISODate("2024-01-01"),
+      $lt: ISODate("2024-07-01"),
+    },
+  })
+  .sort({ orderDate: -1 });
+
+// Batch operations for bulk updates
+// GOOD: Bulk write for multiple operations
+db.products.bulkWrite(
+  [
+    {
+      updateOne: {
+        filter: { _id: ObjectId("...") },
+        update: { $inc: { viewCount: 1 } },
+      },
+    },
+    {
+      updateOne: {
+        filter: { _id: ObjectId("...") },
+        update: { $set: { lastViewed: new Date() } },
+      },
+    },
+  ],
+  { ordered: false }
+);
+
+// Efficient array queries
+// GOOD: Query specific array elements
+db.posts.find({
+  "comments.author": "john_doe",
+  "comments.approved": true,
+});
+
+// Aggregation optimization
+// GOOD: Filter early in pipeline
+db.orders.aggregate([
+  {
+    $match: {
+      orderDate: { $gte: ISODate("2024-01-01") },
+      status: "completed",
+    },
+  },
+  {
+    $lookup: {
+      from: "customers",
+      localField: "customerId",
+      foreignField: "_id",
+      as: "customer",
+    },
+  },
+  {
+    $unwind: "$customer",
+  },
+  {
+    $group: {
+      _id: "$customer.segment",
+      totalRevenue: { $sum: "$total" },
+    },
+  },
+]);
+
+// Memory-efficient cursor operations
+const cursor = db.largeCollection
+  .find({
+    status: "active",
+  })
+  .batchSize(100);
+
+while (cursor.hasNext()) {
+  const doc = cursor.next();
+  // Process document
+  processDocument(doc);
+}
+```
+
+<BackToTop />
