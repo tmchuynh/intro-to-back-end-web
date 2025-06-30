@@ -35,141 +35,220 @@ export const chapters = [
     ctaText: "Start Here",
   },
   {
-    href: "/fund-foundation",
-    title: "Web Server Fundamentals",
-    description: "HTTP protocol, RESTful services, and API design basics.",
-    bgColor: "secondary",
-    icon: FaNetworkWired,
-    ctaText: "Learn Servers",
-  },
-  {
-    href: "/db-version-control-fundamentals",
-    title: "Version Control",
-    description:
-      "Git fundamentals, branching strategies, and collaborative development.",
-    bgColor: "tertiary",
-    icon: FaGitAlt,
-    ctaText: "Master Git",
-  },
-  {
     href: "/fund-back-end-architecture",
     title: "Back-end Architecture",
-    description: "System design, scalability, and architectural patterns.",
-    bgColor: "accent",
-    icon: FaTools,
-    ctaText: "Build Architecture",
-  },
-  {
-    href: "/adv-software-principles",
-    title: "Software Design Principles",
-    description: "SOLID principles, design patterns, and clean code practices.",
-    bgColor: "tertiary",
+    description:
+      "Understanding client-server communication and back-end responsibilities.",
+    bgColor: "secondary",
     icon: FaCogs,
-    ctaText: "Code Better",
+    ctaText: "Learn Architecture",
   },
   {
-    href: "/db-getting-started-with-database-design",
-    title: "Database Design",
-    description: "Schema design, normalization, and relationship modeling.",
+    href: "/db-data-storage/caching-strategies",
+    title: "Caching Strategies",
+    description:
+      "Implementing caching mechanisms to improve performance and scalability.",
+    bgColor: "tertiary",
+    icon: FaBolt,
+    ctaText: "Explore Caching",
+  },
+  {
+    href: "/fund-foundation/API-design",
+    title: "API Design",
+    description:
+      "Designing RESTful APIs, understanding HTTP methods, and best practices.",
+    bgColor: "primary",
+    icon: FaNetworkWired,
+    ctaText: "Learn API Design",
+  },
+  {
+    href: "/fund-foundation/http-protocol",
+    title: "HTTP Protocol",
+    description:
+      "Deep dive into HTTP protocol, status codes, and request/response lifecycle.",
+    bgColor: "secondary",
+    icon: FaCode,
+    ctaText: "Understand HTTP",
+  },
+  {
+    href: "/fund-foundation/web-server-basics",
+    title: "Web Server Basics",
+    description:
+      "Setting up and configuring web servers, understanding server-side rendering.",
+    bgColor: "tertiary",
+    icon: FaServer,
+    ctaText: "Web Server Setup",
+  },
+  {
+    href: "/fund-foundation/RESTful-services",
+    title: "RESTful Services",
+    description:
+      "Building RESTful services, understanding resource representation and statelessness.",
+    bgColor: "primary",
+    icon: FaRocket,
+    ctaText: "Build RESTful APIs",
+  },
+  {
+    href: "/db-getting-started-with-database-design/fundamentals",
+    title: "Database Design Fundamentals",
+    description:
+      "Getting started with database design, normalization, and relationships.",
     bgColor: "secondary",
     icon: FaDatabase,
-    ctaText: "Design Schemas",
+    ctaText: "Learn Database Design",
   },
   {
-    href: "/db-transaction-models",
-    title: "ACID & BASE",
-    description: "Transaction management, consistency models, and properties.",
+    href: "/db-getting-started-with-database-design/normalization-and-relationships",
+    title: "Normalization and Relationships",
+    description:
+      "Understanding normalization, relationships, and schema design principles.",
+    bgColor: "tertiary",
+    icon: FaDatabase,
+    ctaText: "Explore Normalization",
+  },
+  {
+    href: "/db-getting-started-with-database-design/schema-design",
+    title: "Schema Design",
+    description:
+      "Creating efficient database schemas, indexing, and query optimization.",
+    bgColor: "primary",
+    icon: SiMysql,
+    ctaText: "Design Database Schemas",
+  },
+  {
+    href: "/db-getting-started-with-database-design/schema-migration",
+    title: "Schema Migration",
+    description:
+      "Managing schema changes, migrations, and version control for databases.",
     bgColor: "secondary",
-    icon: FaBolt,
-    ctaText: "Understand Transactions",
+    icon: FaTools,
+    ctaText: "Manage Database Migrations",
   },
   {
-    href: "/db-different-databases-and-their-foundational-concepts",
-    title: "Database Types",
-    description: "Relational, NoSQL, GraphQL, and selection criteria.",
+    href: "/db-relational-databases",
+    title: "Relational Databases",
+    description:
+      "Exploring relational databases, SQL, and data integrity constraints.",
+    bgColor: "tertiary",
+    icon: FaDatabase,
+    ctaText: "Learn about Relational Databases",
+  },
+  {
+    href: "/db-non-relational-databases",
+    title: "Non-Relational Databases",
+    description:
+      "Understanding NoSQL databases, document stores, and key-value stores.",
+    bgColor: "primary",
+    icon: SiGraphql,
+    ctaText: "Explore NoSQL Databases",
+  },
+  {
+    href: "/db-object-relational-mappers-fundamentals",
+    title: "Object Relational Mappers (ORMs)",
+    description: "Introduction to ORMs, benefits, and popular ORM frameworks.",
+    bgColor: "secondary",
+    icon: FaCode,
+    ctaText: "Learn about ORMs",
+
+  },
+  {
+    href: "/db-transaction-models/introduction-to-ACID-and-BASE",
+    title: "ACID and BASE Consistency Models",
+    description:
+      "Understanding ACID properties, BASE model, and transaction management.",
+    bgColor: "tertiary",
+    icon: FaCheckCircle,
+    ctaText: "Understand ACID/BASE",
+  },
+  {
+    href: "/db-transaction-models/consistency-models",
+    title: "Consistency Models",
+    description:
+      "Exploring different consistency models, including eventual consistency.",
+    bgColor: "primary",
+    icon: FaShieldAlt,
+    ctaText: "Learn Consistency Models",
+  },
+  {
+    href: "/db-transaction-models/transaction-management",
+    title: "Transaction Management",
+    description:
+      "Managing transactions, isolation levels, and concurrency control.",
+    bgColor: "secondary",
+    icon: FaLock,
+    ctaText: "Manage Transactions",
+  },
+  {
+    href: "/db-transaction-models/concurrency-control",
+    title: "Concurrency Control",
+    description:
+      "Techniques for managing concurrent transactions and preventing conflicts.",
+    bgColor: "tertiary",
+    icon: FaTachometerAlt,
+    ctaText: "Master Control Concurrency",
+  },
+  {
+    href: "/db-data-storage/storage-systems",
+    title: "Storage Systems",
+    description:
+      "Understanding storage systems, file systems, and data management strategies.",
     bgColor: "primary",
     icon: FaDatabase,
-    ctaText: "Choose Databases",
+    ctaText: "Explore Storage Systems",
   },
   {
-    href: "/sql-mySQL",
-    title: "MySQL",
-    description: "Query optimization, indexing, and administration.",
-    bgColor: "secondary",
-    icon: SiMysql,
-    ctaText: "Master MySQL",
-  },
-  {
-    href: "/nosql-mongoDB",
-    title: "MongoDB",
-    description: "NoSQL database fundamentals, schema design, and queries.",
-    bgColor: "tertiary",
-    icon: FaDatabase,
-    ctaText: "Learn MongoDB",
-  },
-  {
-    href: "/nosql-redis",
-    title: "Redis",
-    description: "In-memory data structure store, caching, and pub/sub.",
+    href: "/db-different-databases-and-their-foundational-concepts/data-warehouses-and-data-lakes",
+    title: "Data Warehouses & Data Lakes",
+    description:
+      "Exploring storage systems, data warehouses, and data lakes for big data.",
     bgColor: "secondary",
     icon: FaDatabase,
-    ctaText: "Use Redis",
+    ctaText: "Learn Data Warehousing",
   },
   {
-    href: "/db-data-storage",
-    title: "Data Storage",
-    description: "Storage systems, file systems, and caching strategies.",
-    bgColor: "sidebar-active-text",
-    icon: FaServer,
-    ctaText: "Store Data",
-  },
-  {
-    href: "/spec-graphQL",
-    title: "GraphQL",
-    description: "Schema definition, resolvers, and API implementation.",
-    bgColor: "sidebar-text",
-    icon: SiGraphql,
-    ctaText: "Query Efficiently",
-  },
-  {
-    href: "/adv-docker",
-    title: "Docker",
-    description: "Docker fundamentals, containerization, and deployment.",
-    bgColor: "secondary",
-    icon: FaDocker,
-    ctaText: "Containerize",
-  },
-  {
-    href: "/adv-kubernetes",
-    title: "Kubernetes",
-    description: "Container orchestration, scaling, and management.",
+    href: "/db-data-storage/data-recovery",
+    title: "Data Recovery, In-Memory, Embedded, Time Series, Search Engines",
+    description:
+      "Understanding data recovery, in-memory databases, embedded systems, time series databases, and search engines.",
     bgColor: "tertiary",
-    icon: FaDocker,
-    ctaText: "Orchestrate",
+    icon: FaDatabase,
+    ctaText: "Explore Data Storage",
   },
   {
-    href: "/adv-quality-security-performance",
-    title: "Testing",
-    description: "Unit, integration, performance testing, and automation.",
-    bgColor: "accent",
-    icon: FaVial,
-    ctaText: "Test Everything",
+    href: "/db-different-databases-and-their-foundational-concepts/in-memory",
+    title: "In-Memory Databases",
+    description:
+      "Exploring in-memory databases, their use cases, and performance benefits.",
+    bgColor: "primary",
+    icon: FaDatabase,
+    ctaText: "Learn In-Memory Databases",
   },
   {
-    href: "/adv-quality-security-performance",
-    title: "Security",
-    description: "Authentication, authorization, and security best practices.",
+    href: "/db-different-databases-and-their-foundational-concepts/embedded",
+    title: "Embedded Databases",
+    description:
+      "Understanding embedded databases, their applications, and integration.",
     bgColor: "secondary",
-    icon: FaShieldAlt,
-    ctaText: "Secure Apps",
+    icon: FaDatabase,
+    ctaText: "Explore Embedded Databases",
   },
   {
-    href: "/adv-quality-security-performance",
-    title: "Performance",
-    description: "Optimization, scalability, monitoring, and load balancing.",
-    bgColor: "sidebar-text",
-    icon: FaTachometerAlt,
-    ctaText: "Optimize Performance",
+    href: "/db-different-databases-and-their-foundational-concepts/time-series",
+    title: "Time Series Databases",
+    description:
+      "Exploring time series databases, their structure, and use cases in analytics.",
+    bgColor: "tertiary",
+    icon: FaDatabase,
+    ctaText: "Learn Time Series Databases",
+  },
+  {
+    href: "/db-different-databases-and-their-foundational-concepts/search-engines",
+    title: "Search Engines",
+    description:
+      "Understanding search engines, indexing, and full-text search capabilities.",
+    bgColor: "primary",
+    icon: FaDatabase,
+    ctaText: "Explore Search Engines",
   },
 ];
 
@@ -202,16 +281,16 @@ They will be in the following format:
 
 ### Immediate Actions
 
-| Priority   | Action                                                                                                               | Purpose              |
-| ---------- | -------------------------------------------------------------------------------------------------------------------- | -------------------- |
-| **High**   | [Learn about relational databases](/sql-introduction-to-relational-databases)     | Getting familiar with relational databases |
-| **Medium** | [Reviewing Version Control](/db-version-control-fundamentals)                                       | Essential tooling    |
-| **Low**    | [Explore specific database categories](/db-different-databases-and-their-foundational-concepts) | Practical experience |
+| Priority   | Action                                                                                          | Purpose                                    |
+| ---------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| **High**   | [Learn about relational databases](/sql-introduction-to-relational-databases)                   | Getting familiar with relational databases |
+| **Medium** | [Reviewing Version Control](/db-version-control-fundamentals)                                   | Essential tooling                          |
+| **Low**    | [Explore specific database categories](/db-different-databases-and-their-foundational-concepts) | Practical experience                       |
 
 ### Optional Actions
 
-| Action                                                                                                            | Purpose         |
-| ----------------------------------------------------------------------------------------------------------------- | --------------- |
+| Action                                                                         | Purpose         |
+| ------------------------------------------------------------------------------ | --------------- |
 | [Explore Git and GitHub Tools and Resources](/db-version-control-fundamentals) | Practical tools |
 
 </blockquote>
@@ -220,7 +299,7 @@ At any point, you can revisit this curriculum page to see the entire course outl
 
 This structured approach helps you avoid the overwhelm that often comes with trying to navigate the vast sea of online resources alone. By following a clear, thoughtfully designed progression, you can stay focused, motivated, and confident that you’re investing your time effectively in building practical, job-ready skills.
 
-##### NOTE 
+##### NOTE
 
 > The "Next Steps" sections will assume you are following the course in order, so they will always point to the next logical topic based on the current module. If you choose to skip around, you may need to adjust your path accordingly.
 
@@ -233,7 +312,7 @@ Follow our structured learning path designed to build your back-end skills progr
       <Link
         key={chapter.href}
         href={chapter.href}
-        className="group flex flex-col justify-between text-foreground hover:shadow-lg p-4 border border-gray-200 dark:border-gray-700 rounded-lg no-underline transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600"
+        className="group flex flex-col justify-between text-foreground hover:shadow-lg p-4 border  rounded-lg no-underline transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600"
       >
         <div
           className="flex items-center justify-center mb-3 rounded-lg h-10 w-10"
@@ -265,98 +344,98 @@ Beyond the main curriculum, we provide supplementary resources to enhance your l
 <div className="gap-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mt-6">
   <Link
     href="/db-version-control-fundamentals"
-    className="group flex items-center  hover:shadow-md shadow-sm p-4 border border-gray-200 dark:border-gray-700 rounded-lg no-underline transition-all duration-200"
+    className="group flex items-center  hover:shadow-md shadow-sm p-4 border  rounded-lg no-underline transition-all duration-200"
   >
     <div className="flex items-center justify-center bg-accent text-background mr-3 rounded-lg h-10 w-10">
       <FaGitAlt className="h-5 w-5 " />
     </div>
     <div>
-      <h4 className="font-semibold text-gray-900 text-sm dark:text-white">Version Control</h4>
-      <p className="text-gray-600 text-xs dark:text-gray-400">Git fundamentals and collaborative development</p>
+      <h4 className="font-semibold  text-sm ">Version Control</h4>
+      <p >Git fundamentals and collaborative development</p>
     </div>
-    <FaChevronRight className="ml-auto h-4 w-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300" />
+    <FaChevronRight className="ml-auto h-4 w-4 " />
   </Link>
   
   <Link
     href="/db-different-databases-and-their-foundational-concepts"
-    className="group flex items-center  hover:shadow-md p-4 border border-gray-200 dark:border-gray-700 rounded-lg no-underline transition-all duration-200"
+    className="group flex items-center  hover:shadow-md p-4 border  rounded-lg no-underline transition-all duration-200"
   >
     <div className="flex items-center justify-center bg-primary text-background mr-3 rounded-lg h-10 w-10">
       <FaDatabase className="h-5 w-5 " />
     </div>
     <div>
-      <h4 className="font-semibold text-gray-900 text-sm dark:text-white">Database Technologies</h4>
-      <p className="text-gray-600 text-xs dark:text-gray-400">Relational, NoSQL, and data management systems</p>
+      <h4 className="font-semibold  text-sm ">Database Technologies</h4>
+      <p >Relational, NoSQL, and data management systems</p>
     </div>
-    <FaChevronRight className="ml-auto h-4 w-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300" />
+    <FaChevronRight className="ml-auto h-4 w-4 " />
   </Link>
 
 <Link
   href="/adv-docker"
-  className="group flex items-center  hover:shadow-md p-4 border border-gray-200 dark:border-gray-700 rounded-lg no-underline transition-all duration-200"
+  className="group flex items-center  hover:shadow-md p-4 border  rounded-lg no-underline transition-all duration-200"
 >
   <div className="flex items-center justify-center bg-secondary text-background mr-3 rounded-lg h-10 w-10">
     <FaDocker className="h-5 w-5 " />
   </div>
   <div>
-    <h4 className="font-semibold text-gray-900 text-sm dark:text-white">
+    <h4 className="font-semibold  text-sm ">
       Containerization
     </h4>
-    <p className="text-gray-600 text-xs dark:text-gray-400">
+    <p >
       Docker, Kubernetes, and deployment strategies
     </p>
   </div>
-  <FaChevronRight className="ml-auto h-4 w-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300" />
+  <FaChevronRight className="ml-auto h-4 w-4 " />
 </Link>
 
 <Link
   href="/adv-quality-security-performance"
-  className="group flex items-center  hover:shadow-md p-4 border border-gray-200 dark:border-gray-700 rounded-lg no-underline transition-all duration-200"
+  className="group flex items-center  hover:shadow-md p-4 border  rounded-lg no-underline transition-all duration-200"
 >
   <div className="flex items-center justify-center bg-secondary text-background mr-3 rounded-lg h-10 w-10">
     <FaShieldAlt className="h-5 w-5 " />
   </div>
   <div>
-    <h4 className="font-semibold text-gray-900 text-sm dark:text-white">
+    <h4 className="font-semibold  text-sm ">
       Security
     </h4>
-    <p className="text-gray-600 text-xs dark:text-gray-400">
+    <p >
       Authentication, authorization, and security best practices
     </p>
   </div>
-  <FaChevronRight className="ml-auto h-4 w-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300" />
+  <FaChevronRight className="ml-auto h-4 w-4 " />
 </Link>
 
 <Link
   href="/adv-quality-security-performance"
-  className="group flex items-center  hover:shadow-md p-4 border border-gray-200 dark:border-gray-700 rounded-lg no-underline transition-all duration-200"
+  className="group flex items-center  hover:shadow-md p-4 border  rounded-lg no-underline transition-all duration-200"
 >
   <div className="flex items-center justify-center bg-sidebar-text text-background mr-3 rounded-lg h-10 w-10">
     <FaTachometerAlt className="h-5 w-5 " />
   </div>
   <div>
-    <h4 className="font-semibold text-gray-900 text-sm dark:text-white">
+    <h4 className="font-semibold  text-sm ">
       Performance Optimization
     </h4>
-    <p className="text-gray-600 text-xs dark:text-gray-400">
+    <p >
       Scalability, monitoring, and load balancing
     </p>
   </div>
-  <FaChevronRight className="ml-auto h-4 w-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300" />
+  <FaChevronRight className="ml-auto h-4 w-4 " />
 </Link>
 
   <Link
     href="/adv-quality-security-performance"
-    className="group flex items-center  hover:shadow-md p-4 border border-gray-200 dark:border-gray-700 rounded-lg no-underline transition-all duration-200"
+    className="group flex items-center  hover:shadow-md p-4 border  rounded-lg no-underline transition-all duration-200"
   >
     <div className="flex items-center justify-center bg-sidebar-active-text text-background mr-3 rounded-lg h-10 w-10">
       <FaVial className="h-5 w-5 " />
     </div>
     <div>
-      <h4 className="font-semibold text-gray-900 text-sm dark:text-white">Testing Strategies</h4>
-      <p className="text-gray-600 text-xs dark:text-gray-400">Unit, integration, and performance testing</p>
+      <h4 className="font-semibold  text-sm ">Testing Strategies</h4>
+      <p >Unit, integration, and performance testing</p>
     </div>
-    <FaChevronRight className="ml-auto h-4 w-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300" />
+    <FaChevronRight className="ml-auto h-4 w-4 " />
   </Link>
 </div>
 
