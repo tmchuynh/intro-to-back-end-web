@@ -12,15 +12,15 @@ First, let's create an Express server that will host our API endpoints.
 
 Create a file `src/server/index.ts`:
 
-```typescript
-import express, { Express } from 'express';
-import cors from 'cors';
-import dotenv from 'dotenv';
-import { testConnection } from './config/database';
-import { syncDatabase } from '../models';
-import userRoutes from './routes/userRoutes';
-import taskRoutes from './routes/taskRoutes';
-import authRoutes from './routes/authRoutes';
+```typescript title="src/server/index.ts"
+import express, { Express } from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+import { testConnection } from "./config/database";
+import { syncDatabase } from "../models";
+import userRoutes from "./routes/userRoutes";
+import taskRoutes from "./routes/taskRoutes";
+import authRoutes from "./routes/authRoutes";
 
 // Load environment variables
 dotenv.config();
@@ -38,18 +38,18 @@ app.use(express.urlencoded({ extended: true }));
 testConnection();
 
 // Sync database models (in development only)
-if (process.env.NODE_ENV === 'development') {
+if (process.env.NODE_ENV === "development") {
   syncDatabase(false); // Set to true to force recreate tables
 }
 
 // Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/tasks', taskRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/tasks", taskRoutes);
 
 // Basic route for testing
-app.get('/', (req, res) => {
-  res.json({ message: 'Welcome to the Todo API' });
+app.get("/", (req, res) => {
+  res.json({ message: "Welcome to the Todo API" });
 });
 
 // Start server
@@ -68,17 +68,17 @@ Now, let's create the routes for our API. We'll create three sets of routes: aut
 
 Create a file `src/server/routes/authRoutes.ts`:
 
-```typescript
-import express from 'express';
-import { register, login } from '../controllers/authController';
+```typescript title="src/server/routes/authRoutes.ts"
+import express from "express";
+import { register, login } from "../controllers/authController";
 
 const router = express.Router();
 
 // Register a new user
-router.post('/register', register);
+router.post("/register", register);
 
 // Login a user
-router.post('/login', login);
+router.post("/login", login);
 
 export default router;
 ```
@@ -87,10 +87,14 @@ export default router;
 
 Create a file `src/server/routes/userRoutes.ts`:
 
-```typescript
-import express from 'express';
-import { getProfile, updateProfile, deleteUser } from '../controllers/userController';
-import { authenticate } from '../middleware/auth';
+```typescript title="src/server/routes/userRoutes.ts"
+import express from "express";
+import {
+  getProfile,
+  updateProfile,
+  deleteUser,
+} from "../controllers/userController";
+import { authenticate } from "../middleware/auth";
 
 const router = express.Router();
 
@@ -98,13 +102,13 @@ const router = express.Router();
 router.use(authenticate);
 
 // Get user profile
-router.get('/profile', getProfile);
+router.get("/profile", getProfile);
 
 // Update user profile
-router.put('/profile', updateProfile);
+router.put("/profile", updateProfile);
 
 // Delete user account
-router.delete('/', deleteUser);
+router.delete("/", deleteUser);
 
 export default router;
 ```
@@ -113,17 +117,17 @@ export default router;
 
 Create a file `src/server/routes/taskRoutes.ts`:
 
-```typescript
-import express from 'express';
-import { 
-  getAllTasks, 
-  getTaskById, 
-  createTask, 
-  updateTask, 
+```typescript title="src/server/routes/taskRoutes.ts"
+import express from "express";
+import {
+  getAllTasks,
+  getTaskById,
+  createTask,
+  updateTask,
   deleteTask,
-  completeTask
-} from '../controllers/taskController';
-import { authenticate } from '../middleware/auth';
+  completeTask,
+} from "../controllers/taskController";
+import { authenticate } from "../middleware/auth";
 
 const router = express.Router();
 
@@ -131,22 +135,22 @@ const router = express.Router();
 router.use(authenticate);
 
 // Get all tasks for the logged-in user
-router.get('/', getAllTasks);
+router.get("/", getAllTasks);
 
 // Get a specific task
-router.get('/:id', getTaskById);
+router.get("/:id", getTaskById);
 
 // Create a new task
-router.post('/', createTask);
+router.post("/", createTask);
 
 // Update a task
-router.put('/:id', updateTask);
+router.put("/:id", updateTask);
 
 // Mark a task as complete
-router.patch('/:id/complete', completeTask);
+router.patch("/:id/complete", completeTask);
 
 // Delete a task
-router.delete('/:id', deleteTask);
+router.delete("/:id", deleteTask);
 
 export default router;
 ```
@@ -159,10 +163,10 @@ Controllers handle the business logic for our API endpoints. Let's create contro
 
 Create a file `src/server/controllers/authController.ts`:
 
-```typescript
-import { Request, Response } from 'express';
-import jwt from 'jsonwebtoken';
-import { User } from '../../models';
+```typescript title="src/server/controllers/authController.ts"
+import { Request, Response } from "express";
+import jwt from "jsonwebtoken";
+import { User } from "../../models";
 
 // Register a new user
 export const register = async (req: Request, res: Response) => {
@@ -170,15 +174,15 @@ export const register = async (req: Request, res: Response) => {
     const { username, email, password } = req.body;
 
     // Check if user already exists
-    const existingUser = await User.findOne({ 
-      where: { 
-        [Op.or]: [{ username }, { email }]
-      } 
+    const existingUser = await User.findOne({
+      where: {
+        [Op.or]: [{ username }, { email }],
+      },
     });
 
     if (existingUser) {
-      return res.status(400).json({ 
-        message: 'User with this username or email already exists' 
+      return res.status(400).json({
+        message: "User with this username or email already exists",
       });
     }
 
@@ -192,12 +196,12 @@ export const register = async (req: Request, res: Response) => {
     // Generate JWT token
     const token = jwt.sign(
       { id: user.id, username: user.username },
-      process.env.JWT_SECRET || 'default_secret',
-      { expiresIn: '24h' }
+      process.env.JWT_SECRET || "default_secret",
+      { expiresIn: "24h" }
     );
 
     res.status(201).json({
-      message: 'User registered successfully',
+      message: "User registered successfully",
       token,
       user: {
         id: user.id,
@@ -206,8 +210,8 @@ export const register = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Registration error:', error);
-    res.status(500).json({ message: 'Server error during registration' });
+    console.error("Registration error:", error);
+    res.status(500).json({ message: "Server error during registration" });
   }
 };
 
@@ -220,25 +224,25 @@ export const login = async (req: Request, res: Response) => {
     const user = await User.findOne({ where: { username } });
 
     if (!user) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return res.status(401).json({ message: "Invalid credentials" });
     }
 
     // Validate password
     const isPasswordValid = await user.validatePassword(password);
 
     if (!isPasswordValid) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return res.status(401).json({ message: "Invalid credentials" });
     }
 
     // Generate JWT token
     const token = jwt.sign(
       { id: user.id, username: user.username },
-      process.env.JWT_SECRET || 'default_secret',
-      { expiresIn: '24h' }
+      process.env.JWT_SECRET || "default_secret",
+      { expiresIn: "24h" }
     );
 
     res.status(200).json({
-      message: 'Login successful',
+      message: "Login successful",
       token,
       user: {
         id: user.id,
@@ -247,8 +251,8 @@ export const login = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ message: 'Server error during login' });
+    console.error("Login error:", error);
+    res.status(500).json({ message: "Server error during login" });
   }
 };
 ```
@@ -257,35 +261,35 @@ export const login = async (req: Request, res: Response) => {
 
 Create a file `src/server/controllers/userController.ts`:
 
-```typescript
-import { Request, Response } from 'express';
-import { User, Task } from '../../models';
+```typescript title="src/server/controllers/userController.ts"
+import { Request, Response } from "express";
+import { User, Task } from "../../models";
 
 // Get user profile
 export const getProfile = async (req: Request, res: Response) => {
   try {
     // User is attached to request by the authenticate middleware
     const userId = req.user?.id;
-    
+
     const user = await User.findByPk(userId, {
-      attributes: ['id', 'username', 'email', 'createdAt'],
+      attributes: ["id", "username", "email", "createdAt"],
       include: [
         {
           model: Task,
-          as: 'tasks',
-          attributes: ['id', 'title', 'completed'],
+          as: "tasks",
+          attributes: ["id", "title", "completed"],
         },
       ],
     });
 
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ message: "User not found" });
     }
 
     res.status(200).json(user);
   } catch (error) {
-    console.error('Profile retrieval error:', error);
-    res.status(500).json({ message: 'Server error retrieving profile' });
+    console.error("Profile retrieval error:", error);
+    res.status(500).json({ message: "Server error retrieving profile" });
   }
 };
 
@@ -298,7 +302,7 @@ export const updateProfile = async (req: Request, res: Response) => {
     const user = await User.findByPk(userId);
 
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ message: "User not found" });
     }
 
     // Update user fields
@@ -309,7 +313,7 @@ export const updateProfile = async (req: Request, res: Response) => {
     await user.save();
 
     res.status(200).json({
-      message: 'Profile updated successfully',
+      message: "Profile updated successfully",
       user: {
         id: user.id,
         username: user.username,
@@ -317,8 +321,8 @@ export const updateProfile = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Profile update error:', error);
-    res.status(500).json({ message: 'Server error updating profile' });
+    console.error("Profile update error:", error);
+    res.status(500).json({ message: "Server error updating profile" });
   }
 };
 
@@ -330,7 +334,7 @@ export const deleteUser = async (req: Request, res: Response) => {
     const user = await User.findByPk(userId);
 
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ message: "User not found" });
     }
 
     // Delete all user's tasks
@@ -339,10 +343,10 @@ export const deleteUser = async (req: Request, res: Response) => {
     // Delete user
     await user.destroy();
 
-    res.status(200).json({ message: 'User account deleted successfully' });
+    res.status(200).json({ message: "User account deleted successfully" });
   } catch (error) {
-    console.error('Account deletion error:', error);
-    res.status(500).json({ message: 'Server error deleting account' });
+    console.error("Account deletion error:", error);
+    res.status(500).json({ message: "Server error deleting account" });
   }
 };
 ```
@@ -351,24 +355,24 @@ export const deleteUser = async (req: Request, res: Response) => {
 
 Create a file `src/server/controllers/taskController.ts`:
 
-```typescript
-import { Request, Response } from 'express';
-import { Task } from '../../models';
+```typescript title="src/server/controllers/taskController.ts"
+import { Request, Response } from "express";
+import { Task } from "../../models";
 
 // Get all tasks for the logged-in user
 export const getAllTasks = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
-    
+
     const tasks = await Task.findAll({
       where: { userId },
-      order: [['createdAt', 'DESC']],
+      order: [["createdAt", "DESC"]],
     });
 
     res.status(200).json(tasks);
   } catch (error) {
-    console.error('Error fetching tasks:', error);
-    res.status(500).json({ message: 'Server error fetching tasks' });
+    console.error("Error fetching tasks:", error);
+    res.status(500).json({ message: "Server error fetching tasks" });
   }
 };
 
@@ -377,19 +381,19 @@ export const getTaskById = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
     const taskId = req.params.id;
-    
+
     const task = await Task.findOne({
       where: { id: taskId, userId },
     });
 
     if (!task) {
-      return res.status(404).json({ message: 'Task not found' });
+      return res.status(404).json({ message: "Task not found" });
     }
 
     res.status(200).json(task);
   } catch (error) {
-    console.error('Error fetching task:', error);
-    res.status(500).json({ message: 'Server error fetching task' });
+    console.error("Error fetching task:", error);
+    res.status(500).json({ message: "Server error fetching task" });
   }
 };
 
@@ -400,7 +404,7 @@ export const createTask = async (req: Request, res: Response) => {
     const { title, description, dueDate } = req.body;
 
     if (!title) {
-      return res.status(400).json({ message: 'Title is required' });
+      return res.status(400).json({ message: "Title is required" });
     }
 
     const task = await Task.create({
@@ -412,8 +416,8 @@ export const createTask = async (req: Request, res: Response) => {
 
     res.status(201).json(task);
   } catch (error) {
-    console.error('Error creating task:', error);
-    res.status(500).json({ message: 'Server error creating task' });
+    console.error("Error creating task:", error);
+    res.status(500).json({ message: "Server error creating task" });
   }
 };
 
@@ -423,27 +427,28 @@ export const updateTask = async (req: Request, res: Response) => {
     const userId = req.user?.id;
     const taskId = req.params.id;
     const { title, description, dueDate, completed } = req.body;
-    
+
     const task = await Task.findOne({
       where: { id: taskId, userId },
     });
 
     if (!task) {
-      return res.status(404).json({ message: 'Task not found' });
+      return res.status(404).json({ message: "Task not found" });
     }
 
     // Update task fields
     if (title !== undefined) task.title = title;
     if (description !== undefined) task.description = description;
-    if (dueDate !== undefined) task.dueDate = dueDate ? new Date(dueDate) : null;
+    if (dueDate !== undefined)
+      task.dueDate = dueDate ? new Date(dueDate) : null;
     if (completed !== undefined) task.completed = completed;
 
     await task.save();
 
     res.status(200).json(task);
   } catch (error) {
-    console.error('Error updating task:', error);
-    res.status(500).json({ message: 'Server error updating task' });
+    console.error("Error updating task:", error);
+    res.status(500).json({ message: "Server error updating task" });
   }
 };
 
@@ -452,13 +457,13 @@ export const completeTask = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
     const taskId = req.params.id;
-    
+
     const task = await Task.findOne({
       where: { id: taskId, userId },
     });
 
     if (!task) {
-      return res.status(404).json({ message: 'Task not found' });
+      return res.status(404).json({ message: "Task not found" });
     }
 
     task.completed = !task.completed; // Toggle completion status
@@ -466,8 +471,8 @@ export const completeTask = async (req: Request, res: Response) => {
 
     res.status(200).json(task);
   } catch (error) {
-    console.error('Error completing task:', error);
-    res.status(500).json({ message: 'Server error completing task' });
+    console.error("Error completing task:", error);
+    res.status(500).json({ message: "Server error completing task" });
   }
 };
 
@@ -476,21 +481,21 @@ export const deleteTask = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
     const taskId = req.params.id;
-    
+
     const task = await Task.findOne({
       where: { id: taskId, userId },
     });
 
     if (!task) {
-      return res.status(404).json({ message: 'Task not found' });
+      return res.status(404).json({ message: "Task not found" });
     }
 
     await task.destroy();
 
-    res.status(200).json({ message: 'Task deleted successfully' });
+    res.status(200).json({ message: "Task deleted successfully" });
   } catch (error) {
-    console.error('Error deleting task:', error);
-    res.status(500).json({ message: 'Server error deleting task' });
+    console.error("Error deleting task:", error);
+    res.status(500).json({ message: "Server error deleting task" });
   }
 };
 ```
@@ -499,9 +504,9 @@ export const deleteTask = async (req: Request, res: Response) => {
 
 Create a file `src/server/middleware/auth.ts`:
 
-```typescript
-import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
+```typescript title="src/server/middleware/auth.ts"
+import { Request, Response, NextFunction } from "express";
+import jwt from "jsonwebtoken";
 
 // Extend the Request interface to include user
 declare global {
@@ -515,38 +520,42 @@ declare global {
   }
 }
 
-export const authenticate = (req: Request, res: Response, next: NextFunction) => {
+export const authenticate = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     // Get token from Authorization header
     const authHeader = req.headers.authorization;
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ message: 'Authentication required' });
+
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ message: "Authentication required" });
     }
-    
+
     // Extract the token
-    const token = authHeader.split(' ')[1];
-    
+    const token = authHeader.split(" ")[1];
+
     if (!token) {
-      return res.status(401).json({ message: 'Authentication token missing' });
+      return res.status(401).json({ message: "Authentication token missing" });
     }
-    
+
     // Verify the token
     const decoded = jwt.verify(
-      token, 
-      process.env.JWT_SECRET || 'default_secret'
+      token,
+      process.env.JWT_SECRET || "default_secret"
     ) as { id: number; username: string };
-    
+
     // Attach user data to request
     req.user = {
       id: decoded.id,
       username: decoded.username,
     };
-    
+
     next();
   } catch (error) {
-    console.error('Authentication error:', error);
-    res.status(401).json({ message: 'Invalid or expired token' });
+    console.error("Authentication error:", error);
+    res.status(401).json({ message: "Invalid or expired token" });
   }
 };
 ```

@@ -45,26 +45,26 @@ Sequelize is an ORM (Object-Relational Mapping) tool that makes it easier to int
 
 1. Create a `src/server/config/database.ts` file:
 
-```typescript
-import { Sequelize } from 'sequelize';
-import dotenv from 'dotenv';
+```typescript title="src/server/config/database.ts"
+import { Sequelize } from "sequelize";
+import dotenv from "dotenv";
 
 dotenv.config();
 
 const sequelize = new Sequelize(
-  process.env.DB_NAME || 'todo_app_db',
-  process.env.DB_USER || 'root',
-  process.env.DB_PASS || '',
+  process.env.DB_NAME || "todo_app_db",
+  process.env.DB_USER || "root",
+  process.env.DB_PASS || "",
   {
-    host: process.env.DB_HOST || 'localhost',
-    dialect: 'mysql',
+    host: process.env.DB_HOST || "localhost",
+    dialect: "mysql",
     logging: false, // Set to console.log to see SQL queries
     pool: {
       max: 5,
       min: 0,
       acquire: 30000,
-      idle: 10000
-    }
+      idle: 10000,
+    },
   }
 );
 
@@ -72,10 +72,10 @@ const sequelize = new Sequelize(
 export const testConnection = async () => {
   try {
     await sequelize.authenticate();
-    console.log('Database connection has been established successfully.');
+    console.log("Database connection has been established successfully.");
     return true;
   } catch (error) {
-    console.error('Unable to connect to the database:', error);
+    console.error("Unable to connect to the database:", error);
     return false;
   }
 };
@@ -91,10 +91,10 @@ Now let's define our data models. For our To-Do application, we'll need at least
 
 Create a file `src/models/User.ts`:
 
-```typescript
-import { Model, DataTypes, Optional } from 'sequelize';
-import sequelize from '../server/config/database';
-import bcrypt from 'bcrypt';
+```typescript title="src/models/User.ts"
+import { Model, DataTypes, Optional } from "sequelize";
+import sequelize from "../server/config/database";
+import bcrypt from "bcrypt";
 
 // These are all the attributes in the User model
 interface UserAttributes {
@@ -107,18 +107,22 @@ interface UserAttributes {
 }
 
 // Some attributes are optional in `User.create` call
-interface UserCreationAttributes extends Optional<UserAttributes, 'id' | 'createdAt' | 'updatedAt'> {}
+interface UserCreationAttributes
+  extends Optional<UserAttributes, "id" | "createdAt" | "updatedAt"> {}
 
-class User extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {
+class User
+  extends Model<UserAttributes, UserCreationAttributes>
+  implements UserAttributes
+{
   public id!: number;
   public username!: string;
   public email!: string;
   public password!: string;
-  
+
   // Timestamps
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
-  
+
   // Method to check password
   public async validatePassword(password: string): Promise<boolean> {
     return bcrypt.compare(password, this.password);
@@ -152,7 +156,7 @@ User.init(
   },
   {
     sequelize,
-    tableName: 'users',
+    tableName: "users",
     hooks: {
       // Hash password before saving to database
       beforeCreate: async (user: User) => {
@@ -162,7 +166,7 @@ User.init(
         }
       },
       beforeUpdate: async (user: User) => {
-        if (user.changed('password')) {
+        if (user.changed("password")) {
           const salt = await bcrypt.genSalt(10);
           user.password = await bcrypt.hash(user.password, salt);
         }
@@ -178,9 +182,9 @@ export default User;
 
 Create a file `src/models/Task.ts`:
 
-```typescript
-import { Model, DataTypes, Optional } from 'sequelize';
-import sequelize from '../server/config/database';
+```typescript title="src/models/Task.ts"
+import { Model, DataTypes, Optional } from "sequelize";
+import sequelize from "../server/config/database";
 
 // These are all the attributes in the Task model
 interface TaskAttributes {
@@ -195,16 +199,23 @@ interface TaskAttributes {
 }
 
 // Some attributes are optional in `Task.create` call
-interface TaskCreationAttributes extends Optional<TaskAttributes, 'id' | 'description' | 'dueDate' | 'completed' | 'createdAt' | 'updatedAt'> {}
+interface TaskCreationAttributes
+  extends Optional<
+    TaskAttributes,
+    "id" | "description" | "dueDate" | "completed" | "createdAt" | "updatedAt"
+  > {}
 
-class Task extends Model<TaskAttributes, TaskCreationAttributes> implements TaskAttributes {
+class Task
+  extends Model<TaskAttributes, TaskCreationAttributes>
+  implements TaskAttributes
+{
   public id!: number;
   public title!: string;
   public description!: string | undefined;
   public dueDate!: Date | undefined;
   public completed!: boolean;
   public userId!: number;
-  
+
   // Timestamps
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
@@ -238,14 +249,14 @@ Task.init(
       type: DataTypes.INTEGER.UNSIGNED,
       allowNull: false,
       references: {
-        model: 'users',
-        key: 'id',
+        model: "users",
+        key: "id",
       },
     },
   },
   {
     sequelize,
-    tableName: 'tasks',
+    tableName: "tasks",
   }
 );
 
@@ -256,27 +267,31 @@ export default Task;
 
 Create a file `src/models/index.ts` to define relationships between models:
 
-```typescript
-import User from './User';
-import Task from './Task';
+```typescript title="src/models/index.ts"
+import sequelize from "../server/config/database";
+import { Sequelize } from "sequelize";
+import dotenv from "dotenv";
+dotenv.config();
+import User from "./User";
+import Task from "./Task";
 
 // Define associations
 User.hasMany(Task, {
-  sourceKey: 'id',
-  foreignKey: 'userId',
-  as: 'tasks', // This is how we'll access tasks from a user instance
+  sourceKey: "id",
+  foreignKey: "userId",
+  as: "tasks", // This is how we'll access tasks from a user instance
 });
 
 Task.belongsTo(User, {
-  foreignKey: 'userId',
-  as: 'user', // This is how we'll access a user from a task instance
+  foreignKey: "userId",
+  as: "user", // This is how we'll access a user from a task instance
 });
 
 // Sync all models with the database
 export const syncDatabase = async (force: boolean = false) => {
   await User.sync({ force });
   await Task.sync({ force });
-  console.log('Database synchronized');
+  console.log("Database synchronized");
 };
 
 export { User, Task };
@@ -294,14 +309,15 @@ npm install -D sequelize-cli
 
 2. Create a `.sequelizerc` file in the project root:
 
-```javascript
-const path = require('path');
+```javascript title=".sequelizerc"
+"use strict";
+const path = require("path");
 
 module.exports = {
-  'config': path.resolve('src/server/config', 'database-cli.js'),
-  'models-path': path.resolve('src', 'models'),
-  'seeders-path': path.resolve('src/server/database', 'seeders'),
-  'migrations-path': path.resolve('src/server/database', 'migrations')
+  config: path.resolve("src/server/config", "database-cli.js"),
+  "models-path": path.resolve("src", "models"),
+  "seeders-path": path.resolve("src/server/database", "seeders"),
+  "migrations-path": path.resolve("src/server/database", "migrations"),
 };
 ```
 
