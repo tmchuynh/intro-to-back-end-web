@@ -63,6 +63,14 @@ const rehypeExpressiveCodeOptions = {
   },
 };
 
+const imageHosts = [
+  "images.wondershare.com",
+  "webimages.mongodb.com",
+  "assets.qlik.com",
+  "datatas.com",
+  "miro.medium.com",
+];
+
 /**
  * Next.js configuration object
  * @type {import('next').NextConfig}
@@ -74,6 +82,16 @@ const nextConfig = {
 
   // Enable React Strict Mode for additional development warnings
   reactStrictMode: true,
+
+  images: {
+    remotePatterns: imageHosts.map((hostname) => ({
+      protocol: "https",
+      hostname,
+      port: "",
+      pathname: "/**",
+    })),
+    dangerouslyAllowSVG: true,
+  },
 };
 
 /**
