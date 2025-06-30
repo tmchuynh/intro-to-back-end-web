@@ -1,3 +1,5 @@
+import BackToTop from "@/components/BackToTop";
+
 # Authentication with Passport.js
 
 ## Introduction
@@ -70,6 +72,8 @@ passport.deserializeUser(async (id: number, done) => {
 
 export default passport;
 ```
+
+<BackToTop />
 
 ## Integrating Passport with Express
 
@@ -150,6 +154,8 @@ app.listen(PORT, () => {
 
 export default app;
 ```
+
+<BackToTop />
 
 ## Updating Authentication Routes and Controller
 
@@ -300,6 +306,8 @@ export const authenticate = (
 };
 ```
 
+<BackToTop />
+
 ## Updating User Model for Password Hashing
 
 We've already configured our User model to use bcrypt for password hashing, but let's review the important parts:
@@ -335,6 +343,8 @@ hooks: {
   },
 },
 ```
+
+<BackToTop />
 
 ## Updating Frontend Authentication
 
@@ -395,6 +405,8 @@ async function fetchWithAuth(endpoint: string, options: RequestInit = {}) {
   return data;
 }
 ```
+
+<BackToTop />
 
 ### Updating AuthProvider
 
@@ -521,3 +533,5 @@ When implementing authentication, it's important to follow security best practic
 With authentication using Passport.js and bcrypt implemented, our To-Do List application now has secure user management. In the next module, we'll focus on testing and debugging our application to ensure it works correctly.
 
 [Next: Testing and Debugging →](/proj-to-do-list-app/06-testing-debugging)
+
+<BackToTop />
