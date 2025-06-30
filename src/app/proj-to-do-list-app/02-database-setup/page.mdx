@@ -1,3 +1,5 @@
+import BackToTop from "@/components/BackToTop";
+
 # Database Setup
 
 ## Introduction
@@ -82,6 +84,8 @@ export const testConnection = async () => {
 
 export default sequelize;
 ```
+
+<BackToTop />
 
 ## Defining Sequelize Models
 
@@ -178,6 +182,8 @@ User.init(
 export default User;
 ```
 
+<BackToTop />
+
 ### Task Model
 
 Create a file `src/models/Task.ts`:
@@ -263,6 +269,8 @@ Task.init(
 export default Task;
 ```
 
+<BackToTop />
+
 ## Setting Up Model Associations
 
 Create a file `src/models/index.ts` to define relationships between models:
@@ -332,3 +340,5 @@ npx sequelize-cli init
 With our database and models set up, we can now move on to creating our API endpoints in the next module. We'll implement a RESTful API using Express to interact with our database models.
 
 [Next: Backend API Development →](/proj-to-do-list-app/03-backend-api)
+
+<BackToTop />

@@ -1,3 +1,5 @@
+import BackToTop from "@/components/BackToTop";
+
 # Backend API Development
 
 ## Introduction
@@ -60,6 +62,8 @@ app.listen(PORT, () => {
 export default app;
 ```
 
+<BackToTop />
+
 ## Creating API Routes
 
 Now, let's create the routes for our API. We'll create three sets of routes: authentication, users, and tasks.
@@ -82,6 +86,8 @@ router.post("/login", login);
 
 export default router;
 ```
+
+<BackToTop />
 
 ### User Routes
 
@@ -112,6 +118,8 @@ router.delete("/", deleteUser);
 
 export default router;
 ```
+
+<BackToTop />
 
 ### Task Routes
 
@@ -154,6 +162,8 @@ router.delete("/:id", deleteTask);
 
 export default router;
 ```
+
+<BackToTop />
 
 ## Creating Controllers
 
@@ -257,6 +267,8 @@ export const login = async (req: Request, res: Response) => {
 };
 ```
 
+<BackToTop />
+
 ### User Controller
 
 Create a file `src/server/controllers/userController.ts`:
@@ -350,6 +362,8 @@ export const deleteUser = async (req: Request, res: Response) => {
   }
 };
 ```
+
+<BackToTop />
 
 ### Task Controller
 
@@ -500,6 +514,8 @@ export const deleteTask = async (req: Request, res: Response) => {
 };
 ```
 
+<BackToTop />
+
 ## Creating Authentication Middleware
 
 Create a file `src/server/middleware/auth.ts`:
@@ -565,3 +581,5 @@ export const authenticate = (
 Our backend API is now complete. We have created API endpoints for authentication, user management, and task management. In the next module, we'll develop the frontend of our application using Next.js and Tailwind CSS.
 
 [Next: Frontend Development →](/proj-to-do-list-app/04-frontend-development)
+
+<BackToTop />
