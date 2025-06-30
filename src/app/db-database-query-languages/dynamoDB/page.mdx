@@ -1,0 +1,1753 @@
+import BackToTop from "@/components/BackToTop";
+
+# Amazon DynamoDB Query Language and API
+
+## Table of Contents
+
+## Introduction
+
+Amazon DynamoDB uses a proprietary API-based query language rather than traditional SQL, designed specifically for high-performance, serverless NoSQL database operations. Unlike conventional query languages that use text-based syntax, DynamoDB operations are expressed through JSON-based API calls that leverage the AWS SDK or REST API endpoints. This approach enables seamless integration with cloud-native applications while providing predictable performance at any scale.
+
+DynamoDB's query language is built around key-value and document data models, emphasizing single-table design patterns and efficient access patterns. The language supports various operations including GetItem, PutItem, Query, Scan, UpdateItem, and DeleteItem, each optimized for specific use cases. Rather than complex joins and relationships found in relational databases, DynamoDB queries focus on partition keys, sort keys, and secondary indexes to achieve millisecond latency at massive scale.
+
+The API-driven approach makes DynamoDB particularly suitable for modern, cloud-native applications that require predictable performance, automatic scaling, and serverless architecture. Whether you're building mobile applications, gaming platforms, IoT systems, or web applications, DynamoDB's query language provides the tools to efficiently store, retrieve, and manipulate data with guaranteed performance characteristics.
+
+### Real-World Applications
+
+DynamoDB's query language powers many mission-critical applications across various industries:
+
+- Gaming companies use DynamoDB for player profiles, leaderboards, and real-time multiplayer game state management
+- E-commerce platforms leverage DynamoDB for shopping carts, user sessions, and product catalogs with high read/write throughput
+- Mobile applications employ DynamoDB for user data, push notifications, and offline sync capabilities
+- IoT systems utilize DynamoDB for device telemetry, sensor data collection, and real-time analytics
+- Financial services use DynamoDB for fraud detection, transaction processing, and real-time risk assessment
+- Media streaming platforms rely on DynamoDB for user preferences, viewing history, and content recommendations
+- Social media applications leverage DynamoDB for user feeds, messaging systems, and activity tracking
+- AdTech platforms use DynamoDB for real-time bidding, audience targeting, and campaign analytics
+
+### Key Concepts
+
+- **Table**: The fundamental data structure in DynamoDB, containing items with attributes, similar to a table in relational databases but without fixed schema.
+- **Item**: A collection of attributes that represents a single record in a table, equivalent to a row in relational databases.
+- **Attribute**: A fundamental data element within an item, consisting of a name and value, similar to a column in relational databases.
+- **Partition Key**: The primary key component that determines which physical partition stores an item, crucial for data distribution and access patterns.
+- **Sort Key**: Optional component of a composite primary key that determines the sort order of items within a partition.
+- **Primary Key**: Either a simple primary key (partition key only) or composite primary key (partition key + sort key) that uniquely identifies items.
+- **Global Secondary Index (GSI)**: An index with a different partition key and optional sort key, enabling queries on non-key attributes.
+- **Local Secondary Index (LSI)**: An index that shares the same partition key as the table but has a different sort key.
+- **Throughput**: The read and write capacity units that determine the performance level of a table or index.
+- **Capacity Units**: Read Capacity Units (RCU) and Write Capacity Units (WCU) that measure and limit throughput consumption.
+- **On-Demand Mode**: Billing mode where you pay per request without pre-provisioning capacity.
+- **Provisioned Mode**: Billing mode where you specify and pay for specific read/write capacity levels.
+- **Hot Partition**: A partition that receives significantly more traffic than others, potentially causing throttling.
+- **Eventually Consistent Reads**: Default read consistency that may not reflect recent write operations but provides better performance.
+- **Strongly Consistent Reads**: Read consistency that returns the most up-to-date data but consumes more capacity.
+- **Time To Live (TTL)**: Automatic deletion of items after a specified timestamp, useful for temporary data.
+- **DynamoDB Streams**: Change data capture feature that records data modification events in near real-time.
+- **Point-in-Time Recovery**: Backup feature that enables restoration to any point in time within the retention period.
+- **Global Tables**: Multi-region, multi-master replication for global applications requiring low latency worldwide.
+
+### Benefits of DynamoDB Query Language
+
+- **Predictable Performance**: Single-digit millisecond latency at any scale with consistent performance regardless of table size.
+- **Serverless Architecture**: Fully managed service with automatic scaling, no server provisioning or maintenance required.
+- **Flexible Schema**: Schema-less design allows for varying item structures within the same table without migrations.
+- **Horizontal Scaling**: Seamless scaling to handle millions of requests per second with automatic partitioning.
+- **Global Distribution**: Multi-region replication with Global Tables for worldwide low-latency access.
+- **ACID Transactions**: Support for multi-item transactions ensuring data consistency across operations.
+- **Built-in Security**: Encryption at rest and in transit, fine-grained access control with IAM integration.
+- **Cost Optimization**: Pay-per-use pricing with on-demand billing and reserved capacity options for predictable workloads.
+- **High Availability**: 99.999% availability SLA with automatic failover and fault tolerance.
+- **Stream Processing**: Real-time change data capture for building event-driven architectures.
+- **Backup and Recovery**: Automated backups with point-in-time recovery and on-demand backup capabilities.
+- **Integration Ecosystem**: Native integration with AWS services like Lambda, API Gateway, and analytics tools.
+- **Developer Productivity**: Rich SDKs for multiple programming languages with object mapping libraries.
+- **Monitoring and Observability**: Built-in CloudWatch metrics and AWS X-Ray integration for performance monitoring.
+- **Data Export**: Direct integration with S3 for analytics and data lake architectures.
+
+## DynamoDB API Fundamentals
+
+DynamoDB operations are expressed through JSON-based API calls using AWS SDKs or direct REST API requests, with specific syntax for different data manipulation operations.
+
+### Basic API Structure
+
+- **TableName**: Specifies the target table for the operation
+- **Key**: Defines the primary key for item identification
+- **Item**: Contains the complete item data for write operations
+- **AttributeValues**: Specifies attribute names and values with type descriptors
+- **Expressions**: Condition, update, and projection expressions for advanced operations
+- **ReturnValues**: Controls what data is returned after write operations
+
+```json title="Basic DynamoDB API operation structure"
+// GetItem operation
+{
+  "TableName": "Users",
+  "Key": {
+    "UserId": {
+      "S": "user123"
+    }
+  },
+  "ConsistentRead": true,
+  "ProjectionExpression": "UserId, Email, CreatedAt"
+}
+
+// PutItem operation
+{
+  "TableName": "Users",
+  "Item": {
+    "UserId": {
+      "S": "user123"
+    },
+    "Email": {
+      "S": "user@example.com"
+    },
+    "Name": {
+      "S": "John Doe"
+    },
+    "CreatedAt": {
+      "N": "1719662400"
+    },
+    "IsActive": {
+      "BOOL": true
+    }
+  },
+  "ConditionExpression": "attribute_not_exists(UserId)"
+}
+```
+
+### Data Types and Attribute Values
+
+```json title="DynamoDB data type representations"
+// String type
+{
+  "Name": {
+    "S": "John Doe"
+  }
+}
+
+// Number type
+{
+  "Age": {
+    "N": "30"
+  },
+  "Price": {
+    "N": "19.99"
+  }
+}
+
+// Boolean type
+{
+  "IsActive": {
+    "BOOL": true
+  }
+}
+
+// Binary data type
+{
+  "ProfileImage": {
+    "B": "base64encodeddata"
+  }
+}
+
+// String Set
+{
+  "Tags": {
+    "SS": ["tag1", "tag2", "tag3"]
+  }
+}
+
+// Number Set
+{
+  "Scores": {
+    "NS": ["100", "95", "87"]
+  }
+}
+
+// List type (mixed types)
+{
+  "OrderItems": {
+    "L": [
+      {
+        "M": {
+          "ProductId": { "S": "prod123" },
+          "Quantity": { "N": "2" },
+          "Price": { "N": "29.99" }
+        }
+      }
+    ]
+  }
+}
+
+// Map type (nested object)
+{
+  "Address": {
+    "M": {
+      "Street": { "S": "123 Main St" },
+      "City": { "S": "New York" },
+      "ZipCode": { "S": "10001" }
+    }
+  }
+}
+
+// Null type
+{
+  "MiddleName": {
+    "NULL": true
+  }
+}
+```
+
+## Basic CRUD Operations
+
+DynamoDB provides fundamental operations for creating, reading, updating, and deleting items with specific API calls optimized for performance.
+
+### Reading Data (GetItem and Query)
+
+```json title="Retrieving items and querying data"
+// GetItem - retrieve single item by primary key
+{
+  "TableName": "Products",
+  "Key": {
+    "ProductId": {
+      "S": "prod123"
+    }
+  },
+  "ProjectionExpression": "ProductId, #name, Price, Category",
+  "ExpressionAttributeNames": {
+    "#name": "Name"
+  }
+}
+
+// Query - retrieve multiple items with same partition key
+{
+  "TableName": "Orders",
+  "KeyConditionExpression": "CustomerId = :customerId AND OrderDate BETWEEN :startDate AND :endDate",
+  "ExpressionAttributeValues": {
+    ":customerId": {
+      "S": "customer123"
+    },
+    ":startDate": {
+      "S": "2024-01-01"
+    },
+    ":endDate": {
+      "S": "2024-12-31"
+    }
+  },
+  "FilterExpression": "OrderStatus = :status",
+  "ExpressionAttributeValues": {
+    ":status": {
+      "S": "completed"
+    }
+  },
+  "ScanIndexForward": false,
+  "Limit": 50
+}
+
+// Query with Global Secondary Index
+{
+  "TableName": "Products",
+  "IndexName": "CategoryIndex",
+  "KeyConditionExpression": "Category = :category",
+  "ExpressionAttributeValues": {
+    ":category": {
+      "S": "Electronics"
+    }
+  },
+  "ProjectionExpression": "ProductId, #name, Price",
+  "ExpressionAttributeNames": {
+    "#name": "Name"
+  }
+}
+```
+
+#### Advanced Query Patterns
+
+```json title="Complex querying and filtering scenarios"
+// Query with multiple filter conditions
+{
+  "TableName": "GameScores",
+  "KeyConditionExpression": "GameId = :gameId",
+  "FilterExpression": "Score > :minScore AND PlayerLevel BETWEEN :minLevel AND :maxLevel",
+  "ExpressionAttributeValues": {
+    ":gameId": {
+      "S": "game456"
+    },
+    ":minScore": {
+      "N": "1000"
+    },
+    ":minLevel": {
+      "N": "5"
+    },
+    ":maxLevel": {
+      "N": "10"
+    }
+  },
+  "ScanIndexForward": false,
+  "Limit": 20
+}
+
+// Query with begins_with on sort key
+{
+  "TableName": "ChatMessages",
+  "KeyConditionExpression": "ChatRoomId = :roomId AND begins_with(MessageTimestamp, :datePrefix)",
+  "ExpressionAttributeValues": {
+    ":roomId": {
+      "S": "room789"
+    },
+    ":datePrefix": {
+      "S": "2024-06-29"
+    }
+  }
+}
+
+// Pagination with ExclusiveStartKey
+{
+  "TableName": "Users",
+  "IndexName": "CreatedAtIndex",
+  "KeyConditionExpression": "GSI1PK = :gsi1pk",
+  "ExpressionAttributeValues": {
+    ":gsi1pk": {
+      "S": "USER"
+    }
+  },
+  "Limit": 25,
+  "ExclusiveStartKey": {
+    "UserId": {
+      "S": "user123"
+    },
+    "GSI1PK": {
+      "S": "USER"
+    },
+    "CreatedAt": {
+      "N": "1719662400"
+    }
+  }
+}
+```
+
+### Writing Data (PutItem and UpdateItem)
+
+```json title="Creating and modifying items"
+// PutItem - create or replace entire item
+{
+  "TableName": "Products",
+  "Item": {
+    "ProductId": {
+      "S": "prod456"
+    },
+    "Name": {
+      "S": "Wireless Headphones"
+    },
+    "Category": {
+      "S": "Electronics"
+    },
+    "Price": {
+      "N": "99.99"
+    },
+    "InStock": {
+      "BOOL": true
+    },
+    "Tags": {
+      "SS": ["wireless", "bluetooth", "audio"]
+    },
+    "CreatedAt": {
+      "N": "1719662400"
+    }
+  },
+  "ConditionExpression": "attribute_not_exists(ProductId)",
+  "ReturnValues": "ALL_OLD"
+}
+
+// UpdateItem - modify specific attributes
+{
+  "TableName": "Users",
+  "Key": {
+    "UserId": {
+      "S": "user123"
+    }
+  },
+  "UpdateExpression": "SET #email = :email, LastLoginAt = :loginTime, LoginCount = LoginCount + :increment ADD #tags :newTags",
+  "ExpressionAttributeNames": {
+    "#email": "Email",
+    "#tags": "Tags"
+  },
+  "ExpressionAttributeValues": {
+    ":email": {
+      "S": "newemail@example.com"
+    },
+    ":loginTime": {
+      "N": "1719662400"
+    },
+    ":increment": {
+      "N": "1"
+    },
+    ":newTags": {
+      "SS": ["premium", "verified"]
+    }
+  },
+  "ConditionExpression": "attribute_exists(UserId)",
+  "ReturnValues": "UPDATED_NEW"
+}
+```
+
+#### Atomic Updates and Conditional Writes
+
+```json title="Advanced update operations and conditions"
+// Conditional update with complex logic
+{
+  "TableName": "Inventory",
+  "Key": {
+    "ProductId": {
+      "S": "prod789"
+    }
+  },
+  "UpdateExpression": "SET StockQuantity = StockQuantity - :quantity, LastSoldAt = :timestamp",
+  "ConditionExpression": "StockQuantity >= :quantity AND ProductStatus = :status",
+  "ExpressionAttributeValues": {
+    ":quantity": {
+      "N": "5"
+    },
+    ":timestamp": {
+      "N": "1719662400"
+    },
+    ":status": {
+      "S": "active"
+    }
+  },
+  "ReturnValues": "ALL_NEW"
+}
+
+// Atomic counter increment
+{
+  "TableName": "PageViews",
+  "Key": {
+    "PageUrl": {
+      "S": "/products/laptop"
+    },
+    "Date": {
+      "S": "2024-06-29"
+    }
+  },
+  "UpdateExpression": "ADD ViewCount :increment SET LastViewed = :timestamp",
+  "ExpressionAttributeValues": {
+    ":increment": {
+      "N": "1"
+    },
+    ":timestamp": {
+      "N": "1719662400"
+    }
+  }
+}
+
+// List and Map manipulation
+{
+  "TableName": "UserProfiles",
+  "Key": {
+    "UserId": {
+      "S": "user456"
+    }
+  },
+  "UpdateExpression": "SET #prefs.#theme = :theme, #skills = list_append(#skills, :newSkills) REMOVE #prefs.#oldPref",
+  "ExpressionAttributeNames": {
+    "#prefs": "Preferences",
+    "#theme": "Theme",
+    "#skills": "Skills",
+    "#oldPref": "OldPreference"
+  },
+  "ExpressionAttributeValues": {
+    ":theme": {
+      "S": "dark"
+    },
+    ":newSkills": {
+      "L": [
+        {
+          "S": "DynamoDB"
+        },
+        {
+          "S": "AWS"
+        }
+      ]
+    }
+  }
+}
+```
+
+### Deleting Data (DeleteItem)
+
+```json title="Item deletion operations"
+// Simple delete by primary key
+{
+  "TableName": "Sessions",
+  "Key": {
+    "SessionId": {
+      "S": "session789"
+    }
+  },
+  "ReturnValues": "ALL_OLD"
+}
+
+// Conditional delete
+{
+  "TableName": "Orders",
+  "Key": {
+    "OrderId": {
+      "S": "order123"
+    }
+  },
+  "ConditionExpression": "OrderStatus = :status AND CreatedAt < :cutoffTime",
+  "ExpressionAttributeValues": {
+    ":status": {
+      "S": "pending"
+    },
+    ":cutoffTime": {
+      "N": "1719576000"
+    }
+  }
+}
+
+// Delete with existence check
+{
+  "TableName": "UserSessions",
+  "Key": {
+    "UserId": {
+      "S": "user123"
+    },
+    "SessionId": {
+      "S": "session456"
+    }
+  },
+  "ConditionExpression": "attribute_exists(UserId) AND ExpiresAt < :currentTime",
+  "ExpressionAttributeValues": {
+    ":currentTime": {
+      "N": "1719662400"
+    }
+  }
+}
+```
+
+## Advanced Query Operations
+
+DynamoDB provides sophisticated operations for complex data access patterns, including scanning, batch operations, and transactional processing.
+
+### Scan Operations
+
+```json title="Full table scanning and parallel processing"
+// Basic scan with filters
+{
+  "TableName": "Products",
+  "FilterExpression": "Category = :category AND Price BETWEEN :minPrice AND :maxPrice",
+  "ExpressionAttributeValues": {
+    ":category": {
+      "S": "Electronics"
+    },
+    ":minPrice": {
+      "N": "50"
+    },
+    ":maxPrice": {
+      "N": "500"
+    }
+  },
+  "ProjectionExpression": "ProductId, #name, Price, Category",
+  "ExpressionAttributeNames": {
+    "#name": "Name"
+  },
+  "Limit": 100
+}
+
+// Parallel scan for large tables
+{
+  "TableName": "UserActivity",
+  "FilterExpression": "EventDate BETWEEN :startDate AND :endDate",
+  "ExpressionAttributeValues": {
+    ":startDate": {
+      "S": "2024-06-01"
+    },
+    ":endDate": {
+      "S": "2024-06-30"
+    }
+  },
+  "Segment": 0,
+  "TotalSegments": 4,
+  "ReturnConsumedCapacity": "TOTAL"
+}
+
+// Scan with complex filter expressions
+{
+  "TableName": "GamePlayers",
+  "FilterExpression": "(PlayerLevel > :level AND LastPlayedAt > :recentDate) OR (IsPremium = :premium AND TotalScore > :minScore)",
+  "ExpressionAttributeValues": {
+    ":level": {
+      "N": "10"
+    },
+    ":recentDate": {
+      "N": "1719576000"
+    },
+    ":premium": {
+      "BOOL": true
+    },
+    ":minScore": {
+      "N": "5000"
+    }
+  }
+}
+```
+
+### Batch Operations
+
+```json title="Efficient bulk operations across multiple items"
+// BatchGetItem - retrieve multiple items efficiently
+{
+  "RequestItems": {
+    "Users": {
+      "Keys": [
+        {
+          "UserId": {
+            "S": "user123"
+          }
+        },
+        {
+          "UserId": {
+            "S": "user456"
+          }
+        },
+        {
+          "UserId": {
+            "S": "user789"
+          }
+        }
+      ],
+      "ProjectionExpression": "UserId, #name, Email",
+      "ExpressionAttributeNames": {
+        "#name": "Name"
+      }
+    },
+    "Products": {
+      "Keys": [
+        {
+          "ProductId": {
+            "S": "prod123"
+          }
+        },
+        {
+          "ProductId": {
+            "S": "prod456"
+          }
+        }
+      ]
+    }
+  }
+}
+
+// BatchWriteItem - write multiple items across tables
+{
+  "RequestItems": {
+    "Users": [
+      {
+        "PutRequest": {
+          "Item": {
+            "UserId": {
+              "S": "user999"
+            },
+            "Name": {
+              "S": "Jane Smith"
+            },
+            "Email": {
+              "S": "jane@example.com"
+            },
+            "CreatedAt": {
+              "N": "1719662400"
+            }
+          }
+        }
+      },
+      {
+        "DeleteRequest": {
+          "Key": {
+            "UserId": {
+              "S": "user888"
+            }
+          }
+        }
+      }
+    ],
+    "UserActivity": [
+      {
+        "PutRequest": {
+          "Item": {
+            "UserId": {
+              "S": "user999"
+            },
+            "ActivityType": {
+              "S": "signup"
+            },
+            "Timestamp": {
+              "N": "1719662400"
+            }
+          }
+        }
+      }
+    ]
+  }
+}
+```
+
+### Transactions
+
+```json title="ACID transactions for data consistency"
+// TransactWriteItems - atomic writes across multiple items
+{
+  "TransactItems": [
+    {
+      "Put": {
+        "TableName": "Orders",
+        "Item": {
+          "OrderId": {
+            "S": "order789"
+          },
+          "CustomerId": {
+            "S": "customer123"
+          },
+          "Total": {
+            "N": "299.99"
+          },
+          "Status": {
+            "S": "pending"
+          }
+        },
+        "ConditionExpression": "attribute_not_exists(OrderId)"
+      }
+    },
+    {
+      "Update": {
+        "TableName": "Inventory",
+        "Key": {
+          "ProductId": {
+            "S": "prod123"
+          }
+        },
+        "UpdateExpression": "SET StockQuantity = StockQuantity - :quantity",
+        "ConditionExpression": "StockQuantity >= :quantity",
+        "ExpressionAttributeValues": {
+          ":quantity": {
+            "N": "2"
+          }
+        }
+      }
+    },
+    {
+      "Update": {
+        "TableName": "CustomerStats",
+        "Key": {
+          "CustomerId": {
+            "S": "customer123"
+          }
+        },
+        "UpdateExpression": "ADD TotalOrders :increment, TotalSpent :amount",
+        "ExpressionAttributeValues": {
+          ":increment": {
+            "N": "1"
+          },
+          ":amount": {
+            "N": "299.99"
+          }
+        }
+      }
+    }
+  ]
+}
+
+// TransactGetItems - consistent reads across multiple items
+{
+  "TransactItems": [
+    {
+      "Get": {
+        "TableName": "Users",
+        "Key": {
+          "UserId": {
+            "S": "user123"
+          }
+        },
+        "ProjectionExpression": "UserId, Balance, AccountStatus"
+      }
+    },
+    {
+      "Get": {
+        "TableName": "Accounts",
+        "Key": {
+          "AccountId": {
+            "S": "account456"
+          }
+        },
+        "ProjectionExpression": "AccountId, Balance, LastTransactionId"
+      }
+    }
+  ]
+}
+```
+
+## Single Table Design Patterns
+
+DynamoDB's single-table design methodology optimizes for performance and cost by storing multiple entity types in one table with strategic key design.
+
+### Entity Relationship Modeling
+
+```json title="Single table design with multiple entity types"
+// User entity
+{
+  "PK": {
+    "S": "USER#user123"
+  },
+  "SK": {
+    "S": "USER#user123"
+  },
+  "EntityType": {
+    "S": "User"
+  },
+  "Name": {
+    "S": "John Doe"
+  },
+  "Email": {
+    "S": "john@example.com"
+  },
+  "CreatedAt": {
+    "N": "1719662400"
+  },
+  "GSI1PK": {
+    "S": "USER"
+  },
+  "GSI1SK": {
+    "S": "2024-06-29#user123"
+  }
+}
+
+// Order entity
+{
+  "PK": {
+    "S": "USER#user123"
+  },
+  "SK": {
+    "S": "ORDER#order456"
+  },
+  "EntityType": {
+    "S": "Order"
+  },
+  "OrderId": {
+    "S": "order456"
+  },
+  "Total": {
+    "N": "299.99"
+  },
+  "Status": {
+    "S": "completed"
+  },
+  "OrderDate": {
+    "S": "2024-06-29"
+  },
+  "GSI1PK": {
+    "S": "ORDER"
+  },
+  "GSI1SK": {
+    "S": "2024-06-29#order456"
+  }
+}
+
+// Order Item entity
+{
+  "PK": {
+    "S": "ORDER#order456"
+  },
+  "SK": {
+    "S": "ITEM#prod123"
+  },
+  "EntityType": {
+    "S": "OrderItem"
+  },
+  "ProductId": {
+    "S": "prod123"
+  },
+  "ProductName": {
+    "S": "Wireless Headphones"
+  },
+  "Quantity": {
+    "N": "2"
+  },
+  "UnitPrice": {
+    "N": "149.99"
+  }
+}
+```
+
+### Access Pattern Optimization
+
+```json title="Queries optimized for single table design"
+// Get user and their recent orders
+{
+  "TableName": "AppData",
+  "KeyConditionExpression": "PK = :userPK",
+  "ExpressionAttributeValues": {
+    ":userPK": {
+      "S": "USER#user123"
+    }
+  },
+  "ScanIndexForward": false,
+  "Limit": 20
+}
+
+// Get all orders across users by date range
+{
+  "TableName": "AppData",
+  "IndexName": "GSI1",
+  "KeyConditionExpression": "GSI1PK = :entityType AND GSI1SK BETWEEN :startDate AND :endDate",
+  "ExpressionAttributeValues": {
+    ":entityType": {
+      "S": "ORDER"
+    },
+    ":startDate": {
+      "S": "2024-06-01"
+    },
+    ":endDate": {
+      "S": "2024-06-30"
+    }
+  }
+}
+
+// Get order with all its items
+{
+  "TableName": "AppData",
+  "KeyConditionExpression": "PK = :orderPK",
+  "ExpressionAttributeValues": {
+    ":orderPK": {
+      "S": "ORDER#order456"
+    }
+  }
+}
+
+// Get user's orders within date range
+{
+  "TableName": "AppData",
+  "KeyConditionExpression": "PK = :userPK AND begins_with(SK, :orderPrefix)",
+  "FilterExpression": "OrderDate BETWEEN :startDate AND :endDate",
+  "ExpressionAttributeValues": {
+    ":userPK": {
+      "S": "USER#user123"
+    },
+    ":orderPrefix": {
+      "S": "ORDER#"
+    },
+    ":startDate": {
+      "S": "2024-06-01"
+    },
+    ":endDate": {
+      "S": "2024-06-30"
+    }
+  }
+}
+```
+
+## Real-World DynamoDB Applications
+
+Understanding practical applications demonstrates DynamoDB's effectiveness across different industries and use cases.
+
+### Gaming Platform
+
+```json title="Real-time gaming data management"
+// Player profile with game statistics
+{
+  "TableName": "GameData",
+  "Item": {
+    "PK": {
+      "S": "PLAYER#player123"
+    },
+    "SK": {
+      "S": "PROFILE"
+    },
+    "EntityType": {
+      "S": "PlayerProfile"
+    },
+    "PlayerId": {
+      "S": "player123"
+    },
+    "Username": {
+      "S": "ProGamer2024"
+    },
+    "Level": {
+      "N": "47"
+    },
+    "XP": {
+      "N": "125750"
+    },
+    "Currency": {
+      "N": "15420"
+    },
+    "LastLogin": {
+      "N": "1719662400"
+    },
+    "TotalPlayTime": {
+      "N": "245"
+    },
+    "Achievements": {
+      "SS": ["first_win", "level_25", "collector", "speed_demon"]
+    },
+    "GSI1PK": {
+      "S": "LEADERBOARD"
+    },
+    "GSI1SK": {
+      "S": "LEVEL#000047#player123"
+    }
+  }
+}
+
+// Game session tracking
+{
+  "TableName": "GameData",
+  "Item": {
+    "PK": {
+      "S": "PLAYER#player123"
+    },
+    "SK": {
+      "S": "SESSION#2024-06-29T15:30:00Z"
+    },
+    "EntityType": {
+      "S": "GameSession"
+    },
+    "SessionId": {
+      "S": "session789"
+    },
+    "GameMode": {
+      "S": "ranked_multiplayer"
+    },
+    "StartTime": {
+      "N": "1719662200"
+    },
+    "EndTime": {
+      "N": "1719664800"
+    },
+    "Duration": {
+      "N": "2600"
+    },
+    "Score": {
+      "N": "2845"
+    },
+    "Result": {
+      "S": "victory"
+    },
+    "XPGained": {
+      "N": "450"
+    },
+    "CurrencyEarned": {
+      "N": "180"
+    },
+    "TTL": {
+      "N": "1727438400"
+    }
+  }
+}
+
+// Leaderboard queries
+{
+  "TableName": "GameData",
+  "IndexName": "GSI1",
+  "KeyConditionExpression": "GSI1PK = :leaderboard",
+  "ExpressionAttributeValues": {
+    ":leaderboard": {
+      "S": "LEADERBOARD"
+    }
+  },
+  "ScanIndexForward": false,
+  "Limit": 100,
+  "ProjectionExpression": "PlayerId, Username, #level, XP",
+  "ExpressionAttributeNames": {
+    "#level": "Level"
+  }
+}
+
+// Real-time match updates
+{
+  "TableName": "GameData",
+  "Key": {
+    "PK": {
+      "S": "MATCH#match456"
+    },
+    "SK": {
+      "S": "STATE"
+    }
+  },
+  "UpdateExpression": "SET #status = :status, CurrentRound = CurrentRound + :increment, LastUpdate = :timestamp ADD PlayersActive :activeChange",
+  "ExpressionAttributeNames": {
+    "#status": "Status"
+  },
+  "ExpressionAttributeValues": {
+    ":status": {
+      "S": "in_progress"
+    },
+    ":increment": {
+      "N": "1"
+    },
+    ":timestamp": {
+      "N": "1719662400"
+    },
+    ":activeChange": {
+      "N": "-1"
+    }
+  },
+  "ConditionExpression": "#status = :expectedStatus",
+  "ExpressionAttributeValues": {
+    ":expectedStatus": {
+      "S": "waiting"
+    }
+  }
+}
+```
+
+### E-commerce Platform
+
+```json title="Scalable e-commerce data architecture"
+// Shopping cart management
+{
+  "TableName": "EcommerceData",
+  "TransactItems": [
+    {
+      "Put": {
+        "TableName": "EcommerceData",
+        "Item": {
+          "PK": {
+            "S": "USER#user456"
+          },
+          "SK": {
+            "S": "CART#prod789"
+          },
+          "EntityType": {
+            "S": "CartItem"
+          },
+          "ProductId": {
+            "S": "prod789"
+          },
+          "ProductName": {
+            "S": "Wireless Mouse"
+          },
+          "Quantity": {
+            "N": "2"
+          },
+          "UnitPrice": {
+            "N": "29.99"
+          },
+          "AddedAt": {
+            "N": "1719662400"
+          }
+        },
+        "ConditionExpression": "attribute_not_exists(PK)"
+      }
+    },
+    {
+      "Update": {
+        "TableName": "EcommerceData",
+        "Key": {
+          "PK": {
+            "S": "PRODUCT#prod789"
+          },
+          "SK": {
+            "S": "INVENTORY"
+          }
+        },
+        "UpdateExpression": "SET ReservedQuantity = ReservedQuantity + :quantity",
+        "ConditionExpression": "AvailableQuantity >= :quantity",
+        "ExpressionAttributeValues": {
+          ":quantity": {
+            "N": "2"
+          }
+        }
+      }
+    }
+  ]
+}
+
+// Product catalog with search optimization
+{
+  "TableName": "EcommerceData",
+  "Item": {
+    "PK": {
+      "S": "PRODUCT#prod789"
+    },
+    "SK": {
+      "S": "DETAILS"
+    },
+    "EntityType": {
+      "S": "Product"
+    },
+    "ProductId": {
+      "S": "prod789"
+    },
+    "Name": {
+      "S": "Wireless Bluetooth Mouse"
+    },
+    "Category": {
+      "S": "Electronics"
+    },
+    "Subcategory": {
+      "S": "Computer Accessories"
+    },
+    "Brand": {
+      "S": "TechBrand"
+    },
+    "Price": {
+      "N": "29.99"
+    },
+    "Rating": {
+      "N": "4.5"
+    },
+    "ReviewCount": {
+      "N": "127"
+    },
+    "InStock": {
+      "BOOL": true
+    },
+    "Tags": {
+      "SS": ["wireless", "bluetooth", "ergonomic", "productivity"]
+    },
+    "GSI1PK": {
+      "S": "CATEGORY#Electronics"
+    },
+    "GSI1SK": {
+      "S": "PRICE#00029.99#prod789"
+    },
+    "GSI2PK": {
+      "S": "BRAND#TechBrand"
+    },
+    "GSI2SK": {
+      "S": "RATING#4.5#prod789"
+    }
+  }
+}
+
+// Order processing workflow
+{
+  "TableName": "EcommerceData",
+  "TransactItems": [
+    {
+      "Put": {
+        "TableName": "EcommerceData",
+        "Item": {
+          "PK": {
+            "S": "USER#user456"
+          },
+          "SK": {
+            "S": "ORDER#order123"
+          },
+          "EntityType": {
+            "S": "Order"
+          },
+          "OrderId": {
+            "S": "order123"
+          },
+          "Status": {
+            "S": "confirmed"
+          },
+          "Total": {
+            "N": "89.97"
+          },
+          "OrderDate": {
+            "S": "2024-06-29"
+          },
+          "EstimatedDelivery": {
+            "S": "2024-07-02"
+          },
+          "GSI1PK": {
+            "S": "ORDER_STATUS#confirmed"
+          },
+          "GSI1SK": {
+            "S": "2024-06-29#order123"
+          }
+        }
+      }
+    },
+    {
+      "ConditionCheck": {
+        "TableName": "EcommerceData",
+        "Key": {
+          "PK": {
+            "S": "PAYMENT#payment456"
+          },
+          "SK": {
+            "S": "STATUS"
+          }
+        },
+        "ConditionExpression": "PaymentStatus = :status",
+        "ExpressionAttributeValues": {
+          ":status": {
+            "S": "completed"
+          }
+        }
+      }
+    },
+    {
+      "Update": {
+        "TableName": "EcommerceData",
+        "Key": {
+          "PK": {
+            "S": "INVENTORY#prod789"
+          },
+          "SK": {
+            "S": "STOCK"
+          }
+        },
+        "UpdateExpression": "SET AvailableQuantity = AvailableQuantity - :quantity, SoldQuantity = SoldQuantity + :quantity",
+        "ExpressionAttributeValues": {
+          ":quantity": {
+            "N": "2"
+          }
+        }
+      }
+    }
+  ]
+}
+```
+
+### IoT and Sensor Data
+
+```json title="High-throughput IoT data ingestion and analysis"
+// Sensor data ingestion
+{
+  "TableName": "IoTData",
+  "Item": {
+    "PK": {
+      "S": "DEVICE#sensor123"
+    },
+    "SK": {
+      "S": "READING#2024-06-29T15:30:00.000Z"
+    },
+    "EntityType": {
+      "S": "SensorReading"
+    },
+    "DeviceId": {
+      "S": "sensor123"
+    },
+    "Timestamp": {
+      "N": "1719662200000"
+    },
+    "Temperature": {
+      "N": "23.5"
+    },
+    "Humidity": {
+      "N": "45.2"
+    },
+    "Pressure": {
+      "N": "1013.25"
+    },
+    "BatteryLevel": {
+      "N": "87"
+    },
+    "SignalStrength": {
+      "N": "-45"
+    },
+    "Location": {
+      "M": {
+        "Latitude": {
+          "N": "40.7128"
+        },
+        "Longitude": {
+          "N": "-74.0060"
+        }
+      }
+    },
+    "GSI1PK": {
+      "S": "TIMESTAMP#2024-06-29"
+    },
+    "GSI1SK": {
+      "S": "15:30:00#sensor123"
+    },
+    "TTL": {
+      "N": "1722254200"
+    }
+  }
+}
+
+// Device management and alerts
+{
+  "TableName": "IoTData",
+  "Key": {
+    "PK": {
+      "S": "DEVICE#sensor123"
+    },
+    "SK": {
+      "S": "STATUS"
+    }
+  },
+  "UpdateExpression": "SET LastSeen = :timestamp, BatteryLevel = :battery, #status = :status ADD AlertCount :alertIncrement",
+  "ConditionExpression": "LastSeen < :timestamp",
+  "ExpressionAttributeNames": {
+    "#status": "Status"
+  },
+  "ExpressionAttributeValues": {
+    ":timestamp": {
+      "N": "1719662200"
+    },
+    ":battery": {
+      "N": "87"
+    },
+    ":status": {
+      "S": "online"
+    },
+    ":alertIncrement": {
+      "N": "0"
+    }
+  }
+}
+
+// Aggregated metrics calculation
+{
+  "TableName": "IoTData",
+  "BatchWriteItem": {
+    "RequestItems": {
+      "IoTData": [
+        {
+          "PutRequest": {
+            "Item": {
+              "PK": {
+                "S": "METRICS#hourly"
+              },
+              "SK": {
+                "S": "2024-06-29T15#sensor123"
+              },
+              "EntityType": {
+                "S": "HourlyMetrics"
+              },
+              "DeviceId": {
+                "S": "sensor123"
+              },
+              "Hour": {
+                "S": "2024-06-29T15"
+              },
+              "AvgTemperature": {
+                "N": "23.2"
+              },
+              "MaxTemperature": {
+                "N": "24.1"
+              },
+              "MinTemperature": {
+                "N": "22.8"
+              },
+              "ReadingCount": {
+                "N": "60"
+              },
+              "TTL": {
+                "N": "1727438400"
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
+```
+
+### Social Media and User Activity
+
+```json title="Social platform with real-time features"
+// User timeline and activity feed
+{
+  "TableName": "SocialData",
+  "Item": {
+    "PK": {
+      "S": "USER#user789"
+    },
+    "SK": {
+      "S": "POST#2024-06-29T15:30:00#post456"
+    },
+    "EntityType": {
+      "S": "Post"
+    },
+    "PostId": {
+      "S": "post456"
+    },
+    "Content": {
+      "S": "Just learned about DynamoDB single-table design! 🚀"
+    },
+    "CreatedAt": {
+      "N": "1719662200"
+    },
+    "LikesCount": {
+      "N": "0"
+    },
+    "CommentsCount": {
+      "N": "0"
+    },
+    "SharesCount": {
+      "N": "0"
+    },
+    "Visibility": {
+      "S": "public"
+    },
+    "GSI1PK": {
+      "S": "TIMELINE#public"
+    },
+    "GSI1SK": {
+      "S": "2024-06-29T15:30:00#post456"
+    }
+  }
+}
+
+// Social interactions tracking
+{
+  "TableName": "SocialData",
+  "TransactItems": [
+    {
+      "Put": {
+        "TableName": "SocialData",
+        "Item": {
+          "PK": {
+            "S": "POST#post456"
+          },
+          "SK": {
+            "S": "LIKE#user123"
+          },
+          "EntityType": {
+            "S": "Like"
+          },
+          "UserId": {
+            "S": "user123"
+          },
+          "PostId": {
+            "S": "post456"
+          },
+          "CreatedAt": {
+            "N": "1719662400"
+          }
+        },
+        "ConditionExpression": "attribute_not_exists(PK)"
+      }
+    },
+    {
+      "Update": {
+        "TableName": "SocialData",
+        "Key": {
+          "PK": {
+            "S": "USER#user789"
+          },
+          "SK": {
+            "S": "POST#2024-06-29T15:30:00#post456"
+          }
+        },
+        "UpdateExpression": "ADD LikesCount :increment",
+        "ExpressionAttributeValues": {
+          ":increment": {
+            "N": "1"
+          }
+        }
+      }
+    },
+    {
+      "Put": {
+        "TableName": "SocialData",
+        "Item": {
+          "PK": {
+            "S": "USER#user123"
+          },
+          "SK": {
+            "S": "ACTIVITY#2024-06-29T15:30:15#like#post456"
+          },
+          "EntityType": {
+            "S": "UserActivity"
+          },
+          "ActivityType": {
+            "S": "like"
+          },
+          "TargetId": {
+            "S": "post456"
+          },
+          "TargetUserId": {
+            "S": "user789"
+          },
+          "CreatedAt": {
+            "N": "1719662415"
+          }
+        }
+      }
+    }
+  ]
+}
+
+// Friend relationships and recommendations
+{
+  "TableName": "SocialData",
+  "Item": {
+    "PK": {
+      "S": "USER#user123"
+    },
+    "SK": {
+      "S": "FRIEND#user456"
+    },
+    "EntityType": {
+      "S": "Friendship"
+    },
+    "FriendId": {
+      "S": "user456"
+    },
+    "Status": {
+      "S": "accepted"
+    },
+    "ConnectedAt": {
+      "N": "1719576000"
+    },
+    "MutualFriends": {
+      "N": "5"
+    },
+    "InteractionScore": {
+      "N": "78"
+    },
+    "GSI1PK": {
+      "S": "FRIENDSHIP#user456"
+    },
+    "GSI1SK": {
+      "S": "CONNECTED#1719576000#user123"
+    }
+  }
+}
+```
+
+## Performance Optimization and Best Practices
+
+### Capacity Planning and Scaling
+
+```json title="Optimizing throughput and cost management"
+// Auto-scaling configuration
+{
+  "TableName": "ProductionTable",
+  "BillingMode": "PROVISIONED",
+  "ProvisionedThroughput": {
+    "ReadCapacityUnits": 100,
+    "WriteCapacityUnits": 100
+  },
+  "GlobalSecondaryIndexes": [
+    {
+      "IndexName": "GSI1",
+      "ProvisionedThroughput": {
+        "ReadCapacityUnits": 50,
+        "WriteCapacityUnits": 50
+      }
+    }
+  ]
+}
+
+// On-demand mode for unpredictable workloads
+{
+  "TableName": "EventDrivenTable",
+  "BillingMode": "PAY_PER_REQUEST"
+}
+
+// Query with capacity monitoring
+{
+  "TableName": "HighVolumeTable",
+  "KeyConditionExpression": "PK = :pk",
+  "ExpressionAttributeValues": {
+    ":pk": {
+      "S": "USER#user123"
+    }
+  },
+  "ReturnConsumedCapacity": "TOTAL",
+  "Limit": 50
+}
+```
+
+### Access Pattern Optimization
+
+```json title="Efficient query patterns and hot partition avoidance"
+// Write sharding to avoid hot partitions
+{
+  "TableName": "TimeSeriesData",
+  "Item": {
+    "PK": {
+      "S": "METRICS#2024-06-29#SHARD#3"
+    },
+    "SK": {
+      "S": "15:30:00#sensor123#temp"
+    },
+    "EntityType": {
+      "S": "Metric"
+    },
+    "MetricName": {
+      "S": "temperature"
+    },
+    "Value": {
+      "N": "23.5"
+    },
+    "Timestamp": {
+      "N": "1719662200"
+    },
+    "DeviceId": {
+      "S": "sensor123"
+    }
+  }
+}
+
+// Sparse index optimization
+{
+  "TableName": "UserData",
+  "IndexName": "PremiumUserIndex",
+  "KeyConditionExpression": "GSI1PK = :premiumIndicator",
+  "ExpressionAttributeValues": {
+    ":premiumIndicator": {
+      "S": "PREMIUM"
+    }
+  }
+}
+
+// Eventually consistent reads for better performance
+{
+  "TableName": "ProductCatalog",
+  "Key": {
+    "ProductId": {
+      "S": "prod123"
+    }
+  },
+  "ConsistentRead": false,
+  "ProjectionExpression": "ProductId, #name, Price, InStock",
+  "ExpressionAttributeNames": {
+    "#name": "Name"
+  }
+}
+```
+
+### Monitoring and Troubleshooting
+
+```json title="Performance monitoring and optimization analysis"
+// CloudWatch metrics monitoring
+{
+  "MetricName": "ConsumedReadCapacityUnits",
+  "Namespace": "AWS/DynamoDB",
+  "Dimensions": [
+    {
+      "Name": "TableName",
+      "Value": "ProductionTable"
+    }
+  ],
+  "Statistic": "Sum",
+  "Period": 300
+}
+
+// Query with detailed metrics
+{
+  "TableName": "AnalyticsTable",
+  "KeyConditionExpression": "PK = :pk",
+  "ExpressionAttributeValues": {
+    ":pk": {
+      "S": "USER#user123"
+    }
+  },
+  "ReturnConsumedCapacity": "INDEXES",
+  "ReturnItemCollectionMetrics": "SIZE"
+}
+
+// X-Ray tracing for performance analysis
+{
+  "TableName": "UserTable",
+  "Key": {
+    "UserId": {
+      "S": "user123"
+    }
+  },
+  "TraceId": "1-5e4b8e8d-1234567890123456"
+}
+```
+
+<BackToTop />
