@@ -28,7 +28,6 @@ const CATEGORY_PREFIXES = [
   "perf", // performance
   "dep", // deployment
   "proj", // projects
-  "orm", // object relational mapping
 ];
 
 /**
@@ -288,8 +287,6 @@ function categorizeNavigationItems(
             return "advanced";
           case "util":
             return "utilities";
-          case "orm": // object relational mapping
-            return "orm";
         }
       }
     }
@@ -346,19 +343,6 @@ function categorizeNavigationItems(
         return "nosql";
       }
 
-      // Check for ORM and specialized database sections
-      if (
-        path.includes("orm") ||
-        path.includes("mappers") ||
-        path.includes("object-relational") ||
-        title.includes("neo4j") ||
-        title.includes("orm") ||
-        title.includes("mappers") ||
-        title.includes("object-relational")
-      ) {
-        return "orm";
-      }
-
       // Check for core technology sections
       if (
         path.includes("database") ||
@@ -405,16 +389,6 @@ function categorizeNavigationItems(
       title.includes("sql")
     ) {
       return "sql";
-    } else if (
-      path.includes("orm") ||
-      path.includes("mappers") ||
-      path.includes("object-relational") ||
-      title.includes("neo4j") ||
-      title.includes("orm") ||
-      title.includes("mappers") ||
-      title.includes("object-relational")
-    ) {
-      return "orm";
     } else if (
       path.includes("mongodb") ||
       path.includes("redis") ||
@@ -482,9 +456,11 @@ function categorizeNavigationItems(
       path.includes("proj-") ||
       path.includes("project") ||
       path.includes("to-do-list") ||
+      path.includes("online-learning-platform-website") ||
       title.includes("project") ||
       title.includes("app") ||
       title.includes("application") ||
+      title.includes("platform") ||
       title.includes("todo") ||
       title.includes("to-do")
     ) {
@@ -534,13 +510,6 @@ function categorizeNavigationItems(
     sections.push({
       title: "Projects",
       items: categories.projects,
-    });
-  }
-
-  if (categories.orm.length > 0) {
-    sections.push({
-      title: "Object Relational Mapping Frameworks",
-      items: categories.orm,
     });
   }
 
