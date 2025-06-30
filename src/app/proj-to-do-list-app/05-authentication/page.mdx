@@ -1,0 +1,523 @@
+# Authentication with Passport.js
+
+## Introduction
+
+In this module, we'll implement authentication in our To-Do List application using Passport.js and bcrypt. Passport.js is a popular authentication middleware for Node.js that provides a flexible and modular approach to handling user authentication.
+
+## Setting Up Passport.js
+
+Passport.js uses strategies to authenticate requests. We'll use the `passport-local` strategy, which authenticates users with a username and password.
+
+### Installing Dependencies
+
+First, let's install the required packages:
+
+```bash
+npm install passport passport-local bcrypt
+npm install -D @types/passport @types/passport-local @types/bcrypt
+```
+
+### Configuring Passport
+
+Create a file `src/server/config/passport.ts`:
+
+```typescript title="src/server/config/passport.ts"
+import { Request } from "express";
+import passport from "passport";
+import { Strategy as LocalStrategy } from "passport-local";
+import { User } from "../../models";
+
+// Configure Passport to use local strategy
+passport.use(
+  new LocalStrategy(async (username, password, done) => {
+    try {
+      // Find the user by username
+      const user = await User.findOne({ where: { username } });
+
+      // If user doesn't exist
+      if (!user) {
+        return done(null, false, { message: "Incorrect username or password" });
+      }
+
+      // Check if password is correct
+      const isValidPassword = await user.validatePassword(password);
+      if (!isValidPassword) {
+        return done(null, false, { message: "Incorrect username or password" });
+      }
+
+      // If authentication is successful
+      return done(null, user);
+    } catch (error) {
+      return done(error);
+    }
+  })
+);
+
+// Serialize user into the session
+passport.serializeUser((user: any, done) => {
+  done(null, user.id);
+});
+
+// Deserialize user from the session
+passport.deserializeUser(async (id: number, done) => {
+  try {
+    const user = await User.findByPk(id);
+    done(null, user);
+  } catch (error) {
+    done(error);
+  }
+});
+
+export default passport;
+```
+
+## Integrating Passport with Express
+
+Now, let's update our Express server to use Passport.js.
+
+### Updating Server Configuration
+
+Update `src/server/index.ts`:
+
+```typescript title="src/server/index.ts"
+import express, { Express } from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+import session from "express-session";
+import passport from "./config/passport";
+import { testConnection } from "./config/database";
+import { syncDatabase } from "../models";
+import userRoutes from "./routes/userRoutes";
+import taskRoutes from "./routes/taskRoutes";
+import authRoutes from "./routes/authRoutes";
+
+// Load environment variables
+dotenv.config();
+
+// Initialize Express app
+const app: Express = express();
+const PORT = process.env.PORT || 3001;
+
+// Middleware
+app.use(
+  cors({
+    origin: process.env.CLIENT_URL || "http://localhost:3000",
+    credentials: true,
+  })
+);
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Session configuration
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || "your-session-secret",
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === "production", // Use secure cookies in production
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    },
+  })
+);
+
+// Initialize Passport and session support
+app.use(passport.initialize());
+app.use(passport.session());
+
+// Test database connection
+testConnection();
+
+// Sync database models (in development only)
+if (process.env.NODE_ENV === "development") {
+  syncDatabase(false); // Set to true to force recreate tables
+}
+
+// Routes
+app.use("/api/auth", authRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/tasks", taskRoutes);
+
+// Basic route for testing
+app.get("/", (req, res) => {
+  res.json({ message: "Welcome to the Todo API" });
+});
+
+// Start server
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
+
+export default app;
+```
+
+## Updating Authentication Routes and Controller
+
+Let's update our authentication routes to use Passport.js.
+
+### Authentication Routes
+
+Update `src/server/routes/authRoutes.ts`:
+
+```typescript title="src/server/routes/authRoutes.ts"
+import express from "express";
+import passport from "passport";
+import { register, login, logout } from "../controllers/authController";
+
+const router = express.Router();
+
+// Register a new user
+router.post("/register", register);
+
+// Login a user using Passport local strategy
+router.post("/login", login);
+
+// Logout a user
+router.get("/logout", logout);
+
+export default router;
+```
+
+### Authentication Controller
+
+Update `src/server/controllers/authController.ts`:
+
+```typescript title="src/server/controllers/authController.ts"
+import { Request, Response, NextFunction } from "express";
+import passport from "passport";
+import bcrypt from "bcrypt";
+import { User } from "../../models";
+import { Op } from "sequelize";
+
+// Register a new user
+export const register = async (req: Request, res: Response) => {
+  try {
+    const { username, email, password } = req.body;
+
+    // Check if user already exists
+    const existingUser = await User.findOne({
+      where: {
+        [Op.or]: [{ username }, { email }],
+      },
+    });
+
+    if (existingUser) {
+      return res.status(400).json({
+        message: "User with this username or email already exists",
+      });
+    }
+
+    // Create new user
+    const user = await User.create({
+      username,
+      email,
+      password, // Password will be hashed by the User model hooks
+    });
+
+    // Log the user in after registration
+    req.login(user, (err) => {
+      if (err) {
+        return res
+          .status(500)
+          .json({ message: "Error logging in after registration" });
+      }
+
+      return res.status(201).json({
+        message: "User registered successfully",
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+        },
+      });
+    });
+  } catch (error) {
+    console.error("Registration error:", error);
+    res.status(500).json({ message: "Server error during registration" });
+  }
+};
+
+// Login a user
+export const login = (req: Request, res: Response, next: NextFunction) => {
+  passport.authenticate("local", (err: Error, user: any, info: any) => {
+    if (err) {
+      return next(err);
+    }
+
+    if (!user) {
+      return res
+        .status(401)
+        .json({ message: info.message || "Invalid credentials" });
+    }
+
+    req.login(user, (loginErr) => {
+      if (loginErr) {
+        return next(loginErr);
+      }
+
+      return res.status(200).json({
+        message: "Login successful",
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+        },
+      });
+    });
+  })(req, res, next);
+};
+
+// Logout a user
+export const logout = (req: Request, res: Response) => {
+  req.logout((err) => {
+    if (err) {
+      return res.status(500).json({ message: "Error logging out" });
+    }
+
+    res.status(200).json({ message: "Logout successful" });
+  });
+};
+```
+
+## Authentication Middleware
+
+Update `src/server/middleware/auth.ts` to use Passport session:
+
+```typescript typescript title="src/server/middleware/auth.ts"
+import { Request, Response, NextFunction } from "express";
+
+// Middleware to check if user is authenticated
+export const authenticate = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  if (req.isAuthenticated()) {
+    return next();
+  }
+
+  res.status(401).json({ message: "Authentication required" });
+};
+```
+
+## Updating User Model for Password Hashing
+
+We've already configured our User model to use bcrypt for password hashing, but let's review the important parts:
+
+```typescript title="src/models/User.ts"
+import { Model, DataTypes, Optional } from 'sequelize';
+import sequelize from '../server/config/database';
+import bcrypt from 'bcrypt';
+
+// ...
+
+// Method to check password
+public async validatePassword(password: string): Promise<boolean> {
+  return bcrypt.compare(password, this.password);
+}
+
+// ...
+
+// Hooks for password hashing
+hooks: {
+  // Hash password before saving to database
+  beforeCreate: async (user: User) => {
+    if (user.password) {
+      const salt = await bcrypt.genSalt(10);
+      user.password = await bcrypt.hash(user.password, salt);
+    }
+  },
+  beforeUpdate: async (user: User) => {
+    if (user.changed('password')) {
+      const salt = await bcrypt.genSalt(10);
+      user.password = await bcrypt.hash(user.password, salt);
+    }
+  },
+},
+```
+
+## Updating Frontend Authentication
+
+Now, let's update our frontend to work with the new Passport.js authentication.
+
+### Updating API Client
+
+Update `src/lib/api.ts`:
+
+```typescript title="src/lib/api.ts"
+// Authentication APIs
+export async function login(username: string, password: string) {
+  return fetchWithAuth("/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ username, password }),
+    credentials: "include", // Important for session cookies
+  });
+}
+
+export async function register(
+  username: string,
+  email: string,
+  password: string
+) {
+  return fetchWithAuth("/auth/register", {
+    method: "POST",
+    body: JSON.stringify({ username, email, password }),
+    credentials: "include", // Important for session cookies
+  });
+}
+
+export async function logout() {
+  return fetchWithAuth("/auth/logout", {
+    method: "GET",
+    credentials: "include", // Important for session cookies
+  });
+}
+
+// Update the fetchWithAuth function to include credentials
+async function fetchWithAuth(endpoint: string, options: RequestInit = {}) {
+  const headers = {
+    "Content-Type": "application/json",
+    ...options.headers,
+  };
+
+  const response = await fetch(`${API_URL}${endpoint}`, {
+    ...options,
+    headers,
+    credentials: options.credentials || "same-origin",
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Something went wrong");
+  }
+
+  return data;
+}
+```
+
+### Updating AuthProvider
+
+Update `src/components/auth/AuthProvider.tsx`:
+
+```typescript title="src/components/auth/AuthProvider.tsx"
+'use client';
+
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
+import { login as apiLogin, register as apiRegister, logout as apiLogout, getUserProfile } from '@/lib/api';
+
+interface User {
+  id: number;
+  username: string;
+  email: string;
+}
+
+interface AuthContextType {
+  user: User | null;
+  loading: boolean;
+  login: (username: string, password: string) => Promise<void>;
+  register: (username: string, email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+
+  // Check authentication status on initial load
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const userData = await getUserProfile();
+        setUser(userData);
+      } catch (error) {
+        // Not authenticated
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAuth();
+  }, []);
+
+  // Login function
+  const login = async (username: string, password: string) => {
+    try {
+      setLoading(true);
+      const { user } = await apiLogin(username, password);
+      setUser(user);
+      router.push('/dashboard');
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Register function
+  const register = async (username: string, email: string, password: string) => {
+    try {
+      setLoading(true);
+      const { user } = await apiRegister(username, email, password);
+      setUser(user);
+      router.push('/dashboard');
+    } catch (error) {
+      console.error('Registration error:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Logout function
+  const logout = async () => {
+    try {
+      setLoading(true);
+      await apiLogout();
+      setUser(null);
+      router.push('/');
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+}
+```
+
+## Security Considerations
+
+When implementing authentication, it's important to follow security best practices:
+
+1. **HTTPS**: Always use HTTPS in production to encrypt data in transit.
+2. **Password Storage**: Never store plaintext passwords; use bcrypt for hashing.
+3. **Rate Limiting**: Implement rate limiting on login routes to prevent brute force attacks.
+4. **CSRF Protection**: Implement Cross-Site Request Forgery protection.
+5. **Session Management**: Use secure cookies and proper session management.
+6. **Input Validation**: Validate all user inputs to prevent injection attacks.
+
+## Next Steps
+
+With authentication using Passport.js and bcrypt implemented, our To-Do List application now has secure user management. In the next module, we'll focus on testing and debugging our application to ensure it works correctly.
+
+[Next: Testing and Debugging →](/proj-to-do-list-app/06-testing-debugging)

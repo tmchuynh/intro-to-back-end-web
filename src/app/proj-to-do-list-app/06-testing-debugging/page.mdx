@@ -1,0 +1,500 @@
+# Testing and Debugging
+
+## Introduction
+
+In this module, we'll explore testing and debugging strategies for our To-Do List application. Testing is crucial for ensuring that our application works as expected and for catching bugs early in the development process.
+
+## Types of Testing
+
+For our application, we'll cover three main types of testing:
+
+1. **Unit Testing**: Testing individual components and functions in isolation
+2. **Integration Testing**: Testing how components work together
+3. **End-to-End Testing**: Testing the application as a whole, simulating user interactions
+
+## Setting Up Testing Tools
+
+We'll use Jest as our testing framework and React Testing Library for testing React components.
+
+### Installing Testing Dependencies
+
+```bash
+npm install -D jest @testing-library/react @testing-library/jest-dom @testing-library/user-event jest-environment-jsdom ts-jest
+```
+
+### Configuring Jest
+
+Create a `jest.config.js` file in the root directory:
+
+```javascript title="jest.config.js"
+const nextJest = require("next/jest");
+
+const createJestConfig = nextJest({
+  // Provide the path to your Next.js app to load next.config.js and .env files
+  dir: "./",
+});
+
+// Add any custom config to be passed to Jest
+const customJestConfig = {
+  setupFilesAfterEnv: ["<rootDir>/jest.setup.js"],
+  testEnvironment: "jest-environment-jsdom",
+  moduleNameMapper: {
+    "^@/components/(.*)$": "<rootDir>/src/components/$1",
+    "^@/lib/(.*)$": "<rootDir>/src/lib/$1",
+  },
+};
+
+// createJestConfig is exported this way to ensure that next/jest can load the Next.js config
+module.exports = createJestConfig(customJestConfig);
+```
+
+Create a `jest.setup.js` file:
+
+```javascript title="jest.setup.js"
+// Import Jest DOM utilities
+import "@testing-library/jest-dom";
+```
+
+Update `package.json` to include test scripts:
+
+```json title="package.json"
+{
+  "name": "todo-app",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "next": "^13.0.0",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "express": "^4.17.1",
+    "mysql2": "^2.3.3",
+    "sequelize": "^6.6.5",
+    "dotenv": "^10.0.0",
+    "jsonwebtoken": "^8.5.1",
+    "bcrypt": "^5.0.1",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "@types/node": "^16.11.7",
+    "@types/react": "^17.0.34",
+    "@types/react-dom": "^17.0.11",
+    "@testing-library/react": "^12.1.2",
+    "@testing-library/jest-dom": "^5.16.4",
+    "@testing-library/user-event": "^13.5.0",
+    "jest-environment-jsdom": "^27.4.3",
+    "ts-jest": "^27.1.4"
+  },
+"scripts": {
+  "test": "jest",
+  "test:watch": "jest --watch",
+  "test:coverage": "jest --coverage"
+}
+```
+
+## Unit Testing
+
+Let's write some unit tests for our application components and utilities.
+
+### Testing Utility Functions
+
+Create a test file `src/lib/utils.test.ts`:
+
+```typescript title="src/lib/utils.test.ts"
+import { formatDate, classNames } from "./utils";
+
+describe("Utility Functions", () => {
+  describe("formatDate", () => {
+    it("should format a date string correctly", () => {
+      const dateString = "2023-10-15T14:30:00.000Z";
+      const formatted = formatDate(dateString);
+      expect(formatted).toMatch(/Oct 15, 2023/);
+    });
+  });
+
+  describe("classNames", () => {
+    it("should join class names correctly", () => {
+      const result = classNames(
+        "btn",
+        true && "btn-primary",
+        false && "hidden"
+      );
+      expect(result).toBe("btn btn-primary");
+    });
+
+    it("should filter out falsy values", () => {
+      const result = classNames("btn", false, null, undefined, "btn-large");
+      expect(result).toBe("btn btn-large");
+    });
+  });
+});
+```
+
+### Testing React Components
+
+Create a test file for TaskItem component `src/components/tasks/TaskItem.test.tsx`:
+
+```tsx title="src/components/tasks/TaskItem.test.tsx"
+import { render, screen, fireEvent } from "@testing-library/react";
+import TaskItem from "./TaskItem";
+
+const mockTask = {
+  id: 1,
+  title: "Test Task",
+  description: "This is a test task",
+  completed: false,
+  userId: 1,
+  createdAt: "2023-10-15T14:30:00.000Z",
+  updatedAt: "2023-10-15T14:30:00.000Z",
+};
+
+const mockToggleComplete = jest.fn();
+const mockDelete = jest.fn();
+
+describe("TaskItem Component", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("renders task details correctly", () => {
+    render(
+      <TaskItem
+        task={mockTask}
+        onToggleComplete={mockToggleComplete}
+        onDelete={mockDelete}
+      />
+    );
+
+    expect(screen.getByText("Test Task")).toBeInTheDocument();
+    expect(screen.getByText("This is a test task")).toBeInTheDocument();
+    expect(screen.getByRole("checkbox")).not.toBeChecked();
+  });
+
+  it("renders completed task with strikethrough", () => {
+    const completedTask = { ...mockTask, completed: true };
+
+    render(
+      <TaskItem
+        task={completedTask}
+        onToggleComplete={mockToggleComplete}
+        onDelete={mockDelete}
+      />
+    );
+
+    const title = screen.getByText("Test Task");
+    expect(title).toHaveClass("line-through");
+    expect(screen.getByRole("checkbox")).toBeChecked();
+  });
+
+  it("calls onToggleComplete when checkbox is clicked", () => {
+    render(
+      <TaskItem
+        task={mockTask}
+        onToggleComplete={mockToggleComplete}
+        onDelete={mockDelete}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("checkbox"));
+    expect(mockToggleComplete).toHaveBeenCalledWith(1);
+  });
+
+  it("calls onDelete when delete button is clicked", () => {
+    render(
+      <TaskItem
+        task={mockTask}
+        onToggleComplete={mockToggleComplete}
+        onDelete={mockDelete}
+      />
+    );
+
+    fireEvent.click(screen.getByText("Delete"));
+    expect(mockDelete).toHaveBeenCalledWith(1);
+  });
+});
+```
+
+## Integration Testing
+
+Let's write an integration test for our API client.
+
+Create a test file `src/lib/api.test.ts`:
+
+```typescript title="src/lib/api.test.ts"
+import { getTasks, createTask, completeTask, deleteTask } from "./api";
+
+// Mock the fetch function
+global.fetch = jest.fn();
+
+describe("API Client", () => {
+  beforeEach(() => {
+    jest.resetAllMocks();
+
+    // Mock localStorage for token retrieval
+    Object.defineProperty(window, "localStorage", {
+      value: {
+        getItem: jest.fn(() => "fake-token"),
+      },
+      writable: true,
+    });
+  });
+
+  it("should fetch tasks with authentication", async () => {
+    const mockTasks = [{ id: 1, title: "Test Task", completed: false }];
+
+    // Mock successful response
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockTasks,
+    });
+
+    const result = await getTasks();
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining("/tasks"),
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: "Bearer fake-token",
+        }),
+      })
+    );
+
+    expect(result).toEqual(mockTasks);
+  });
+
+  it("should create a new task", async () => {
+    const newTask = { title: "New Task", description: "Task description" };
+    const createdTask = { id: 1, ...newTask, completed: false };
+
+    // Mock successful response
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: async () => createdTask,
+    });
+
+    const result = await createTask(newTask);
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining("/tasks"),
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify(newTask),
+      })
+    );
+
+    expect(result).toEqual(createdTask);
+  });
+
+  // More tests for other API functions...
+});
+```
+
+## End-to-End Testing
+
+For end-to-end testing, we'll use Cypress to simulate user interactions with our application.
+
+### Installing Cypress
+
+```bash
+npm install -D cypress
+```
+
+Add a Cypress script to `package.json`:
+
+```json title="package.json"
+{
+  "name": "todo-app",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    // ... other dependencies
+  },
+  "devDependencies": {
+    // ... other dev dependencies
+    "cypress": "^10.0.0"
+  },
+"scripts": {
+  "cypress": "cypress open",
+  "e2e": "start-server-and-test dev http://localhost:3000 cypress"
+}
+```
+
+### Writing Cypress Tests
+
+Create a test file `cypress/e2e/todo.cy.js`:
+
+```javascript title="cypress/e2e/todo.cy.js"
+describe("Todo App", () => {
+  beforeEach(() => {
+    // Visit the app before each test
+    cy.visit("http://localhost:3000");
+
+    // Mock API responses
+    cy.intercept("GET", "/api/tasks", { fixture: "tasks.json" }).as("getTasks");
+    cy.intercept("POST", "/api/tasks", { fixture: "new-task.json" }).as(
+      "createTask"
+    );
+    cy.intercept("PATCH", "/api/tasks/*", {
+      fixture: "completed-task.json",
+    }).as("completeTask");
+    cy.intercept("DELETE", "/api/tasks/*", { statusCode: 200 }).as(
+      "deleteTask"
+    );
+  });
+
+  it("should allow a user to login", () => {
+    cy.visit("http://localhost:3000/auth/login");
+
+    cy.intercept("POST", "/api/auth/login", {
+      statusCode: 200,
+      body: {
+        user: { id: 1, username: "testuser", email: "test@example.com" },
+      },
+    }).as("loginUser");
+
+    cy.get('input[id="username"]').type("testuser");
+    cy.get('input[id="password"]').type("password123");
+    cy.get('button[type="submit"]').click();
+
+    cy.wait("@loginUser");
+    cy.url().should("include", "/dashboard");
+  });
+
+  it("should display tasks on the dashboard", () => {
+    // Mock authenticated user
+    cy.intercept("GET", "/api/users/profile", {
+      statusCode: 200,
+      body: { id: 1, username: "testuser", email: "test@example.com" },
+    }).as("getProfile");
+
+    cy.visit("http://localhost:3000/dashboard");
+    cy.wait("@getTasks");
+
+    cy.get('[data-testid="task-list"]').should("exist");
+    cy.get('[data-testid="task-item"]').should("have.length.at.least", 1);
+  });
+
+  it("should allow creating a new task", () => {
+    // Mock authenticated user
+    cy.intercept("GET", "/api/users/profile", {
+      statusCode: 200,
+      body: { id: 1, username: "testuser", email: "test@example.com" },
+    }).as("getProfile");
+
+    cy.visit("http://localhost:3000/tasks/new");
+
+    cy.get('input[id="title"]').type("New Test Task");
+    cy.get('textarea[id="description"]').type(
+      "This is a test task created with Cypress"
+    );
+    cy.get('button[type="submit"]').click();
+
+    cy.wait("@createTask");
+    cy.url().should("include", "/tasks");
+    cy.get('[data-testid="task-item"]').contains("New Test Task");
+  });
+
+  // More tests for completing and deleting tasks...
+});
+```
+
+## Debugging Strategies
+
+### Frontend Debugging
+
+1. **Browser Developer Tools**:
+   - Use the Elements panel to inspect the DOM
+   - Use the Console for JavaScript errors
+   - Use the Network tab to inspect API requests
+   - Use the React Developer Tools extension for React components
+
+2. **Debugging React Components**:
+   - Use `console.log` for quick debugging
+   - Use React DevTools to inspect component state and props
+   - Use the React DevTools Profiler to identify performance issues
+
+### Backend Debugging
+
+1. **Server Logs**:
+   - Check Express server logs for errors
+   - Use logging libraries like `winston` for better logging
+
+2. **API Testing Tools**:
+   - Use Postman or Insomnia to test API endpoints
+   - Check request and response payloads
+
+3. **Database Debugging**:
+   - Enable Sequelize logging to see SQL queries
+   - Use MySQL Workbench to directly query the database
+
+### Common Issues and Solutions
+
+1. **CORS Issues**:
+   - Ensure your CORS configuration is correct in the backend
+   - Check that your frontend is making requests to the correct URL
+
+2. **Authentication Issues**:
+   - Check that tokens are being stored and sent correctly
+   - Verify that server-side authentication middleware is working
+
+3. **Database Connection Issues**:
+   - Verify database credentials
+   - Check that the database server is running
+   - Look for connection errors in server logs
+
+## Implementing Logging
+
+Add proper logging to the backend to help with debugging:
+
+```bash
+npm install winston
+```
+
+Create a logger utility `src/server/utils/logger.ts`:
+
+```typescript title="src/server/utils/logger.ts"
+import winston from "winston";
+
+const logger = winston.createLogger({
+  level: process.env.LOG_LEVEL || "info",
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.json()
+  ),
+  transports: [
+    new winston.transports.Console({
+      format: winston.format.combine(
+        winston.format.colorize(),
+        winston.format.simple()
+      ),
+    }),
+    new winston.transports.File({ filename: "error.log", level: "error" }),
+    new winston.transports.File({ filename: "combined.log" }),
+  ],
+});
+
+export default logger;
+```
+
+Use the logger in controllers:
+
+```typescript title="src/server/controllers/taskController.ts"
+import logger from "../utils/logger";
+
+// In a controller function
+try {
+  // Controller logic
+} catch (error) {
+  logger.error("Error in controller function:", {
+    error: error.message,
+    stack: error.stack,
+    data: req.body,
+  });
+  res.status(500).json({ message: "Server error" });
+}
+```
+
+## Next Steps
+
+Now that we've set up testing and debugging for our application, we can move on to the deployment phase. In the next module, we'll prepare our application for production and deploy it to a hosting platform.
+
+[Next: Deployment →](/proj-to-do-list-app/07-deployment)
