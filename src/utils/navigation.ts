@@ -77,6 +77,7 @@ export function extractCategoryFromPath(pathName: string): {
  * - Hyphenated words are capitalized on both sides of the hyphen.
  * - If the cleaned name starts with "use" (but not "user"), the original cleaned name is returned.
  * - The string "jQuery" is preserved as-is.
+ * - Numeric prefixes like "01-", "02-" are removed from the displayed title.
  *
  * @param str - The input string, typically a path or identifier, to be converted to smart title case.
  * @returns The smart title-cased version of the input string.
@@ -84,6 +85,14 @@ export function extractCategoryFromPath(pathName: string): {
 export function toSmartTitleCase(str: string): string {
   // Extract category and clean name first
   const { cleanName } = extractCategoryFromPath(str);
+
+  // Check for numeric prefix like "01-", "02-", etc.
+  const numericPrefixMatch = cleanName.match(/^(\d+)[-]/);
+
+  // Remove the numeric prefix for processing
+  const nameWithoutPrefix = numericPrefixMatch
+    ? cleanName.substring(numericPrefixMatch[0].length)
+    : cleanName;
 
   // Define words to be lowercased (articles, conjunctions, short prepositions)
   const minorWords = new Set([
@@ -112,15 +121,18 @@ export function toSmartTitleCase(str: string): string {
     "v.",
   ]);
 
-  if (cleanName.startsWith("use") && !cleanName.startsWith("user")) {
-    return cleanName;
+  if (
+    nameWithoutPrefix.startsWith("use") &&
+    !nameWithoutPrefix.startsWith("user")
+  ) {
+    return nameWithoutPrefix; // Don't keep the numeric prefix
   }
 
-  if (cleanName === "jQuery") {
-    return "jQuery"; // Keep jQuery as is
+  if (nameWithoutPrefix === "jQuery") {
+    return "jQuery"; // Keep jQuery as is, without numeric prefix
   }
 
-  return cleanName
+  const processedTitle = nameWithoutPrefix
     .split("-")
     .map((word, index, array) => {
       // Always capitalize the first word of the title
@@ -150,6 +162,9 @@ export function toSmartTitleCase(str: string): string {
       return word.charAt(0).toUpperCase() + word.slice(1);
     })
     .join(" ");
+
+  // Return the title without the numeric prefix
+  return processedTitle;
 }
 
 /**
@@ -645,21 +660,32 @@ function getPriority(title: string): number {
 // Helper function to sort navigation items with priority logic
 function sortNavigationItems(items: NavigationItem[]): NavigationItem[] {
   return items.sort((a, b) => {
-    // Extract numeric prefixes like "01-", "02-", etc.
-    const numericPrefixRegexA = a.title.match(/^(\d+)[-\s]/);
-    const numericPrefixRegexB = b.title.match(/^(\d+)[-\s]/);
-    
-    // If both items have numeric prefixes, sort by those numbers
+    // Try to extract numeric prefixes from href (path) first
+    const pathSegmentsA = a.href
+      .split("/")
+      .filter((segment) => segment.length > 0);
+    const pathSegmentsB = b.href
+      .split("/")
+      .filter((segment) => segment.length > 0);
+
+    const lastSegmentA = pathSegmentsA[pathSegmentsA.length - 1] || "";
+    const lastSegmentB = pathSegmentsB[pathSegmentsB.length - 1] || "";
+
+    // Look for numeric prefixes in the path segments (like "01-page", "02-page")
+    const numericPrefixRegexA = lastSegmentA.match(/^(\d+)[-]/);
+    const numericPrefixRegexB = lastSegmentB.match(/^(\d+)[-]/);
+
+    // If both items have numeric prefixes in their paths, sort by those numbers
     if (numericPrefixRegexA && numericPrefixRegexB) {
       const numA = parseInt(numericPrefixRegexA[1], 10);
       const numB = parseInt(numericPrefixRegexB[1], 10);
       return numA - numB;
     }
-    
-    // If only one has a numeric prefix, prioritize it
+
+    // If only one has a numeric prefix in the path, prioritize it
     if (numericPrefixRegexA) return -1;
     if (numericPrefixRegexB) return 1;
-    
+
     // If neither has a numeric prefix, use the priority system
     const priorityA = getPriority(a.title);
     const priorityB = getPriority(b.title);
