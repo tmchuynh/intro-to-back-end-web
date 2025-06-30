@@ -674,9 +674,15 @@ g.V().has('person', 'name', 'Alice')
 
 ## Graph Analysis Techniques
 
+Graph analysis is a crucial application of graph databases, enabling insights into network structures that aren't easily discoverable with traditional databases. Gremlin provides powerful tools for analyzing graph properties, identifying patterns, and extracting meaningful information from complex networks.
+
 ### Centrality Analysis
 
-Gremlin can be used to analyze the importance of vertices in a network:
+Centrality measures help identify the most important vertices in a network. These metrics are essential for understanding network structure, information flow, and identifying influential nodes.
+
+#### Degree Centrality
+
+Degree centrality measures the number of direct connections a node has. Nodes with high degree centrality are often considered influential because they can directly affect many other nodes.
 
 ```python
 # Degree Centrality: Find the most connected people in the network
@@ -687,23 +693,128 @@ g.V().hasLabel('person')
   .order().by('connections', desc)
   .limit(10)
 
+# Calculate in-degree (popularity) and out-degree (sociability) separately
+g.V().hasLabel('person')
+  .project('name', 'followers', 'following')
+  .by('name')
+  .by(in('knows').count())
+  .by(out('knows').count())
+  .order().by('followers', desc)
+
+# Find influence ratio (out-degree / in-degree)
+g.V().hasLabel('person')
+  .where(in('knows').count().is(gt(0)))  // Avoid division by zero
+  .project('name', 'influenceRatio')
+  .by('name')
+  .by(math('_().out("knows").count() / _().in("knows").count()'))
+  .order().by('influenceRatio', desc)
+```
+
+In this example, we use `both('knows')` to count both incoming and outgoing connections for each person. The `project()` step allows us to create a structured output with names and connection counts. We can also calculate in-degree and out-degree separately to analyze popularity and sociability.
+
+#### Betweenness Centrality
+
+Betweenness centrality identifies nodes that act as bridges between different parts of a network. These nodes are crucial for information flow and removing them could disconnect the network.
+
+```python
 # Betweenness Centrality approximation: Find potential bridges between communities
 g.V().hasLabel('person').as('p')
   .project('person', 'betweenness')
   .by('name')
   .by(
-    select('p').
-    repeat(both('knows').simplePath().as('path'))
+    select('p')
+    .repeat(both('knows').simplePath().as('path'))
     .times(2)
     .emit(hasLabel('person'))
     .path().count()
   )
   .order().by('betweenness', desc)
+  .limit(5)
+
+# More accurate betweenness calculation for small networks
+// This is computationally intensive for large graphs
+g.V().hasLabel('person').as('p')
+  .project('person', 'betweenness')
+  .by('name')
+  .by(
+    V().hasLabel('person').as('source')
+    .V().hasLabel('person').as('target')
+    .where('source', neq('target'))
+    .where('source', neq('p'))
+    .where('target', neq('p'))
+    .select('source')
+    .repeat(out('knows').simplePath())
+    .until(where(eq('target')))
+    .path()
+    .filter(unfold().where(eq('p')).count().is(gt(0)))
+    .count()
+  )
+  .order().by('betweenness', desc)
 ```
+
+In this example, we use a repeat step to traverse paths between pairs of nodes and count how many times each node appears in those paths. The `simplePath()` ensures we don't revisit nodes, which is crucial for accurate betweenness calculations.
+
+#### Closeness Centrality
+
+Closeness centrality measures how quickly a node can access all other nodes in the network. Nodes with high closeness centrality can efficiently spread information through the network.
+
+```python
+# Closeness Centrality: Find people who can reach others quickly
+g.V().hasLabel('person').as('p')
+  .project('person', 'averageDistance')
+  .by('name')
+  .by(
+    V().hasLabel('person')
+    .where(neq('p'))
+    .as('others')
+    .select('p')
+    .repeat(out('knows').simplePath())
+    .until(where(eq('others')))
+    .path().count().as('pathLength')
+    .select('others').count().as('totalOthers')
+    .select('pathLength')
+    .math('_ / totalOthers')
+  )
+  .order().by('averageDistance', asc)
+```
+
+This query calculates the average distance from each person to all other people in the network. The `repeat()` step traverses paths, and we compute the average path length to determine closeness centrality.
+
+#### Eigenvector Centrality Approximation
+
+Eigenvector centrality assigns relative scores to nodes based on the concept that connections to high-scoring nodes contribute more to a node's score than connections to low-scoring nodes.
+
+```python
+# Simple PageRank-like algorithm (Eigenvector Centrality approximation)
+// Initialize all vertices with score 1.0
+g.V().hasLabel('person').property('score', 1.0)
+
+// Run 5 iterations of score propagation
+g.V().hasLabel('person').as('p')
+  .property('score',
+    select('p').both('knows')
+    .values('score')
+    .mean()
+    .math('(_ * 0.85) + 0.15')
+  )
+
+// Get final scores
+g.V().hasLabel('person')
+  .project('name', 'score')
+  .by('name')
+  .by('score')
+  .order().by('score', desc)
+```
+
+This example uses a simple iterative approach to approximate eigenvector centrality. Each person's score is updated based on the average scores of their connections, simulating a PageRank-like behavior.
 
 ### Community Detection
 
-Identify groups or communities within your graph:
+Community detection algorithms identify groups or clusters of nodes that are more densely connected to each other than to the rest of the network. These communities often represent functional units, social circles, or interest groups.
+
+#### Common Connection Communities
+
+Identify communities based on shared connections:
 
 ```python
 # Simple community detection by common connections
@@ -718,16 +829,103 @@ g.V().hasLabel('person').as('p')
       .fold()
   )
 
+# Find people who form a tight-knit group (all know each other)
+g.V().hasLabel('person').as('p1')
+  .out('knows').as('p2')
+  .out('knows').as('p3')
+  .where('p3', neq('p1'))
+  .filter(__.select('p3').out('knows').is(eq('p1')))
+  .select('p1', 'p2', 'p3')
+  .by('name')
+  .dedup()
+```
+
+This query identifies communities by looking for people who know each other directly or through mutual friends. The `fold()` step collects names into a list, representing the community.
+
+#### Interest-Based Communities
+
+Discover communities based on shared interests or attributes:
+
+```python
 # Find clusters by shared interests
 g.V().hasLabel('person')
   .group()
   .by(out('interested_in').values('category').fold())
   .unfold()
+  .project('interests', 'members')
+  .by(keys)
+  .by(values)
+
+# Identify common interests within social circles
+g.V().hasLabel('person').as('p')
+  .out('knows').dedup().fold().as('friends')
+  .select('p').out('interested_in').as('interest')
+  .select('friends').unfold()
+  .out('interested_in')
+  .where(eq('interest'))
+  .select('p', 'interest')
+  .by('name')
+  .by('name')
+  .dedup()
+
+# Calculate interest overlap between friends
+g.V().hasLabel('person').as('p1')
+  .out('knows').as('p2')
+  .project('person1', 'person2', 'sharedInterests', 'interestOverlap')
+  .by(select('p1').values('name'))
+  .by(select('p2').values('name'))
+  .by(
+    select('p1').out('interested_in').as('i1')
+    .select('p2').out('interested_in')
+    .where(eq('i1'))
+    .values('name').fold()
+  )
+  .by(
+    select('p1').out('interested_in').as('i1')
+    .select('p2').out('interested_in')
+    .where(eq('i1'))
+    .count().as('shared')
+    .select('p1').out('interested_in').count().as('total1')
+    .select('p2').out('interested_in').count().as('total2')
+    .math('shared / ((total1 + total2) - shared)')
+  )
+  .order().by('interestOverlap', desc)
 ```
+
+This example shows how to find communities based on shared interests. We group people by their interests and then identify overlaps between friends' interests. The `math()` step calculates the interest overlap ratio, providing insights into how closely related the interests of connected individuals are.
+
+#### Modular Structure Detection
+
+Identify modular structures in the network:
+
+```python
+# Find isolated communities (subgraphs with more internal than external connections)
+g.V().hasLabel('person').as('person')
+  .project('name', 'inGroupConnections', 'outGroupConnections')
+  .by('name')
+  .by(
+    select('person').out('knows')
+    .where(out('knows').where(eq('person')))
+    .count()
+  )
+  .by(
+    select('person').out('knows')
+    .where(out('knows').where(neq('person')))
+    .count()
+  )
+  .filter(select('inGroupConnections').is(gt('outGroupConnections')))
+  .order().by('inGroupConnections', desc)
+```
+
+This query identifies isolated communities by comparing the number of internal connections (connections within the group) to external connections (connections to other groups). The `filter()` step ensures we only keep communities where internal connections exceed external ones.
 
 ### Time-Based Analysis
 
-Analyze how graphs evolve over time:
+Time-based analysis examines how graphs evolve over time, revealing trends, patterns, and growth dynamics. These analyses are essential for understanding network evolution and making predictions.
+
+#### Temporal Pattern Analysis
+
+Analyze temporal patterns in relationship formation:
 
 ```python
 # Find new friendships formed in 2023
@@ -744,7 +942,142 @@ g.V().has('person', 'name', 'Alice')
   .by('since')
   .by(count())
   .order().by(keys, asc)
+
+# Monthly friendship formation rate
+g.E().hasLabel('knows')
+  .has('since', between(2020, 2025))
+  .group()
+  .by(
+    values('since').math('floor(_ / 100) * 100 + (_ % 100)')
+  )
+  .by(count())
+  .order().by(keys, asc)
 ```
+
+This example shows how to find friendships formed in a specific year and analyze the growth of a person's network over time. The `group()` step aggregates friendships by year, allowing us to see trends in relationship formation.
+
+#### Network Evolution Analysis
+
+Study how the network structure changes over time:
+
+```python
+# Analyze network density over time
+// First, get total nodes per year
+g.V().hasLabel('person')
+  .group()
+  .by('joinYear')
+  .by(count())
+  .as('nodesByYear')
+// Then, get connections formed each year
+g.E().hasLabel('knows')
+  .group()
+  .by('since')
+  .by(count())
+  .as('edgesByYear')
+// Calculate density (edges / potential edges) for each year
+g.select('nodesByYear', 'edgesByYear')
+  .unfold()
+  .project('year', 'nodes', 'edges', 'density')
+  .by(keys)
+  .by(select(column(0)))
+  .by(select(column(1)))
+  .by(math('edges / (nodes * (nodes - 1) / 2)'))
+  .order().by('year', asc)
+
+# Identify "friendship accelerators" - people who joined and led to many new connections
+g.V().hasLabel('person')
+  .project('name', 'joinYear', 'connectionsInFirstYear')
+  .by('name')
+  .by('joinYear')
+  .by(
+    outE('knows')
+    .filter(values('since').is(eq('joinYear')))
+    .count()
+  )
+  .order().by('connectionsInFirstYear', desc)
+```
+
+This query analyzes network density over time by counting nodes and edges per year, then calculating the density as edges divided by potential edges. It also identifies "friendship accelerators" who joined the network and quickly formed many connections.
+
+#### Relationship Longevity Analysis
+
+Investigate the duration and stability of relationships:
+
+```python
+# Find longest-lasting friendships
+g.E().hasLabel('knows')
+  .has('since', lt(2020))
+  .has('active', true)
+  .project('person1', 'person2', 'duration')
+  .by(outV().values('name'))
+  .by(inV().values('name'))
+  .by(math('2025 - since'))
+  .order().by('duration', desc)
+
+# Calculate friendship churn rate per year
+g.E().hasLabel('knows')
+  .has('endYear')
+  .group()
+  .by('endYear')
+  .by(count())
+  .as('ended')
+g.E().hasLabel('knows')
+  .group()
+  .by('since')
+  .by(count())
+  .as('started')
+g.select('started', 'ended')
+  .project('year', 'started', 'ended', 'churnRate')
+  .by(keys)
+  .by(select(column(0)))
+  .by(select(column(1)))
+  .by(math('ended / started'))
+  .order().by('year', asc)
+```
+
+This example finds the longest-lasting friendships and calculates the churn rate of friendships per year. The `math()` step computes the duration of friendships and the churn rate as the ratio of ended friendships to started friendships.
+
+### Combining Multiple Techniques
+
+Real-world graph analysis often requires combining multiple techniques to extract meaningful insights:
+
+```python
+# Find community influencers - people with high centrality in their community
+g.V().hasLabel('person').as('p')
+  .out('member_of').as('community')
+  .select('community').in('member_of').as('members')
+  .select('p')
+  .project('person', 'community', 'influence')
+  .by('name')
+  .by(select('community').values('name'))
+  .by(
+    both('knows')
+    .where(out('member_of').where(eq('community')))
+    .count()
+  )
+  .order().by('community').by('influence', desc)
+
+# Temporal community evolution - track how communities grow and merge over time
+g.V().hasLabel('community')
+  .project('community', 'sizeByYear', 'membershipChanges')
+  .by('name')
+  .by(
+    in('member_of')
+    .group()
+    .by('joinYear')
+    .by(count())
+  )
+  .by(
+    in('member_of')
+    .order().by('joinDate', asc)
+    .project('name', 'joinDate')
+    .by('name')
+    .by('joinDate')
+    .fold()
+  )
+```
+
+These graph analysis techniques demonstrate the power of Gremlin for extracting valuable insights from complex network data. By combining different centrality measures, community detection algorithms, and temporal analysis methods, you can gain a deep understanding of the structure, dynamics, and evolution of your graph data.
 
 ### Example Queries with Explanations
 
