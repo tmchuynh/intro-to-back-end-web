@@ -1,0 +1,674 @@
+import BackToTop from "@/components/BackToTop";
+
+# REST API Controllers
+
+## Introduction
+
+In this module, we'll create the REST API controllers that expose our online learning platform's functionality to clients. Controllers act as the interface between the client and our services, handling HTTP requests and generating appropriate responses.
+
+## Basic Controller Structure
+
+Each controller typically follows a similar pattern:
+
+1. Handles specific HTTP methods (GET, POST, PUT, DELETE)
+2. Maps to specific URL paths
+3. Validates input data
+4. Delegates business logic to services
+5. Returns appropriate HTTP status codes and response bodies
+
+Let's implement the controllers for our main entities.
+
+## UserController
+
+```java title="src/main/java/com/example/learningplatform/controller/UserController.java"
+package com.example.learningplatform.controller;
+
+import com.example.learningplatform.dto.UserRegistrationDto;
+import com.example.learningplatform.model.User;
+import com.example.learningplatform.service.UserService;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import jakarta.validation.Valid;
+
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/users")
+public class UserController {
+
+    private final UserService userService;
+
+    @Autowired
+    public UserController(UserService userService) {
+        this.userService = userService;
+    }
+
+    @PostMapping("/register")
+    public ResponseEntity<User> registerUser(@Valid @RequestBody UserRegistrationDto registrationDto) {
+        User user = userService.registerUser(registrationDto);
+        return new ResponseEntity<>(user, HttpStatus.CREATED);
+    }
+
+    @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or authentication.principal.id == #id")
+    public ResponseEntity<User> getUserById(@PathVariable String id) {
+        User user = userService.findById(id);
+        return ResponseEntity.ok(user);
+    }
+
+    @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<User>> getAllUsers() {
+        List<User> users = userService.findAllUsers();
+        return ResponseEntity.ok(users);
+    }
+
+    @GetMapping("/role/{role}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<User>> getUsersByRole(@PathVariable String role) {
+        List<User> users = userService.findUsersByRole(role);
+        return ResponseEntity.ok(users);
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or authentication.principal.id == #id")
+    public ResponseEntity<User> updateUser(@PathVariable String id, @Valid @RequestBody User userDetails) {
+        User updatedUser = userService.updateUser(id, userDetails);
+        return ResponseEntity.ok(updatedUser);
+    }
+
+    @PutMapping("/{id}/password")
+    @PreAuthorize("hasRole('ADMIN') or authentication.principal.id == #id")
+    public ResponseEntity<User> changePassword(
+            @PathVariable String id,
+            @RequestBody Map<String, String> passwordData) {
+
+        String currentPassword = passwordData.get("currentPassword");
+        String newPassword = passwordData.get("newPassword");
+
+        User updatedUser = userService.changePassword(id, currentPassword, newPassword);
+        return ResponseEntity.ok(updatedUser);
+    }
+
+    @PutMapping("/{id}/roles")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<User> updateUserRoles(
+            @PathVariable String id,
+            @RequestBody List<String> roles) {
+
+        User updatedUser = userService.updateUserRoles(id, roles);
+        return ResponseEntity.ok(updatedUser);
+    }
+
+    @PutMapping("/{id}/deactivate")
+    @PreAuthorize("hasRole('ADMIN') or authentication.principal.id == #id")
+    public ResponseEntity<Void> deactivateUser(@PathVariable String id) {
+        userService.deactivateUser(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/{id}/activate")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> activateUser(@PathVariable String id) {
+        userService.activateUser(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deleteUser(@PathVariable String id) {
+        userService.deleteUser(id);
+        return ResponseEntity.noContent().build();
+    }
+}
+```
+
+<BackToTop />
+
+## CourseController
+
+```java title="src/main/java/com/example/learningplatform/controller/CourseController.java"
+package com.example.learningplatform.controller;
+
+import com.example.learningplatform.model.Course;
+import com.example.learningplatform.service.CourseService;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import jakarta.validation.Valid;
+
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/courses")
+public class CourseController {
+
+    private final CourseService courseService;
+
+    @Autowired
+    public CourseController(CourseService courseService) {
+        this.courseService = courseService;
+    }
+
+    @PostMapping
+    @PreAuthorize("hasRole('INSTRUCTOR') or hasRole('ADMIN')")
+    public ResponseEntity<Course> createCourse(@Valid @RequestBody Course course) {
+        Course newCourse = courseService.createCourse(course);
+        return new ResponseEntity<>(newCourse, HttpStatus.CREATED);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Course> getCourseById(@PathVariable String id) {
+        Course course = courseService.findById(id);
+        return ResponseEntity.ok(course);
+    }
+
+    @GetMapping("/slug/{slug}")
+    public ResponseEntity<Course> getCourseBySlug(@PathVariable String slug) {
+        Course course = courseService.findBySlug(slug);
+        return ResponseEntity.ok(course);
+    }
+
+    @GetMapping
+    public ResponseEntity<Page<Course>> getAllPublishedCourses(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "title") String sort) {
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by(sort));
+        Page<Course> courses = courseService.findAllPublishedCourses(pageable);
+        return ResponseEntity.ok(courses);
+    }
+
+    @GetMapping("/instructor/{instructorId}")
+    public ResponseEntity<List<Course>> getCoursesByInstructor(@PathVariable String instructorId) {
+        List<Course> courses = courseService.findCoursesByInstructor(instructorId);
+        return ResponseEntity.ok(courses);
+    }
+
+    @GetMapping("/tags")
+    public ResponseEntity<List<Course>> getCoursesByTags(@RequestParam List<String> tags) {
+        List<Course> courses = courseService.findCoursesByTags(tags);
+        return ResponseEntity.ok(courses);
+    }
+
+    @GetMapping("/level/{level}")
+    public ResponseEntity<List<Course>> getCoursesByLevel(@PathVariable String level) {
+        List<Course> courses = courseService.findCoursesByLevel(level);
+        return ResponseEntity.ok(courses);
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<List<Course>> searchCourses(@RequestParam String keyword) {
+        List<Course> courses = courseService.searchCourses(keyword);
+        return ResponseEntity.ok(courses);
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or @courseService.findById(#id).instructorId == authentication.principal.id")
+    public ResponseEntity<Course> updateCourse(
+            @PathVariable String id,
+            @Valid @RequestBody Course courseDetails) {
+
+        Course updatedCourse = courseService.updateCourse(id, courseDetails);
+        return ResponseEntity.ok(updatedCourse);
+    }
+
+    @PutMapping("/{id}/publish")
+    @PreAuthorize("hasRole('ADMIN') or @courseService.findById(#id).instructorId == authentication.principal.id")
+    public ResponseEntity<Course> publishCourse(@PathVariable String id) {
+        Course publishedCourse = courseService.publishCourse(id);
+        return ResponseEntity.ok(publishedCourse);
+    }
+
+    @PutMapping("/{id}/unpublish")
+    @PreAuthorize("hasRole('ADMIN') or @courseService.findById(#id).instructorId == authentication.principal.id")
+    public ResponseEntity<Course> unpublishCourse(@PathVariable String id) {
+        Course unpublishedCourse = courseService.unpublishCourse(id);
+        return ResponseEntity.ok(unpublishedCourse);
+    }
+
+    @PutMapping("/{id}/archive")
+    @PreAuthorize("hasRole('ADMIN') or @courseService.findById(#id).instructorId == authentication.principal.id")
+    public ResponseEntity<Course> archiveCourse(@PathVariable String id) {
+        Course archivedCourse = courseService.archiveCourse(id);
+        return ResponseEntity.ok(archivedCourse);
+    }
+
+    @PutMapping("/{id}/rating")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Course> rateCourse(
+            @PathVariable String id,
+            @RequestBody Map<String, Double> ratingData) {
+
+        Double rating = ratingData.get("rating");
+        Course ratedCourse = courseService.updateCourseRating(id, rating);
+        return ResponseEntity.ok(ratedCourse);
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or @courseService.findById(#id).instructorId == authentication.principal.id")
+    public ResponseEntity<Void> deleteCourse(@PathVariable String id) {
+        courseService.deleteCourse(id);
+        return ResponseEntity.noContent().build();
+    }
+}
+```
+
+<BackToTop />
+
+## ModuleController
+
+```java title="src/main/java/com/example/learningplatform/controller/ModuleController.java"
+package com.example.learningplatform.controller;
+
+import com.example.learningplatform.model.Module;
+import com.example.learningplatform.service.ModuleService;
+import com.example.learningplatform.service.CourseService;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import jakarta.validation.Valid;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/modules")
+public class ModuleController {
+
+    private final ModuleService moduleService;
+    private final CourseService courseService;
+
+    @Autowired
+    public ModuleController(ModuleService moduleService, CourseService courseService) {
+        this.moduleService = moduleService;
+        this.courseService = courseService;
+    }
+
+    @PostMapping
+    @PreAuthorize("hasRole('INSTRUCTOR') or hasRole('ADMIN')")
+    public ResponseEntity<Module> createModule(@Valid @RequestBody Module module) {
+        // Verify the user has access to the course
+        String courseId = module.getCourseId();
+        String instructorId = courseService.findById(courseId).getInstructorId();
+
+        if (instructorId.equals(SecurityUtils.getCurrentUserId()) || SecurityUtils.hasRole("ADMIN")) {
+            Module newModule = moduleService.createModule(module);
+            return new ResponseEntity<>(newModule, HttpStatus.CREATED);
+        } else {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Module> getModuleById(@PathVariable String id) {
+        Module module = moduleService.findById(id);
+        return ResponseEntity.ok(module);
+    }
+
+    @GetMapping("/course/{courseId}")
+    public ResponseEntity<List<Module>> getModulesByCourse(@PathVariable String courseId) {
+        List<Module> modules = moduleService.findModulesByCourse(courseId);
+        return ResponseEntity.ok(modules);
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('INSTRUCTOR') or hasRole('ADMIN')")
+    public ResponseEntity<Module> updateModule(
+            @PathVariable String id,
+            @Valid @RequestBody Module moduleDetails) {
+
+        Module module = moduleService.findById(id);
+        String instructorId = courseService.findById(module.getCourseId()).getInstructorId();
+
+        if (instructorId.equals(SecurityUtils.getCurrentUserId()) || SecurityUtils.hasRole("ADMIN")) {
+            Module updatedModule = moduleService.updateModule(id, moduleDetails);
+            return ResponseEntity.ok(updatedModule);
+        } else {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+    }
+
+    @PostMapping("/{id}/lessons")
+    @PreAuthorize("hasRole('INSTRUCTOR') or hasRole('ADMIN')")
+    public ResponseEntity<Module> addLesson(
+            @PathVariable String id,
+            @Valid @RequestBody Module.Lesson lesson) {
+
+        Module module = moduleService.findById(id);
+        String instructorId = courseService.findById(module.getCourseId()).getInstructorId();
+
+        if (instructorId.equals(SecurityUtils.getCurrentUserId()) || SecurityUtils.hasRole("ADMIN")) {
+            Module updatedModule = moduleService.addLesson(id, lesson);
+            return ResponseEntity.ok(updatedModule);
+        } else {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+    }
+
+    @PutMapping("/{id}/lessons/{lessonId}")
+    @PreAuthorize("hasRole('INSTRUCTOR') or hasRole('ADMIN')")
+    public ResponseEntity<Module> updateLesson(
+            @PathVariable String id,
+            @PathVariable String lessonId,
+            @Valid @RequestBody Module.Lesson lessonDetails) {
+
+        Module module = moduleService.findById(id);
+        String instructorId = courseService.findById(module.getCourseId()).getInstructorId();
+
+        if (instructorId.equals(SecurityUtils.getCurrentUserId()) || SecurityUtils.hasRole("ADMIN")) {
+            Module updatedModule = moduleService.updateLesson(id, lessonId, lessonDetails);
+            return ResponseEntity.ok(updatedModule);
+        } else {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+    }
+
+    @DeleteMapping("/{id}/lessons/{lessonId}")
+    @PreAuthorize("hasRole('INSTRUCTOR') or hasRole('ADMIN')")
+    public ResponseEntity<Module> deleteLesson(
+            @PathVariable String id,
+            @PathVariable String lessonId) {
+
+        Module module = moduleService.findById(id);
+        String instructorId = courseService.findById(module.getCourseId()).getInstructorId();
+
+        if (instructorId.equals(SecurityUtils.getCurrentUserId()) || SecurityUtils.hasRole("ADMIN")) {
+            Module updatedModule = moduleService.deleteLesson(id, lessonId);
+            return ResponseEntity.ok(updatedModule);
+        } else {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('INSTRUCTOR') or hasRole('ADMIN')")
+    public ResponseEntity<Void> deleteModule(@PathVariable String id) {
+        Module module = moduleService.findById(id);
+        String instructorId = courseService.findById(module.getCourseId()).getInstructorId();
+
+        if (instructorId.equals(SecurityUtils.getCurrentUserId()) || SecurityUtils.hasRole("ADMIN")) {
+            moduleService.deleteModule(id);
+            return ResponseEntity.noContent().build();
+        } else {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+    }
+
+    // Note: SecurityUtils is a utility class that should be implemented to provide
+    // access to the current authenticated user and their roles
+}
+```
+
+<BackToTop />
+
+## EnrollmentController
+
+```java title="src/main/java/com/example/learningplatform/controller/EnrollmentController.java"
+package com.example.learningplatform.controller;
+
+import com.example.learningplatform.model.Enrollment;
+import com.example.learningplatform.service.EnrollmentService;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/enrollments")
+public class EnrollmentController {
+
+    private final EnrollmentService enrollmentService;
+
+    @Autowired
+    public EnrollmentController(EnrollmentService enrollmentService) {
+        this.enrollmentService = enrollmentService;
+    }
+
+    @PostMapping
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Enrollment> enrollInCourse(@RequestBody Map<String, String> enrollmentData) {
+        String userId = SecurityUtils.getCurrentUserId();
+        String courseId = enrollmentData.get("courseId");
+
+        Enrollment enrollment = enrollmentService.enrollUserInCourse(userId, courseId);
+        return new ResponseEntity<>(enrollment, HttpStatus.CREATED);
+    }
+
+    @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or @enrollmentService.findById(#id).userId == authentication.principal.id")
+    public ResponseEntity<Enrollment> getEnrollmentById(@PathVariable String id) {
+        Enrollment enrollment = enrollmentService.findById(id);
+        return ResponseEntity.ok(enrollment);
+    }
+
+    @GetMapping("/user/{userId}")
+    @PreAuthorize("hasRole('ADMIN') or #userId == authentication.principal.id")
+    public ResponseEntity<List<Enrollment>> getEnrollmentsByUser(@PathVariable String userId) {
+        List<Enrollment> enrollments = enrollmentService.findEnrollmentsByUser(userId);
+        return ResponseEntity.ok(enrollments);
+    }
+
+    @GetMapping("/course/{courseId}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('INSTRUCTOR')")
+    public ResponseEntity<List<Enrollment>> getEnrollmentsByCourse(@PathVariable String courseId) {
+        List<Enrollment> enrollments = enrollmentService.findEnrollmentsByCourse(courseId);
+        return ResponseEntity.ok(enrollments);
+    }
+
+    @PostMapping("/{id}/complete-lesson")
+    @PreAuthorize("@enrollmentService.findById(#id).userId == authentication.principal.id")
+    public ResponseEntity<Enrollment> markLessonAsCompleted(
+            @PathVariable String id,
+            @RequestBody Map<String, String> lessonData) {
+
+        String lessonId = lessonData.get("lessonId");
+        Enrollment enrollment = enrollmentService.markLessonAsCompleted(id, lessonId);
+        return ResponseEntity.ok(enrollment);
+    }
+
+    @PostMapping("/{id}/notes")
+    @PreAuthorize("@enrollmentService.findById(#id).userId == authentication.principal.id")
+    public ResponseEntity<Enrollment> addNote(
+            @PathVariable String id,
+            @RequestBody Map<String, String> noteData) {
+
+        String lessonId = noteData.get("lessonId");
+        String content = noteData.get("content");
+
+        Enrollment enrollment = enrollmentService.addNote(id, lessonId, content);
+        return ResponseEntity.ok(enrollment);
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or @enrollmentService.findById(#id).userId == authentication.principal.id")
+    public ResponseEntity<Void> unenroll(@PathVariable String id) {
+        enrollmentService.unenrollUser(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/{id}/last-access")
+    @PreAuthorize("@enrollmentService.findById(#id).userId == authentication.principal.id")
+    public ResponseEntity<Enrollment> updateLastAccess(@PathVariable String id) {
+        Enrollment enrollment = enrollmentService.updateLastAccess(id);
+        return ResponseEntity.ok(enrollment);
+    }
+}
+```
+
+<BackToTop />
+
+## Additional Controllers
+
+We should implement controllers for the remaining entities as well:
+
+- `DiscussionController` - For managing forum discussions and comments
+- `AssessmentController` - For quizzes and tests
+- `SubmissionController` - For assessment submissions
+- `NotificationController` - For user notifications
+
+Each controller will handle the appropriate HTTP endpoints for its entity, including authorization rules to ensure data security.
+
+## Security Utility
+
+Let's implement the SecurityUtils class we referenced in the controllers:
+
+```java title="src/main/java/com/example/learningplatform/util/SecurityUtils.java"
+package com.example.learningplatform.util;
+
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+
+public class SecurityUtils {
+
+    /**
+     * Get the ID of the currently authenticated user
+     */
+    public static String getCurrentUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return null;
+        }
+
+        Object principal = authentication.getPrincipal();
+        if (principal instanceof org.springframework.security.core.userdetails.User) {
+            // Assuming the username is the user ID
+            return ((org.springframework.security.core.userdetails.User) principal).getUsername();
+        } else if (principal instanceof String) {
+            return (String) principal;
+        }
+
+        return null;
+    }
+
+    /**
+     * Check if the current user has a specific role
+     */
+    public static boolean hasRole(String role) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return false;
+        }
+
+        String roleWithPrefix = role.startsWith("ROLE_") ? role : "ROLE_" + role;
+
+        return authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(authority -> authority.equals(roleWithPrefix));
+    }
+
+    /**
+     * Check if the current user is authenticated
+     */
+    public static boolean isAuthenticated() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return authentication != null && authentication.isAuthenticated();
+    }
+}
+```
+
+<BackToTop />
+
+## API Documentation with Swagger/OpenAPI
+
+It's important to document our API for developers who will use it. Spring Boot's integration with OpenAPI makes this easy:
+
+```java title="src/main/java/com/example/learningplatform/config/OpenApiConfig.java"
+package com.example.learningplatform.config;
+
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Contact;
+import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.info.License;
+import io.swagger.v3.oas.models.security.SecurityScheme;
+import io.swagger.v3.oas.models.Components;
+import io.swagger.v3.oas.models.security.SecurityRequirement;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class OpenApiConfig {
+
+    @Bean
+    public OpenAPI customOpenAPI() {
+        return new OpenAPI()
+                .info(new Info()
+                        .title("Learning Platform API")
+                        .version("1.0")
+                        .description("REST API for Online Learning Platform")
+                        .contact(new Contact()
+                                .name("Example Learning")
+                                .email("contact@example.com")
+                                .url("https://www.example.com"))
+                        .license(new License()
+                                .name("MIT License")
+                                .url("https://opensource.org/licenses/MIT")))
+                .addSecurityItem(new SecurityRequirement().addList("bearerAuth"))
+                .components(new Components()
+                        .addSecuritySchemes("bearerAuth",
+                                new SecurityScheme()
+                                        .name("bearerAuth")
+                                        .type(SecurityScheme.Type.HTTP)
+                                        .scheme("bearer")
+                                        .bearerFormat("JWT")));
+    }
+}
+```
+
+## Cross-Origin Resource Sharing (CORS)
+
+To allow our frontend application to communicate with the API from a different domain, we need to configure CORS:
+
+```java title="src/main/java/com/example/learningplatform/config/WebConfig.java"
+package com.example.learningplatform.config;
+
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+@Configuration
+public class WebConfig implements WebMvcConfigurer {
+
+    @Override
+    public void addCorsMappings(CorsRegistry registry) {
+        registry.addMapping("/api/**")
+                .allowedOrigins("http://localhost:3000") // Frontend origin
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                .allowedHeaders("*")
+                .allowCredentials(true)
+                .maxAge(3600);
+    }
+}
+```
+
+## Next Steps
+
+Now that we've implemented our REST API controllers, in the next module we'll focus on implementing authentication with Argon2 password hashing for secure user management.
+
+[Next: Authentication with Argon2 →](/proj-online-learning-platform-website/09-authentication-argon2)
