@@ -1,0 +1,1726 @@
+import BackToTop from "@/components/BackToTop";
+
+# Instructor Course Editor
+
+## Introduction
+
+In this module, we'll implement the course creation and editing interface for instructors. This will allow instructors to create new courses, add modules and lessons, upload content, and manage course materials. We'll use form management with Formik and implement a rich editor for content creation.
+
+## CourseEditorPage Component
+
+Let's create the main course editor page that will handle both creation and editing:
+
+```jsx
+// src/pages/CourseEditorPage.jsx
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { Formik, Form } from "formik";
+import * as Yup from "yup";
+import { FaSave, FaArrowLeft, FaPlus, FaEye, FaTrash } from "react-icons/fa";
+import CourseService from "../services/courseService";
+import Button from "../components/common/Button";
+import Input from "../components/common/Input";
+import TextArea from "../components/common/TextArea";
+import Card from "../components/common/Card";
+import ModuleEditor from "../components/course/ModuleEditor";
+
+const CourseEditorPage = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const isEditMode = !!id;
+
+  const [course, setCourse] = useState(null);
+  const [isLoading, setIsLoading] = useState(isEditMode);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [activeTab, setActiveTab] = useState("basic");
+  const [modules, setModules] = useState([]);
+
+  useEffect(() => {
+    const fetchCourse = async () => {
+      if (!isEditMode) {
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        const courseData = await CourseService.getCourseById(id);
+        setCourse(courseData);
+        setModules(courseData.modules || []);
+      } catch (err) {
+        setError("Failed to load course data. Please try again later.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCourse();
+  }, [id, isEditMode]);
+
+  const initialValues = {
+    title: course?.title || "",
+    slug: course?.slug || "",
+    description: course?.description || "",
+    level: course?.level || "BEGINNER",
+    category: course?.category || "",
+    thumbnail: course?.thumbnail || "",
+    price: course?.price || 0,
+    published: course?.published || false,
+    duration: course?.duration || "",
+    learningObjectives: course?.learningObjectives?.join("\n") || "",
+    requirements: course?.requirements?.join("\n") || "",
+    instructorBio: course?.instructorBio || "",
+  };
+
+  const validationSchema = Yup.object({
+    title: Yup.string()
+      .required("Title is required")
+      .max(100, "Title must be at most 100 characters"),
+    slug: Yup.string()
+      .required("Slug is required")
+      .matches(
+        /^[a-z0-9-]+$/,
+        "Slug can only contain lowercase letters, numbers, and hyphens"
+      )
+      .max(100, "Slug must be at most 100 characters"),
+    description: Yup.string()
+      .required("Description is required")
+      .min(50, "Description must be at least 50 characters"),
+    level: Yup.string()
+      .required("Level is required")
+      .oneOf(["BEGINNER", "INTERMEDIATE", "ADVANCED"], "Invalid level"),
+    category: Yup.string().required("Category is required"),
+    price: Yup.number()
+      .min(0, "Price must be non-negative")
+      .required("Price is required"),
+  });
+
+  const handleSubmit = async (values, { setSubmitting }) => {
+    try {
+      setIsSaving(true);
+      setError("");
+
+      // Process multi-line strings into arrays
+      const processedValues = {
+        ...values,
+        learningObjectives: values.learningObjectives
+          ? values.learningObjectives.split("\n").filter((item) => item.trim())
+          : [],
+        requirements: values.requirements
+          ? values.requirements.split("\n").filter((item) => item.trim())
+          : [],
+        modules: modules,
+      };
+
+      let result;
+      if (isEditMode) {
+        result = await CourseService.updateCourse(id, processedValues);
+      } else {
+        result = await CourseService.createCourse(processedValues);
+      }
+
+      navigate(`/instructor/courses/edit/${result.id}`);
+    } catch (err) {
+      setError(
+        err.response?.data?.message ||
+          `Failed to ${isEditMode ? "update" : "create"} course. Please try again.`
+      );
+    } finally {
+      setIsSaving(false);
+      setSubmitting(false);
+    }
+  };
+
+  const handleAddModule = () => {
+    const newModule = {
+      id: `temp-${Date.now()}`,
+      title: "New Module",
+      description: "",
+      order: modules.length,
+      lessons: [],
+    };
+
+    setModules([...modules, newModule]);
+  };
+
+  const handleUpdateModule = (updatedModule) => {
+    setModules(
+      modules.map((module) =>
+        module.id === updatedModule.id ? updatedModule : module
+      )
+    );
+  };
+
+  const handleDeleteModule = (moduleId) => {
+    if (window.confirm("Are you sure you want to delete this module?")) {
+      setModules(modules.filter((module) => module.id !== moduleId));
+    }
+  };
+
+  const handleReorderModules = (reorderedModules) => {
+    // Update the order property of each module
+    const updatedModules = reorderedModules.map((module, index) => ({
+      ...module,
+      order: index,
+    }));
+
+    setModules(updatedModules);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-16">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center">
+          <Button
+            onClick={() => navigate("/instructor/courses")}
+            variant="outline"
+            size="sm"
+            className="mr-4"
+          >
+            <FaArrowLeft className="mr-2" /> Back to Courses
+          </Button>
+
+          <h1 className="text-3xl font-bold text-gray-900">
+            {isEditMode ? "Edit Course" : "Create New Course"}
+          </h1>
+        </div>
+
+        {isEditMode && (
+          <Button
+            as="a"
+            href={`/courses/${id}`}
+            target="_blank"
+            variant="outline"
+            size="sm"
+          >
+            <FaEye className="mr-2" /> Preview Course
+          </Button>
+        )}
+      </div>
+
+      {error && (
+        <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-md border border-red-200">
+          {error}
+        </div>
+      )}
+
+      <div className="bg-white shadow-md rounded-lg overflow-hidden mb-8">
+        <div className="border-b border-gray-200">
+          <nav className="flex -mb-px">
+            <button
+              className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${
+                activeTab === "basic"
+                  ? "border-primary-500 text-primary-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+              onClick={() => setActiveTab("basic")}
+            >
+              Basic Information
+            </button>
+
+            <button
+              className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${
+                activeTab === "content"
+                  ? "border-primary-500 text-primary-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              } ${!isEditMode ? "opacity-50 cursor-not-allowed" : ""}`}
+              onClick={() => isEditMode && setActiveTab("content")}
+              disabled={!isEditMode}
+            >
+              Course Content
+            </button>
+
+            <button
+              className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${
+                activeTab === "settings"
+                  ? "border-primary-500 text-primary-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+              onClick={() => setActiveTab("settings")}
+            >
+              Additional Settings
+            </button>
+          </nav>
+        </div>
+
+        <Formik
+          initialValues={initialValues}
+          validationSchema={validationSchema}
+          onSubmit={handleSubmit}
+          enableReinitialize
+        >
+          {({
+            values,
+            errors,
+            touched,
+            handleChange,
+            handleBlur,
+            isSubmitting,
+            setFieldValue,
+          }) => (
+            <Form>
+              <div className="p-6">
+                {/* Basic Information Tab */}
+                {activeTab === "basic" && (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <Input
+                        id="title"
+                        name="title"
+                        label="Course Title"
+                        placeholder="Enter the course title"
+                        value={values.title}
+                        onChange={handleChange}
+                        onBlur={handleBlur}
+                        error={touched.title && errors.title}
+                        touched={touched.title}
+                        required
+                      />
+
+                      <Input
+                        id="slug"
+                        name="slug"
+                        label="URL Slug"
+                        placeholder="enter-url-slug"
+                        value={values.slug}
+                        onChange={handleChange}
+                        onBlur={handleBlur}
+                        error={touched.slug && errors.slug}
+                        touched={touched.slug}
+                        required
+                        helpText="Used in the course URL. Use only lowercase letters, numbers, and hyphens."
+                      />
+                    </div>
+
+                    <TextArea
+                      id="description"
+                      name="description"
+                      label="Course Description"
+                      placeholder="Provide a detailed description of your course"
+                      value={values.description}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      error={touched.description && errors.description}
+                      touched={touched.description}
+                      required
+                      rows={6}
+                    />
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <div>
+                        <label
+                          htmlFor="level"
+                          className="block text-sm font-medium text-gray-700 mb-1"
+                        >
+                          Course Level <span className="text-red-500">*</span>
+                        </label>
+                        <select
+                          id="level"
+                          name="level"
+                          value={values.level}
+                          onChange={handleChange}
+                          onBlur={handleBlur}
+                          className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                        >
+                          <option value="BEGINNER">Beginner</option>
+                          <option value="INTERMEDIATE">Intermediate</option>
+                          <option value="ADVANCED">Advanced</option>
+                        </select>
+                        {touched.level && errors.level && (
+                          <p className="mt-1 text-sm text-red-600">
+                            {errors.level}
+                          </p>
+                        )}
+                      </div>
+
+                      <Input
+                        id="category"
+                        name="category"
+                        label="Category"
+                        placeholder="e.g., Programming, Design, Business"
+                        value={values.category}
+                        onChange={handleChange}
+                        onBlur={handleBlur}
+                        error={touched.category && errors.category}
+                        touched={touched.category}
+                        required
+                      />
+
+                      <Input
+                        id="price"
+                        name="price"
+                        type="number"
+                        label="Price ($)"
+                        placeholder="0.00"
+                        value={values.price}
+                        onChange={handleChange}
+                        onBlur={handleBlur}
+                        error={touched.price && errors.price}
+                        touched={touched.price}
+                        required
+                        min="0"
+                        step="0.01"
+                      />
+                    </div>
+
+                    <Input
+                      id="thumbnail"
+                      name="thumbnail"
+                      label="Thumbnail URL"
+                      placeholder="https://example.com/image.jpg"
+                      value={values.thumbnail}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      error={touched.thumbnail && errors.thumbnail}
+                      touched={touched.thumbnail}
+                      helpText="Provide a URL to an image that represents your course (recommended size: 1280x720)"
+                    />
+
+                    <Input
+                      id="duration"
+                      name="duration"
+                      label="Course Duration"
+                      placeholder="e.g., 6 weeks, 10 hours"
+                      value={values.duration}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      error={touched.duration && errors.duration}
+                      touched={touched.duration}
+                    />
+                  </div>
+                )}
+
+                {/* Course Content Tab */}
+                {activeTab === "content" && (
+                  <div>
+                    <div className="flex justify-between items-center mb-6">
+                      <h2 className="text-xl font-semibold text-gray-900">
+                        Modules
+                      </h2>
+
+                      <Button
+                        type="button"
+                        onClick={handleAddModule}
+                        variant="outline"
+                        size="sm"
+                      >
+                        <FaPlus className="mr-2" /> Add Module
+                      </Button>
+                    </div>
+
+                    {modules.length === 0 ? (
+                      <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                        <h3 className="text-lg font-medium text-gray-700 mb-2">
+                          No modules yet
+                        </h3>
+                        <p className="text-gray-500 mb-4">
+                          Start building your course by adding modules and
+                          lessons.
+                        </p>
+                        <Button
+                          type="button"
+                          onClick={handleAddModule}
+                          variant="primary"
+                        >
+                          <FaPlus className="mr-2" /> Add Your First Module
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-6">
+                        {modules.map((module, index) => (
+                          <ModuleEditor
+                            key={module.id}
+                            module={module}
+                            index={index}
+                            onUpdate={handleUpdateModule}
+                            onDelete={() => handleDeleteModule(module.id)}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Additional Settings Tab */}
+                {activeTab === "settings" && (
+                  <div className="space-y-6">
+                    <TextArea
+                      id="learningObjectives"
+                      name="learningObjectives"
+                      label="Learning Objectives"
+                      placeholder="Enter each learning objective on a new line"
+                      value={values.learningObjectives}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      error={
+                        touched.learningObjectives && errors.learningObjectives
+                      }
+                      touched={touched.learningObjectives}
+                      rows={5}
+                      helpText="What will students learn in this course? Enter one objective per line."
+                    />
+
+                    <TextArea
+                      id="requirements"
+                      name="requirements"
+                      label="Course Requirements"
+                      placeholder="Enter each requirement on a new line"
+                      value={values.requirements}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      error={touched.requirements && errors.requirements}
+                      touched={touched.requirements}
+                      rows={5}
+                      helpText="What should students know before taking this course? Enter one requirement per line."
+                    />
+
+                    <TextArea
+                      id="instructorBio"
+                      name="instructorBio"
+                      label="Instructor Bio"
+                      placeholder="Enter your bio as the instructor of this course"
+                      value={values.instructorBio}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      error={touched.instructorBio && errors.instructorBio}
+                      touched={touched.instructorBio}
+                      rows={4}
+                    />
+
+                    <div className="flex items-center">
+                      <input
+                        id="published"
+                        name="published"
+                        type="checkbox"
+                        checked={values.published}
+                        onChange={handleChange}
+                        className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                      />
+                      <label
+                        htmlFor="published"
+                        className="ml-2 block text-sm text-gray-900"
+                      >
+                        Publish this course (make it visible to students)
+                      </label>
+                    </div>
+                  </div>
+                )}
+
+                <div className="mt-8 pt-5 border-t border-gray-200 flex justify-end">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="mr-3"
+                    onClick={() => navigate("/instructor/courses")}
+                  >
+                    Cancel
+                  </Button>
+
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    disabled={isSubmitting || isSaving}
+                  >
+                    <div className="flex items-center">
+                      <FaSave className="mr-2" />
+                      {isSaving ? "Saving..." : "Save Course"}
+                    </div>
+                  </Button>
+                </div>
+              </div>
+            </Form>
+          )}
+        </Formik>
+      </div>
+    </div>
+  );
+};
+
+export default CourseEditorPage;
+```
+
+<BackToTop />
+
+## Module Editor Component
+
+Let's create a component for editing course modules:
+
+```jsx
+// src/components/course/ModuleEditor.jsx
+import React, { useState } from "react";
+import PropTypes from "prop-types";
+import {
+  FaChevronDown,
+  FaChevronUp,
+  FaTrash,
+  FaPlus,
+  FaArrowUp,
+  FaArrowDown,
+} from "react-icons/fa";
+import Input from "../common/Input";
+import TextArea from "../common/TextArea";
+import Button from "../common/Button";
+import LessonEditor from "./LessonEditor";
+
+const ModuleEditor = ({
+  module,
+  index,
+  onUpdate,
+  onDelete,
+  onMoveUp,
+  onMoveDown,
+}) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [lessons, setLessons] = useState(module.lessons || []);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    const updatedModule = {
+      ...module,
+      [name]: value,
+    };
+    onUpdate(updatedModule);
+  };
+
+  const handleAddLesson = () => {
+    const newLesson = {
+      id: `temp-lesson-${Date.now()}`,
+      title: "New Lesson",
+      content: "",
+      duration: "00:00",
+      order: lessons.length,
+    };
+
+    const updatedLessons = [...lessons, newLesson];
+    setLessons(updatedLessons);
+
+    onUpdate({
+      ...module,
+      lessons: updatedLessons,
+    });
+  };
+
+  const handleUpdateLesson = (updatedLesson) => {
+    const updatedLessons = lessons.map((lesson) =>
+      lesson.id === updatedLesson.id ? updatedLesson : lesson
+    );
+
+    setLessons(updatedLessons);
+
+    onUpdate({
+      ...module,
+      lessons: updatedLessons,
+    });
+  };
+
+  const handleDeleteLesson = (lessonId) => {
+    if (window.confirm("Are you sure you want to delete this lesson?")) {
+      const updatedLessons = lessons.filter((lesson) => lesson.id !== lessonId);
+
+      // Update order for remaining lessons
+      const reorderedLessons = updatedLessons.map((lesson, idx) => ({
+        ...lesson,
+        order: idx,
+      }));
+
+      setLessons(reorderedLessons);
+
+      onUpdate({
+        ...module,
+        lessons: reorderedLessons,
+      });
+    }
+  };
+
+  const handleMoveLessonUp = (index) => {
+    if (index === 0) return;
+
+    const updatedLessons = [...lessons];
+    [updatedLessons[index - 1], updatedLessons[index]] = [
+      updatedLessons[index],
+      updatedLessons[index - 1],
+    ];
+
+    // Update order for all lessons
+    const reorderedLessons = updatedLessons.map((lesson, idx) => ({
+      ...lesson,
+      order: idx,
+    }));
+
+    setLessons(reorderedLessons);
+
+    onUpdate({
+      ...module,
+      lessons: reorderedLessons,
+    });
+  };
+
+  const handleMoveLessonDown = (index) => {
+    if (index === lessons.length - 1) return;
+
+    const updatedLessons = [...lessons];
+    [updatedLessons[index], updatedLessons[index + 1]] = [
+      updatedLessons[index + 1],
+      updatedLessons[index],
+    ];
+
+    // Update order for all lessons
+    const reorderedLessons = updatedLessons.map((lesson, idx) => ({
+      ...lesson,
+      order: idx,
+    }));
+
+    setLessons(reorderedLessons);
+
+    onUpdate({
+      ...module,
+      lessons: reorderedLessons,
+    });
+  };
+
+  return (
+    <div className="border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+      <div className="bg-gray-50 px-4 py-3 flex justify-between items-center">
+        <div className="flex items-center">
+          <button
+            type="button"
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="text-gray-500 hover:text-gray-700 mr-2 focus:outline-none"
+          >
+            {isExpanded ? <FaChevronUp /> : <FaChevronDown />}
+          </button>
+          <h3 className="font-medium text-gray-900">
+            Module {index + 1}: {module.title}
+          </h3>
+        </div>
+
+        <div className="flex space-x-2">
+          {onMoveUp && (
+            <button
+              type="button"
+              onClick={onMoveUp}
+              className="text-gray-500 hover:text-gray-700 focus:outline-none"
+              title="Move module up"
+            >
+              <FaArrowUp />
+            </button>
+          )}
+
+          {onMoveDown && (
+            <button
+              type="button"
+              onClick={onMoveDown}
+              className="text-gray-500 hover:text-gray-700 focus:outline-none"
+              title="Move module down"
+            >
+              <FaArrowDown />
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={onDelete}
+            className="text-red-500 hover:text-red-700 focus:outline-none"
+            title="Delete module"
+          >
+            <FaTrash />
+          </button>
+        </div>
+      </div>
+
+      {isExpanded && (
+        <div className="p-4 border-t border-gray-200">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <Input
+              id={`module-${module.id}-title`}
+              name="title"
+              label="Module Title"
+              value={module.title}
+              onChange={handleChange}
+              required
+            />
+
+            <Input
+              id={`module-${module.id}-duration`}
+              name="duration"
+              label="Estimated Duration"
+              placeholder="e.g., 2 hours, 30 minutes"
+              value={module.duration || ""}
+              onChange={handleChange}
+            />
+          </div>
+
+          <TextArea
+            id={`module-${module.id}-description`}
+            name="description"
+            label="Module Description"
+            value={module.description || ""}
+            onChange={handleChange}
+            rows={3}
+          />
+
+          <div className="mt-6">
+            <div className="flex justify-between items-center mb-4">
+              <h4 className="text-lg font-medium text-gray-900">
+                Lessons {lessons.length > 0 && `(${lessons.length})`}
+              </h4>
+
+              <Button
+                type="button"
+                onClick={handleAddLesson}
+                variant="outline"
+                size="sm"
+              >
+                <FaPlus className="mr-2" /> Add Lesson
+              </Button>
+            </div>
+
+            {lessons.length === 0 ? (
+              <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                <p className="text-gray-500 mb-4">
+                  No lessons in this module yet.
+                </p>
+                <Button
+                  type="button"
+                  onClick={handleAddLesson}
+                  variant="primary"
+                  size="sm"
+                >
+                  <FaPlus className="mr-2" /> Add Your First Lesson
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {lessons.map((lesson, idx) => (
+                  <LessonEditor
+                    key={lesson.id}
+                    lesson={lesson}
+                    index={idx}
+                    onUpdate={handleUpdateLesson}
+                    onDelete={() => handleDeleteLesson(lesson.id)}
+                    onMoveUp={() => handleMoveLessonUp(idx)}
+                    onMoveDown={() => handleMoveLessonDown(idx)}
+                    canMoveUp={idx > 0}
+                    canMoveDown={idx < lessons.length - 1}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+ModuleEditor.propTypes = {
+  module: PropTypes.shape({
+    id: PropTypes.string.isRequired,
+    title: PropTypes.string.isRequired,
+    description: PropTypes.string,
+    duration: PropTypes.string,
+    order: PropTypes.number,
+    lessons: PropTypes.array,
+  }).isRequired,
+  index: PropTypes.number.isRequired,
+  onUpdate: PropTypes.func.isRequired,
+  onDelete: PropTypes.func.isRequired,
+  onMoveUp: PropTypes.func,
+  onMoveDown: PropTypes.func,
+};
+
+export default ModuleEditor;
+```
+
+<BackToTop />
+
+## Lesson Editor Component
+
+Now, let's create a component for editing lessons within modules:
+
+```jsx
+// src/components/course/LessonEditor.jsx
+import React, { useState } from "react";
+import PropTypes from "prop-types";
+import {
+  FaChevronDown,
+  FaChevronUp,
+  FaTrash,
+  FaArrowUp,
+  FaArrowDown,
+} from "react-icons/fa";
+import Input from "../common/Input";
+import TextArea from "../common/TextArea";
+import RichTextEditor from "./RichTextEditor";
+
+const LessonEditor = ({
+  lesson,
+  index,
+  onUpdate,
+  onDelete,
+  onMoveUp,
+  onMoveDown,
+  canMoveUp,
+  canMoveDown,
+}) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    onUpdate({
+      ...lesson,
+      [name]: value,
+    });
+  };
+
+  const handleContentChange = (content) => {
+    onUpdate({
+      ...lesson,
+      content,
+    });
+  };
+
+  return (
+    <div className="border border-gray-200 rounded-lg overflow-hidden">
+      <div className="bg-gray-50 px-4 py-2 flex justify-between items-center">
+        <div className="flex items-center">
+          <button
+            type="button"
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="text-gray-500 hover:text-gray-700 mr-2 focus:outline-none"
+          >
+            {isExpanded ? <FaChevronUp /> : <FaChevronDown />}
+          </button>
+          <h4 className="font-medium">
+            Lesson {index + 1}: {lesson.title}
+          </h4>
+        </div>
+
+        <div className="flex space-x-2">
+          {canMoveUp && (
+            <button
+              type="button"
+              onClick={onMoveUp}
+              className="text-gray-500 hover:text-gray-700 focus:outline-none"
+              title="Move lesson up"
+            >
+              <FaArrowUp />
+            </button>
+          )}
+
+          {canMoveDown && (
+            <button
+              type="button"
+              onClick={onMoveDown}
+              className="text-gray-500 hover:text-gray-700 focus:outline-none"
+              title="Move lesson down"
+            >
+              <FaArrowDown />
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={onDelete}
+            className="text-red-500 hover:text-red-700 focus:outline-none"
+            title="Delete lesson"
+          >
+            <FaTrash />
+          </button>
+        </div>
+      </div>
+
+      {isExpanded && (
+        <div className="p-4 border-t border-gray-200">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <Input
+              id={`lesson-${lesson.id}-title`}
+              name="title"
+              label="Lesson Title"
+              value={lesson.title}
+              onChange={handleChange}
+              required
+            />
+
+            <Input
+              id={`lesson-${lesson.id}-duration`}
+              name="duration"
+              label="Duration"
+              placeholder="e.g., 10:00"
+              value={lesson.duration || ""}
+              onChange={handleChange}
+            />
+          </div>
+
+          <div className="mb-4">
+            <label
+              htmlFor={`lesson-${lesson.id}-type`}
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Lesson Type
+            </label>
+            <select
+              id={`lesson-${lesson.id}-type`}
+              name="type"
+              value={lesson.type || "VIDEO"}
+              onChange={handleChange}
+              className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+            >
+              <option value="VIDEO">Video</option>
+              <option value="TEXT">Text</option>
+              <option value="QUIZ">Quiz</option>
+              <option value="ASSIGNMENT">Assignment</option>
+            </select>
+          </div>
+
+          {lesson.type === "VIDEO" && (
+            <Input
+              id={`lesson-${lesson.id}-videoUrl`}
+              name="videoUrl"
+              label="Video URL"
+              placeholder="e.g., https://www.youtube.com/watch?v=..."
+              value={lesson.videoUrl || ""}
+              onChange={handleChange}
+            />
+          )}
+
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Lesson Content
+            </label>
+            <RichTextEditor
+              initialValue={lesson.content || ""}
+              onChange={handleContentChange}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+LessonEditor.propTypes = {
+  lesson: PropTypes.shape({
+    id: PropTypes.string.isRequired,
+    title: PropTypes.string.isRequired,
+    content: PropTypes.string,
+    duration: PropTypes.string,
+    type: PropTypes.string,
+    videoUrl: PropTypes.string,
+    order: PropTypes.number,
+  }).isRequired,
+  index: PropTypes.number.isRequired,
+  onUpdate: PropTypes.func.isRequired,
+  onDelete: PropTypes.func.isRequired,
+  onMoveUp: PropTypes.func.isRequired,
+  onMoveDown: PropTypes.func.isRequired,
+  canMoveUp: PropTypes.bool.isRequired,
+  canMoveDown: PropTypes.bool.isRequired,
+};
+
+export default LessonEditor;
+```
+
+<BackToTop />
+
+## Rich Text Editor Component
+
+Let's create a simple rich text editor component using a contentEditable div. In a real application, you might want to use a more robust solution like Draft.js, TinyMCE, or Quill.
+
+```jsx
+// src/components/course/RichTextEditor.jsx
+import React, { useState, useEffect, useRef } from "react";
+import PropTypes from "prop-types";
+import {
+  FaBold,
+  FaItalic,
+  FaListUl,
+  FaListOl,
+  FaLink,
+  FaImage,
+  FaCode,
+} from "react-icons/fa";
+
+const RichTextEditor = ({ initialValue, onChange }) => {
+  const [content, setContent] = useState(initialValue || "");
+  const editorRef = useRef(null);
+
+  useEffect(() => {
+    if (editorRef.current) {
+      editorRef.current.innerHTML = content;
+    }
+  }, []);
+
+  const handleInput = () => {
+    if (editorRef.current) {
+      const newContent = editorRef.current.innerHTML;
+      setContent(newContent);
+      onChange(newContent);
+    }
+  };
+
+  const execCommand = (command, value = null) => {
+    document.execCommand(command, false, value);
+    handleInput();
+    editorRef.current.focus();
+  };
+
+  const handleBold = () => execCommand("bold");
+  const handleItalic = () => execCommand("italic");
+  const handleUnorderedList = () => execCommand("insertUnorderedList");
+  const handleOrderedList = () => execCommand("insertOrderedList");
+
+  const handleLink = () => {
+    const url = prompt("Enter the URL:");
+    if (url) {
+      execCommand("createLink", url);
+    }
+  };
+
+  const handleImage = () => {
+    const url = prompt("Enter the image URL:");
+    if (url) {
+      execCommand("insertImage", url);
+    }
+  };
+
+  const handleCode = () => {
+    const selection = window.getSelection();
+    if (selection.rangeCount) {
+      const range = selection.getRangeAt(0);
+      const selectedText = range.toString();
+
+      if (selectedText) {
+        const codeElement = document.createElement("code");
+        codeElement.innerText = selectedText;
+
+        range.deleteContents();
+        range.insertNode(codeElement);
+
+        // Update content
+        handleInput();
+      }
+    }
+  };
+
+  return (
+    <div className="border border-gray-300 rounded-md overflow-hidden">
+      <div className="bg-gray-50 border-b border-gray-300 p-2 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={handleBold}
+          className="p-1 rounded hover:bg-gray-200 focus:outline-none"
+          title="Bold"
+        >
+          <FaBold />
+        </button>
+
+        <button
+          type="button"
+          onClick={handleItalic}
+          className="p-1 rounded hover:bg-gray-200 focus:outline-none"
+          title="Italic"
+        >
+          <FaItalic />
+        </button>
+
+        <button
+          type="button"
+          onClick={handleUnorderedList}
+          className="p-1 rounded hover:bg-gray-200 focus:outline-none"
+          title="Bullet List"
+        >
+          <FaListUl />
+        </button>
+
+        <button
+          type="button"
+          onClick={handleOrderedList}
+          className="p-1 rounded hover:bg-gray-200 focus:outline-none"
+          title="Numbered List"
+        >
+          <FaListOl />
+        </button>
+
+        <button
+          type="button"
+          onClick={handleLink}
+          className="p-1 rounded hover:bg-gray-200 focus:outline-none"
+          title="Insert Link"
+        >
+          <FaLink />
+        </button>
+
+        <button
+          type="button"
+          onClick={handleImage}
+          className="p-1 rounded hover:bg-gray-200 focus:outline-none"
+          title="Insert Image"
+        >
+          <FaImage />
+        </button>
+
+        <button
+          type="button"
+          onClick={handleCode}
+          className="p-1 rounded hover:bg-gray-200 focus:outline-none"
+          title="Insert Code"
+        >
+          <FaCode />
+        </button>
+      </div>
+
+      <div
+        ref={editorRef}
+        contentEditable
+        className="p-3 min-h-[200px] focus:outline-none"
+        onInput={handleInput}
+      />
+    </div>
+  );
+};
+
+RichTextEditor.propTypes = {
+  initialValue: PropTypes.string,
+  onChange: PropTypes.func.isRequired,
+};
+
+export default RichTextEditor;
+```
+
+<BackToTop />
+
+## TextArea Component
+
+Let's create a TextArea component to complement our Input component:
+
+```jsx
+// src/components/common/TextArea.jsx
+import React from "react";
+import PropTypes from "prop-types";
+
+const TextArea = ({
+  id,
+  name,
+  label,
+  placeholder,
+  value,
+  onChange,
+  onBlur,
+  error,
+  touched,
+  required = false,
+  disabled = false,
+  className = "",
+  rows = 3,
+  helpText,
+  ...props
+}) => {
+  const baseClasses =
+    "block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm";
+  const errorClasses = touched && error ? "border-red-300" : "border-gray-300";
+  const disabledClasses = disabled
+    ? "bg-gray-100 cursor-not-allowed"
+    : "bg-white";
+
+  const textareaClasses = `${baseClasses} ${errorClasses} ${disabledClasses} ${className}`;
+
+  return (
+    <div className="mb-4">
+      {label && (
+        <label
+          htmlFor={id}
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
+          {label} {required && <span className="text-red-500">*</span>}
+        </label>
+      )}
+
+      <textarea
+        id={id}
+        name={name}
+        placeholder={placeholder}
+        value={value}
+        onChange={onChange}
+        onBlur={onBlur}
+        disabled={disabled}
+        className={textareaClasses}
+        rows={rows}
+        required={required}
+        {...props}
+      />
+
+      {helpText && <p className="mt-1 text-sm text-gray-500">{helpText}</p>}
+
+      {touched && error && <p className="mt-1 text-sm text-red-600">{error}</p>}
+    </div>
+  );
+};
+
+TextArea.propTypes = {
+  id: PropTypes.string.isRequired,
+  name: PropTypes.string.isRequired,
+  label: PropTypes.string,
+  placeholder: PropTypes.string,
+  value: PropTypes.string,
+  onChange: PropTypes.func.isRequired,
+  onBlur: PropTypes.func,
+  error: PropTypes.string,
+  touched: PropTypes.bool,
+  required: PropTypes.bool,
+  disabled: PropTypes.bool,
+  className: PropTypes.string,
+  rows: PropTypes.number,
+  helpText: PropTypes.string,
+};
+
+export default TextArea;
+```
+
+<BackToTop />
+
+## Course Learning Interface
+
+Let's now implement the interface for students to access course content:
+
+```jsx
+// src/pages/CourseLearningPage.jsx
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import {
+  FaArrowLeft,
+  FaCheck,
+  FaLock,
+  FaChevronDown,
+  FaChevronUp,
+  FaPlay,
+} from "react-icons/fa";
+import CourseService from "../services/courseService";
+import Button from "../components/common/Button";
+import Card from "../components/common/Card";
+
+const CourseLearningPage = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+
+  const [course, setCourse] = useState(null);
+  const [enrollment, setEnrollment] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [activeModuleIndex, setActiveModuleIndex] = useState(0);
+  const [activeLessonId, setActiveLessonId] = useState(null);
+  const [currentLesson, setCurrentLesson] = useState(null);
+  const [expandedModules, setExpandedModules] = useState({});
+
+  useEffect(() => {
+    const fetchCourseAndEnrollment = async () => {
+      try {
+        setIsLoading(true);
+
+        // Fetch course details
+        const courseData = await CourseService.getCourseById(id);
+        setCourse(courseData);
+
+        // Fetch user's enrollment for this course
+        const enrollments = await CourseService.getUserEnrollments();
+        const userEnrollment = enrollments.find((e) => e.courseId === id);
+
+        if (!userEnrollment) {
+          // User is not enrolled, redirect to course details
+          navigate(`/courses/${id}`);
+          return;
+        }
+
+        setEnrollment(userEnrollment);
+
+        // Set initial expanded state for all modules
+        const initialExpandedState = {};
+        courseData.modules.forEach((module, index) => {
+          initialExpandedState[index] = index === 0; // Only expand the first module
+        });
+        setExpandedModules(initialExpandedState);
+
+        // Set active lesson based on progress
+        if (userEnrollment.lastLessonId) {
+          setActiveLessonId(userEnrollment.lastLessonId);
+
+          // Find the module containing this lesson
+          for (let i = 0; i < courseData.modules.length; i++) {
+            const module = courseData.modules[i];
+            const lessonIndex = module.lessons.findIndex(
+              (l) => l.id === userEnrollment.lastLessonId
+            );
+
+            if (lessonIndex !== -1) {
+              setActiveModuleIndex(i);
+              setExpandedModules({ ...initialExpandedState, [i]: true });
+
+              // Set current lesson
+              setCurrentLesson(module.lessons[lessonIndex]);
+              break;
+            }
+          }
+        } else if (
+          courseData.modules.length > 0 &&
+          courseData.modules[0].lessons.length > 0
+        ) {
+          // Set first lesson as active if no progress
+          setActiveLessonId(courseData.modules[0].lessons[0].id);
+          setCurrentLesson(courseData.modules[0].lessons[0]);
+        }
+      } catch (err) {
+        setError("Failed to load course content. Please try again later.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCourseAndEnrollment();
+  }, [id, navigate]);
+
+  const toggleModuleExpansion = (index) => {
+    setExpandedModules({
+      ...expandedModules,
+      [index]: !expandedModules[index],
+    });
+  };
+
+  const handleLessonClick = (moduleIndex, lesson) => {
+    setActiveModuleIndex(moduleIndex);
+    setActiveLessonId(lesson.id);
+    setCurrentLesson(lesson);
+
+    // Update user progress (in a real app, this would be an API call)
+    // For now, we'll just update the local state
+    setEnrollment({
+      ...enrollment,
+      lastLessonId: lesson.id,
+      lastAccessDate: new Date().toISOString(),
+    });
+  };
+
+  const markLessonComplete = async () => {
+    try {
+      // In a real app, this would be an API call to update lesson completion status
+      // For now, we'll just update the local state
+
+      // Find the next lesson, if any
+      let nextLesson = null;
+      let nextModuleIndex = activeModuleIndex;
+
+      // Check if there are more lessons in the current module
+      const currentModule = course.modules[activeModuleIndex];
+      const currentLessonIndex = currentModule.lessons.findIndex(
+        (l) => l.id === activeLessonId
+      );
+
+      if (currentLessonIndex < currentModule.lessons.length - 1) {
+        // Next lesson in the same module
+        nextLesson = currentModule.lessons[currentLessonIndex + 1];
+      } else if (activeModuleIndex < course.modules.length - 1) {
+        // First lesson in the next module
+        nextModuleIndex = activeModuleIndex + 1;
+        const nextModule = course.modules[nextModuleIndex];
+
+        if (nextModule.lessons.length > 0) {
+          nextLesson = nextModule.lessons[0];
+
+          // Expand the next module
+          setExpandedModules({
+            ...expandedModules,
+            [nextModuleIndex]: true,
+          });
+        }
+      }
+
+      if (nextLesson) {
+        setActiveModuleIndex(nextModuleIndex);
+        setActiveLessonId(nextLesson.id);
+        setCurrentLesson(nextLesson);
+      }
+
+      // Update progress
+      const completedLessons = [...(enrollment.completedLessons || [])];
+      if (!completedLessons.includes(activeLessonId)) {
+        completedLessons.push(activeLessonId);
+      }
+
+      // Calculate progress percentage
+      const totalLessons = course.modules.reduce(
+        (total, module) => total + module.lessons.length,
+        0
+      );
+
+      const progressPercentage = Math.round(
+        (completedLessons.length / totalLessons) * 100
+      );
+
+      setEnrollment({
+        ...enrollment,
+        completedLessons,
+        progress: progressPercentage,
+        lastLessonId: nextLesson ? nextLesson.id : activeLessonId,
+        lastAccessDate: new Date().toISOString(),
+      });
+    } catch (err) {
+      console.error("Error marking lesson as complete:", err);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-16">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
+
+  if (error || !course) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
+        <h2 className="text-2xl font-bold text-red-600 mb-4">Error</h2>
+        <p className="text-gray-600">{error || "Course not found"}</p>
+        <Button
+          onClick={() => navigate("/my-courses")}
+          variant="primary"
+          className="mt-8"
+        >
+          Back to My Courses
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-gray-50 min-h-screen">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Course Header */}
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <Button
+              onClick={() => navigate("/my-courses")}
+              variant="outline"
+              size="sm"
+              className="mb-2"
+            >
+              <FaArrowLeft className="mr-2" /> Back to My Courses
+            </Button>
+            <h1 className="text-2xl font-bold text-gray-900">{course.title}</h1>
+          </div>
+
+          <div className="flex items-center">
+            <div className="mr-4">
+              <div className="text-sm text-gray-500 mb-1">Your Progress</div>
+              <div className="flex items-center">
+                <div className="w-32 bg-gray-200 rounded-full h-2.5">
+                  <div
+                    className="bg-primary-600 h-2.5 rounded-full"
+                    style={{ width: `${enrollment.progress || 0}%` }}
+                  ></div>
+                </div>
+                <span className="ml-2 text-sm font-medium text-gray-700">
+                  {enrollment.progress || 0}%
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          {/* Course Sidebar (Modules and Lessons) */}
+          <div className="lg:col-span-1">
+            <Card className="sticky top-8">
+              <h2 className="text-lg font-semibold mb-4">Course Content</h2>
+
+              <div className="space-y-2">
+                {course.modules.map((module, moduleIndex) => (
+                  <div
+                    key={module.id}
+                    className="border border-gray-200 rounded-md overflow-hidden"
+                  >
+                    <div
+                      className={`px-3 py-2 flex justify-between items-center cursor-pointer ${
+                        moduleIndex === activeModuleIndex
+                          ? "bg-primary-50"
+                          : "bg-gray-50"
+                      }`}
+                      onClick={() => toggleModuleExpansion(moduleIndex)}
+                    >
+                      <div className="font-medium text-gray-900">
+                        Module {moduleIndex + 1}: {module.title}
+                      </div>
+                      <div>
+                        {expandedModules[moduleIndex] ? (
+                          <FaChevronUp className="text-gray-500" />
+                        ) : (
+                          <FaChevronDown className="text-gray-500" />
+                        )}
+                      </div>
+                    </div>
+
+                    {expandedModules[moduleIndex] && (
+                      <ul className="border-t border-gray-200 divide-y divide-gray-200">
+                        {module.lessons.map((lesson) => {
+                          const isActive = lesson.id === activeLessonId;
+                          const isCompleted =
+                            enrollment.completedLessons?.includes(lesson.id);
+
+                          return (
+                            <li
+                              key={lesson.id}
+                              className={`px-3 py-2 cursor-pointer ${
+                                isActive ? "bg-primary-50" : "hover:bg-gray-50"
+                              }`}
+                              onClick={() =>
+                                handleLessonClick(moduleIndex, lesson)
+                              }
+                            >
+                              <div className="flex items-center">
+                                {isCompleted ? (
+                                  <FaCheck className="text-green-500 mr-2" />
+                                ) : isActive ? (
+                                  <FaPlay className="text-primary-500 mr-2" />
+                                ) : (
+                                  <div className="w-4 h-4 rounded-full border border-gray-300 mr-2"></div>
+                                )}
+                                <span className={isActive ? "font-medium" : ""}>
+                                  {lesson.title}
+                                </span>
+                              </div>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </div>
+
+          {/* Lesson Content */}
+          <div className="lg:col-span-3">
+            {currentLesson ? (
+              <Card>
+                <div className="mb-6">
+                  <h2 className="text-2xl font-bold mb-2">
+                    {currentLesson.title}
+                  </h2>
+                  <div className="flex items-center text-sm text-gray-500">
+                    <span>
+                      Module {activeModuleIndex + 1}, Lesson{" "}
+                      {course.modules[activeModuleIndex].lessons.findIndex(
+                        (l) => l.id === currentLesson.id
+                      ) + 1}
+                    </span>
+                    {currentLesson.duration && (
+                      <span className="ml-4">{currentLesson.duration}</span>
+                    )}
+                  </div>
+                </div>
+
+                {currentLesson.type === "VIDEO" && currentLesson.videoUrl && (
+                  <div className="mb-6 aspect-w-16 aspect-h-9">
+                    <iframe
+                      src={currentLesson.videoUrl}
+                      title={currentLesson.title}
+                      allowFullScreen
+                      className="w-full h-full rounded-lg"
+                    ></iframe>
+                  </div>
+                )}
+
+                <div
+                  className="prose max-w-none mb-8"
+                  dangerouslySetInnerHTML={{ __html: currentLesson.content }}
+                />
+
+                <div className="flex justify-between border-t border-gray-200 pt-6">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      // Find previous lesson
+                      const currentModule = course.modules[activeModuleIndex];
+                      const currentLessonIndex =
+                        currentModule.lessons.findIndex(
+                          (l) => l.id === currentLesson.id
+                        );
+
+                      if (currentLessonIndex > 0) {
+                        // Previous lesson in the same module
+                        const prevLesson =
+                          currentModule.lessons[currentLessonIndex - 1];
+                        handleLessonClick(activeModuleIndex, prevLesson);
+                      } else if (activeModuleIndex > 0) {
+                        // Last lesson in the previous module
+                        const prevModuleIndex = activeModuleIndex - 1;
+                        const prevModule = course.modules[prevModuleIndex];
+
+                        if (prevModule.lessons.length > 0) {
+                          const prevLesson =
+                            prevModule.lessons[prevModule.lessons.length - 1];
+
+                          // Expand the previous module
+                          setExpandedModules({
+                            ...expandedModules,
+                            [prevModuleIndex]: true,
+                          });
+
+                          handleLessonClick(prevModuleIndex, prevLesson);
+                        }
+                      }
+                    }}
+                    disabled={
+                      activeModuleIndex === 0 &&
+                      course.modules[0].lessons.findIndex(
+                        (l) => l.id === currentLesson.id
+                      ) === 0
+                    }
+                  >
+                    Previous Lesson
+                  </Button>
+
+                  <Button variant="primary" onClick={markLessonComplete}>
+                    {enrollment.completedLessons?.includes(currentLesson.id)
+                      ? "Continue to Next Lesson"
+                      : "Mark as Complete"}
+                  </Button>
+                </div>
+              </Card>
+            ) : (
+              <Card>
+                <div className="text-center py-12">
+                  <h2 className="text-2xl font-bold text-gray-700 mb-4">
+                    No lesson selected
+                  </h2>
+                  <p className="text-gray-600 mb-8">
+                    Select a lesson from the course content to start learning.
+                  </p>
+                </div>
+              </Card>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default CourseLearningPage;
+```
+
+## Next Steps
+
+In the next module, we'll focus on implementing the administrator dashboard, which will allow admins to manage users, courses, and monitor platform activity.
+
+[Next: Admin Dashboard Implementation →](/proj-online-learning-platform-website/14-admin-dashboard-implementation)
+
+<BackToTop />
