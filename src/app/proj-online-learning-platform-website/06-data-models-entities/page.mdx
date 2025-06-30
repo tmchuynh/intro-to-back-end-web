@@ -1,0 +1,1038 @@
+import BackToTop from "@/components/BackToTop";
+
+# Data Models and Entities
+
+## Introduction
+
+In this module, we'll create the Java classes that represent our MongoDB documents. These models will serve as the core data structures for our online learning platform. We'll use Spring Data MongoDB annotations to map our Java classes to MongoDB collections.
+
+## Setting Up Base Entity Classes
+
+Let's start by creating some base classes that will be extended by our entities:
+
+### Auditable Base Class
+
+This abstract class will provide common auditing fields for our entities:
+
+```java title="Auditable.java"
+package com.example.learningplatform.model.base;
+
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+
+import java.time.ZonedDateTime;
+
+public abstract class Auditable {
+
+    @CreatedDate
+    private ZonedDateTime createdAt;
+
+    @LastModifiedDate
+    private ZonedDateTime updatedAt;
+
+    @CreatedBy
+    private String createdBy;
+
+    @LastModifiedBy
+    private String modifiedBy;
+
+    // Getters and setters
+    public ZonedDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(ZonedDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public ZonedDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(ZonedDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    public String getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(String createdBy) {
+        this.createdBy = createdBy;
+    }
+
+    public String getModifiedBy() {
+        return modifiedBy;
+    }
+
+    public void setModifiedBy(String modifiedBy) {
+        this.modifiedBy = modifiedBy;
+    }
+}
+```
+
+<BackToTop />
+
+## User-Related Entities
+
+### User Entity
+
+```java title="User.java"
+package com.example.learningplatform.model;
+
+import com.example.learningplatform.model.base.Auditable;
+
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.mapping.Document;
+
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
+import java.time.ZonedDateTime;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
+@Document(collection = "users")
+public class User extends Auditable {
+
+    @Id
+    private String id;
+
+    @NotBlank
+    @Size(min = 3, max = 50)
+    @Indexed(unique = true)
+    private String username;
+
+    @NotBlank
+    @Email
+    @Indexed(unique = true)
+    private String email;
+
+    @NotBlank
+    private String passwordHash;
+
+    @NotBlank
+    private String firstName;
+
+    @NotBlank
+    private String lastName;
+
+    private Set<String> roles = new HashSet<>();
+
+    private String profileImage;
+
+    private String bio;
+
+    private ZonedDateTime lastLogin;
+
+    private boolean isActive = true;
+
+    private Map<String, Boolean> preferences;
+
+    private Map<String, String> socialProfiles;
+
+    // Default constructor
+    public User() {
+    }
+
+    // Constructor with required fields
+    public User(String username, String email, String passwordHash, String firstName, String lastName) {
+        this.username = username;
+        this.email = email;
+        this.passwordHash = passwordHash;
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.roles.add("ROLE_STUDENT");  // Default role
+    }
+
+    // Getters and setters
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getPasswordHash() {
+        return passwordHash;
+    }
+
+    public void setPasswordHash(String passwordHash) {
+        this.passwordHash = passwordHash;
+    }
+
+    public String getFirstName() {
+        return firstName;
+    }
+
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
+    }
+
+    public Set<String> getRoles() {
+        return roles;
+    }
+
+    public void setRoles(Set<String> roles) {
+        this.roles = roles;
+    }
+
+    public void addRole(String role) {
+        this.roles.add(role);
+    }
+
+    public void removeRole(String role) {
+        this.roles.remove(role);
+    }
+
+    public String getProfileImage() {
+        return profileImage;
+    }
+
+    public void setProfileImage(String profileImage) {
+        this.profileImage = profileImage;
+    }
+
+    public String getBio() {
+        return bio;
+    }
+
+    public void setBio(String bio) {
+        this.bio = bio;
+    }
+
+    public ZonedDateTime getLastLogin() {
+        return lastLogin;
+    }
+
+    public void setLastLogin(ZonedDateTime lastLogin) {
+        this.lastLogin = lastLogin;
+    }
+
+    public boolean isActive() {
+        return isActive;
+    }
+
+    public void setActive(boolean active) {
+        isActive = active;
+    }
+
+    public Map<String, Boolean> getPreferences() {
+        return preferences;
+    }
+
+    public void setPreferences(Map<String, Boolean> preferences) {
+        this.preferences = preferences;
+    }
+
+    public Map<String, String> getSocialProfiles() {
+        return socialProfiles;
+    }
+
+    public void setSocialProfiles(Map<String, String> socialProfiles) {
+        this.socialProfiles = socialProfiles;
+    }
+
+    // Helper methods
+    public String getFullName() {
+        return firstName + " " + lastName;
+    }
+
+    public boolean hasRole(String role) {
+        return roles.contains(role);
+    }
+}
+```
+
+<BackToTop />
+
+## Course-Related Entities
+
+### Course Entity
+
+```java title="Course.java"
+package com.example.learningplatform.model;
+
+import com.example.learningplatform.model.base.Auditable;
+
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.mapping.Document;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+
+import java.util.ArrayList;
+import java.util.List;
+
+@Document(collection = "courses")
+public class Course extends Auditable {
+
+    @Id
+    private String id;
+
+    @NotBlank
+    @Size(min = 5, max = 100)
+    private String title;
+
+    @NotBlank
+    @Indexed(unique = true)
+    private String slug;
+
+    @NotBlank
+    @Size(min = 20)
+    private String description;
+
+    @NotBlank
+    private String instructorId;
+
+    private String instructorName;
+
+    private String thumbnailUrl;
+
+    private Double price;
+
+    @NotNull
+    private String level;  // BEGINNER, INTERMEDIATE, ADVANCED
+
+    private List<String> tags = new ArrayList<>();
+
+    private Double averageRating;
+
+    private Integer ratingsCount = 0;
+
+    private Integer enrolledCount = 0;
+
+    private boolean isPublished = false;
+
+    private String status = "DRAFT";  // DRAFT, ACTIVE, ARCHIVED
+
+    private List<String> requirements = new ArrayList<>();
+
+    private List<String> learningObjectives = new ArrayList<>();
+
+    // Default constructor
+    public Course() {
+    }
+
+    // Constructor with required fields
+    public Course(String title, String slug, String description, String instructorId, String instructorName, String level) {
+        this.title = title;
+        this.slug = slug;
+        this.description = description;
+        this.instructorId = instructorId;
+        this.instructorName = instructorName;
+        this.level = level;
+    }
+
+    // Getters and setters
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public String getSlug() {
+        return slug;
+    }
+
+    public void setSlug(String slug) {
+        this.slug = slug;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getInstructorId() {
+        return instructorId;
+    }
+
+    public void setInstructorId(String instructorId) {
+        this.instructorId = instructorId;
+    }
+
+    public String getInstructorName() {
+        return instructorName;
+    }
+
+    public void setInstructorName(String instructorName) {
+        this.instructorName = instructorName;
+    }
+
+    public String getThumbnailUrl() {
+        return thumbnailUrl;
+    }
+
+    public void setThumbnailUrl(String thumbnailUrl) {
+        this.thumbnailUrl = thumbnailUrl;
+    }
+
+    public Double getPrice() {
+        return price;
+    }
+
+    public void setPrice(Double price) {
+        this.price = price;
+    }
+
+    public String getLevel() {
+        return level;
+    }
+
+    public void setLevel(String level) {
+        this.level = level;
+    }
+
+    public List<String> getTags() {
+        return tags;
+    }
+
+    public void setTags(List<String> tags) {
+        this.tags = tags;
+    }
+
+    public Double getAverageRating() {
+        return averageRating;
+    }
+
+    public void setAverageRating(Double averageRating) {
+        this.averageRating = averageRating;
+    }
+
+    public Integer getRatingsCount() {
+        return ratingsCount;
+    }
+
+    public void setRatingsCount(Integer ratingsCount) {
+        this.ratingsCount = ratingsCount;
+    }
+
+    public Integer getEnrolledCount() {
+        return enrolledCount;
+    }
+
+    public void setEnrolledCount(Integer enrolledCount) {
+        this.enrolledCount = enrolledCount;
+    }
+
+    public boolean isPublished() {
+        return isPublished;
+    }
+
+    public void setPublished(boolean published) {
+        isPublished = published;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public List<String> getRequirements() {
+        return requirements;
+    }
+
+    public void setRequirements(List<String> requirements) {
+        this.requirements = requirements;
+    }
+
+    public List<String> getLearningObjectives() {
+        return learningObjectives;
+    }
+
+    public void setLearningObjectives(List<String> learningObjectives) {
+        this.learningObjectives = learningObjectives;
+    }
+
+    // Helper methods
+    public void addTag(String tag) {
+        if (!this.tags.contains(tag)) {
+            this.tags.add(tag);
+        }
+    }
+
+    public void removeTag(String tag) {
+        this.tags.remove(tag);
+    }
+
+    public void addRequirement(String requirement) {
+        if (!this.requirements.contains(requirement)) {
+            this.requirements.add(requirement);
+        }
+    }
+
+    public void addLearningObjective(String objective) {
+        if (!this.learningObjectives.contains(objective)) {
+            this.learningObjectives.add(objective);
+        }
+    }
+}
+```
+
+<BackToTop />
+
+### Module and Lesson Entities
+
+```java title="Module.java"
+package com.example.learningplatform.model;
+
+import com.example.learningplatform.model.base.Auditable;
+
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.mongodb.core.mapping.Document;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+
+import java.util.ArrayList;
+import java.util.List;
+
+@Document(collection = "modules")
+@CompoundIndex(name = "courseId_orderIndex", def = "{'courseId': 1, 'orderIndex': 1}")
+public class Module extends Auditable {
+
+    @Id
+    private String id;
+
+    @NotBlank
+    private String courseId;
+
+    @NotBlank
+    @Size(min = 3, max = 100)
+    private String title;
+
+    private String description;
+
+    @NotNull
+    private Integer orderIndex;
+
+    private Integer duration;  // in minutes
+
+    private List<Lesson> lessons = new ArrayList<>();
+
+    // Constructors, getters, and setters
+
+    // Inner class for Lesson
+    public static class Lesson {
+
+        private String id;
+
+        @NotBlank
+        @Size(min = 3, max = 100)
+        private String title;
+
+        @NotBlank
+        private String type;  // VIDEO, READING, QUIZ
+
+        private LessonContent content;
+
+        @NotNull
+        private Integer orderIndex;
+
+        private boolean isRequired = true;
+
+        private List<Resource> resources = new ArrayList<>();
+
+        // Nested classes
+        public static class LessonContent {
+            private String videoUrl;
+            private Integer duration;  // in minutes
+            private String htmlContent;
+
+            // Getters and setters
+        }
+
+        public static class Resource {
+            private String title;
+            private String url;
+            private String type;
+
+            // Getters and setters
+        }
+
+        // Getters and setters
+    }
+
+    // Rest of getters and setters for Module class
+}
+```
+
+<BackToTop />
+
+## Enrollment and Progress Tracking
+
+```java title="Enrollment.java"
+package com.example.learningplatform.model;
+
+import com.example.learningplatform.model.base.Auditable;
+
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.mongodb.core.mapping.Document;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+
+import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
+@Document(collection = "enrollments")
+@CompoundIndex(name = "userId_courseId", def = "{'userId': 1, 'courseId': 1}", unique = true)
+public class Enrollment extends Auditable {
+
+    @Id
+    private String id;
+
+    @NotBlank
+    private String userId;
+
+    @NotBlank
+    private String courseId;
+
+    @NotNull
+    private ZonedDateTime enrollmentDate;
+
+    private ZonedDateTime lastAccessDate;
+
+    private ZonedDateTime completionDate;
+
+    private Integer progressPercentage = 0;
+
+    private boolean certificateIssued = false;
+
+    private String status = "NOT_STARTED";  // NOT_STARTED, IN_PROGRESS, COMPLETED, DROPPED
+
+    private List<CompletedLesson> completedLessons = new ArrayList<>();
+
+    private List<Note> notes = new ArrayList<>();
+
+    // Nested classes
+    public static class CompletedLesson {
+        private String lessonId;
+        private ZonedDateTime completedAt;
+
+        // Getters and setters
+    }
+
+    public static class Note {
+        private String lessonId;
+        private String content;
+        private ZonedDateTime createdAt;
+
+        // Getters and setters
+    }
+
+    // Constructors, getters, and setters
+}
+```
+
+<BackToTop />
+
+## Discussion and Community
+
+```java title="Discussion.java"
+package com.example.learningplatform.model;
+
+import com.example.learningplatform.model.base.Auditable;
+
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.mapping.Document;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
+import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
+@Document(collection = "discussions")
+public class Discussion extends Auditable {
+
+    @Id
+    private String id;
+
+    @NotBlank
+    @Indexed
+    private String courseId;
+
+    private String lessonId;
+
+    @NotBlank
+    @Size(min = 5, max = 200)
+    private String title;
+
+    @NotBlank
+    @Size(min = 10)
+    private String content;
+
+    @NotBlank
+    private String authorId;
+
+    private String authorName;
+
+    private Integer views = 0;
+
+    private boolean isResolved = false;
+
+    private List<String> tags = new ArrayList<>();
+
+    private List<Comment> comments = new ArrayList<>();
+
+    // Nested Comment class
+    public static class Comment {
+
+        private String id;
+
+        @NotBlank
+        private String authorId;
+
+        private String authorName;
+
+        @NotBlank
+        @Size(min = 5)
+        private String content;
+
+        private ZonedDateTime createdAt;
+
+        private ZonedDateTime updatedAt;
+
+        private boolean isAcceptedAnswer = false;
+
+        private Integer votes = 0;
+
+        // Getters and setters
+    }
+
+    // Constructors, getters, and setters
+}
+```
+
+<BackToTop />
+
+## Assessment and Quizzes
+
+```java title="Assessment.java"
+package com.example.learningplatform.model;
+
+import com.example.learningplatform.model.base.Auditable;
+
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+
+import java.util.ArrayList;
+import java.util.List;
+
+@Document(collection = "assessments")
+public class Assessment extends Auditable {
+
+    @Id
+    private String id;
+
+    @NotBlank
+    private String courseId;
+
+    private String moduleId;
+
+    @NotBlank
+    @Size(min = 5, max = 100)
+    private String title;
+
+    private String description;
+
+    @NotBlank
+    private String type;  // QUIZ, ASSIGNMENT, EXAM
+
+    private Integer timeLimit;  // in minutes
+
+    @NotNull
+    @Min(0)
+    @Max(100)
+    private Integer passingScore;
+
+    private Integer attempts;
+
+    private boolean isRandomized = false;
+
+    private List<Question> questions = new ArrayList<>();
+
+    // Nested Question class
+    public static class Question {
+
+        private String id;
+
+        @NotBlank
+        private String question;
+
+        @NotBlank
+        private String type;  // MULTIPLE_CHOICE, TRUE_FALSE, CODING, SHORT_ANSWER
+
+        @NotNull
+        @Min(1)
+        private Integer points;
+
+        private List<String> options;
+
+        private Integer correctAnswerIndex;
+
+        private String expectedOutput;
+
+        private List<String> hints;
+
+        private String explanation;
+
+        // Getters and setters
+    }
+
+    // Constructors, getters, and setters
+}
+```
+
+<BackToTop />
+
+## Assessment Submissions
+
+```java title="Submission.java"
+package com.example.learningplatform.model;
+
+import com.example.learningplatform.model.base.Auditable;
+
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.mongodb.core.mapping.Document;
+
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+
+import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
+@Document(collection = "submissions")
+@CompoundIndex(name = "userId_assessmentId", def = "{'userId': 1, 'assessmentId': 1}")
+public class Submission extends Auditable {
+
+    @Id
+    private String id;
+
+    @NotBlank
+    private String userId;
+
+    @NotBlank
+    private String assessmentId;
+
+    @NotBlank
+    private String courseId;
+
+    @NotNull
+    private ZonedDateTime startedAt;
+
+    private ZonedDateTime submittedAt;
+
+    @Min(0)
+    @Max(100)
+    private Integer score;
+
+    private String status = "IN_PROGRESS";  // IN_PROGRESS, SUBMITTED, GRADED
+
+    private Integer timeSpent;  // in minutes
+
+    private Integer attemptNumber = 1;
+
+    private List<Answer> answers = new ArrayList<>();
+
+    private String feedback;
+
+    // Nested Answer class
+    public static class Answer {
+
+        @NotBlank
+        private String questionId;
+
+        private Integer selectedOptionIndex;
+
+        private String codeSubmission;
+
+        private String textAnswer;
+
+        private boolean isCorrect;
+
+        private Integer pointsEarned;
+
+        // Getters and setters
+    }
+
+    // Constructors, getters, and setters
+}
+```
+
+<BackToTop />
+
+## Notifications
+
+```java title="Notification.java"
+package com.example.learningplatform.model;
+
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.mongodb.core.mapping.Document;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+
+import java.time.ZonedDateTime;
+import java.util.Map;
+
+@Document(collection = "notifications")
+@CompoundIndex(name = "userId_isRead", def = "{'userId': 1, 'isRead': 1}")
+public class Notification {
+
+    @Id
+    private String id;
+
+    @NotBlank
+    private String userId;
+
+    @NotBlank
+    private String type;  // COURSE_ANNOUNCEMENT, DISCUSSION_REPLY, GRADE_POSTED, etc.
+
+    @NotBlank
+    private String title;
+
+    @NotBlank
+    private String message;
+
+    private String relatedId;  // ID of related entity (course, discussion, etc.)
+
+    @NotNull
+    private ZonedDateTime createdAt;
+
+    private boolean isRead = false;
+
+    private Map<String, Object> metadata;
+
+    // Constructors, getters, and setters
+}
+```
+
+<BackToTop />
+
+## Data Transfer Objects (DTOs)
+
+In addition to entity classes, it's often useful to create DTOs for API requests and responses:
+
+```java title="UserRegistrationDto.java"
+package com.example.learningplatform.dto;
+
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
+public class UserRegistrationDto {
+
+    @NotBlank
+    @Size(min = 3, max = 50)
+    private String username;
+
+    @NotBlank
+    @Email
+    private String email;
+
+    @NotBlank
+    @Size(min = 8, max = 100)
+    private String password;
+
+    @NotBlank
+    private String firstName;
+
+    @NotBlank
+    private String lastName;
+
+    // Getters and setters
+}
+```
+
+```java title="LoginDto.java"
+package com.example.learningplatform.dto;
+
+import jakarta.validation.constraints.NotBlank;
+
+public class LoginDto {
+
+    @NotBlank
+    private String usernameOrEmail;
+
+    @NotBlank
+    private String password;
+
+    // Getters and setters
+}
+```
+
+## Next Steps
+
+Now that we've created our data models, in the next module we'll implement the repository interfaces that will allow us to interact with MongoDB for each entity type.
+
+[Next: Repositories and Services →](/proj-online-learning-platform-website/07-repositories-services)
+
+<BackToTop />
