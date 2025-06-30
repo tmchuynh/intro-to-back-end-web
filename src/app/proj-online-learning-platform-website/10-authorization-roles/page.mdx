@@ -1,0 +1,611 @@
+import BackToTop from "@/components/BackToTop";
+
+# Authorization and Roles
+
+## Introduction
+
+In this module, we'll implement role-based authorization for our online learning platform. Role-based access control (RBAC) restricts system access to authorized users based on their roles. We'll define different roles like student, instructor, and administrator, and implement permissions for each role.
+
+## Role-Based Access Control Overview
+
+Our platform will have the following roles:
+
+1. **ROLE_STUDENT** - Regular users who can enroll in courses and access learning materials
+2. **ROLE_INSTRUCTOR** - Users who can create and manage courses, modules, and assessments
+3. **ROLE_ADMIN** - Users with full administrative privileges
+
+Each role will have specific permissions that determine what actions they can perform in the system.
+
+## Configuring Method-Level Security
+
+Spring Security provides method-level security using annotations. We've already enabled this in our security configuration with `@EnableMethodSecurity(prePostEnabled = true)`. Now, let's see how to use it effectively.
+
+## Implementing Role-Based Permissions
+
+### Method-Level Security Annotations
+
+Spring Security provides several annotations for securing methods:
+
+- `@PreAuthorize` - Checks authorization before method execution
+- `@PostAuthorize` - Verifies authorization after method execution
+- `@Secured` - Simpler role-based security
+- `@RolesAllowed` - Similar to `@Secured` but from the JSR-250 standard
+
+We'll primarily use `@PreAuthorize` as it's the most flexible.
+
+### Creating Custom Permission Evaluators
+
+Let's create a custom permission evaluator for more complex authorization rules:
+
+```java title="src/main/java/com/example/learningplatform/security/CustomPermissionEvaluator.java"
+package com.example.learningplatform.security;
+
+import com.example.learningplatform.model.Course;
+import com.example.learningplatform.model.Enrollment;
+import com.example.learningplatform.repository.CourseRepository;
+import com.example.learningplatform.repository.EnrollmentRepository;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.PermissionEvaluator;
+import org.springframework.security.core.Authentication;
+import org.springframework.stereotype.Component;
+
+import java.io.Serializable;
+import java.util.Optional;
+
+@Component
+public class CustomPermissionEvaluator implements PermissionEvaluator {
+
+    @Autowired
+    private CourseRepository courseRepository;
+
+    @Autowired
+    private EnrollmentRepository enrollmentRepository;
+
+    @Override
+    public boolean hasPermission(Authentication authentication, Object targetDomainObject, Object permission) {
+        if ((authentication == null) || (targetDomainObject == null) || !(permission instanceof String)) {
+            return false;
+        }
+
+        String userId = authentication.getName();
+
+        if (targetDomainObject instanceof Course) {
+            Course course = (Course) targetDomainObject;
+            return hasPermissionForCourse(userId, course, permission.toString());
+        }
+
+        return false;
+    }
+
+    @Override
+    public boolean hasPermission(Authentication authentication, Serializable targetId, String targetType, Object permission) {
+        if ((authentication == null) || (targetId == null) || !(targetId instanceof String) || (targetType == null) || !(permission instanceof String)) {
+            return false;
+        }
+
+        String userId = authentication.getName();
+        String id = (String) targetId;
+
+        if (targetType.equals("Course")) {
+            Optional<Course> course = courseRepository.findById(id);
+            return course.isPresent() && hasPermissionForCourse(userId, course.get(), permission.toString());
+        }
+
+        return false;
+    }
+
+    private boolean hasPermissionForCourse(String userId, Course course, String permission) {
+        // Check if user is the instructor of the course
+        if (course.getInstructorId().equals(userId)) {
+            return true;
+        }
+
+        // Check if user is enrolled in the course (for "read" permission)
+        if (permission.equals("read")) {
+            return enrollmentRepository.findByUserIdAndCourseId(userId, course.getId()).isPresent();
+        }
+
+        return false;
+    }
+}
+```
+
+<BackToTop />
+
+### Configuring Method Security with Custom Evaluator
+
+Let's configure our permission evaluator:
+
+```java title="src/main/java/com/example/learningplatform/security/MethodSecurityConfig.java"
+package com.example.learningplatform.security;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.access.expression.method.DefaultMethodSecurityExpressionHandler;
+import org.springframework.security.access.expression.method.MethodSecurityExpressionHandler;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+
+@Configuration
+@EnableMethodSecurity
+public class MethodSecurityConfig {
+
+    @Autowired
+    private CustomPermissionEvaluator customPermissionEvaluator;
+
+    @Bean
+    public MethodSecurityExpressionHandler methodSecurityExpressionHandler() {
+        DefaultMethodSecurityExpressionHandler expressionHandler = new DefaultMethodSecurityExpressionHandler();
+        expressionHandler.setPermissionEvaluator(customPermissionEvaluator);
+        return expressionHandler;
+    }
+}
+```
+
+## Implementing Role-Based Access in Controllers
+
+Let's see how to secure our controller methods based on user roles:
+
+### CourseController with Role-Based Access
+
+```java title="src/main/java/com/example/learningplatform/controller/CourseController.java"
+package com.example.learningplatform.controller;
+
+import com.example.learningplatform.model.Course;
+import com.example.learningplatform.service.CourseService;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import jakarta.validation.Valid;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/courses")
+public class CourseController {
+
+    private final CourseService courseService;
+
+    @Autowired
+    public CourseController(CourseService courseService) {
+        this.courseService = courseService;
+    }
+
+    // Only instructors and admins can create courses
+    @PostMapping
+    @PreAuthorize("hasRole('INSTRUCTOR') or hasRole('ADMIN')")
+    public ResponseEntity<Course> createCourse(@Valid @RequestBody Course course) {
+        Course newCourse = courseService.createCourse(course);
+        return new ResponseEntity<>(newCourse, HttpStatus.CREATED);
+    }
+
+    // Anyone can view published courses
+    @GetMapping("/{id}")
+    public ResponseEntity<Course> getCourseById(@PathVariable String id) {
+        Course course = courseService.findById(id);
+
+        // If course is not published, only instructor or admin can view it
+        if (!course.isPublished()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        return ResponseEntity.ok(course);
+    }
+
+    // Only the instructor of the course or admin can update it
+    @PutMapping("/{id}")
+    @PreAuthorize("hasPermission(#id, 'Course', 'update') or hasRole('ADMIN')")
+    public ResponseEntity<Course> updateCourse(
+            @PathVariable String id,
+            @Valid @RequestBody Course courseDetails) {
+
+        Course updatedCourse = courseService.updateCourse(id, courseDetails);
+        return ResponseEntity.ok(updatedCourse);
+    }
+
+    // Only the instructor of the course or admin can delete it
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasPermission(#id, 'Course', 'delete') or hasRole('ADMIN')")
+    public ResponseEntity<Void> deleteCourse(@PathVariable String id) {
+        courseService.deleteCourse(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    // More endpoints...
+}
+```
+
+<BackToTop />
+
+### EnrollmentController with Role-Based Access
+
+```java title="src/main/java/com/example/learningplatform/controller/EnrollmentController.java"
+package com.example.learningplatform.controller;
+
+import com.example.learningplatform.model.Enrollment;
+import com.example.learningplatform.service.EnrollmentService;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/enrollments")
+public class EnrollmentController {
+
+    private final EnrollmentService enrollmentService;
+
+    @Autowired
+    public EnrollmentController(EnrollmentService enrollmentService) {
+        this.enrollmentService = enrollmentService;
+    }
+
+    // Any authenticated user can enroll in a course
+    @PostMapping
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Enrollment> enrollInCourse(
+            @RequestBody Map<String, String> enrollmentData,
+            @AuthenticationPrincipal UserDetails userDetails) {
+
+        String userId = userDetails.getUsername();
+        String courseId = enrollmentData.get("courseId");
+
+        Enrollment enrollment = enrollmentService.enrollUserInCourse(userId, courseId);
+        return new ResponseEntity<>(enrollment, HttpStatus.CREATED);
+    }
+
+    // Users can only view their own enrollments, admins can view any
+    @GetMapping("/user/{userId}")
+    @PreAuthorize("#userId == authentication.principal.username or hasRole('ADMIN')")
+    public ResponseEntity<List<Enrollment>> getEnrollmentsByUser(@PathVariable String userId) {
+        List<Enrollment> enrollments = enrollmentService.findEnrollmentsByUser(userId);
+        return ResponseEntity.ok(enrollments);
+    }
+
+    // Only instructors and admins can view all enrollments for a course
+    @GetMapping("/course/{courseId}")
+    @PreAuthorize("hasPermission(#courseId, 'Course', 'read') or hasRole('ADMIN')")
+    public ResponseEntity<List<Enrollment>> getEnrollmentsByCourse(@PathVariable String courseId) {
+        List<Enrollment> enrollments = enrollmentService.findEnrollmentsByCourse(courseId);
+        return ResponseEntity.ok(enrollments);
+    }
+
+    // More endpoints...
+}
+```
+
+<BackToTop />
+
+## User Management with Roles
+
+Let's enhance our UserService to manage roles:
+
+```java title="src/main/java/com/example/learningplatform/service/UserService.java"
+package com.example.learningplatform.service;
+
+import com.example.learningplatform.dto.UserRegistrationDto;
+import com.example.learningplatform.exception.ResourceAlreadyExistsException;
+import com.example.learningplatform.exception.ResourceNotFoundException;
+import com.example.learningplatform.model.User;
+import com.example.learningplatform.repository.UserRepository;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
+import java.time.ZonedDateTime;
+import java.util.Set;
+
+@Service
+public class UserService {
+
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+
+    @Autowired
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+    }
+
+    // Add a role to a user (only admins can do this)
+    @PreAuthorize("hasRole('ADMIN')")
+    public User addRoleToUser(String userId, String role) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
+
+        // Ensure role has the ROLE_ prefix
+        String formattedRole = role.startsWith("ROLE_") ? role : "ROLE_" + role;
+        user.addRole(formattedRole);
+
+        return userRepository.save(user);
+    }
+
+    // Remove a role from a user (only admins can do this)
+    @PreAuthorize("hasRole('ADMIN')")
+    public User removeRoleFromUser(String userId, String role) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
+
+        // Ensure role has the ROLE_ prefix
+        String formattedRole = role.startsWith("ROLE_") ? role : "ROLE_" + role;
+        user.removeRole(formattedRole);
+
+        return userRepository.save(user);
+    }
+
+    // Set all roles for a user (only admins can do this)
+    @PreAuthorize("hasRole('ADMIN')")
+    public User updateUserRoles(String userId, Set<String> roles) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
+
+        // Format roles to ensure they have the ROLE_ prefix
+        Set<String> formattedRoles = roles.stream()
+                .map(role -> role.startsWith("ROLE_") ? role : "ROLE_" + role)
+                .collect(java.util.stream.Collectors.toSet());
+
+        user.setRoles(formattedRoles);
+
+        return userRepository.save(user);
+    }
+
+    // Check if a user has a specific role
+    public boolean hasRole(String userId, String role) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
+
+        // Ensure role has the ROLE_ prefix
+        String formattedRole = role.startsWith("ROLE_") ? role : "ROLE_" + role;
+
+        return user.getRoles().contains(formattedRole);
+    }
+
+    // Create a new admin user (only existing admins can do this)
+    @PreAuthorize("hasRole('ADMIN')")
+    public User createAdminUser(UserRegistrationDto registrationDto) {
+        User user = registerUser(registrationDto);
+        user.addRole("ROLE_ADMIN");
+        return userRepository.save(user);
+    }
+
+    // Create a new instructor user (only admins can do this)
+    @PreAuthorize("hasRole('ADMIN')")
+    public User createInstructorUser(UserRegistrationDto registrationDto) {
+        User user = registerUser(registrationDto);
+        user.addRole("ROLE_INSTRUCTOR");
+        return userRepository.save(user);
+    }
+
+    // Other methods...
+}
+```
+
+<BackToTop />
+
+## Implementing an Admin Controller
+
+Let's create a dedicated controller for administrative functions:
+
+```java title="src/main/java/com/example/learningplatform/controller/AdminController.java"
+package com.example.learningplatform.controller;
+
+import com.example.learningplatform.dto.UserRegistrationDto;
+import com.example.learningplatform.model.User;
+import com.example.learningplatform.service.UserService;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import jakarta.validation.Valid;
+
+import java.util.List;
+import java.util.Set;
+
+@RestController
+@RequestMapping("/admin")
+@PreAuthorize("hasRole('ADMIN')") // Entire controller is restricted to admins
+public class AdminController {
+
+    private final UserService userService;
+
+    @Autowired
+    public AdminController(UserService userService) {
+        this.userService = userService;
+    }
+
+    @PostMapping("/users/admin")
+    public ResponseEntity<User> createAdminUser(@Valid @RequestBody UserRegistrationDto registrationDto) {
+        User admin = userService.createAdminUser(registrationDto);
+        return new ResponseEntity<>(admin, HttpStatus.CREATED);
+    }
+
+    @PostMapping("/users/instructor")
+    public ResponseEntity<User> createInstructorUser(@Valid @RequestBody UserRegistrationDto registrationDto) {
+        User instructor = userService.createInstructorUser(registrationDto);
+        return new ResponseEntity<>(instructor, HttpStatus.CREATED);
+    }
+
+    @PutMapping("/users/{userId}/roles")
+    public ResponseEntity<User> updateUserRoles(
+            @PathVariable String userId,
+            @RequestBody Set<String> roles) {
+
+        User updatedUser = userService.updateUserRoles(userId, roles);
+        return ResponseEntity.ok(updatedUser);
+    }
+
+    @PutMapping("/users/{userId}/roles/{role}")
+    public ResponseEntity<User> addRoleToUser(
+            @PathVariable String userId,
+            @PathVariable String role) {
+
+        User updatedUser = userService.addRoleToUser(userId, role);
+        return ResponseEntity.ok(updatedUser);
+    }
+
+    @DeleteMapping("/users/{userId}/roles/{role}")
+    public ResponseEntity<User> removeRoleFromUser(
+            @PathVariable String userId,
+            @PathVariable String role) {
+
+        User updatedUser = userService.removeRoleFromUser(userId, role);
+        return ResponseEntity.ok(updatedUser);
+    }
+
+    // More administrative endpoints...
+}
+```
+
+<BackToTop />
+
+## SpEL Expressions for Authorization
+
+Spring Security's expression language (SpEL) provides powerful authorization rules. Here are some examples:
+
+```java title="SpEL Examples"
+// Check if the user has a specific role
+@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAuthority('ROLE_INSTRUCTOR')")
+
+// Basic role checks
+@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
+
+// Authentication checks
+@PreAuthorize("isAuthenticated()")
+@PreAuthorize("isAnonymous()")
+
+// User-specific checks
+@PreAuthorize("authentication.principal.username == #username")
+@PreAuthorize("#userId == authentication.principal.id")
+
+// Custom permission checks
+@PreAuthorize("hasPermission(#id, 'Course', 'read')")
+@PreAuthorize("@courseService.findById(#id).instructorId == authentication.principal.id")
+
+// Logical operators
+@PreAuthorize("hasRole('INSTRUCTOR') or hasRole('ADMIN')")
+@PreAuthorize("hasRole('STUDENT') and hasPermission(#courseId, 'Course', 'read')")
+```
+
+<BackToTop />
+
+## Creating a CurrentUser Annotation
+
+For convenience, let's create a custom annotation to inject the current user:
+
+```java title="src/main/java/com/example/learningplatform/security/CurrentUser.java"
+package com.example.learningplatform.security;
+
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+
+import java.lang.annotation.*;
+
+@Target({ElementType.PARAMETER, ElementType.TYPE})
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+@AuthenticationPrincipal
+public @interface CurrentUser {
+}
+```
+
+Now we can use it in our controllers:
+
+```java title="src/main/java/com/example/learningplatform/controller/UserController.java"
+package com.example.learningplatform.controller;
+@GetMapping("/me")
+public ResponseEntity<User> getCurrentUser(@CurrentUser UserDetails userDetails) {
+    User user = userService.findById(userDetails.getUsername());
+    return ResponseEntity.ok(user);
+}
+```
+
+## Testing Authorization
+
+Let's test our role-based access control with different user roles:
+
+### Admin User
+
+```bash
+# Login as admin
+curl -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "usernameOrEmail": "admin",
+    "password": "admin_password"
+  }'
+
+# Use the returned token to access admin-only endpoint
+curl -X GET http://localhost:8080/api/admin/users \
+  -H "Authorization: Bearer {admin_token}"
+```
+
+### Instructor User
+
+```bash
+# Login as instructor
+curl -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "usernameOrEmail": "instructor",
+    "password": "instructor_password"
+  }'
+
+# Create a course
+curl -X POST http://localhost:8080/api/courses \
+  -H "Authorization: Bearer {instructor_token}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Introduction to MongoDB",
+    "slug": "intro-mongodb",
+    "description": "Learn the basics of MongoDB...",
+    "level": "BEGINNER"
+  }'
+```
+
+### Student User
+
+```bash
+# Login as student
+curl -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "usernameOrEmail": "student",
+    "password": "student_password"
+  }'
+
+# Enroll in a course
+curl -X POST http://localhost:8080/api/enrollments \
+  -H "Authorization: Bearer {student_token}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "courseId": "{course_id}"
+  }'
+
+# Try to access admin endpoint (should fail)
+curl -X GET http://localhost:8080/api/admin/users \
+  -H "Authorization: Bearer {student_token}"
+```
+
+## Next Steps
+
+Now that we've implemented role-based authorization, in the next module we'll focus on setting up the frontend for our online learning platform using React and TailwindCSS.
+
+[Next: Frontend Setup →](/proj-online-learning-platform-website/11-frontend-setup)
