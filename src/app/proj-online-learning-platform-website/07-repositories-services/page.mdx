@@ -1,0 +1,880 @@
+import BackToTop from "@/components/BackToTop";
+
+# Repositories and Services
+
+## Introduction
+
+In this module, we'll implement the repository interfaces and service classes for our online learning platform. Repositories provide the data access layer that interacts with MongoDB, while services encapsulate the business logic of our application.
+
+## MongoDB Repositories
+
+Spring Data MongoDB provides a powerful repository abstraction that allows us to define repositories as simple interfaces. Let's implement repositories for our entities.
+
+### UserRepository
+
+```java title="UserRepository.java"
+package com.example.learningplatform.repository;
+
+import com.example.learningplatform.model.User;
+
+import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.mongodb.repository.Query;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.Optional;
+
+@Repository
+public interface UserRepository extends MongoRepository<User, String> {
+
+    Optional<User> findByEmail(String email);
+
+    Optional<User> findByUsername(String username);
+
+    boolean existsByEmail(String email);
+
+    boolean existsByUsername(String username);
+
+    @Query("{ $or: [ { 'email': ?0 }, { 'username': ?0 } ] }")
+    Optional<User> findByEmailOrUsername(String emailOrUsername);
+
+    List<User> findByRolesContaining(String role);
+
+    @Query("{ 'isActive': true }")
+    List<User> findAllActiveUsers();
+
+    @Query("{ 'roles': ?0, 'isActive': true }")
+    List<User> findActiveUsersByRole(String role);
+
+    long countByRolesContaining(String role);
+}
+```
+
+### CourseRepository
+
+```java title="CourseRepository.java"
+package com.example.learningplatform.repository;
+
+import com.example.learningplatform.model.Course;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.mongodb.repository.Query;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.Optional;
+
+@Repository
+public interface CourseRepository extends MongoRepository<Course, String> {
+
+    Optional<Course> findBySlug(String slug);
+
+    List<Course> findByInstructorId(String instructorId);
+
+    @Query("{ 'isPublished': true, 'status': 'ACTIVE' }")
+    Page<Course> findAllPublishedCourses(Pageable pageable);
+
+    @Query("{ 'tags': { $in: ?0 }, 'isPublished': true, 'status': 'ACTIVE' }")
+    List<Course> findByTagsAndPublished(List<String> tags);
+
+    @Query("{ 'level': ?0, 'isPublished': true, 'status': 'ACTIVE' }")
+    List<Course> findByLevelAndPublished(String level);
+
+    @Query("{ 'title': { $regex: ?0, $options: 'i' }, 'isPublished': true, 'status': 'ACTIVE' }")
+    List<Course> searchByTitle(String titleKeyword);
+
+    @Query("{ $or: [ { 'title': { $regex: ?0, $options: 'i' } }, { 'description': { $regex: ?0, $options: 'i' } } ], 'isPublished': true, 'status': 'ACTIVE' }")
+    List<Course> searchByTitleOrDescription(String keyword);
+}
+```
+
+<BackToTop />
+
+### ModuleRepository
+
+```java title="ModuleRepository.java"
+package com.example.learningplatform.repository;
+
+import com.example.learningplatform.model.Module;
+
+import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.mongodb.repository.Query;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+
+@Repository
+public interface ModuleRepository extends MongoRepository<Module, String> {
+
+    List<Module> findByCourseId(String courseId);
+
+    List<Module> findByCourseIdOrderByOrderIndex(String courseId);
+
+    @Query("{ 'courseId': ?0, 'lessons.id': ?1 }")
+    Module findByLessonId(String courseId, String lessonId);
+}
+```
+
+### EnrollmentRepository
+
+```java title="EnrollmentRepository.java"
+package com.example.learningplatform.repository;
+
+import com.example.learningplatform.model.Enrollment;
+
+import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.mongodb.repository.Query;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.Optional;
+
+@Repository
+public interface EnrollmentRepository extends MongoRepository<Enrollment, String> {
+
+    Optional<Enrollment> findByUserIdAndCourseId(String userId, String courseId);
+
+    List<Enrollment> findByUserId(String userId);
+
+    List<Enrollment> findByCourseId(String courseId);
+
+    @Query("{ 'userId': ?0, 'status': ?1 }")
+    List<Enrollment> findByUserIdAndStatus(String userId, String status);
+
+    @Query("{ 'userId': ?0, 'progressPercentage': 100 }")
+    List<Enrollment> findCompletedCoursesByUserId(String userId);
+
+    long countByCourseId(String courseId);
+
+    @Query("{ 'courseId': ?0, 'status': 'COMPLETED' }")
+    long countCompletedEnrollmentsByCourseId(String courseId);
+}
+```
+
+<BackToTop />
+
+### DiscussionRepository
+
+```java title="DiscussionRepository.java"
+package com.example.learningplatform.repository;
+
+import com.example.learningplatform.model.Discussion;
+
+import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.mongodb.repository.Query;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+
+@Repository
+public interface DiscussionRepository extends MongoRepository<Discussion, String> {
+
+    List<Discussion> findByCourseId(String courseId);
+
+    List<Discussion> findByLessonId(String lessonId);
+
+    List<Discussion> findByAuthorId(String authorId);
+
+    @Query("{ 'courseId': ?0, 'isResolved': ?1 }")
+    List<Discussion> findByCourseIdAndResolved(String courseId, boolean isResolved);
+
+    @Query("{ 'tags': { $in: ?0 } }")
+    List<Discussion> findByTags(List<String> tags);
+
+    @Query("{ 'title': { $regex: ?0, $options: 'i' } }")
+    List<Discussion> searchByTitle(String titleKeyword);
+}
+```
+
+### AssessmentRepository
+
+```java title="AssessmentRepository.java"
+package com.example.learningplatform.repository;
+
+import com.example.learningplatform.model.Assessment;
+
+import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+
+@Repository
+public interface AssessmentRepository extends MongoRepository<Assessment, String> {
+
+    List<Assessment> findByCourseId(String courseId);
+
+    List<Assessment> findByModuleId(String moduleId);
+
+    List<Assessment> findByCourseIdAndType(String courseId, String type);
+}
+```
+
+<BackToTop />
+
+### SubmissionRepository
+
+```java title="SubmissionRepository.java"
+package com.example.learningplatform.repository;
+
+import com.example.learningplatform.model.Submission;
+
+import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.mongodb.repository.Query;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.Optional;
+
+@Repository
+public interface SubmissionRepository extends MongoRepository<Submission, String> {
+
+    List<Submission> findByUserId(String userId);
+
+    List<Submission> findByAssessmentId(String assessmentId);
+
+    Optional<Submission> findByUserIdAndAssessmentIdAndAttemptNumber(String userId, String assessmentId, Integer attemptNumber);
+
+    @Query("{ 'userId': ?0, 'assessmentId': ?1 }")
+    List<Submission> findAllByUserIdAndAssessmentId(String userId, String assessmentId);
+
+    @Query("{ 'assessmentId': ?0, 'status': 'GRADED' }")
+    List<Submission> findGradedSubmissionsByAssessmentId(String assessmentId);
+
+    @Query("{ 'courseId': ?0, 'userId': ?1, 'status': 'GRADED' }")
+    List<Submission> findGradedSubmissionsByCourseIdAndUserId(String courseId, String userId);
+}
+```
+
+### NotificationRepository
+
+```java title="NotificationRepository.java"
+package com.example.learningplatform.repository;
+
+import com.example.learningplatform.model.Notification;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.mongodb.repository.Query;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+
+@Repository
+public interface NotificationRepository extends MongoRepository<Notification, String> {
+
+    List<Notification> findByUserId(String userId);
+
+    Page<Notification> findByUserIdOrderByCreatedAtDesc(String userId, Pageable pageable);
+
+    @Query("{ 'userId': ?0, 'isRead': false }")
+    List<Notification> findUnreadByUserId(String userId);
+
+    long countByUserIdAndIsRead(String userId, boolean isRead);
+}
+```
+
+<BackToTop />
+
+## Service Layer
+
+Now that we have our repositories, let's implement the service layer. Services encapsulate business logic and orchestrate the operations between different repositories.
+
+### UserService
+
+```java title="UserService.java"
+package com.example.learningplatform.service;
+
+import com.example.learningplatform.dto.UserRegistrationDto;
+import com.example.learningplatform.exception.ResourceAlreadyExistsException;
+import com.example.learningplatform.exception.ResourceNotFoundException;
+import com.example.learningplatform.model.User;
+import com.example.learningplatform.repository.UserRepository;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
+import java.time.ZonedDateTime;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+@Service
+public class UserService {
+
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+
+    @Autowired
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+    }
+
+    public User registerUser(UserRegistrationDto registrationDto) {
+        // Check if username already exists
+        if (userRepository.existsByUsername(registrationDto.getUsername())) {
+            throw new ResourceAlreadyExistsException("Username already exists: " + registrationDto.getUsername());
+        }
+
+        // Check if email already exists
+        if (userRepository.existsByEmail(registrationDto.getEmail())) {
+            throw new ResourceAlreadyExistsException("Email already exists: " + registrationDto.getEmail());
+        }
+
+        // Create new user
+        User user = new User();
+        user.setUsername(registrationDto.getUsername());
+        user.setEmail(registrationDto.getEmail());
+        user.setPasswordHash(passwordEncoder.encode(registrationDto.getPassword()));
+        user.setFirstName(registrationDto.getFirstName());
+        user.setLastName(registrationDto.getLastName());
+
+        // Set default role
+        user.addRole("ROLE_STUDENT");
+
+        // Set default preferences
+        Map<String, Boolean> preferences = new HashMap<>();
+        preferences.put("emailNotifications", true);
+        preferences.put("darkMode", false);
+        user.setPreferences(preferences);
+
+        // Save user
+        return userRepository.save(user);
+    }
+
+    public User findById(String id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+    }
+
+    public Optional<User> findByEmailOrUsername(String emailOrUsername) {
+        return userRepository.findByEmailOrUsername(emailOrUsername);
+    }
+
+    public List<User> findAllUsers() {
+        return userRepository.findAll();
+    }
+
+    public List<User> findAllActiveUsers() {
+        return userRepository.findAllActiveUsers();
+    }
+
+    public List<User> findUsersByRole(String role) {
+        return userRepository.findByRolesContaining(role);
+    }
+
+    public User updateUser(String id, User userDetails) {
+        User user = findById(id);
+
+        // Update fields
+        user.setFirstName(userDetails.getFirstName());
+        user.setLastName(userDetails.getLastName());
+        user.setBio(userDetails.getBio());
+        user.setProfileImage(userDetails.getProfileImage());
+        user.setPreferences(userDetails.getPreferences());
+        user.setSocialProfiles(userDetails.getSocialProfiles());
+
+        return userRepository.save(user);
+    }
+
+    public void updateLastLogin(String id) {
+        User user = findById(id);
+        user.setLastLogin(ZonedDateTime.now());
+        userRepository.save(user);
+    }
+
+    public User changePassword(String id, String currentPassword, String newPassword) {
+        User user = findById(id);
+
+        // Verify current password
+        if (!passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
+            throw new IllegalArgumentException("Current password is incorrect");
+        }
+
+        // Update password
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        return userRepository.save(user);
+    }
+
+    public User updateUserRoles(String id, List<String> roles) {
+        User user = findById(id);
+        user.setRoles(new java.util.HashSet<>(roles));
+        return userRepository.save(user);
+    }
+
+    public void deactivateUser(String id) {
+        User user = findById(id);
+        user.setActive(false);
+        userRepository.save(user);
+    }
+
+    public void activateUser(String id) {
+        User user = findById(id);
+        user.setActive(true);
+        userRepository.save(user);
+    }
+
+    public void deleteUser(String id) {
+        userRepository.deleteById(id);
+    }
+
+    public long countUsersByRole(String role) {
+        return userRepository.countByRolesContaining(role);
+    }
+}
+```
+
+<BackToTop />
+
+### CourseService
+
+```java title="CourseService.java"
+package com.example.learningplatform.service;
+
+import com.example.learningplatform.exception.ResourceAlreadyExistsException;
+import com.example.learningplatform.exception.ResourceNotFoundException;
+import com.example.learningplatform.model.Course;
+import com.example.learningplatform.model.User;
+import com.example.learningplatform.repository.CourseRepository;
+import com.example.learningplatform.repository.UserRepository;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+public class CourseService {
+
+    private final CourseRepository courseRepository;
+    private final UserRepository userRepository;
+
+    @Autowired
+    public CourseService(CourseRepository courseRepository, UserRepository userRepository) {
+        this.courseRepository = courseRepository;
+        this.userRepository = userRepository;
+    }
+
+    public Course createCourse(Course course) {
+        // Check if slug already exists
+        if (courseRepository.findBySlug(course.getSlug()).isPresent()) {
+            throw new ResourceAlreadyExistsException("Course with slug already exists: " + course.getSlug());
+        }
+
+        // Verify instructor exists
+        User instructor = userRepository.findById(course.getInstructorId())
+                .orElseThrow(() -> new ResourceNotFoundException("Instructor not found with id: " + course.getInstructorId()));
+
+        // Set instructor name
+        course.setInstructorName(instructor.getFullName());
+
+        return courseRepository.save(course);
+    }
+
+    public Course findById(String id) {
+        return courseRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Course not found with id: " + id));
+    }
+
+    public Course findBySlug(String slug) {
+        return courseRepository.findBySlug(slug)
+                .orElseThrow(() -> new ResourceNotFoundException("Course not found with slug: " + slug));
+    }
+
+    public List<Course> findAllCourses() {
+        return courseRepository.findAll();
+    }
+
+    public Page<Course> findAllPublishedCourses(Pageable pageable) {
+        return courseRepository.findAllPublishedCourses(pageable);
+    }
+
+    public List<Course> findCoursesByInstructor(String instructorId) {
+        return courseRepository.findByInstructorId(instructorId);
+    }
+
+    public List<Course> findCoursesByTags(List<String> tags) {
+        return courseRepository.findByTagsAndPublished(tags);
+    }
+
+    public List<Course> findCoursesByLevel(String level) {
+        return courseRepository.findByLevelAndPublished(level);
+    }
+
+    public List<Course> searchCourses(String keyword) {
+        return courseRepository.searchByTitleOrDescription(keyword);
+    }
+
+    public Course updateCourse(String id, Course courseDetails) {
+        Course course = findById(id);
+
+        // Update fields
+        course.setTitle(courseDetails.getTitle());
+        course.setDescription(courseDetails.getDescription());
+        course.setThumbnailUrl(courseDetails.getThumbnailUrl());
+        course.setPrice(courseDetails.getPrice());
+        course.setLevel(courseDetails.getLevel());
+        course.setTags(courseDetails.getTags());
+        course.setRequirements(courseDetails.getRequirements());
+        course.setLearningObjectives(courseDetails.getLearningObjectives());
+
+        return courseRepository.save(course);
+    }
+
+    public Course publishCourse(String id) {
+        Course course = findById(id);
+        course.setPublished(true);
+        course.setStatus("ACTIVE");
+        return courseRepository.save(course);
+    }
+
+    public Course unpublishCourse(String id) {
+        Course course = findById(id);
+        course.setPublished(false);
+        course.setStatus("DRAFT");
+        return courseRepository.save(course);
+    }
+
+    public Course archiveCourse(String id) {
+        Course course = findById(id);
+        course.setStatus("ARCHIVED");
+        return courseRepository.save(course);
+    }
+
+    public void deleteCourse(String id) {
+        courseRepository.deleteById(id);
+    }
+
+    public Course updateCourseRating(String id, double rating) {
+        Course course = findById(id);
+
+        // Update rating
+        int currentCount = course.getRatingsCount() != null ? course.getRatingsCount() : 0;
+        double currentAvg = course.getAverageRating() != null ? course.getAverageRating() : 0.0;
+
+        // Calculate new average
+        double newAvg;
+        if (currentCount == 0) {
+            newAvg = rating;
+        } else {
+            newAvg = (currentAvg * currentCount + rating) / (currentCount + 1);
+        }
+
+        course.setAverageRating(newAvg);
+        course.setRatingsCount(currentCount + 1);
+
+        return courseRepository.save(course);
+    }
+}
+```
+
+<BackToTop />
+
+### EnrollmentService
+
+```java title="EnrollmentService.java"
+package com.example.learningplatform.service;
+
+import com.example.learningplatform.exception.ResourceAlreadyExistsException;
+import com.example.learningplatform.exception.ResourceNotFoundException;
+import com.example.learningplatform.model.Course;
+import com.example.learningplatform.model.Enrollment;
+import com.example.learningplatform.model.Module;
+import com.example.learningplatform.repository.CourseRepository;
+import com.example.learningplatform.repository.EnrollmentRepository;
+import com.example.learningplatform.repository.ModuleRepository;
+import com.example.learningplatform.repository.UserRepository;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.ZonedDateTime;
+import java.util.List;
+import java.util.Optional;
+
+@Service
+public class EnrollmentService {
+
+    private final EnrollmentRepository enrollmentRepository;
+    private final UserRepository userRepository;
+    private final CourseRepository courseRepository;
+    private final ModuleRepository moduleRepository;
+
+    @Autowired
+    public EnrollmentService(
+            EnrollmentRepository enrollmentRepository,
+            UserRepository userRepository,
+            CourseRepository courseRepository,
+            ModuleRepository moduleRepository) {
+        this.enrollmentRepository = enrollmentRepository;
+        this.userRepository = userRepository;
+        this.courseRepository = courseRepository;
+        this.moduleRepository = moduleRepository;
+    }
+
+    @Transactional
+    public Enrollment enrollUserInCourse(String userId, String courseId) {
+        // Verify user exists
+        if (!userRepository.existsById(userId)) {
+            throw new ResourceNotFoundException("User not found with id: " + userId);
+        }
+
+        // Verify course exists
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new ResourceNotFoundException("Course not found with id: " + courseId));
+
+        // Check if already enrolled
+        Optional<Enrollment> existingEnrollment = enrollmentRepository.findByUserIdAndCourseId(userId, courseId);
+        if (existingEnrollment.isPresent()) {
+            throw new ResourceAlreadyExistsException("User already enrolled in this course");
+        }
+
+        // Create enrollment
+        Enrollment enrollment = new Enrollment();
+        enrollment.setUserId(userId);
+        enrollment.setCourseId(courseId);
+        enrollment.setEnrollmentDate(ZonedDateTime.now());
+        enrollment.setStatus("NOT_STARTED");
+        enrollment.setProgressPercentage(0);
+
+        // Save enrollment
+        Enrollment savedEnrollment = enrollmentRepository.save(enrollment);
+
+        // Update course enrolled count
+        course.setEnrolledCount(course.getEnrolledCount() + 1);
+        courseRepository.save(course);
+
+        return savedEnrollment;
+    }
+
+    public Enrollment findById(String id) {
+        return enrollmentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Enrollment not found with id: " + id));
+    }
+
+    public Enrollment findByUserAndCourse(String userId, String courseId) {
+        return enrollmentRepository.findByUserIdAndCourseId(userId, courseId)
+                .orElseThrow(() -> new ResourceNotFoundException("Enrollment not found for user and course"));
+    }
+
+    public List<Enrollment> findEnrollmentsByUser(String userId) {
+        return enrollmentRepository.findByUserId(userId);
+    }
+
+    public List<Enrollment> findEnrollmentsByCourse(String courseId) {
+        return enrollmentRepository.findByCourseId(courseId);
+    }
+
+    @Transactional
+    public Enrollment markLessonAsCompleted(String enrollmentId, String lessonId) {
+        Enrollment enrollment = findById(enrollmentId);
+
+        // Check if lesson already completed
+        boolean alreadyCompleted = enrollment.getCompletedLessons().stream()
+                .anyMatch(cl -> cl.getLessonId().equals(lessonId));
+
+        if (!alreadyCompleted) {
+            // Create new completed lesson
+            Enrollment.CompletedLesson completedLesson = new Enrollment.CompletedLesson();
+            completedLesson.setLessonId(lessonId);
+            completedLesson.setCompletedAt(ZonedDateTime.now());
+
+            // Add to completed lessons
+            enrollment.getCompletedLessons().add(completedLesson);
+
+            // Update progress percentage
+            updateProgressPercentage(enrollment);
+        }
+
+        return enrollmentRepository.save(enrollment);
+    }
+
+    private void updateProgressPercentage(Enrollment enrollment) {
+        // Get total lessons count
+        List<Module> modules = moduleRepository.findByCourseId(enrollment.getCourseId());
+        int totalLessons = modules.stream()
+                .mapToInt(module -> module.getLessons().size())
+                .sum();
+
+        // Calculate progress
+        int completedCount = enrollment.getCompletedLessons().size();
+        int progressPercentage = totalLessons > 0
+                ? (int) Math.round((double) completedCount / totalLessons * 100)
+                : 0;
+
+        enrollment.setProgressPercentage(progressPercentage);
+
+        // Update status
+        if (progressPercentage == 0) {
+            enrollment.setStatus("NOT_STARTED");
+        } else if (progressPercentage == 100) {
+            enrollment.setStatus("COMPLETED");
+            enrollment.setCompletionDate(ZonedDateTime.now());
+        } else {
+            enrollment.setStatus("IN_PROGRESS");
+        }
+    }
+
+    public Enrollment addNote(String enrollmentId, String lessonId, String noteContent) {
+        Enrollment enrollment = findById(enrollmentId);
+
+        // Create new note
+        Enrollment.Note note = new Enrollment.Note();
+        note.setLessonId(lessonId);
+        note.setContent(noteContent);
+        note.setCreatedAt(ZonedDateTime.now());
+
+        // Add to notes
+        enrollment.getNotes().add(note);
+
+        return enrollmentRepository.save(enrollment);
+    }
+
+    @Transactional
+    public void unenrollUser(String enrollmentId) {
+        Enrollment enrollment = findById(enrollmentId);
+
+        // Update course enrolled count
+        Course course = courseRepository.findById(enrollment.getCourseId())
+                .orElseThrow(() -> new ResourceNotFoundException("Course not found"));
+
+        course.setEnrolledCount(Math.max(0, course.getEnrolledCount() - 1));
+        courseRepository.save(course);
+
+        // Delete enrollment
+        enrollmentRepository.delete(enrollment);
+    }
+
+    public Enrollment updateLastAccess(String enrollmentId) {
+        Enrollment enrollment = findById(enrollmentId);
+        enrollment.setLastAccessDate(ZonedDateTime.now());
+        return enrollmentRepository.save(enrollment);
+    }
+
+    public long countEnrollmentsByCourse(String courseId) {
+        return enrollmentRepository.countByCourseId(courseId);
+    }
+
+    public long countCompletedEnrollmentsByCourse(String courseId) {
+        return enrollmentRepository.countCompletedEnrollmentsByCourseId(courseId);
+    }
+}
+```
+
+### Additional Services
+
+We should also implement services for the remaining entities:
+
+- `ModuleService` - For managing course modules and lessons
+- `DiscussionService` - For forum discussions and comments
+- `AssessmentService` - For quizzes and tests
+- `SubmissionService` - For handling assessment submissions
+- `NotificationService` - For user notifications
+
+Each service will follow a similar pattern, with methods for creating, reading, updating, and deleting entities, as well as business-specific operations.
+
+<BackToTop />
+
+## Exception Handling
+
+Let's create some custom exceptions to handle errors in our application:
+
+```java title="ResourceNotFoundException.java"
+package com.example.learningplatform.exception;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.ResponseStatus;
+
+@ResponseStatus(HttpStatus.NOT_FOUND)
+public class ResourceNotFoundException extends RuntimeException {
+    public ResourceNotFoundException(String message) {
+        super(message);
+    }
+}
+```
+
+```java title="ResourceAlreadyExistsException.java"
+package com.example.learningplatform.exception;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.ResponseStatus;
+
+@ResponseStatus(HttpStatus.CONFLICT)
+public class ResourceAlreadyExistsException extends RuntimeException {
+    public ResourceAlreadyExistsException(String message) {
+        super(message);
+    }
+}
+```
+
+And a global exception handler:
+
+```java title="GlobalExceptionHandler.java"
+package com.example.learningplatform.exception;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+
+import java.util.HashMap;
+import java.util.Map;
+
+@ControllerAdvice
+public class GlobalExceptionHandler {
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleResourceNotFoundException(ResourceNotFoundException ex) {
+        Map<String, String> error = new HashMap<>();
+        error.put("error", "Resource not found");
+        error.put("message", ex.getMessage());
+        return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(ResourceAlreadyExistsException.class)
+    public ResponseEntity<Map<String, String>> handleResourceAlreadyExistsException(ResourceAlreadyExistsException ex) {
+        Map<String, String> error = new HashMap<>();
+        error.put("error", "Resource already exists");
+        error.put("message", ex.getMessage());
+        return new ResponseEntity<>(error, HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<Map<String, String>> handleValidationExceptions(MethodArgumentNotValidException ex) {
+        Map<String, String> errors = new HashMap<>();
+        ex.getBindingResult().getAllErrors().forEach((error) -> {
+            String fieldName = ((FieldError) error).getField();
+            String errorMessage = error.getDefaultMessage();
+            errors.put(fieldName, errorMessage);
+        });
+        return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Map<String, String>> handleGenericException(Exception ex) {
+        Map<String, String> error = new HashMap<>();
+        error.put("error", "Internal server error");
+        error.put("message", ex.getMessage());
+        return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+}
+```
+
+## Next Steps
+
+Now that we've implemented our repositories and services, in the next module we'll create the REST API controllers that will expose our application's functionality to clients.
+
+[Next: REST API Controllers →](/proj-online-learning-platform-website/08-rest-api-controllers)
+
+<BackToTop />
