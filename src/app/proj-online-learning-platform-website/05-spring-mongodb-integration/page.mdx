@@ -1,0 +1,509 @@
+import BackToTop from "@/components/BackToTop";
+
+# Spring MongoDB Integration
+
+## Introduction
+
+In this module, we'll configure the Spring Boot application to work with MongoDB. Spring Data MongoDB provides a convenient way to interact with MongoDB, offering high-level abstractions and repository support that simplifies database operations.
+
+## MongoDB Configuration in Spring Boot
+
+### Configuration Classes
+
+First, let's create a MongoDB configuration class to customize our MongoDB connection if needed:
+
+```java title="MongoConfig.java"
+package com.example.learningplatform.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.data.mongodb.MongoDatabaseFactory;
+import org.springframework.data.mongodb.MongoTransactionManager;
+import org.springframework.data.mongodb.config.EnableMongoAuditing;
+import org.springframework.data.mongodb.core.mapping.event.ValidatingMongoEventListener;
+import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
+
+@Configuration
+@EnableMongoAuditing
+public class MongoConfig {
+
+    // Enable MongoDB transactions
+    @Bean
+    MongoTransactionManager transactionManager(MongoDatabaseFactory dbFactory) {
+        return new MongoTransactionManager(dbFactory);
+    }
+
+    // Add validation for MongoDB documents
+    @Bean
+    public ValidatingMongoEventListener validatingMongoEventListener(
+            LocalValidatorFactoryBean factory) {
+        return new ValidatingMongoEventListener(factory);
+    }
+
+    @Bean
+    public LocalValidatorFactoryBean validator() {
+        return new LocalValidatorFactoryBean();
+    }
+}
+```
+
+This configuration:
+
+- Enables MongoDB auditing for automatic timestamp fields
+- Sets up a transaction manager for MongoDB operations
+- Configures validation for MongoDB documents
+
+### Setting Up MongoDB Converters
+
+MongoDB stores data in BSON format, which might require custom converters for certain Java types. Let's create some common converters:
+
+```java title="MongoConverterConfig.java"
+package com.example.learningplatform.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.core.convert.converter.Converter;
+import org.springframework.data.mongodb.core.convert.MongoCustomConversions;
+
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+@Configuration
+public class MongoConverterConfig {
+
+    @Bean
+    public MongoCustomConversions customConversions() {
+        List<Converter<?, ?>> converters = new ArrayList<>();
+
+        // Add converters for ZonedDateTime <-> Date
+        converters.add(new ZonedDateTimeToDateConverter());
+        converters.add(new DateToZonedDateTimeConverter());
+
+        return new MongoCustomConversions(converters);
+    }
+
+    private static class ZonedDateTimeToDateConverter implements Converter<ZonedDateTime, Date> {
+        @Override
+        public Date convert(ZonedDateTime source) {
+            return source == null ? null : Date.from(source.toInstant());
+        }
+    }
+
+    private static class DateToZonedDateTimeConverter implements Converter<Date, ZonedDateTime> {
+        @Override
+        public ZonedDateTime convert(Date source) {
+            return source == null ? null : ZonedDateTime.ofInstant(source.toInstant(), ZoneOffset.UTC);
+        }
+    }
+}
+```
+
+<BackToTop />
+
+## Creating MongoDB Indexes
+
+When working with MongoDB, properly defining indexes is crucial for performance. While we already defined our indexes conceptually in the previous module, let's implement them in Spring Boot:
+
+```java title="MongoIndexConfig.java"
+package com.example.learningplatform.config;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.mongodb.core.index.CompoundIndexes;
+import org.springframework.data.mongodb.core.index.Index;
+import org.springframework.data.mongodb.core.index.IndexDefinition;
+import org.springframework.data.mongodb.core.index.IndexOperations;
+
+import jakarta.annotation.PostConstruct;
+
+@Configuration
+public class MongoIndexConfig {
+
+    private final MongoTemplate mongoTemplate;
+
+    @Autowired
+    public MongoIndexConfig(MongoTemplate mongoTemplate) {
+        this.mongoTemplate = mongoTemplate;
+    }
+
+    @PostConstruct
+    public void initIndexes() {
+        // Users collection indexes
+        IndexOperations userIndexOps = mongoTemplate.indexOps("users");
+        userIndexOps.ensureIndex(new Index().on("email", Index.Direction.ASC).unique());
+        userIndexOps.ensureIndex(new Index().on("username", Index.Direction.ASC).unique());
+
+        // Courses collection indexes
+        IndexOperations courseIndexOps = mongoTemplate.indexOps("courses");
+        courseIndexOps.ensureIndex(new Index().on("slug", Index.Direction.ASC).unique());
+        courseIndexOps.ensureIndex(new Index().on("instructorId", Index.Direction.ASC));
+        courseIndexOps.ensureIndex(new Index().on("tags", Index.Direction.ASC));
+
+        // Modules collection indexes
+        IndexOperations moduleIndexOps = mongoTemplate.indexOps("modules");
+        moduleIndexOps.ensureIndex(new Index().on("courseId", Index.Direction.ASC)
+                                             .on("orderIndex", Index.Direction.ASC));
+
+        // Enrollments collection indexes
+        IndexOperations enrollmentIndexOps = mongoTemplate.indexOps("enrollments");
+        enrollmentIndexOps.ensureIndex(new Index().on("userId", Index.Direction.ASC)
+                                                 .on("courseId", Index.Direction.ASC).unique());
+        enrollmentIndexOps.ensureIndex(new Index().on("courseId", Index.Direction.ASC));
+
+        // More collection indexes...
+    }
+}
+```
+
+## Testing MongoDB Connection
+
+Let's create a simple test to verify our MongoDB connection is working:
+
+```java title="MongoConnectionTest.java"
+package com.example.learningplatform.config;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.mongodb.core.MongoTemplate;
+
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
+@SpringBootTest
+public class MongoConnectionTest {
+
+    @Autowired
+    private MongoTemplate mongoTemplate;
+
+    @Test
+    public void testMongoConnection() {
+        assertNotNull(mongoTemplate);
+        assertNotNull(mongoTemplate.getDb());
+
+        // Log connection information
+        System.out.println("Connected to MongoDB: " + mongoTemplate.getDb().getName());
+    }
+}
+```
+
+<BackToTop />
+
+## Working with MongoDB in Spring Boot
+
+### MongoDB Templates
+
+Spring Boot provides the `MongoTemplate` class for MongoDB operations. It's a powerful, low-level API for working with MongoDB directly:
+
+```java title="UserSearchService.java"
+package com.example.learningplatform.service;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.stereotype.Service;
+
+import com.example.learningplatform.model.User;
+
+import java.util.List;
+
+@Service
+public class UserSearchService {
+
+    private final MongoTemplate mongoTemplate;
+
+    @Autowired
+    public UserSearchService(MongoTemplate mongoTemplate) {
+        this.mongoTemplate = mongoTemplate;
+    }
+
+    public List<User> searchUsersByName(String name) {
+        Query query = new Query();
+        query.addCriteria(
+            new Criteria().orOperator(
+                Criteria.where("firstName").regex(name, "i"),
+                Criteria.where("lastName").regex(name, "i")
+            )
+        );
+        return mongoTemplate.find(query, User.class);
+    }
+}
+```
+
+### MongoDB Repositories
+
+Spring Data MongoDB provides repository interfaces that simplify database operations. Let's see an example:
+
+```java title="UserRepository.java"
+package com.example.learningplatform.repository;
+
+import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.mongodb.repository.Query;
+import org.springframework.stereotype.Repository;
+
+import com.example.learningplatform.model.User;
+
+import java.util.List;
+import java.util.Optional;
+
+@Repository
+public interface UserRepository extends MongoRepository<User, String> {
+
+    // Find by email (unique)
+    Optional<User> findByEmail(String email);
+
+    // Find by username (unique)
+    Optional<User> findByUsername(String username);
+
+    // Find by role
+    List<User> findByRoleContaining(String role);
+
+    // Custom query using MongoDB query language
+    @Query("{'role': ?0, 'isActive': true}")
+    List<User> findActiveUsersByRole(String role);
+
+    // Count users by role
+    long countByRoleContaining(String role);
+}
+```
+
+<BackToTop />
+
+## Handling MongoDB Exceptions
+
+It's important to handle MongoDB-specific exceptions properly. Let's create an exception handler:
+
+```java title="MongoDbExceptionHandler.java"
+package com.example.learningplatform.exception;
+
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.DuplicateKeyException;
+import org.springframework.data.mongodb.UncategorizedMongoDbException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import java.util.HashMap;
+import java.util.Map;
+
+@RestControllerAdvice
+public class MongoDbExceptionHandler {
+
+    @ExceptionHandler(DuplicateKeyException.class)
+    public ResponseEntity<Map<String, String>> handleDuplicateKeyException(DuplicateKeyException ex) {
+        Map<String, String> error = new HashMap<>();
+        error.put("error", "Duplicate key error");
+        error.put("message", extractMongoErrorMessage(ex.getMessage()));
+        return new ResponseEntity<>(error, HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, String>> handleDataIntegrityViolationException(
+            DataIntegrityViolationException ex) {
+        Map<String, String> error = new HashMap<>();
+        error.put("error", "Data integrity violation");
+        error.put("message", ex.getMessage());
+        return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(UncategorizedMongoDbException.class)
+    public ResponseEntity<Map<String, String>> handleUncategorizedMongoDbException(
+            UncategorizedMongoDbException ex) {
+        Map<String, String> error = new HashMap<>();
+        error.put("error", "Database error");
+        error.put("message", "An unexpected database error occurred");
+        return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    // Helper method to extract the key part from MongoDB error messages
+    private String extractMongoErrorMessage(String message) {
+        if (message.contains("dup key")) {
+            int startIndex = message.indexOf("{ :");
+            int endIndex = message.indexOf(" }");
+            if (startIndex != -1 && endIndex != -1) {
+                return "Duplicate value for " + message.substring(startIndex + 3, endIndex);
+            }
+        }
+        return message;
+    }
+}
+```
+
+<BackToTop />
+
+## MongoDB Transactions
+
+MongoDB supports multi-document transactions since version 4.0. Here's how to use them in Spring Boot:
+
+```java title="EnrollmentService.java"
+package com.example.learningplatform.service;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.mongodb.MongoTransactionManager;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
+
+import com.example.learningplatform.model.Course;
+import com.example.learningplatform.model.Enrollment;
+import com.example.learningplatform.model.User;
+
+@Service
+public class EnrollmentService {
+
+    private final MongoTemplate mongoTemplate;
+    private final TransactionTemplate transactionTemplate;
+
+    @Autowired
+    public EnrollmentService(MongoTemplate mongoTemplate, MongoTransactionManager transactionManager) {
+        this.mongoTemplate = mongoTemplate;
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
+    }
+
+    // Using programmatic transactions
+    public Enrollment enrollUserInCourse(String userId, String courseId) {
+        return transactionTemplate.execute(status -> {
+            // Get user and course
+            User user = mongoTemplate.findById(userId, User.class);
+            Course course = mongoTemplate.findById(courseId, Course.class);
+
+            if (user == null || course == null) {
+                throw new IllegalArgumentException("User or course not found");
+            }
+
+            // Create enrollment
+            Enrollment enrollment = new Enrollment();
+            enrollment.setUserId(userId);
+            enrollment.setCourseId(courseId);
+            enrollment.setStatus("NOT_STARTED");
+            enrollment.setEnrollmentDate(java.time.ZonedDateTime.now());
+            enrollment.setProgressPercentage(0);
+
+            // Save enrollment
+            Enrollment savedEnrollment = mongoTemplate.save(enrollment);
+
+            // Update course enrolled count
+            course.setEnrolledCount(course.getEnrolledCount() + 1);
+            mongoTemplate.save(course);
+
+            return savedEnrollment;
+        });
+    }
+
+    // Using declarative transactions
+    @Transactional
+    public void unenrollUserFromCourse(String userId, String courseId) {
+        // Find enrollment
+        Enrollment enrollment = mongoTemplate.findOne(
+            org.springframework.data.mongodb.core.query.Query.query(
+                org.springframework.data.mongodb.core.query.Criteria.where("userId").is(userId)
+                    .and("courseId").is(courseId)
+            ),
+            Enrollment.class
+        );
+
+        if (enrollment == null) {
+            throw new IllegalArgumentException("Enrollment not found");
+        }
+
+        // Delete enrollment
+        mongoTemplate.remove(enrollment);
+
+        // Update course enrolled count
+        Course course = mongoTemplate.findById(courseId, Course.class);
+        if (course != null) {
+            course.setEnrolledCount(Math.max(0, course.getEnrolledCount() - 1));
+            mongoTemplate.save(course);
+        }
+    }
+}
+```
+
+<BackToTop />
+
+## MongoDB Auditing
+
+Spring Data MongoDB provides auditing capabilities to automatically track created and modified dates. Here's how to set it up:
+
+```java title="MongoAuditingConfig.java"
+package com.example.learningplatform.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.data.domain.AuditorAware;
+import org.springframework.data.mongodb.config.EnableMongoAuditing;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+
+import java.util.Optional;
+
+@Configuration
+@EnableMongoAuditing
+public class MongoAuditingConfig {
+
+    @Bean
+    public AuditorAware<String> auditorProvider() {
+        return () -> {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null || !authentication.isAuthenticated()) {
+                return Optional.of("system");
+            }
+            return Optional.of(authentication.getName());
+        };
+    }
+}
+```
+
+Then in your entity classes:
+
+```java title="Course.java"
+package com.example.learningplatform.model;
+
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.mongodb.core.mapping.Document;
+
+import java.time.ZonedDateTime;
+
+@Document(collection = "courses")
+public class Course {
+    @Id
+    private String id;
+
+    private String title;
+    private String description;
+    // other fields...
+
+    @CreatedDate
+    private ZonedDateTime createdAt;
+
+    @LastModifiedDate
+    private ZonedDateTime updatedAt;
+
+    @CreatedBy
+    private String createdBy;
+
+    @LastModifiedBy
+    private String modifiedBy;
+
+    // getters and setters...
+}
+```
+
+## Next Steps
+
+Now that we have integrated Spring Boot with MongoDB, we're ready to create our data models and entities in the next module. We'll implement the MongoDB schema we designed earlier as Java classes with proper annotations.
+
+[Next: Data Models and Entities →](/proj-online-learning-platform-website/06-data-models-entities)
+
+<BackToTop />
