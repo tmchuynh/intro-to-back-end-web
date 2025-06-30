@@ -1,0 +1,1603 @@
+import BackToTop from "@/components/BackToTop";
+
+# User Management
+
+## Introduction
+
+In this module, we'll implement the user management functionality for our learning platform. This will include a profile management section for users to update their information, an admin interface to manage users, and the necessary backend services to support these features.
+
+## User Profile Management
+
+First, let's create a page for users to view and edit their profiles:
+
+```jsx
+// src/pages/ProfilePage.jsx
+import React, { useState, useEffect } from "react";
+import { useFormik } from "formik";
+import * as Yup from "yup";
+import { FaUser, FaSave, FaKey } from "react-icons/fa";
+import { useAuth } from "../context/AuthContext";
+import UserService from "../services/userService";
+import Button from "../components/common/Button";
+import Input from "../components/common/Input";
+import TextArea from "../components/common/TextArea";
+import Card from "../components/common/Card";
+
+const ProfilePage = () => {
+  const { currentUser, updateUser } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [activeTab, setActiveTab] = useState("profile");
+
+  const profileFormik = useFormik({
+    initialValues: {
+      name: currentUser?.name || "",
+      email: currentUser?.email || "",
+      username: currentUser?.username || "",
+      bio: currentUser?.bio || "",
+      title: currentUser?.title || "",
+      avatarUrl: currentUser?.avatarUrl || "",
+    },
+    validationSchema: Yup.object({
+      name: Yup.string().required("Name is required"),
+      email: Yup.string()
+        .email("Invalid email address")
+        .required("Email is required"),
+      username: Yup.string().required("Username is required"),
+      bio: Yup.string(),
+      title: Yup.string(),
+      avatarUrl: Yup.string().url("Must be a valid URL"),
+    }),
+    onSubmit: async (values) => {
+      try {
+        setIsLoading(true);
+        setError("");
+        setSuccess("");
+
+        // Update user profile
+        const updatedUser = await UserService.updateProfile(values);
+
+        // Update auth context
+        updateUser(updatedUser);
+
+        setSuccess("Profile updated successfully!");
+      } catch (err) {
+        setError(
+          err.response?.data?.message ||
+            "Failed to update profile. Please try again."
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    },
+  });
+
+  const passwordFormik = useFormik({
+    initialValues: {
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+    },
+    validationSchema: Yup.object({
+      currentPassword: Yup.string().required("Current password is required"),
+      newPassword: Yup.string()
+        .required("New password is required")
+        .min(8, "Password must be at least 8 characters")
+        .matches(
+          /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
+          "Password must contain at least one uppercase letter, one lowercase letter, one number and one special character"
+        ),
+      confirmPassword: Yup.string()
+        .oneOf([Yup.ref("newPassword"), null], "Passwords must match")
+        .required("Confirm password is required"),
+    }),
+    onSubmit: async (values, { resetForm }) => {
+      try {
+        setIsLoading(true);
+        setError("");
+        setSuccess("");
+
+        // Change password
+        await UserService.changePassword(values);
+
+        resetForm();
+        setSuccess("Password changed successfully!");
+      } catch (err) {
+        setError(
+          err.response?.data?.message ||
+            "Failed to change password. Please try again."
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    },
+  });
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900">My Profile</h1>
+        <p className="mt-2 text-lg text-gray-600">
+          Manage your account settings and preferences
+        </p>
+      </div>
+
+      <div className="bg-white shadow-md rounded-lg overflow-hidden mb-8">
+        <div className="border-b border-gray-200">
+          <nav className="flex -mb-px">
+            <button
+              className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${
+                activeTab === "profile"
+                  ? "border-primary-500 text-primary-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+              onClick={() => setActiveTab("profile")}
+            >
+              Profile Information
+            </button>
+
+            <button
+              className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${
+                activeTab === "password"
+                  ? "border-primary-500 text-primary-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+              onClick={() => setActiveTab("password")}
+            >
+              Change Password
+            </button>
+          </nav>
+        </div>
+
+        <div className="p-6">
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-md border border-red-200">
+              {error}
+            </div>
+          )}
+
+          {success && (
+            <div className="mb-6 p-4 bg-green-50 text-green-700 rounded-md border border-green-200">
+              {success}
+            </div>
+          )}
+
+          {activeTab === "profile" && (
+            <form onSubmit={profileFormik.handleSubmit}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <Input
+                  id="name"
+                  name="name"
+                  label="Full Name"
+                  value={profileFormik.values.name}
+                  onChange={profileFormik.handleChange}
+                  onBlur={profileFormik.handleBlur}
+                  error={
+                    profileFormik.touched.name && profileFormik.errors.name
+                  }
+                  touched={profileFormik.touched.name}
+                  required
+                />
+
+                <Input
+                  id="username"
+                  name="username"
+                  label="Username"
+                  value={profileFormik.values.username}
+                  onChange={profileFormik.handleChange}
+                  onBlur={profileFormik.handleBlur}
+                  error={
+                    profileFormik.touched.username &&
+                    profileFormik.errors.username
+                  }
+                  touched={profileFormik.touched.username}
+                  required
+                />
+
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  label="Email Address"
+                  value={profileFormik.values.email}
+                  onChange={profileFormik.handleChange}
+                  onBlur={profileFormik.handleBlur}
+                  error={
+                    profileFormik.touched.email && profileFormik.errors.email
+                  }
+                  touched={profileFormik.touched.email}
+                  required
+                />
+
+                <Input
+                  id="title"
+                  name="title"
+                  label="Title / Position"
+                  placeholder="e.g., Software Engineer, UX Designer"
+                  value={profileFormik.values.title}
+                  onChange={profileFormik.handleChange}
+                  onBlur={profileFormik.handleBlur}
+                  error={
+                    profileFormik.touched.title && profileFormik.errors.title
+                  }
+                  touched={profileFormik.touched.title}
+                />
+              </div>
+
+              <TextArea
+                id="bio"
+                name="bio"
+                label="Bio"
+                placeholder="Tell us about yourself"
+                value={profileFormik.values.bio}
+                onChange={profileFormik.handleChange}
+                onBlur={profileFormik.handleBlur}
+                error={profileFormik.touched.bio && profileFormik.errors.bio}
+                touched={profileFormik.touched.bio}
+                rows={4}
+              />
+
+              <Input
+                id="avatarUrl"
+                name="avatarUrl"
+                label="Avatar URL"
+                placeholder="https://example.com/avatar.jpg"
+                value={profileFormik.values.avatarUrl}
+                onChange={profileFormik.handleChange}
+                onBlur={profileFormik.handleBlur}
+                error={
+                  profileFormik.touched.avatarUrl &&
+                  profileFormik.errors.avatarUrl
+                }
+                touched={profileFormik.touched.avatarUrl}
+                className="mt-4"
+              />
+
+              <div className="mt-6 flex justify-end">
+                <Button type="submit" variant="primary" disabled={isLoading}>
+                  <div className="flex items-center">
+                    <FaSave className="mr-2" />
+                    {isLoading ? "Saving..." : "Save Changes"}
+                  </div>
+                </Button>
+              </div>
+            </form>
+          )}
+
+          {activeTab === "password" && (
+            <form onSubmit={passwordFormik.handleSubmit}>
+              <div className="space-y-4">
+                <Input
+                  id="currentPassword"
+                  name="currentPassword"
+                  type="password"
+                  label="Current Password"
+                  value={passwordFormik.values.currentPassword}
+                  onChange={passwordFormik.handleChange}
+                  onBlur={passwordFormik.handleBlur}
+                  error={
+                    passwordFormik.touched.currentPassword &&
+                    passwordFormik.errors.currentPassword
+                  }
+                  touched={passwordFormik.touched.currentPassword}
+                  required
+                />
+
+                <Input
+                  id="newPassword"
+                  name="newPassword"
+                  type="password"
+                  label="New Password"
+                  value={passwordFormik.values.newPassword}
+                  onChange={passwordFormik.handleChange}
+                  onBlur={passwordFormik.handleBlur}
+                  error={
+                    passwordFormik.touched.newPassword &&
+                    passwordFormik.errors.newPassword
+                  }
+                  touched={passwordFormik.touched.newPassword}
+                  required
+                />
+
+                <Input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type="password"
+                  label="Confirm New Password"
+                  value={passwordFormik.values.confirmPassword}
+                  onChange={passwordFormik.handleChange}
+                  onBlur={passwordFormik.handleBlur}
+                  error={
+                    passwordFormik.touched.confirmPassword &&
+                    passwordFormik.errors.confirmPassword
+                  }
+                  touched={passwordFormik.touched.confirmPassword}
+                  required
+                />
+              </div>
+
+              <div className="mt-6 flex justify-end">
+                <Button type="submit" variant="primary" disabled={isLoading}>
+                  <div className="flex items-center">
+                    <FaKey className="mr-2" />
+                    {isLoading ? "Changing Password..." : "Change Password"}
+                  </div>
+                </Button>
+              </div>
+            </form>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ProfilePage;
+```
+
+<BackToTop />
+
+## Admin User Management
+
+Next, let's create the admin user management interface:
+
+```jsx
+// src/pages/AdminUsersPage.jsx
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import {
+  FaSearch,
+  FaPlus,
+  FaEdit,
+  FaTrash,
+  FaUserCog,
+  FaFilter,
+  FaLock,
+  FaUnlock,
+} from "react-icons/fa";
+import AdminService from "../services/adminService";
+import Button from "../components/common/Button";
+import Card from "../components/common/Card";
+import Modal from "../components/common/Modal";
+
+const AdminUsersPage = () => {
+  const [users, setUsers] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState({
+    role: "",
+    status: "ACTIVE",
+  });
+  const [pagination, setPagination] = useState({
+    page: 0,
+    size: 10,
+    totalPages: 0,
+    totalElements: 0,
+  });
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [showRolesModal, setShowRolesModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedRoles, setSelectedRoles] = useState([]);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [pagination.page, filters]);
+
+  const fetchUsers = async () => {
+    try {
+      setIsLoading(true);
+      const response = await AdminService.getUsers({
+        page: pagination.page,
+        size: pagination.size,
+        role: filters.role,
+        status: filters.status,
+        search: searchTerm,
+      });
+
+      setUsers(response.content);
+      setPagination({
+        ...pagination,
+        totalPages: response.totalPages,
+        totalElements: response.totalElements,
+      });
+    } catch (err) {
+      setError("Failed to load users. Please try again later.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    setPagination({ ...pagination, page: 0 });
+    fetchUsers();
+  };
+
+  const handleFilterChange = (e) => {
+    const { name, value } = e.target;
+    setFilters({
+      ...filters,
+      [name]: value,
+    });
+    setPagination({ ...pagination, page: 0 });
+  };
+
+  const handlePageChange = (newPage) => {
+    setPagination({ ...pagination, page: newPage });
+  };
+
+  const toggleFilters = () => {
+    setShowFilters(!showFilters);
+  };
+
+  const openRolesModal = (user) => {
+    setSelectedUser(user);
+    setSelectedRoles(user.roles || []);
+    setShowRolesModal(true);
+  };
+
+  const openDeleteModal = (user) => {
+    setSelectedUser(user);
+    setShowDeleteModal(true);
+  };
+
+  const handleRoleChange = (role) => {
+    if (selectedRoles.includes(role)) {
+      setSelectedRoles(selectedRoles.filter((r) => r !== role));
+    } else {
+      setSelectedRoles([...selectedRoles, role]);
+    }
+  };
+
+  const updateUserRoles = async () => {
+    try {
+      await AdminService.updateUserRoles(selectedUser.id, selectedRoles);
+
+      // Update the user in the list
+      setUsers(
+        users.map((user) =>
+          user.id === selectedUser.id ? { ...user, roles: selectedRoles } : user
+        )
+      );
+
+      setShowRolesModal(false);
+    } catch (err) {
+      setError("Failed to update user roles. Please try again.");
+    }
+  };
+
+  const toggleUserStatus = async (userId, currentStatus) => {
+    try {
+      const newStatus = currentStatus === "ACTIVE" ? "INACTIVE" : "ACTIVE";
+      await AdminService.updateUserStatus(userId, newStatus);
+
+      // Update the user in the list
+      setUsers(
+        users.map((user) =>
+          user.id === userId ? { ...user, status: newStatus } : user
+        )
+      );
+    } catch (err) {
+      setError("Failed to update user status. Please try again.");
+    }
+  };
+
+  const deleteUser = async () => {
+    try {
+      await AdminService.deleteUser(selectedUser.id);
+
+      // Remove the user from the list
+      setUsers(users.filter((user) => user.id !== selectedUser.id));
+
+      setShowDeleteModal(false);
+    } catch (err) {
+      setError("Failed to delete user. Please try again.");
+    }
+  };
+
+  const getRoleBadgeClass = (role) => {
+    switch (role) {
+      case "ROLE_ADMIN":
+        return "bg-red-100 text-red-800";
+      case "ROLE_INSTRUCTOR":
+        return "bg-blue-100 text-blue-800";
+      case "ROLE_STUDENT":
+        return "bg-green-100 text-green-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const formatRoleName = (role) => {
+    return role.replace("ROLE_", "");
+  };
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="flex justify-between items-center mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            User Management
+          </h1>
+          <p className="text-lg text-gray-600">
+            Manage users, roles, and permissions
+          </p>
+        </div>
+
+        <Button as={Link} to="/admin/users/create" variant="primary">
+          <div className="flex items-center">
+            <FaPlus className="mr-2" />
+            Add New User
+          </div>
+        </Button>
+      </div>
+
+      {error && (
+        <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-md border border-red-200">
+          {error}
+        </div>
+      )}
+
+      <Card className="mb-8">
+        <div className="mb-6">
+          <form
+            onSubmit={handleSearch}
+            className="flex flex-col md:flex-row gap-4"
+          >
+            <div className="relative flex-grow">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <FaSearch className="text-gray-400" />
+              </div>
+              <input
+                type="text"
+                placeholder="Search by name, email, or username..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              />
+            </div>
+
+            <Button type="submit" variant="primary">
+              Search
+            </Button>
+
+            <Button
+              type="button"
+              onClick={toggleFilters}
+              variant="outline"
+              className="flex items-center justify-center"
+            >
+              <FaFilter className="mr-2" />
+              Filters
+            </Button>
+          </form>
+
+          {showFilters && (
+            <div className="mt-4 p-4 bg-gray-50 rounded-md">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label
+                    htmlFor="role"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Role
+                  </label>
+                  <select
+                    id="role"
+                    name="role"
+                    value={filters.role}
+                    onChange={handleFilterChange}
+                    className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md"
+                  >
+                    <option value="">All Roles</option>
+                    <option value="ROLE_ADMIN">Admin</option>
+                    <option value="ROLE_INSTRUCTOR">Instructor</option>
+                    <option value="ROLE_STUDENT">Student</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="status"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Status
+                  </label>
+                  <select
+                    id="status"
+                    name="status"
+                    value={filters.status}
+                    onChange={handleFilterChange}
+                    className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md"
+                  >
+                    <option value="">All Statuses</option>
+                    <option value="ACTIVE">Active</option>
+                    <option value="INACTIVE">Inactive</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {isLoading ? (
+          <div className="flex justify-center py-8">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
+          </div>
+        ) : users.length === 0 ? (
+          <div className="text-center py-8">
+            <p className="text-gray-500">
+              No users found matching your criteria.
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      User
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      Email
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      Roles
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      Status
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      Created At
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {users.map((user) => (
+                    <tr key={user.id}>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="h-10 w-10 flex-shrink-0">
+                            {user.avatarUrl ? (
+                              <img
+                                className="h-10 w-10 rounded-full"
+                                src={user.avatarUrl}
+                                alt={user.name}
+                              />
+                            ) : (
+                              <div className="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center text-primary-700">
+                                <span className="text-xl font-medium">
+                                  {user.name.charAt(0).toUpperCase()}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="ml-4">
+                            <div className="text-sm font-medium text-gray-900">
+                              {user.name}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              @{user.username}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">
+                          {user.email}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex flex-wrap gap-1">
+                          {user.roles && user.roles.length > 0 ? (
+                            user.roles.map((role) => (
+                              <span
+                                key={role}
+                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleBadgeClass(
+                                  role
+                                )}`}
+                              >
+                                {formatRoleName(role)}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-sm text-gray-500">
+                              No roles assigned
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            user.status === "ACTIVE"
+                              ? "bg-green-100 text-green-800"
+                              : "bg-red-100 text-red-800"
+                          }`}
+                        >
+                          {user.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {new Date(user.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div className="flex justify-end space-x-2">
+                          <button
+                            onClick={() => openRolesModal(user)}
+                            className="text-primary-600 hover:text-primary-900"
+                            title="Manage roles"
+                          >
+                            <FaUserCog />
+                          </button>
+                          <button
+                            onClick={() =>
+                              toggleUserStatus(user.id, user.status)
+                            }
+                            className={
+                              user.status === "ACTIVE"
+                                ? "text-yellow-600 hover:text-yellow-900"
+                                : "text-green-600 hover:text-green-900"
+                            }
+                            title={
+                              user.status === "ACTIVE"
+                                ? "Deactivate user"
+                                : "Activate user"
+                            }
+                          >
+                            {user.status === "ACTIVE" ? (
+                              <FaLock />
+                            ) : (
+                              <FaUnlock />
+                            )}
+                          </button>
+                          <Link
+                            to={`/admin/users/edit/${user.id}`}
+                            className="text-indigo-600 hover:text-indigo-900"
+                            title="Edit user"
+                          >
+                            <FaEdit />
+                          </Link>
+                          <button
+                            onClick={() => openDeleteModal(user)}
+                            className="text-red-600 hover:text-red-900"
+                            title="Delete user"
+                          >
+                            <FaTrash />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="py-3 flex items-center justify-between border-t border-gray-200 px-4 sm:px-0 mt-4">
+              <div className="flex-1 flex justify-between sm:hidden">
+                <Button
+                  onClick={() => handlePageChange(pagination.page - 1)}
+                  disabled={pagination.page === 0}
+                  variant="outline"
+                  size="sm"
+                >
+                  Previous
+                </Button>
+                <Button
+                  onClick={() => handlePageChange(pagination.page + 1)}
+                  disabled={pagination.page >= pagination.totalPages - 1}
+                  variant="outline"
+                  size="sm"
+                >
+                  Next
+                </Button>
+              </div>
+              <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm text-gray-700">
+                    Showing{" "}
+                    <span className="font-medium">
+                      {pagination.page * pagination.size + 1}
+                    </span>{" "}
+                    to{" "}
+                    <span className="font-medium">
+                      {Math.min(
+                        (pagination.page + 1) * pagination.size,
+                        pagination.totalElements
+                      )}
+                    </span>{" "}
+                    of{" "}
+                    <span className="font-medium">
+                      {pagination.totalElements}
+                    </span>{" "}
+                    results
+                  </p>
+                </div>
+                <div>
+                  <nav
+                    className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
+                    aria-label="Pagination"
+                  >
+                    <Button
+                      onClick={() => handlePageChange(pagination.page - 1)}
+                      disabled={pagination.page === 0}
+                      variant="outline"
+                      size="sm"
+                    >
+                      Previous
+                    </Button>
+                    {[...Array(pagination.totalPages).keys()].map((page) => (
+                      <button
+                        key={page}
+                        onClick={() => handlePageChange(page)}
+                        className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                          pagination.page === page
+                            ? "z-10 bg-primary-50 border-primary-500 text-primary-600"
+                            : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
+                        }`}
+                      >
+                        {page + 1}
+                      </button>
+                    ))}
+                    <Button
+                      onClick={() => handlePageChange(pagination.page + 1)}
+                      disabled={pagination.page >= pagination.totalPages - 1}
+                      variant="outline"
+                      size="sm"
+                    >
+                      Next
+                    </Button>
+                  </nav>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+      </Card>
+
+      {/* Manage Roles Modal */}
+      <Modal
+        isOpen={showRolesModal}
+        onClose={() => setShowRolesModal(false)}
+        title="Manage User Roles"
+      >
+        {selectedUser && (
+          <div>
+            <p className="mb-4">
+              Assign roles to <strong>{selectedUser.name}</strong>
+            </p>
+
+            <div className="space-y-2 mb-6">
+              <div className="flex items-center">
+                <input
+                  id="role-admin"
+                  type="checkbox"
+                  checked={selectedRoles.includes("ROLE_ADMIN")}
+                  onChange={() => handleRoleChange("ROLE_ADMIN")}
+                  className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                />
+                <label
+                  htmlFor="role-admin"
+                  className="ml-2 block text-sm text-gray-900"
+                >
+                  Admin
+                </label>
+              </div>
+
+              <div className="flex items-center">
+                <input
+                  id="role-instructor"
+                  type="checkbox"
+                  checked={selectedRoles.includes("ROLE_INSTRUCTOR")}
+                  onChange={() => handleRoleChange("ROLE_INSTRUCTOR")}
+                  className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                />
+                <label
+                  htmlFor="role-instructor"
+                  className="ml-2 block text-sm text-gray-900"
+                >
+                  Instructor
+                </label>
+              </div>
+
+              <div className="flex items-center">
+                <input
+                  id="role-student"
+                  type="checkbox"
+                  checked={selectedRoles.includes("ROLE_STUDENT")}
+                  onChange={() => handleRoleChange("ROLE_STUDENT")}
+                  className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                />
+                <label
+                  htmlFor="role-student"
+                  className="ml-2 block text-sm text-gray-900"
+                >
+                  Student
+                </label>
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3">
+              <Button
+                onClick={() => setShowRolesModal(false)}
+                variant="outline"
+              >
+                Cancel
+              </Button>
+              <Button onClick={updateUserRoles} variant="primary">
+                Save Changes
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Delete User Modal */}
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        title="Delete User"
+      >
+        {selectedUser && (
+          <div>
+            <p className="mb-4">
+              Are you sure you want to delete the user{" "}
+              <strong>{selectedUser.name}</strong>? This action cannot be
+              undone.
+            </p>
+
+            <div className="flex justify-end space-x-3">
+              <Button
+                onClick={() => setShowDeleteModal(false)}
+                variant="outline"
+              >
+                Cancel
+              </Button>
+              <Button onClick={deleteUser} variant="danger">
+                Delete User
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+    </div>
+  );
+};
+
+export default AdminUsersPage;
+```
+
+<BackToTop />
+
+## Create/Edit User Form
+
+Let's create a component for adding or editing users:
+
+```jsx
+// src/pages/AdminUserFormPage.jsx
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { useFormik } from "formik";
+import * as Yup from "yup";
+import { FaSave, FaArrowLeft, FaUserPlus } from "react-icons/fa";
+import AdminService from "../services/adminService";
+import Button from "../components/common/Button";
+import Input from "../components/common/Input";
+import TextArea from "../components/common/TextArea";
+import Card from "../components/common/Card";
+
+const AdminUserFormPage = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const isEditMode = !!id;
+
+  const [user, setUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(isEditMode);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  useEffect(() => {
+    if (isEditMode) {
+      const fetchUser = async () => {
+        try {
+          setIsLoading(true);
+          const userData = await AdminService.getUserById(id);
+          setUser(userData);
+        } catch (err) {
+          setError("Failed to load user data. Please try again later.");
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      fetchUser();
+    }
+  }, [id, isEditMode]);
+
+  const initialValues = {
+    name: user?.name || "",
+    email: user?.email || "",
+    username: user?.username || "",
+    password: "",
+    roles: user?.roles || ["ROLE_STUDENT"],
+    bio: user?.bio || "",
+    title: user?.title || "",
+    avatarUrl: user?.avatarUrl || "",
+    status: user?.status || "ACTIVE",
+  };
+
+  const validationSchema = Yup.object({
+    name: Yup.string().required("Name is required"),
+    email: Yup.string()
+      .email("Invalid email address")
+      .required("Email is required"),
+    username: Yup.string().required("Username is required"),
+    password: isEditMode
+      ? Yup.string()
+      : Yup.string().required("Password is required"),
+    roles: Yup.array().min(1, "At least one role is required"),
+    bio: Yup.string(),
+    title: Yup.string(),
+    avatarUrl: Yup.string().url("Must be a valid URL"),
+    status: Yup.string().oneOf(["ACTIVE", "INACTIVE"], "Invalid status"),
+  });
+
+  const formik = useFormik({
+    initialValues,
+    validationSchema,
+    enableReinitialize: true,
+    onSubmit: async (values) => {
+      try {
+        setIsSaving(true);
+        setError("");
+        setSuccess("");
+
+        if (isEditMode) {
+          await AdminService.updateUser(id, values);
+          setSuccess("User updated successfully!");
+        } else {
+          await AdminService.createUser(values);
+          setSuccess("User created successfully!");
+          formik.resetForm();
+        }
+      } catch (err) {
+        setError(
+          err.response?.data?.message ||
+            `Failed to ${isEditMode ? "update" : "create"} user. Please try again.`
+        );
+      } finally {
+        setIsSaving(false);
+      }
+    },
+  });
+
+  const handleRoleChange = (role) => {
+    const currentRoles = [...formik.values.roles];
+
+    if (currentRoles.includes(role)) {
+      // Remove role
+      const updatedRoles = currentRoles.filter((r) => r !== role);
+      formik.setFieldValue("roles", updatedRoles);
+    } else {
+      // Add role
+      formik.setFieldValue("roles", [...currentRoles, role]);
+    }
+  };
+
+  if (isEditMode && isLoading) {
+    return (
+      <div className="flex justify-center py-16">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="flex items-center mb-8">
+        <Button
+          onClick={() => navigate("/admin/users")}
+          variant="outline"
+          size="sm"
+          className="mr-4"
+        >
+          <FaArrowLeft className="mr-2" /> Back to Users
+        </Button>
+
+        <h1 className="text-3xl font-bold text-gray-900">
+          {isEditMode ? "Edit User" : "Create New User"}
+        </h1>
+      </div>
+
+      <Card>
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-md border border-red-200">
+            {error}
+          </div>
+        )}
+
+        {success && (
+          <div className="mb-6 p-4 bg-green-50 text-green-700 rounded-md border border-green-200">
+            {success}
+          </div>
+        )}
+
+        <form onSubmit={formik.handleSubmit}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <Input
+              id="name"
+              name="name"
+              label="Full Name"
+              value={formik.values.name}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              error={formik.touched.name && formik.errors.name}
+              touched={formik.touched.name}
+              required
+            />
+
+            <Input
+              id="username"
+              name="username"
+              label="Username"
+              value={formik.values.username}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              error={formik.touched.username && formik.errors.username}
+              touched={formik.touched.username}
+              required
+            />
+
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              label="Email Address"
+              value={formik.values.email}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              error={formik.touched.email && formik.errors.email}
+              touched={formik.touched.email}
+              required
+            />
+
+            <Input
+              id="password"
+              name="password"
+              type="password"
+              label={
+                isEditMode
+                  ? "Password (leave blank to keep unchanged)"
+                  : "Password"
+              }
+              value={formik.values.password}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              error={formik.touched.password && formik.errors.password}
+              touched={formik.touched.password}
+              required={!isEditMode}
+            />
+
+            <Input
+              id="title"
+              name="title"
+              label="Title / Position"
+              placeholder="e.g., Software Engineer, UX Designer"
+              value={formik.values.title}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              error={formik.touched.title && formik.errors.title}
+              touched={formik.touched.title}
+            />
+
+            <Input
+              id="avatarUrl"
+              name="avatarUrl"
+              label="Avatar URL"
+              placeholder="https://example.com/avatar.jpg"
+              value={formik.values.avatarUrl}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              error={formik.touched.avatarUrl && formik.errors.avatarUrl}
+              touched={formik.touched.avatarUrl}
+            />
+          </div>
+
+          <TextArea
+            id="bio"
+            name="bio"
+            label="Bio"
+            placeholder="User biography"
+            value={formik.values.bio}
+            onChange={formik.handleChange}
+            onBlur={formik.handleBlur}
+            error={formik.touched.bio && formik.errors.bio}
+            touched={formik.touched.bio}
+            rows={4}
+          />
+
+          <div className="mt-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              User Roles <span className="text-red-500">*</span>
+            </label>
+
+            <div className="space-y-2 mb-4">
+              <div className="flex items-center">
+                <input
+                  id="role-admin"
+                  type="checkbox"
+                  checked={formik.values.roles.includes("ROLE_ADMIN")}
+                  onChange={() => handleRoleChange("ROLE_ADMIN")}
+                  className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                />
+                <label
+                  htmlFor="role-admin"
+                  className="ml-2 block text-sm text-gray-900"
+                >
+                  Admin
+                </label>
+              </div>
+
+              <div className="flex items-center">
+                <input
+                  id="role-instructor"
+                  type="checkbox"
+                  checked={formik.values.roles.includes("ROLE_INSTRUCTOR")}
+                  onChange={() => handleRoleChange("ROLE_INSTRUCTOR")}
+                  className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                />
+                <label
+                  htmlFor="role-instructor"
+                  className="ml-2 block text-sm text-gray-900"
+                >
+                  Instructor
+                </label>
+              </div>
+
+              <div className="flex items-center">
+                <input
+                  id="role-student"
+                  type="checkbox"
+                  checked={formik.values.roles.includes("ROLE_STUDENT")}
+                  onChange={() => handleRoleChange("ROLE_STUDENT")}
+                  className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                />
+                <label
+                  htmlFor="role-student"
+                  className="ml-2 block text-sm text-gray-900"
+                >
+                  Student
+                </label>
+              </div>
+            </div>
+
+            {formik.touched.roles && formik.errors.roles && (
+              <p className="mt-1 text-sm text-red-600">{formik.errors.roles}</p>
+            )}
+          </div>
+
+          <div className="mt-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Status
+            </label>
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center">
+                <input
+                  id="status-active"
+                  name="status"
+                  type="radio"
+                  value="ACTIVE"
+                  checked={formik.values.status === "ACTIVE"}
+                  onChange={formik.handleChange}
+                  className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300"
+                />
+                <label
+                  htmlFor="status-active"
+                  className="ml-2 block text-sm text-gray-900"
+                >
+                  Active
+                </label>
+              </div>
+
+              <div className="flex items-center">
+                <input
+                  id="status-inactive"
+                  name="status"
+                  type="radio"
+                  value="INACTIVE"
+                  checked={formik.values.status === "INACTIVE"}
+                  onChange={formik.handleChange}
+                  className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300"
+                />
+                <label
+                  htmlFor="status-inactive"
+                  className="ml-2 block text-sm text-gray-900"
+                >
+                  Inactive
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-8 pt-5 border-t border-gray-200 flex justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              className="mr-3"
+              onClick={() => navigate("/admin/users")}
+            >
+              Cancel
+            </Button>
+
+            <Button type="submit" variant="primary" disabled={isSaving}>
+              <div className="flex items-center">
+                {isEditMode ? (
+                  <>
+                    <FaSave className="mr-2" />
+                    {isSaving ? "Saving..." : "Save Changes"}
+                  </>
+                ) : (
+                  <>
+                    <FaUserPlus className="mr-2" />
+                    {isSaving ? "Creating..." : "Create User"}
+                  </>
+                )}
+              </div>
+            </Button>
+          </div>
+        </form>
+      </Card>
+    </div>
+  );
+};
+
+export default AdminUserFormPage;
+```
+
+<BackToTop />
+
+## Modal Component
+
+Let's create a reusable modal component that we used in the admin interface:
+
+```jsx
+// src/components/common/Modal.jsx
+import React, { useEffect, useRef } from "react";
+import PropTypes from "prop-types";
+import { FaTimes } from "react-icons/fa";
+import ReactDOM from "react-dom";
+
+const Modal = ({ isOpen, onClose, title, children, size = "md" }) => {
+  const modalRef = useRef(null);
+
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+
+    const handleClickOutside = (e) => {
+      if (modalRef.current && !modalRef.current.contains(e.target)) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener("keydown", handleEscape);
+      document.addEventListener("mousedown", handleClickOutside);
+      document.body.style.overflow = "hidden";
+    }
+
+    return () => {
+      document.removeEventListener("keydown", handleEscape);
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.body.style.overflow = "auto";
+    };
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
+  const sizeClasses = {
+    sm: "max-w-md",
+    md: "max-w-lg",
+    lg: "max-w-2xl",
+    xl: "max-w-4xl",
+  };
+
+  const modalContent = (
+    <div className="fixed inset-0 z-50 overflow-y-auto">
+      <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+        <div className="fixed inset-0 transition-opacity" aria-hidden="true">
+          <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+        </div>
+
+        <span
+          className="hidden sm:inline-block sm:align-middle sm:h-screen"
+          aria-hidden="true"
+        >
+          &#8203;
+        </span>
+
+        <div
+          ref={modalRef}
+          className={`inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle ${sizeClasses[size]} w-full`}
+        >
+          <div className="px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-200 mb-4">
+              <h3 className="text-lg font-medium text-gray-900">{title}</h3>
+              <button
+                onClick={onClose}
+                className="bg-white rounded-md text-gray-400 hover:text-gray-500 focus:outline-none"
+              >
+                <FaTimes />
+              </button>
+            </div>
+            <div>{children}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  return ReactDOM.createPortal(
+    modalContent,
+    document.getElementById("modal-root") || document.body
+  );
+};
+
+Modal.propTypes = {
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  title: PropTypes.string.isRequired,
+  children: PropTypes.node.isRequired,
+  size: PropTypes.oneOf(["sm", "md", "lg", "xl"]),
+};
+
+export default Modal;
+```
+
+<BackToTop />
+
+## User Service
+
+Let's create the service that handles user-related API calls:
+
+```jsx
+// src/services/userService.js
+import api from "./api";
+
+const UserService = {
+  // Get current user profile
+  getProfile: async () => {
+    const response = await api.get("/users/me");
+    return response.data;
+  },
+
+  // Update user profile
+  updateProfile: async (profileData) => {
+    const response = await api.put("/users/profile", profileData);
+    return response.data;
+  },
+
+  // Change user password
+  changePassword: async (passwordData) => {
+    const response = await api.post("/users/change-password", passwordData);
+    return response.data;
+  },
+
+  // Upload profile image
+  uploadAvatar: async (file) => {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await api.post("/users/avatar", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+    return response.data;
+  },
+};
+
+export default UserService;
+```
+
+<BackToTop />
+
+## Admin Service
+
+Let's create the service for admin-specific functionality:
+
+```jsx
+// src/services/adminService.js
+import api from "./api";
+
+const AdminService = {
+  // Get users with pagination and filters
+  getUsers: async (params) => {
+    const response = await api.get("/admin/users", { params });
+    return response.data;
+  },
+
+  // Get user by ID
+  getUserById: async (id) => {
+    const response = await api.get(`/admin/users/${id}`);
+    return response.data;
+  },
+
+  // Create new user
+  createUser: async (userData) => {
+    const response = await api.post("/admin/users", userData);
+    return response.data;
+  },
+
+  // Update user
+  updateUser: async (id, userData) => {
+    const response = await api.put(`/admin/users/${id}`, userData);
+    return response.data;
+  },
+
+  // Update user roles
+  updateUserRoles: async (id, roles) => {
+    const response = await api.put(`/admin/users/${id}/roles`, { roles });
+    return response.data;
+  },
+
+  // Update user status
+  updateUserStatus: async (id, status) => {
+    const response = await api.patch(`/admin/users/${id}/status`, { status });
+    return response.data;
+  },
+
+  // Delete user
+  deleteUser: async (id) => {
+    const response = await api.delete(`/admin/users/${id}`);
+    return response.data;
+  },
+
+  // Get platform statistics
+  getStatistics: async () => {
+    const response = await api.get("/admin/statistics");
+    return response.data;
+  },
+};
+
+export default AdminService;
+```
+
+## Next Steps
+
+In this module, we've implemented the user management functionality for our learning platform. We've created user profile management for regular users and a comprehensive admin interface for managing users, roles, and permissions.
+
+In the next module, we'll focus on course management functionality, including course creation, editing, and the student's learning interface.
+
+[Next: Course Management →](/proj-online-learning-platform-website/14-course-management)
+
+<BackToTop />
