@@ -176,12 +176,60 @@ Gremlin provides a rich set of traversal steps that allow you to navigate and ma
 
 #### g.V()
 
-Starts the traversal from all vertices in the graph. This is often the starting point for most queries.
+Starts the traversal from all vertices in the graph. This is often the starting point for most queries. You can also provide specific vertex IDs to start from particular vertices.
 
 ```python
 # Get all vertices in the graph
 g.V()
+
+# Get vertex with specific ID
+g.V(123)
+
+# Get multiple vertices by IDs
+g.V(123, 456, 789)
+
+# Get vertices and their properties
+g.V().valueMap()
+
+# Get vertices with complete property information including labels
+g.V().elementMap()
+
+# Count all vertices in the graph
+g.V().count()
+
+# Get vertices and transform them to a list of maps with specific properties
+g.V().hasLabel('person')
+  .project('name', 'age', 'location')
+  .by('name')
+  .by('age')
+  .by(coalesce(values('location'), constant('Unknown')))
 ```
+
+Here, `g.V()` retrieves all vertices, and `valueMap()` returns a map of properties for each vertex. The `elementMap()` step provides a more detailed view, including labels. The `project()` step allows you to create custom result structures, and `coalesce()` provides a default value if a property is missing.
+
+The `g.V()` step can be combined with various filters to narrow down results:
+
+```python
+# Get all person vertices
+g.V().hasLabel('person')
+
+# Get a specific person by property
+g.V().has('person', 'name', 'Alice')
+
+# Get all vertices with a specific property value regardless of label
+g.V().has('age', 30)
+
+# Get vertices with a property value in a specific range
+g.V().has('age', between(25, 35))
+
+# Get vertices with multiple filters (AND condition)
+g.V().has('person', 'name', 'Alice').has('age', gt(25))
+
+# Limit results to avoid memory issues with large graphs
+g.V().limit(100)
+```
+
+In these examples, we use `hasLabel()` to filter vertices by their label, `has()` to filter by specific properties, and `between()` for range queries. The `coalesce()` function is used to provide a default value if a property is missing.
 
 #### g.E()
 
@@ -233,25 +281,118 @@ g.V().has('person', 'name', 'Alice').both('knows')
 
 #### outE(), inE(), bothE()
 
-Similar to the above, but return the edges themselves rather than the vertices.
+These methods are similar to `out()`, `in()`, and `both()`, but they return the edges themselves rather than the destination vertices. This is useful when you need to work with edge properties or when you need to analyze the relationships directly.
 
 ```python
-# Get details about Alice's friendship connections
+# Get details about Alice's friendship connections (outgoing edges)
 g.V().has('person', 'name', 'Alice').outE('knows')
+
+# Get all incoming friend connections to Alice
+g.V().has('person', 'name', 'Alice').inE('knows')
+
+# Get all friend connections (both incoming and outgoing) for Alice
+g.V().has('person', 'name', 'Alice').bothE('knows')
+
+# Get friendship connections with their properties
+g.V().has('person', 'name', 'Alice')
+  .outE('knows')
+  .project('friend', 'since')
+  .by(inV().values('name'))
+  .by('since')
+
+# Filter edges by their properties
+g.V().has('person', 'name', 'Alice')
+  .outE('knows')
+  .has('since', gt(2020))
+  .inV().values('name')
+
+# Count friend connections by year
+g.V().has('person', 'name', 'Alice')
+  .outE('knows')
+  .group()
+  .by('since')
+  .by(count())
 ```
+
+The `outE()` step moves from vertices to their outgoing edges, `inE()` moves to incoming edges, and `bothE()` includes both directions. These steps are particularly useful when edge properties contain important information like relationship strength, timestamps, or other attributes that qualify the relationship.
 
 #### outV(), inV(), bothV()
 
-From an edge, move to the outgoing vertex, incoming vertex, or both vertices.
+These methods navigate from an edge to its connected vertices. `outV()` returns the vertex where the edge starts (the outgoing vertex), `inV()` returns the vertex where the edge ends (the incoming vertex), and `bothV()` returns both vertices. These methods are typically used after you've selected edges with `E()` or one of the edge traversal methods.
 
 ```python
 # From friendship edges, get the pairs of friends
 g.E().hasLabel('knows').as('friendship')
-  .inV().as('person1')
+  .inV().as('person1')  // Person who receives the friendship
   .select('friendship')
-  .outV().as('person2')
+  .outV().as('person2')  // Person who initiated the friendship
   .select('person1', 'person2')
+  .by('name')
+
+# Find all of Alice's friends and when the friendship was established
+g.V().has('person', 'name', 'Alice')
+  .outE('knows').as('relationship')
+  .inV().as('friend')
+  .select('friend', 'relationship')
+  .by('name')
+  .by('since')
+
+# Find all mutual friendships established in the same year
+g.V().as('person1')
+  .outE('knows').as('e1')
+  .inV().as('person2')
+  .outE('knows').as('e2')
+  .where(inV().eq('person1'))
+  .where('e1', eq('e2').by('since'))
+  .select('person1', 'person2', 'e1')
+  .by('name')
+  .by('name')
+  .by('since')
+
+# Analyze reciprocal relationships with different properties
+g.V().hasLabel('person').as('p1')
+  .outE('rates').as('rating1')
+  .inV().as('p2')
+  .outE('rates').as('rating2')
+  .where(inV().eq('p1'))
+  .select('p1', 'p2', 'rating1', 'rating2')
+  .by('name')
+  .by('name')
+  .by('score')
+  .by('score')
 ```
+
+These vertex-edge traversal combinations allow for precise navigation through the graph's structure, making it possible to analyze not just connections but also the nature and properties of those connections.
+
+You can combine these methods with other Gremlin steps to create sophisticated queries:
+
+```python
+# Find friendships that have lasted the longest
+g.V().hasLabel('person')
+  .outE('knows')
+  .order().by('since', asc)
+  .limit(5)
+  .project('person1', 'person2', 'yearsFriends')
+  .by(outV().values('name'))
+  .by(inV().values('name'))
+  .by('since')
+
+# Find all "friend of a friend" relationships where the intermediate
+# friend was made in a specific year
+g.V().has('person', 'name', 'Alice')
+  .outE('knows').has('since', 2020)
+  .inV()
+  .outE('knows').has('since', gt(2020))
+  .inV()
+  .path()
+  .by('name')
+  .by('since')
+  .by('name')
+  .by('since')
+  .by('name')
+```
+
+In these examples, we use `outE()` to traverse outgoing edges, `inV()` to get the vertices at the end of those edges, and `project()` to create a structured output. The `order()` step sorts the results based on edge properties like 'since', allowing us to analyze relationships over time.
 
 ### Filtering and Mapping
 
