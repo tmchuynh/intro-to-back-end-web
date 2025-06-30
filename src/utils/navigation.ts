@@ -463,6 +463,17 @@ function categorizeNavigationItems(
       title.includes("tools")
     ) {
       return "utilities";
+    } else if (
+      path.includes("proj-") ||
+      path.includes("project") ||
+      path.includes("to-do-list") ||
+      title.includes("project") ||
+      title.includes("app") ||
+      title.includes("application") ||
+      title.includes("todo") ||
+      title.includes("to-do")
+    ) {
+      return "projects";
     } else {
       return "fundamentals";
     }
