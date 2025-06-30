@@ -74,13 +74,196 @@ g.V().hasLabel('person').has('name', 'Alice').out('knows').count()
 g.V().hasLabel('person').has('name', 'Alice').repeat(out('knows')).until(has('name', 'Bob')).path()
 ```
 
+## Advanced Features
+
+### Graph Manipulation
+
+Beyond querying, Gremlin also allows for creating, updating, and deleting graph elements:
+
+```python
+# Add a new vertex
+g.addV('person').property('name', 'Eve').property('age', 28)
+
+# Add a new edge
+g.V().has('person', 'name', 'Alice')
+  .addE('knows').to(__.V().has('person', 'name', 'Eve'))
+  .property('since', 2023)
+
+# Update a property
+g.V().has('person', 'name', 'Alice').property('age', 30)
+
+# Remove a vertex
+g.V().has('person', 'name', 'Eve').drop()
+```
+
+### Subgraph Extraction
+
+Gremlin allows you to extract subgraphs based on specific criteria:
+
+```python
+# Extract a subgraph of Alice and all her friends
+g.V().has('person', 'name', 'Alice')
+  .outE('knows').subgraph('friendsOf').inV()
+  .cap('friendsOf')
+```
+
+### Path Analysis
+
+For more complex path analysis, Gremlin offers advanced traversal steps:
+
+```python
+# Find all paths between Alice and Bob up to 3 steps away
+g.V().has('person', 'name', 'Alice')
+  .repeat(out().simplePath())
+  .until(has('name', 'Bob').or().loops().is(3))
+  .path().by('name')
+```
+
+## Performance Optimization
+
+### Indexing
+
+For optimal Gremlin query performance, proper indexing is essential:
+
+```python
+// Create a composite index for fast lookups
+mgmt = graph.openManagement()
+name = mgmt.getPropertyKey('name')
+mgmt.buildIndex('nameIndex', Vertex.class).addKey(name).buildCompositeIndex()
+mgmt.commit()
+```
+
+### Query Optimization Tips
+
+1. **Use Specific Starting Points**: Instead of `g.V()`, use `g.V().hasLabel('person')` to narrow down the starting set.
+
+2. **Limit Result Sets**: Use `limit()` to restrict the number of results:
+
+   ```python
+   g.V().hasLabel('person').limit(10)
+   ```
+
+3. **Prefer Early Filtering**: Apply filters as early as possible in the traversal:
+
+   ```python
+   // Better
+   g.V().hasLabel('person').has('age', gt(30)).out('knows')
+   // Less efficient
+   g.V().hasLabel('person').out('knows').has('age', gt(30))
+   ```
+
+4. **Use Traversal Strategies**: Gremlin provides optimization strategies that can be applied to traversals.
+
+## Real-World Use Cases
+
+### Social Network Analysis
+
+```python
+// Find friends-of-friends recommendations
+g.V().has('person', 'name', 'Alice')
+  .out('knows')
+  .out('knows')
+  .where(without('Alice'))
+  .where(not(__.in_('knows').has('name', 'Alice')))
+  .dedup()
+  .values('name')
+```
+
+### Fraud Detection
+
+```python
+// Find suspicious transaction patterns
+g.V().hasLabel('account').has('flagged', true)
+  .out('transaction')
+  .where(__.values('amount').is(gt(10000)))
+  .in('transaction')
+  .where(__.out('transaction').count().is(gt(5)))
+  .path().by(valueMap())
+```
+
+### Knowledge Graph Navigation
+
+```python
+// Find all topics related to 'Machine Learning'
+g.V().has('topic', 'name', 'Machine Learning')
+  .both('related_to')
+  .dedup()
+  .values('name')
+```
+
+## Integration with Programming Languages
+
+Gremlin can be integrated with various programming languages:
+
+### Java
+
+```java
+GraphTraversalSource g = traversal().withRemote(DriverRemoteConnection.using("localhost", 8182, "g"));
+List<String> names = g.V().hasLabel("person").values("name").toList();
+```
+
+### Python
+
+```python
+from gremlin_python.process.anonymous_traversal import traversal
+from gremlin_python.driver.driver_remote_connection import DriverRemoteConnection
+
+g = traversal().withRemote(DriverRemoteConnection('ws://localhost:8182/gremlin', 'g'))
+names = g.V().hasLabel('person').values('name').toList()
+```
+
+### JavaScript
+
+```javascript
+const gremlin = require("gremlin");
+const { traversal, DriverRemoteConnection } = gremlin.process;
+
+const g = traversal().withRemote(
+  new DriverRemoteConnection("ws://localhost:8182/gremlin")
+);
+g.V()
+  .hasLabel("person")
+  .values("name")
+  .toList()
+  .then((names) => console.log(names));
+```
+
+## Common Challenges and Solutions
+
+### Handling Large Result Sets
+
+For queries that might return large result sets, use pagination:
+
+```python
+// Get results in batches
+g.V().hasLabel('person').range(0, 10)  // First 10 results
+g.V().hasLabel('person').range(10, 20) // Next 10 results
+```
+
+### Optimizing Memory Usage
+
+Use `dedup()` to remove duplicates and `project()` to select only needed properties:
+
+```python
+g.V().hasLabel('person')
+  .project('name', 'age')
+  .by('name')
+  .by('age')
+  .dedup()
+```
+
 ## Conclusion
 
 Gremlin is a powerful query language for graph databases that allows you to express complex traversals and queries in a concise manner. Its functional style and rich set of traversal steps make it suitable for a wide range of applications, from social networks to recommendation systems. By mastering Gremlin, you can unlock the full potential of graph databases and gain valuable insights from your data.
+
+With the advanced features and optimization techniques covered in this guide, you should be well-equipped to build efficient and powerful graph applications using Gremlin.
 
 ## Additional Resources
 
 - [Gremlin Documentation](https://tinkerpop.apache.org/docs/current/reference/)
 - [JanusGraph Documentation](https://docs.janusgraph.org/)
+- [Apache TinkerPop Project](https://tinkerpop.apache.org/)
+- [Practical Gremlin: An Apache TinkerPop Tutorial](https://kelvinlawrence.net/book/Gremlin-Graph-Guide.html)
+- [Gremlin Recipes](https://tinkerpop.apache.org/docs/current/recipes/)
 
 <BackToTop />
