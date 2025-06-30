@@ -1,0 +1,318 @@
+# Database Setup
+
+## Introduction
+
+In this module, we'll set up our MySQL database for the To-Do List application and configure Sequelize ORM to interact with it. We'll create the database schema, establish a connection, and define our initial database models.
+
+## Creating the MySQL Database
+
+### Using MySQL Command Line
+
+1. Log in to MySQL:
+
+```bash
+mysql -u root -p
+```
+
+2. Create a new database:
+
+```sql
+CREATE DATABASE todo_app_db;
+USE todo_app_db;
+```
+
+3. Create a user for the application (optional but recommended for security):
+
+```sql
+CREATE USER 'todo_app_user'@'localhost' IDENTIFIED BY 'your_secure_password';
+GRANT ALL PRIVILEGES ON todo_app_db.* TO 'todo_app_user'@'localhost';
+FLUSH PRIVILEGES;
+```
+
+### Using MySQL Workbench
+
+If you prefer a GUI tool, you can use MySQL Workbench:
+
+1. Open MySQL Workbench and connect to your MySQL server
+2. Go to the "Schemas" tab, right-click and select "Create Schema..."
+3. Name it `todo_app_db` and click "Apply"
+
+## Setting Up Sequelize
+
+Sequelize is an ORM (Object-Relational Mapping) tool that makes it easier to interact with the database using JavaScript objects instead of writing raw SQL queries.
+
+### Creating the Database Connection
+
+1. Create a `src/server/config/database.ts` file:
+
+```typescript
+import { Sequelize } from 'sequelize';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const sequelize = new Sequelize(
+  process.env.DB_NAME || 'todo_app_db',
+  process.env.DB_USER || 'root',
+  process.env.DB_PASS || '',
+  {
+    host: process.env.DB_HOST || 'localhost',
+    dialect: 'mysql',
+    logging: false, // Set to console.log to see SQL queries
+    pool: {
+      max: 5,
+      min: 0,
+      acquire: 30000,
+      idle: 10000
+    }
+  }
+);
+
+// Test the connection
+export const testConnection = async () => {
+  try {
+    await sequelize.authenticate();
+    console.log('Database connection has been established successfully.');
+    return true;
+  } catch (error) {
+    console.error('Unable to connect to the database:', error);
+    return false;
+  }
+};
+
+export default sequelize;
+```
+
+## Defining Sequelize Models
+
+Now let's define our data models. For our To-Do application, we'll need at least two models: `User` and `Task`.
+
+### User Model
+
+Create a file `src/models/User.ts`:
+
+```typescript
+import { Model, DataTypes, Optional } from 'sequelize';
+import sequelize from '../server/config/database';
+import bcrypt from 'bcrypt';
+
+// These are all the attributes in the User model
+interface UserAttributes {
+  id: number;
+  username: string;
+  email: string;
+  password: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+// Some attributes are optional in `User.create` call
+interface UserCreationAttributes extends Optional<UserAttributes, 'id' | 'createdAt' | 'updatedAt'> {}
+
+class User extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {
+  public id!: number;
+  public username!: string;
+  public email!: string;
+  public password!: string;
+  
+  // Timestamps
+  public readonly createdAt!: Date;
+  public readonly updatedAt!: Date;
+  
+  // Method to check password
+  public async validatePassword(password: string): Promise<boolean> {
+    return bcrypt.compare(password, this.password);
+  }
+}
+
+User.init(
+  {
+    id: {
+      type: DataTypes.INTEGER.UNSIGNED,
+      autoIncrement: true,
+      primaryKey: true,
+    },
+    username: {
+      type: DataTypes.STRING(50),
+      allowNull: false,
+      unique: true,
+    },
+    email: {
+      type: DataTypes.STRING(100),
+      allowNull: false,
+      unique: true,
+      validate: {
+        isEmail: true,
+      },
+    },
+    password: {
+      type: DataTypes.STRING(100),
+      allowNull: false,
+    },
+  },
+  {
+    sequelize,
+    tableName: 'users',
+    hooks: {
+      // Hash password before saving to database
+      beforeCreate: async (user: User) => {
+        if (user.password) {
+          const salt = await bcrypt.genSalt(10);
+          user.password = await bcrypt.hash(user.password, salt);
+        }
+      },
+      beforeUpdate: async (user: User) => {
+        if (user.changed('password')) {
+          const salt = await bcrypt.genSalt(10);
+          user.password = await bcrypt.hash(user.password, salt);
+        }
+      },
+    },
+  }
+);
+
+export default User;
+```
+
+### Task Model
+
+Create a file `src/models/Task.ts`:
+
+```typescript
+import { Model, DataTypes, Optional } from 'sequelize';
+import sequelize from '../server/config/database';
+
+// These are all the attributes in the Task model
+interface TaskAttributes {
+  id: number;
+  title: string;
+  description?: string;
+  dueDate?: Date;
+  completed: boolean;
+  userId: number;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+// Some attributes are optional in `Task.create` call
+interface TaskCreationAttributes extends Optional<TaskAttributes, 'id' | 'description' | 'dueDate' | 'completed' | 'createdAt' | 'updatedAt'> {}
+
+class Task extends Model<TaskAttributes, TaskCreationAttributes> implements TaskAttributes {
+  public id!: number;
+  public title!: string;
+  public description!: string | undefined;
+  public dueDate!: Date | undefined;
+  public completed!: boolean;
+  public userId!: number;
+  
+  // Timestamps
+  public readonly createdAt!: Date;
+  public readonly updatedAt!: Date;
+}
+
+Task.init(
+  {
+    id: {
+      type: DataTypes.INTEGER.UNSIGNED,
+      autoIncrement: true,
+      primaryKey: true,
+    },
+    title: {
+      type: DataTypes.STRING(100),
+      allowNull: false,
+    },
+    description: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    dueDate: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    completed: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+    userId: {
+      type: DataTypes.INTEGER.UNSIGNED,
+      allowNull: false,
+      references: {
+        model: 'users',
+        key: 'id',
+      },
+    },
+  },
+  {
+    sequelize,
+    tableName: 'tasks',
+  }
+);
+
+export default Task;
+```
+
+## Setting Up Model Associations
+
+Create a file `src/models/index.ts` to define relationships between models:
+
+```typescript
+import User from './User';
+import Task from './Task';
+
+// Define associations
+User.hasMany(Task, {
+  sourceKey: 'id',
+  foreignKey: 'userId',
+  as: 'tasks', // This is how we'll access tasks from a user instance
+});
+
+Task.belongsTo(User, {
+  foreignKey: 'userId',
+  as: 'user', // This is how we'll access a user from a task instance
+});
+
+// Sync all models with the database
+export const syncDatabase = async (force: boolean = false) => {
+  await User.sync({ force });
+  await Task.sync({ force });
+  console.log('Database synchronized');
+};
+
+export { User, Task };
+```
+
+## Database Migrations and Seeders (Optional)
+
+For a more production-ready approach, consider using Sequelize CLI to manage migrations and seed data:
+
+1. Install Sequelize CLI:
+
+```bash
+npm install -D sequelize-cli
+```
+
+2. Create a `.sequelizerc` file in the project root:
+
+```javascript
+const path = require('path');
+
+module.exports = {
+  'config': path.resolve('src/server/config', 'database-cli.js'),
+  'models-path': path.resolve('src', 'models'),
+  'seeders-path': path.resolve('src/server/database', 'seeders'),
+  'migrations-path': path.resolve('src/server/database', 'migrations')
+};
+```
+
+3. Initialize Sequelize:
+
+```bash
+npx sequelize-cli init
+```
+
+## Next Steps
+
+With our database and models set up, we can now move on to creating our API endpoints in the next module. We'll implement a RESTful API using Express to interact with our database models.
+
+[Next: Backend API Development →](/proj-to-do-list-app/03-backend-api)
