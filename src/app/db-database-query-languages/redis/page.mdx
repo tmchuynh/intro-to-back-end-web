@@ -1,0 +1,1420 @@
+import BackToTop from "@/components/BackToTop";
+
+# Redis Commands and Query Language
+
+## Table of Contents
+
+## Introduction
+
+Redis (Remote Dictionary Server) employs a command-based query language that operates on various data structures through a rich set of atomic commands. Unlike traditional SQL databases, Redis uses a simple, intuitive command syntax that directly manipulates data structures such as strings, hashes, lists, sets, and sorted sets. This command-driven approach enables developers to perform complex operations with minimal overhead, making Redis ideal for high-performance applications requiring sub-millisecond response times.
+
+The Redis command language is designed around the principle of simplicity and performance, with each command being atomic and optimized for specific data structure operations. Commands follow a consistent pattern where the operation type is followed by the key name and relevant parameters. This approach eliminates the need for complex query parsing and optimization, resulting in predictable performance characteristics that scale linearly with data size.
+
+Redis commands are categorized by the data structures they operate on, with each category providing specialized operations that leverage the underlying data structure's properties. The language supports advanced features like transactions, pub/sub messaging, Lua scripting, and modules that extend functionality. Whether you're implementing caching layers, real-time analytics, session management, or message queues, Redis commands provide the precise tools needed for efficient data manipulation.
+
+### Real-World Applications
+
+Redis commands power diverse applications across industries where high-performance data operations are critical:
+
+- Caching systems use Redis string and hash commands for lightning-fast data retrieval and session management
+- Real-time analytics platforms leverage Redis sorted sets and HyperLogLog for counting, ranking, and statistical operations
+- Gaming applications employ Redis lists and sets for leaderboards, inventory management, and real-time player matching
+- E-commerce platforms utilize Redis for shopping cart management, product recommendations, and inventory tracking
+- Social media applications use Redis pub/sub and stream commands for real-time messaging and activity feeds
+- Financial services leverage Redis for fraud detection, rate limiting, and high-frequency trading data management
+- IoT systems employ Redis time series and stream commands for sensor data ingestion and real-time monitoring
+- Content delivery networks use Redis for edge caching, geographic routing, and traffic management
+- Chat applications utilize Redis pub/sub and list commands for real-time messaging and conversation history
+
+### Key Concepts
+
+- **Key-Value Store**: Redis's fundamental storage model where every piece of data is associated with a unique key identifier.
+- **Data Structures**: Native support for strings, hashes, lists, sets, sorted sets, bitmaps, HyperLogLog, and streams.
+- **Atomic Operations**: All Redis commands execute atomically, ensuring data consistency without explicit locking mechanisms.
+- **Memory-Based Storage**: Primary data storage in RAM with optional persistence to disk for durability and recovery.
+- **Single-Threaded Architecture**: Command execution in a single thread eliminates race conditions and simplifies concurrency.
+- **Pipeline Operations**: Batching multiple commands to reduce network round-trips and improve throughput performance.
+- **Database Selection**: Multiple logical databases (0-15 by default) within a single Redis instance for data organization.
+- **Expiration and TTL**: Automatic key expiration with time-to-live settings for cache management and data lifecycle control.
+- **Persistence Mechanisms**: RDB snapshots and AOF (Append Only File) for data durability and crash recovery.
+- **Replication**: Master-slave replication for high availability, load distribution, and disaster recovery scenarios.
+- **Clustering**: Horizontal scaling across multiple Redis nodes with automatic sharding and failover capabilities.
+- **Pub/Sub Messaging**: Publisher-subscriber pattern for real-time messaging and event-driven architecture implementation.
+- **Lua Scripting**: Server-side script execution for complex operations, atomic multi-command transactions, and custom logic.
+- **Modules**: Extensible architecture supporting custom data types, commands, and functionality through loadable modules.
+- **Transactions**: Multi-command transactions with WATCH, MULTI, and EXEC for complex atomic operations.
+- **Streams**: Log-like data structure for event sourcing, message queues, and time-series data management.
+- **Geospatial Operations**: Built-in support for geographic data storage, indexing, and proximity queries.
+- **Probabilistic Data Structures**: HyperLogLog for cardinality estimation and Bloom filters for membership testing.
+
+### Benefits of Redis Commands
+
+- **Exceptional Performance**: Sub-millisecond latency for most operations with throughput exceeding millions of operations per second.
+- **Simple Command Syntax**: Intuitive, human-readable commands that require minimal learning curve for developers.
+- **Rich Data Structure Support**: Native operations for complex data types eliminating the need for application-level data manipulation.
+- **Atomic Guarantees**: All operations are atomic by default, ensuring data consistency without complex locking mechanisms.
+- **Memory Efficiency**: Optimized memory usage with compressed data structures and efficient storage algorithms.
+- **Horizontal Scalability**: Clustering capabilities for distributing data and load across multiple Redis instances.
+- **High Availability**: Master-slave replication with automatic failover for production-grade reliability and uptime.
+- **Flexible Persistence**: Multiple persistence options balancing performance, durability, and recovery requirements.
+- **Real-Time Capabilities**: Pub/sub messaging and streams for building responsive, event-driven applications.
+- **Extensibility**: Module system and Lua scripting for custom functionality and domain-specific operations.
+- **Development Productivity**: Extensive client libraries for all major programming languages with consistent API design.
+- **Operational Simplicity**: Minimal configuration requirements and straightforward deployment across various environments.
+- **Cost Effectiveness**: Efficient resource utilization reducing infrastructure costs while maintaining high performance.
+- **Community and Ecosystem**: Large community support with extensive documentation, tools, and third-party integrations.
+- **Enterprise Features**: Advanced security, monitoring, and management capabilities for production deployments.
+
+## Core Data Structure Commands
+
+Redis organizes commands around specific data structures, each optimized for particular use cases and access patterns. The following sections detail the most commonly used commands for each data structure, providing examples and explanations of their functionality.
+
+### String Commands
+
+Strings are the most basic Redis data type, capable of storing text, numbers, or binary data up to 512MB in size.
+
+```bash title="String operations for basic key-value storage and manipulation"
+# Basic string operations
+SET user:1001:name "John Doe"
+GET user:1001:name
+MSET user:1001:email "john@example.com" user:1001:age "30"
+MGET user:1001:name user:1001:email user:1001:age
+```
+
+In this example, we set and retrieve user data using simple key-value pairs. The `SET` command creates or updates a key, while `GET` retrieves its value. The `MSET` and `MGET` commands allow for bulk operations on multiple keys.
+
+```bash title="String operations for bulk updates and retrieval"
+# Bulk string operations
+MSET user:1002:name "Alice" user:1002:email "alice@example.com"
+MGET user:1002:name user:1002:email
+MSETNX user:1003:name "Bob" user:1003:email "bob@example.com"
+MGET user:1003:name user:1003:email
+```
+
+In this example, we use `MSET` to set multiple keys at once and `MGET` to retrieve them. The `MSETNX` command sets multiple keys only if they do not already exist, ensuring atomicity.
+
+```bash title="String operations for atomic updates and data manipulation"
+# String with expiration (TTL)
+SET session:abc123 "user_data" EX 3600  # Expires in 1 hour
+SETEX cache:product:123 300 "product_data"  # 5 minutes TTL
+TTL session:abc123
+EXPIRE user:1001:name 7200  # Set TTL to 2 hours
+```
+
+In this example, we set a session key with an expiration time using `EX` and `SETEX`. The `TTL` command checks the remaining time to live for a key, while `EXPIRE` sets a new expiration time.
+
+```bash title="String operations for atomic and conditional updates"
+# Conditional set operations
+SET config:maintenance "true" NX  # Only if key doesn't exist
+SET config:maintenance "false" XX  # Only if key exists
+SETNX lock:resource:456 "locked"  # Set if not exists (locking)
+```
+
+In this example, we use `NX` and `XX` options with `SET` to conditionally set values based on key existence. The `SETNX` command is used for atomic locking, ensuring that a resource can only be locked if it is not already locked.
+
+```bash title="String operations for numeric and floating-point values"
+# Atomic increment/decrement operations
+SET counter:page_views 0
+INCR counter:page_views
+INCRBY counter:page_views 10
+DECR counter:page_views
+DECRBY counter:page_views 5
+INCRBYFLOAT price:product:789 2.50
+```
+
+In this example, we perform atomic numeric operations using `INCR`, `INCRBY`, `DECR`, and `DECRBY` commands. These commands allow for efficient counting and updating of numeric values without requiring additional read-modify-write cycles. The `INCRBYFLOAT` command is used for floating-point values.
+
+```bash title="String operations for binary data and string manipulation"
+# String manipulation and bit operations
+SET binary_data "hello"
+APPEND binary_data " world"
+STRLEN binary_data
+GETRANGE binary_data 0 4  # Get substring
+SETRANGE binary_data 6 "Redis"
+```
+
+In this example, we manipulate strings using `APPEND`, `STRLEN`, `GETRANGE`, and `SETRANGE`. The `APPEND` command adds to an existing string, while `STRLEN` retrieves its length. The `GETRANGE` command extracts a substring, and `SETRANGE` modifies part of the string.
+
+```bash title="String operations for bitmaps and analytics"
+# Bit operations for flags and analytics
+SETBIT user:1001:features 0 1  # Enable feature 0
+SETBIT user:1001:features 2 1  # Enable feature 2
+GETBIT user:1001:features 0
+BITCOUNT user:1001:features  # Count set bits
+BITOP AND result:features user:1001:features user:1002:features
+```
+
+In this example, we use bit operations to manage flags and perform analytics. The `SETBIT` command sets a specific bit in a string, while `GETBIT` retrieves its value. The `BITCOUNT` command counts the number of set bits, and `BITOP` performs bitwise operations across multiple keys.
+
+```bash title="String operations for JSON-like data storage"
+# JSON-like data with strings
+SET user:1001:profile '{"name":"John","age":30,"active":true}'
+GET user:1001:profile
+```
+
+In this example, we store JSON-like data as a string. Redis does not have native JSON support, but strings can be used to store serialized JSON objects. The `GET` command retrieves the entire JSON string, which can then be parsed by the application.
+
+### Hash Commands
+
+Hashes store field-value pairs, ideal for representing objects and structured data.
+
+```bash title="Hash operations for structured data storage and manipulation"
+# Basic hash operations
+HSET user:1001 name "John Doe" email "john@example.com" age 30
+HGET user:1001 name
+HMGET user:1001 name email age
+HGETALL user:1001
+```
+
+In this example, we use `HSET` to create a hash representing a user with multiple fields. The `HGET` command retrieves a specific field, while `HMGET` retrieves multiple fields at once. The `HGETALL` command returns all fields and values in the hash.
+
+```bash title="Hash operations for bulk updates and retrieval"
+# Individual field operations
+HEXISTS user:1001 phone  # Check if field exists
+HDEL user:1001 phone     # Delete field
+HKEYS user:1001          # Get all field names
+HVALS user:1001          # Get all values
+HLEN user:1001           # Number of fields
+```
+
+In this example, we perform individual field operations using `HEXISTS`, `HDEL`, `HKEYS`, `HVALS`, and `HLEN`. These commands allow for efficient manipulation and inspection of hash fields.
+
+```bash title="Hash operations for atomic updates and conditional sets"
+# Atomic numeric operations on hash fields
+HINCRBY user:1001 login_count 1
+HINCRBYFLOAT user:1001 account_balance 25.50
+HINCRBY stats:daily:2024-06-29 page_views 1
+HINCRBY stats:daily:2024-06-29 unique_visitors 1
+```
+
+In this example, we use `HINCRBY` and `HINCRBYFLOAT` to perform atomic updates on numeric fields within a hash. These commands allow for efficient counting and financial calculations without requiring additional read-modify-write cycles.
+
+```bash title="Hash operations for field manipulation and inspection"
+# Conditional hash operations
+HSETNX user:1001 created_at "2024-06-29"  # Set only if field doesn't exist
+HMSET product:123 name "Laptop" price 999.99 category "Electronics" stock 50
+```
+
+In this example, we use `HSETNX` to conditionally set a field only if it does not already exist. The `HMSET` command allows for bulk setting of multiple fields in a hash, making it efficient for initializing structured data.
+
+```bash title="Hash operations for complex objects and nested structures"
+# Complex object storage
+HSET order:1001 customer_id 1001 total 299.99 status "pending" created_at "2024-06-29T10:30:00Z"
+HMSET order:1001:items item_1 "product:123:2" item_2 "product:456:1"
+HSET order:1001:shipping address "123 Main St" city "New York" zip "10001"
+```
+
+In this example, we create a complex order object using hashes. The `HSET` command initializes the order with customer information, total amount, status, and creation timestamp. The `HMSET` command is used to set multiple items in the order, allowing for structured representation of nested data.
+
+```bash title="Hash operations for user profiles and session management"
+# Product catalog with hash
+HMSET product:laptop:001 \
+  name "Gaming Laptop" \
+  brand "TechBrand" \
+  price 1299.99 \
+  category "Electronics" \
+  stock 25 \
+  rating 4.5 \
+  features "gaming,high-performance,RGB"
+```
+
+In this example, we create a product catalog entry using a hash. The `HMSET` command initializes the product with various attributes such as name, brand, price, category, stock, rating, and features. This structured representation allows for efficient querying and manipulation of product data.
+
+```bash title="Hash operations for user session management and tracking"
+# User session management
+HMSET session:user:1001 \
+  user_id 1001 \
+  login_time "2024-06-29T10:00:00Z" \
+  last_activity "2024-06-29T10:30:00Z" \
+  ip_address "192.168.1.1" \
+  user_agent "Mozilla/5.0..."
+EXPIRE session:user:1001 3600  # 1 hour session
+```
+
+In this example, we manage user sessions using hashes. The `HMSET` command initializes the session with user ID, login time, last activity timestamp, IP address, and user agent. The `EXPIRE` command sets a time-to-live for the session, automatically removing it after 1 hour of inactivity.
+
+### List Commands
+
+Lists are ordered collections of strings, perfect for queues, stacks, and timeline data.
+
+```bash title="List operations for ordered collections and queues"
+# Basic list operations (left/right push and pop)
+LPUSH notifications:user:1001 "New message from Alice"
+RPUSH notifications:user:1001 "Payment processed" "Order shipped"
+LPOP notifications:user:1001   # Remove from left (FIFO queue)
+RPOP notifications:user:1001   # Remove from right (LIFO stack)
+```
+
+In this example, we use `LPUSH` and `RPUSH` to add notifications to a user's list. The `LPOP` command removes the oldest notification (FIFO), while `RPOP` removes the most recent one (LIFO).
+
+```bash title="List operations for bulk insertion and retrieval"
+# Queue implementation (FIFO)
+LPUSH queue:email "email1@example.com"
+LPUSH queue:email "email2@example.com"
+RPOP queue:email  # Process oldest email first
+```
+
+In this example, we implement a simple email queue using lists. The `LPUSH` command adds emails to the queue, while `RPOP` processes the oldest email first, following the FIFO principle.
+
+```bash title="List operations for stack implementation and undo functionality"
+# Stack implementation (LIFO)
+LPUSH stack:undo "action1"
+LPUSH stack:undo "action2"
+LPOP stack:undo   # Undo most recent action
+```
+
+In this example, we implement a stack using lists. The `LPUSH` command adds actions to the stack, while `LPOP` removes the most recent action, allowing for undo functionality.
+
+```bash title="List operations for timeline and activity tracking"
+# List inspection and manipulation
+LLEN notifications:user:1001    # Get list length
+LINDEX notifications:user:1001 0  # Get element at index
+LRANGE notifications:user:1001 0 4  # Get range of elements
+LRANGE notifications:user:1001 0 -1 # Get all elements
+```
+
+In this example, we inspect and manipulate the list of notifications. The `LLEN` command retrieves the length of the list, while `LINDEX` gets an element at a specific index. The `LRANGE` command retrieves a range of elements, allowing for pagination or partial retrieval.
+
+```bash title="List operations for advanced manipulation and trimming"
+# List modification
+LSET notifications:user:1001 0 "Updated notification"
+LINSERT notifications:user:1001 BEFORE "existing_item" "new_item"
+LREM notifications:user:1001 1 "item_to_remove"  # Remove 1 occurrence
+LTRIM notifications:user:1001 0 9  # Keep only first 10 items
+```
+
+In this example, we perform advanced list manipulation. The `LSET` command updates an element at a specific index, while `LINSERT` adds a new item before or after an existing item. The `LREM` command removes occurrences of a specified item, and `LTRIM` limits the list to a specified range, effectively trimming it.
+
+```bash title="List operations for real-time processing and task queues"
+# Blocking operations for real-time processing
+BLPOP queue:tasks 0  # Block until element available
+BRPOP queue:priority_tasks 5  # Block for max 5 seconds
+BRPOPLPUSH queue:pending queue:processing 0  # Atomic move between lists
+```
+
+In this example, we use blocking list operations for real-time processing. The `BLPOP` command blocks until an element is available in the queue, while `BRPOP` blocks for a specified timeout. The `BRPOPLPUSH` command atomically moves an element from one list to another, useful for task processing scenarios.
+
+```bash title="List operations for activity timelines and event logging"
+# Activity timeline implementation
+LPUSH timeline:user:1001 '{"type":"login","timestamp":"2024-06-29T10:00:00Z"}'
+LPUSH timeline:user:1001 '{"type":"purchase","product":"laptop","timestamp":"2024-06-29T10:30:00Z"}'
+LPUSH timeline:user:1001 '{"type":"logout","timestamp":"2024-06-29T11:00:00Z"}'
+LTRIM timeline:user:1001 0 99  # Keep only last 100 activities
+```
+
+In this example, we implement a user activity timeline using lists. The `LPUSH` command adds activity events to the timeline, while `LTRIM` limits the list to the last 100 activities, ensuring efficient storage and retrieval.
+
+```bash title="List operations for chat applications and message history"
+# Chat message queue
+LPUSH chat:room:general '{"user":"john","message":"Hello everyone","time":"10:30:00"}'
+LPUSH chat:room:general '{"user":"alice","message":"Hi John!","time":"10:30:15"}'
+LRANGE chat:room:general 0 49  # Get last 50 messages
+```
+
+In this example, we implement a chat message queue using lists. The `LPUSH` command adds messages to the chat room, while `LRANGE` retrieves the last 50 messages for display in the chat interface.
+
+```bash title="List operations for task processing and priority queues"
+# Task processing queue with priority
+LPUSH queue:high_priority "urgent_task_1"
+LPUSH queue:normal_priority "regular_task_1"
+LPUSH queue:low_priority "background_task_1"
+```
+
+In this example, we implement a task processing queue with different priority levels using lists. The `LPUSH` command adds tasks to their respective priority queues, allowing for efficient processing based on urgency.
+
+```bash title="List operations for worker polling and task management"
+# Worker polling multiple queues by priority
+BLPOP queue:high_priority queue:normal_priority queue:low_priority 1
+```
+
+In this example, we implement worker polling across multiple queues by priority. The `BLPOP` command blocks until an element is available in any of the specified queues, allowing workers to process tasks based on their priority levels.
+
+### Set Commands
+
+Sets store unique, unordered collections of strings, ideal for tags, relationships, and membership testing.
+
+```bash title="Set operations for unique collections and membership testing"
+# Basic set operations
+SADD tags:article:123 "redis" "database" "nosql" "performance"
+SREM tags:article:123 "performance"
+SMEMBERS tags:article:123  # Get all members
+SCARD tags:article:123     # Get set size
+SISMEMBER tags:article:123 "redis"  # Check membership
+```
+
+In this example, we use `SADD` to add tags to an article, ensuring uniqueness. The `SREM` command removes a specific tag, while `SMEMBERS` retrieves all tags associated with the article. The `SCARD` command returns the number of unique tags, and `SISMEMBER` checks if a specific tag exists.
+
+```bash title="Set operations for advanced membership and uniqueness"
+# Random operations
+SRANDMEMBER tags:article:123    # Get random member
+SRANDMEMBER tags:article:123 2  # Get 2 random members
+SPOP tags:article:123           # Remove and return random member
+```
+
+In this example, we perform random operations on the set of tags. The `SRANDMEMBER` command retrieves a random tag, while specifying a count returns multiple random tags. The `SPOP` command removes and returns a random tag from the set.
+
+```bash title="Set operations for union, intersection, and difference"
+# Set operations (union, intersection, difference)
+SADD skills:john "javascript" "python" "redis"
+SADD skills:alice "python" "java" "postgresql"
+SADD skills:bob "javascript" "redis" "mongodb"
+```
+
+In this example, we add skills for multiple users using `SADD`. Each user has a unique set of skills, and we can perform operations to analyze these sets.
+
+```bash title="Set operations for combining and comparing sets"
+SUNION skills:john skills:alice          # All unique skills
+SINTER skills:john skills:alice          # Common skills
+SDIFF skills:john skills:alice           # Skills John has but Alice doesn't
+```
+
+In this example, we perform set operations to analyze user skills. The `SUNION` command retrieves all unique skills across users, while `SINTER` finds common skills between John and Alice. The `SDIFF` command identifies skills that John has but Alice does not.
+
+```bash title="Set operations for storing results of set operations"
+# Store results of set operations
+SUNIONSTORE all_skills skills:john skills:alice skills:bob
+SINTERSTORE common_skills skills:john skills:alice
+SDIFFSTORE unique_to_john skills:john skills:alice
+```
+
+In this example, we store the results of set operations using `SUNIONSTORE`, `SINTERSTORE`, and `SDIFFSTORE`. These commands create new sets containing the results of union, intersection, and difference operations, allowing for efficient storage and retrieval of combined data.
+
+```bash title="Set operations for user relationships and social graphs"
+# User following/followers system
+SADD following:user:1001 "user:1002" "user:1003" "user:1004"
+SADD followers:user:1002 "user:1001" "user:1005" "user:1006"
+SISMEMBER following:user:1001 "user:1002"  # Check if following
+SCARD followers:user:1002  # Follower count
+```
+
+In this example, we implement a user following and followers system using sets. The `SADD` command adds users to the following and followers sets, ensuring uniqueness. The `SISMEMBER` command checks if a user is being followed, while `SCARD` retrieves the number of followers for a user.
+
+```bash title="Set operations for social media and user interactions"
+# Mutual connections
+SINTER following:user:1001 followers:user:1001  # Mutual follows
+```
+
+In this example, we find mutual connections between users using the `SINTER` command. This command retrieves users that both follow and are followed by a specific user, allowing for analysis of mutual relationships.
+
+```bash title="Set operations for product categorization and tagging"
+# Product categorization
+SADD category:electronics "laptop" "smartphone" "tablet"
+SADD category:computers "laptop" "desktop" "server"
+SADD category:mobile "smartphone" "tablet" "smartwatch"
+```
+
+In this example, we categorize products using sets. The `SADD` command adds products to different categories, ensuring that each product is uniquely associated with its category.
+
+```bash title="Set operations for product recommendations and cross-categorization"
+# Find products in multiple categories
+SINTER category:electronics category:computers
+```
+
+In this example, we find products that belong to multiple categories using the `SINTER` command. This command retrieves products that are categorized as both electronics and computers, allowing for cross-categorization analysis.
+
+```bash title="Set operations for user activity tracking and online presence"
+# Online users tracking
+SADD online_users "user:1001" "user:1002" "user:1003"
+SISMEMBER online_users "user:1001"
+SCARD online_users  # Count online users
+```
+
+In this example, we track online users using sets. The `SADD` command adds users to the online set, while `SISMEMBER` checks if a specific user is currently online. The `SCARD` command retrieves the total number of online users.
+
+```bash title="Set operations for A/B testing and experiment tracking"
+# A/B testing groups
+SADD experiment:variant_a "user:1001" "user:1003" "user:1005"
+SADD experiment:variant_b "user:1002" "user:1004" "user:1006"
+SISMEMBER experiment:variant_a "user:1001"
+```
+
+In this example, we implement A/B testing groups using sets. The `SADD` command adds users to different experiment variants, ensuring that each user is uniquely assigned to a variant. The `SISMEMBER` command checks if a specific user is part of a variant group.
+
+```bash title="Set operations for IP address management and security"
+# IP address blacklist
+SADD blacklist:ips "192.168.1.100" "10.0.0.50"
+SISMEMBER blacklist:ips "192.168.1.100"  # Check if IP is blacklisted
+```
+
+In this example, we manage an IP address blacklist using sets. The `SADD` command adds IP addresses to the blacklist, ensuring uniqueness. The `SISMEMBER` command checks if a specific IP address is blacklisted, allowing for security and access control.
+
+### Sorted Set Commands
+
+Sorted sets combine the uniqueness of sets with ordering by score, perfect for rankings and leaderboards.
+
+```bash title="Sorted set operations for ordered collections and rankings"
+# Basic sorted set operations
+ZADD leaderboard:game 1000 "player1" 1500 "player2" 2000 "player3"
+ZCARD leaderboard:game  # Get number of members
+ZCOUNT leaderboard:game 1000 2000  # Count members in score range
+ZSCORE leaderboard:game "player2"  # Get member's score
+```
+
+In this example, we use `ZADD` to add players to a game leaderboard with their scores. The `ZCARD` command retrieves the number of members in the sorted set, while `ZCOUNT` counts members within a specific score range. The `ZSCORE` command retrieves the score of a specific player.
+
+```bash title="Sorted set operations for ranking and score retrieval"
+# Ranking operations
+ZRANK leaderboard:game "player1"     # Get rank (0-based, lowest score)
+ZREVRANK leaderboard:game "player1"  # Get rank (0-based, highest score)
+ZRANGE leaderboard:game 0 9          # Top 10 by score (ascending)
+ZREVRANGE leaderboard:game 0 9       # Top 10 by score (descending)
+ZRANGE leaderboard:game 0 9 WITHSCORES  # Include scores
+```
+
+In this example, we perform ranking operations using `ZRANK` and `ZREVRANK` to get the rank of a player in ascending and descending order. The `ZRANGE` command retrieves the top 10 players by score in ascending order, while `ZREVRANGE` retrieves them in descending order. The `WITHSCORES` option includes scores in the result.
+
+```bash title="Sorted set operations for range queries and score-based retrieval"
+# Score-based queries
+ZRANGEBYSCORE leaderboard:game 1000 1500           # Members with scores 1000-1500
+ZREVRANGEBYSCORE leaderboard:game 2000 1000        # Reverse order
+ZRANGEBYSCORE leaderboard:game 1000 +inf LIMIT 0 5 # Top 5 above 1000
+```
+
+In this example, we perform score-based queries using `ZRANGEBYSCORE` to retrieve members within a specific score range. The `ZREVRANGEBYSCORE` command retrieves members in reverse order. The `LIMIT` option allows us to paginate results, retrieving only the top 5 members above a certain score.
+
+```bash title="Sorted set operations for score manipulation and updates"
+# Score manipulation
+ZINCRBY leaderboard:game 100 "player1"  # Increase player1's score by 100
+ZINCRBY leaderboard:game -50 "player2"  # Decrease player2's score by 50
+```
+
+In this example, we manipulate scores using `ZINCRBY` to increase or decrease a player's score. This command allows for efficient updates without needing to read the current score first.
+
+```bash title="Sorted set operations for advanced ranking and leaderboard management"
+# Removing members
+ZREM leaderboard:game "player1"                    # Remove specific member
+ZREMRANGEBYRANK leaderboard:game 10 -1             # Remove all but top 10
+ZREMRANGEBYSCORE leaderboard:game -inf 500         # Remove scores below 500
+```
+
+In this example, we remove members from the sorted set using `ZREM` to delete a specific player. The `ZREMRANGEBYRANK` command removes all members below a certain rank, while `ZREMRANGEBYSCORE` removes members with scores below a specified threshold.
+
+```bash title="Sorted set operations for leaderboard management and real-time updates"
+# Leaderboard management
+ZADD leaderboard:game 2500 "player4" 3000 "player5"
+ZADD leaderboard:game 1800 "player6" 2200 "player7"
+ZUNIONSTORE leaderboard:combined 2 leaderboard:game leaderboard:game2 WEIGHTS 1 0.5
+ZINTERSTORE leaderboard:top_players 2 leaderboard:game leaderboard:game2 WEIGHTS 1 0.5
+```
+
+In this example, we manage leaderboards by adding new players with `ZADD`. The `ZUNIONSTORE` command combines two leaderboards, applying weights to their scores. The `ZINTERSTORE` command finds the intersection of two leaderboards, allowing us to identify top players across multiple games.
+
+```bash title="Sorted set operations for complex data structures and analytics"
+# Complex data structures with sorted sets
+ZADD user:activity:1001 1719662400 "login" 1719665000 "purchase" 1719667600 "logout"
+ZADD user:activity:1002 1719662400 "login" 1719665000 "viewed_product"
+ZADD user:activity:1003 1719662400 "login" 1719665000 "added_to_cart" 1719667600 "checkout"
+ZRANGEBYSCORE user:activity:1001 1719662400 1719667600  # Get activities in time range
+ZREVRANGEBYSCORE user:activity:1001 1719667600 1719662400  # Get activities in reverse time
+```
+
+In this example, we use sorted sets to track user activities with timestamps. The `ZADD` command adds activities with their corresponding timestamps. The `ZRANGEBYSCORE` command retrieves activities within a specific time range, while `ZREVRANGEBYSCORE` retrieves them in reverse order.
+
+```bash title="Sorted set operations for time-based data and analytics"
+# Time-based sorted sets for analytics
+ZADD page_views:2024-06-29 1719662400 "page1:view1" 1719662460 "page1:view2"
+ZADD page_views:2024-06-29 1719662520 "page2:view1" 1719662580 "page2:view2"
+ZADD page_views:2024-06-29 1719662640 "page3:view1" 1719662700 "page3:view2"
+ZRANGEBYSCORE page_views:2024-06-29 1719662400 1719662700  # Get all views for the day
+ZREMRANGEBYSCORE page_views:2024-06-29 -inf 1719662400  # Remove views older than a specific time
+ZCARD page_views:2024-06-29  # Current view count for the day
+```
+
+In this example, we use sorted sets to track page views for a specific day. The `ZADD` command adds page views with their timestamps. The `ZRANGEBYSCORE` command retrieves all views for the day, while `ZREMRANGEBYSCORE` removes views older than a specified time. The `ZCARD` command counts the total number of views for the day.
+
+```bash title="Sorted set operations for real-time analytics and event tracking"
+# Real-time analytics with sorted sets
+ZADD event_log:2024-06-29 1719662400 "event1" 1719662460 "event2" 1719662520 "event3"
+ZRANGEBYSCORE event_log:2024-06-29 1719662400 1719662700  # Get events in time range
+ZREMRANGEBYSCORE event_log:2024-06-29 -inf 1719662400  # Remove events older than a specific time
+ZCARD event_log:2024-06-29  # Count of events for the day
+```
+
+In this example, we use sorted sets to track events for a specific day. The `ZADD` command adds events with their timestamps. The `ZRANGEBYSCORE` command retrieves events within a specific time range, while `ZREMRANGEBYSCORE` removes events older than a specified time. The `ZCARD` command counts the total number of events for the day.
+
+### Advanced Sorted Set Commands
+
+Sorted sets can also be used for more complex scenarios such as time-based scoring, priority queues, and real-time analytics.
+
+```bash title="Advanced sorted set operations for time-based scoring and analytics"
+# Time-based scoring (timestamps)
+ZADD recent_activity:user:1001 1719662400 "login" 1719665000 "purchase" 1719667600 "logout"
+ZRANGEBYSCORE recent_activity:user:1001 1719662400 1719667600  # Activities in time range
+```
+
+In this example, we use sorted sets to track user activities with timestamps. The `ZADD` command adds activities with their corresponding timestamps. The `ZRANGEBYSCORE` command retrieves activities within a specific time range.
+
+```bash title="Advanced sorted set operations for priority queues and task management"
+# Priority queue implementation
+ZADD task_queue 1 "low_priority_task" 5 "normal_task" 10 "high_priority_task"
+ZPOPMAX task_queue  # Get highest priority task
+ZPOPMIN task_queue  # Get lowest priority task
+```
+
+In this example, we implement a priority queue using sorted sets. The `ZADD` command adds tasks with their priority scores. The `ZPOPMAX` command retrieves and removes the highest priority task, while `ZPOPMIN` retrieves and removes the lowest priority task.
+
+```bash title="Advanced sorted set operations for real-time analytics and sliding windows"
+# Real-time analytics with sliding window
+ZADD page_views:hourly 1719662400 "page1:view1" 1719662460 "page1:view2"
+ZREMRANGEBYSCORE page_views:hourly -inf 1719658800  # Remove views older than 1 hour
+ZCARD page_views:hourly  # Current hour view count
+```
+
+In this example, we use sorted sets to track page views in a sliding window of one hour. The `ZADD` command adds page views with their timestamps. The `ZREMRANGEBYSCORE` command removes views older than one hour, and the `ZCARD` command counts the current view count for that hour.
+
+```bash title="Advanced sorted set operations for real-time event tracking and analytics"
+# Real-time event tracking
+ZADD event_log:2024-06-29 1719662400 "event1" 1719662460 "event2" 1719662520 "event3"
+ZRANGEBYSCORE event_log:2024-06-29 1719662400 1719662700  # Get events in time range
+ZREMRANGEBYSCORE event_log:2024-06-29 -inf 1719662400  # Remove events older than a specific time
+ZCARD event_log:2024-06-29  # Count of events for the day
+```
+
+In this example, we use sorted sets to track events for a specific day. The `ZADD` command adds events with their timestamps. The `ZRANGEBYSCORE` command retrieves events within a specific time range, while `ZREMRANGEBYSCORE` removes events older than a specified time. The `ZCARD` command counts the total number of events for the day.
+
+```bash title="Advanced sorted set operations for real-time user activity tracking"
+# Real-time user activity tracking
+ZADD user_activity:1001 1719662400 "login" 1719665000 "purchase" 1719667600 "logout"
+ZRANGEBYSCORE user_activity:1001 1719662400 1719667600  # Get activities in time range
+ZREMRANGEBYSCORE user_activity:1001 -inf 1719662400  # Remove activities older than a specific time
+ZCARD user_activity:1001  # Count of activities for the user
+```
+
+In this example, we use sorted sets to track user activities with timestamps. The `ZADD` command adds activities with their corresponding timestamps. The `ZRANGEBYSCORE` command retrieves activities within a specific time range, while `ZREMRANGEBYSCORE` removes activities older than a specified time. The `ZCARD` command counts the total number of activities for the user.
+
+```bash title="Advanced sorted set operations for real-time user engagement tracking"
+# Real-time user engagement tracking
+ZADD user_engagement:1001 1719662400 "viewed_page" 1719665000 "clicked_button" 1719667600 "shared_content"
+ZRANGEBYSCORE user_engagement:1001 1719662400 1719667600  # Get engagements in time range
+ZREMRANGEBYSCORE user_engagement:1001 -inf 1719662400  # Remove engagements older than a specific time
+ZCARD user_engagement:1001  # Count of engagements for the user
+```
+
+In this example, we use sorted sets to track user engagements with timestamps. The `ZADD` command adds engagements with their corresponding timestamps. The `ZRANGEBYSCORE` command retrieves engagements within a specific time range, while `ZREMRANGEBYSCORE` removes engagements older than a specified time. The `ZCARD` command counts the total number of engagements for the user.
+
+```bash title="Advanced sorted set operations for real-time user interaction tracking"
+# Real-time user interaction tracking
+ZADD user_interaction:1001 1719662400 "liked_post" 1719665000 "commented_post" 1719667600 "shared_post"
+ZRANGEBYSCORE user_interaction:1001 1719662400 1719667600  # Get interactions in time range
+ZREMRANGEBYSCORE user_interaction:1001 -inf 1719662400  # Remove interactions older than a specific time
+ZCARD user_interaction:1001  # Count of interactions for the user
+```
+
+In this example, we use sorted sets to track user interactions with timestamps. The `ZADD` command adds interactions with their corresponding timestamps. The `ZRANGEBYSCORE` command retrieves interactions within a specific time range, while `ZREMRANGEBYSCORE` removes interactions older than a specified time. The `ZCARD` command counts the total number of interactions for the user.
+
+### HyperLogLog Commands
+
+HyperLogLog is a probabilistic data structure for approximating the cardinality of large sets with minimal memory usage.
+
+```bash title="HyperLogLog operations for cardinality estimation"
+# Basic HyperLogLog operations
+PFADD unique_visitors:2024-06-29 "user:1001" "user:1002" "user:1003"
+PFADD unique_visitors:2024-06-29 "user:1004" "user:1005"
+PFCOUNT unique_visitors:2024-06-29  # Estimate unique visitors
+PFMERGE unique_visitors:all unique_visitors:2024-06-29 unique_visitors:2024-06-30  # Merge multiple HyperLogLogs
+```
+
+In this example, we use `PFADD` to add unique visitors to a HyperLogLog for a specific day. The `PFCOUNT` command estimates the number of unique visitors, and `PFMERGE` combines multiple HyperLogLogs into one, allowing for efficient aggregation of data across multiple days.
+
+```bash title="HyperLogLog operations for efficient counting and merging"
+# HyperLogLog for counting unique events
+PFADD event_log:2024-06-29 "event1" "event2" "event3"
+PFADD event_log:2024-06-30 "event4" "event5" "event6"
+PFCOUNT event_log:2024-06-29  # Estimate unique events for the day
+PFCOUNT event_log:2024-06-30  # Estimate unique events for the next day
+PFMERGE event_log:all event_log:2024-06-29 event_log:2024-06-30  # Merge event logs
+```
+
+In this example, we use `PFADD` to add unique events to a HyperLogLog for specific days. The `PFCOUNT` command estimates the number of unique events for each day, and `PFMERGE` combines multiple HyperLogLogs into one, allowing for efficient aggregation of event data across multiple days.
+
+```bash title="HyperLogLog operations for user activity tracking"
+# HyperLogLog for user activity tracking
+PFADD user_activity:2024-06-29 "user:1001:login" "user:1002:purchase" "user:1003:logout"
+PFADD user_activity:2024-06-30 "user:1004:login" "user:1005:purchase" "user:1006:logout"
+PFCOUNT user_activity:2024-06-29  # Estimate unique user activities for the day
+PFCOUNT user_activity:2024-06-30  # Estimate unique user activities for the next day
+PFMERGE user_activity:all user_activity:2024-06-29 user_activity:2024-06-30  # Merge user activity logs
+```
+
+```bash title="HyperLogLog operations for real-time analytics and event tracking"
+# HyperLogLog for real-time analytics
+PFADD real_time_events:2024-06-29 "event1" "event2" "event3"
+PFADD real_time_events:2024-06-30 "event4" "event5" "event6"
+PFCOUNT real_time_events:2024-06-29  # Estimate unique real-time events for the day
+PFCOUNT real_time_events:2024-06-30  # Estimate unique real-time events for the next day
+PFMERGE real_time_events:all real_time_events:2024-06-29 real_time_events:2024-06-30  # Merge real-time event logs
+```
+
+### Bitmap Commands
+
+Bitmaps are used for efficient storage and manipulation of binary data, often used for flags, counters, and membership testing.
+
+```bash title="Bitmap operations for binary data manipulation"
+# Basic bitmap operations
+SETBIT user:1001:features 0 1  # Enable feature 0
+SETBIT user:1001:features 1 0  # Disable feature 1
+SETBIT user:1001:features 2 1  # Enable feature 2
+GETBIT user:1001:features 0  # Check if feature 0 is enabled
+GETBIT user:1001:features 1  # Check if feature 1 is enabled
+```
+
+```bash title="Bitmap operations for counting and analytics"
+# Bitmap counting operations
+BITCOUNT user:1001:features  # Count number of enabled features
+BITCOUNT user:1001:features 0  # Count number of enabled features in range
+BITOP AND result:features user:1001:features user:1002:features  # Bitwise AND operation
+BITOP OR result:features user:1001:features user:1002:features  # Bitwise OR operation
+BITOP XOR result:features user:1001:features user:1002:features  # Bitwise XOR operation
+BITOP NOT result:features user:1001:features  # Bitwise NOT operation
+```
+
+```bash title="Bitmap operations for user activity tracking and analytics"
+# Bitmap for user activity tracking
+SETBIT user:1001:activity 0 1  # User logged in
+SETBIT user:1001:activity 1 0  # User did not perform action 1
+SETBIT user:1001:activity 2 1  # User performed action 2
+GETBIT user:1001:activity 0  # Check if user logged in
+GETBIT user:1001:activity 1  # Check if user performed action 1
+GETBIT user:1001:activity 2  # Check if user performed action 2
+```
+
+```bash title="Bitmap operations for real-time user engagement tracking"
+# Bitmap for real-time user engagement tracking
+SETBIT user_engagement:1001 0 1  # User engaged with content
+SETBIT user_engagement:1001 1 0  # User did not share content
+SETBIT user_engagement:1001 2 1  # User commented on content
+GETBIT user_engagement:1001 0  # Check if user engaged with content
+GETBIT user_engagement:1001 1  # Check if user shared content
+GETBIT user_engagement:1001 2  # Check if user commented on content
+```
+
+```bash title="Bitmap operations for real-time user interaction tracking"
+# Bitmap for real-time user interaction tracking
+SETBIT user_interaction:1001 0 1  # User liked post
+SETBIT user_interaction:1001 1 0  # User did not comment on post
+SETBIT user_interaction:1001 2 1  # User shared post
+GETBIT user_interaction:1001 0  # Check if user liked post
+GETBIT user_interaction:1001 1  # Check if user commented on post
+GETBIT user_interaction:1001 2  # Check if user shared post
+```
+
+## Advanced Redis Operations
+
+Redis provides sophisticated features for complex data operations, real-time messaging, and distributed computing scenarios. These advanced operations leverage Redis's capabilities to build scalable, high-performance applications.
+
+### Pub/Sub and Messaging
+
+```bash title="Pub/Sub operations for real-time messaging and notifications"
+# Basic publish/subscribe
+SUBSCRIBE channel:notifications
+SUBSCRIBE channel:alerts channel:updates  # Multiple channels
+PSUBSCRIBE channel:*  # Pattern-based subscription
+PSUBSCRIBE user:*:notifications  # Subscribe to user notification channels
+```
+
+```bash title="Pub/Sub operations for real-time notifications and alerts"
+# Publishing messages
+PUBLISH channel:notifications "New user registered"
+PUBLISH channel:alerts "System maintenance in 10 minutes"
+PUBLISH user:1001:notifications "You have a new message"
+```
+
+```bash title="Pub/Sub operations for real-time chat and messaging"
+# Channel management
+PUBSUB CHANNELS           # List active channels
+PUBSUB CHANNELS user:*    # Pattern-based channel listing
+PUBSUB NUMSUB channel:notifications  # Number of subscribers
+PUBSUB NUMPAT            # Number of pattern subscriptions
+```
+
+```bash title="Pub/Sub operations for real-time updates and event-driven architecture"
+# Subscribing to channels
+SUBSCRIBE channel:notifications
+SUBSCRIBE channel:alerts
+SUBSCRIBE channel:updates
+PSUBSCRIBE channel:*  # Subscribe to all channels
+PSUBSCRIBE user:*:notifications  # Subscribe to user-specific channels
+# Receiving messages
+# Messages will be received in the subscribed client
+```
+
+```bash title="Pub/Sub operations for Unsubscribing and managing subscriptions"
+# Unsubscribing from channels
+UNSUBSCRIBE channel:notifications
+UNSUBSCRIBE channel:alerts
+UNSUBSCRIBE channel:updates
+PUNSUBSCRIBE channel:*  # Unsubscribe from all channels
+PUNSUBSCRIBE user:*:notifications  # Unsubscribe from user-specific channels
+```
+
+```bash title="Pub/Sub operations for real-time event-driven architecture"
+# Real-time chat implementation
+PUBLISH chat:room:general '{"user":"john","message":"Hello everyone!","timestamp":"2024-06-29T10:30:00Z"}'
+PUBLISH chat:room:tech '{"user":"alice","message":"Check out this Redis feature","timestamp":"2024-06-29T10:30:15Z"}'
+```
+
+```bash title="Pub/Sub operations for real-time system monitoring and alerts"
+# System monitoring alerts
+PUBLISH alerts:cpu '{"server":"web-01","cpu_usage":85,"threshold":80,"timestamp":"2024-06-29T10:30:00Z"}'
+PUBLISH alerts:memory '{"server":"db-01","memory_usage":90,"threshold":85,"timestamp":"2024-06-29T10:30:05Z"}'
+```
+
+```bash title="Pub/Sub operations for real-time notifications and user interactions"
+# Live notifications
+PUBLISH notifications:user:1001 '{"type":"like","post_id":"123","user":"alice","timestamp":"2024-06-29T10:30:00Z"}'
+PUBLISH notifications:user:1001 '{"type":"comment","post_id":"123","user":"bob","message":"Great post!","timestamp":"2024-06-29T10:30:30Z"}'
+```
+
+```bash title="Pub/Sub operations for real-time event-driven architecture"
+# Event-driven architecture
+PUBLISH events:user:created '{"user_id":"1001","email":"john@example.com","timestamp":"2024-06-29T10:30:00Z"}'
+PUBLISH events:order:placed '{"order_id":"12345","user_id":"1001","total":299.99,"timestamp":"2024-06-29T10:30:00Z"}'
+PUBLISH events:payment:processed '{"payment_id":"67890","order_id":"12345","amount":299.99,"timestamp":"2024-06-29T10:30:30Z"}'
+```
+
+### Stream Commands
+
+Streams provide advanced messaging capabilities with consumer groups and message acknowledgment.
+
+```bash title="Stream operations for real-time data processing and event sourcing"
+# Adding entries to streams
+XADD events:user_activity * user_id 1001 action login timestamp 1719662400000
+XADD events:user_activity * user_id 1001 action purchase product_id 123 amount 99.99 timestamp 1719663000000
+XADD events:user_activity * user_id 1002 action logout timestamp 1719663600000
+```
+
+```bash title="Stream operations for reading and processing messages"
+# Reading from streams
+XREAD STREAMS events:user_activity 0  # Read all entries
+XREAD STREAMS events:user_activity $  # Read only new entries
+XREAD BLOCK 0 STREAMS events:user_activity $  # Block and wait for new entries
+```
+
+```bash title="Stream operations for consumer groups and message acknowledgment"
+# Stream information
+XLEN events:user_activity  # Number of entries
+XINFO STREAM events:user_activity  # Stream metadata
+XRANGE events:user_activity - +  # All entries
+XRANGE events:user_activity - + COUNT 10  # First 10 entries
+```
+
+```bash title="Stream operations for consumer groups and message acknowledgment"
+# Consumer groups for parallel processing
+XGROUP CREATE events:user_activity analytics_group $ MKSTREAM
+XGROUP CREATE events:user_activity notification_group 0
+```
+
+```bash title="Stream operations for reading as consumer group members"
+# Reading as consumer group member
+XREADGROUP GROUP analytics_group consumer1 STREAMS events:user_activity >
+XREADGROUP GROUP analytics_group consumer2 STREAMS events:user_activity >
+```
+
+```bash title="Stream operations for acknowledging messages"
+# Acknowledging messages
+XACK events:user_activity analytics_group 1719662400000-0  # Acknowledge specific message
+XACK events:user_activity analytics_group 1719663000000-0  # Acknowledge another message
+```
+
+```bash title="Stream operations for managing pending messages and recovery"
+# Pending messages and recovery
+XPENDING events:user_activity analytics_group  # Overview of pending messages
+XPENDING events:user_activity analytics_group - + 10 consumer1  # Detailed pending info
+```
+
+```bash title="Stream operations for trimming and managing stream size"
+# Trimming streams to manage size
+XTRIM events:user_activity MAXLEN 1000  # Keep only last 1,
+# Event sourcing example
+XADD order:events:12345 * event order_created user_id 1001 total 299.99 timestamp 1719662400000
+XADD order:events:12345 * event payment_processed payment_id 67890 amount 299.99 timestamp 1719662460000
+XADD order:events:12345 * event item_shipped tracking_number ABC123 timestamp 1719748800000
+XADD order:events:12345 * event item_delivered signature "John Doe" timestamp 1719835200000
+```
+
+```bash title="Stream operations for event sourcing and order history"
+# Event sourcing for order history
+XADD order:events:12345 * event order_created user_id 1001 total 299.99 timestamp 1719662400000
+XADD order:events:12345 * event payment_processed payment_id 67890 amount 299.99 timestamp 1719662460000
+XADD order:events:12345 * event item_shipped tracking_number ABC123 timestamp 1719748800000
+XADD order:events:12345 * event item_delivered signature "John Doe" timestamp 1719835200000
+# Reading order history
+XRANGE order:events:12345 - +
+```
+
+```bash title="Stream operations for IoT data streaming and sensor data"
+# IoT data streaming
+XADD sensor:temperature:room1 * value 23.5 unit celsius timestamp 1719662400000 device_id sensor001
+XADD sensor:humidity:room1 * value 45.2 unit percent timestamp 1719662400000 device_id sensor002
+XADD sensor:pressure:room1 * value 1013.25 unit hpa timestamp 1719662400000 device_id sensor003
+# Reading IoT sensor data
+XRANGE sensor:temperature:room1 - +  # Get all temperature readings
+XRANGE sensor:humidity:room1 - +  # Get all humidity readings
+XRANGE sensor:pressure:room1 - +  # Get all pressure readings
+# IoT sensor data streaming
+XADD sensor:temperature:room1 * value 23.5 unit celsius timestamp 1719662400000 device_id sensor001
+XADD sensor:humidity:room1 * value 45.2 unit percent timestamp 1719662400000 device_id sensor002
+XADD sensor:pressure:room1 * value 1013.25 unit hpa timestamp 1719662400000 device_id sensor003
+```
+
+```bash title="Stream operations for time-series data and metrics collection"
+# Time-series data collection
+XADD metrics:cpu_usage * server web-01 usage 75.5 cores 4 timestamp 1719662400000
+XADD metrics:memory_usage * server web-01 used_gb 12.8 total_gb 16 timestamp 1719662400000
+XADD metrics:disk_usage * server web-01 used_gb 200 total_gb 500 timestamp 1719662400000
+# Reading time-series data
+XRANGE metrics:cpu_usage - +  # Get all CPU usage metrics
+XRANGE metrics:memory_usage - +  # Get all memory usage metrics
+XRANGE metrics:disk_usage - +  # Get all disk usage metrics
+# Time-series data with automatic ID generation
+XADD metrics:cpu_usage * server web-01 usage 75.5 cores 4 timestamp 1719662400000
+XADD metrics:memory_usage * server web-01 used_gb 12.8 total_gb 16 timestamp 1719662400000
+```
+
+```bash title="Stream operations for real-time analytics and monitoring"
+# Real-time analytics and monitoring
+XADD analytics:page_views * page_id "home" user_id 1001 timestamp 1719662400000
+XADD analytics:page_views * page_id "product" user_id 1002 timestamp 1719662460000
+XADD analytics:page_views * page_id "checkout" user_id 1003 timestamp 1719662520000
+# Reading real-time analytics data
+XRANGE analytics:page_views - +  # Get all page view events
+XRANGE analytics:page_views - + COUNT 100  # Get last 100 page views
+# Real-time analytics with automatic ID generation
+XADD analytics:page_views * page_id "home" user_id 1001 timestamp 1719662400000
+XADD analytics:page_views * page_id "product" user_id 1002 timestamp 1719662460000
+XADD analytics:page_views * page
+# Stream trimming for size management
+XTRIM events:user_activity MAXLEN 10000  # Keep only last 10,000 entries
+XTRIM metrics:cpu_usage MAXLEN ~ 1000   # Approximately 1,000 entries (more efficient)
+```
+
+### Transactions and Lua Scripts
+
+```bash title="Transaction operations for atomic operations and data integrity"
+# Basic transactions with MULTI/EXEC
+MULTI
+SET user:1001:balance 1000
+INCR user:1001:transaction_count
+SADD user:1001:actions "balance_update"
+EXEC
+```
+
+```bash title="Transaction operations for atomic updates and data consistency"
+# Conditional transactions with WATCH
+WATCH user:1001:balance
+balance = GET user:1001:balance
+if balance >= 100:
+    MULTI
+    DECRBY user:1001:balance 100
+    INCR user:1001:purchase_count
+    LPUSH user:1001:transactions "purchase:100:2024-06-29"
+    EXEC
+else:
+    DISCARD
+```
+
+```lua title="Lua script for atomic operations and complex logic"
+# Lua script for atomic operations
+"""
+Lua script: atomic_transfer.lua
+Transfer money between accounts atomically
+"""
+local from_key = KEYS[1]
+local to_key = KEYS[2]
+local amount = tonumber(ARGV[1])
+
+local from_balance = tonumber(redis.call('GET', from_key) or 0)
+if from_balance >= amount then
+    redis.call('DECRBY', from_key, amount)
+    redis.call('INCRBY', to_key, amount)
+    return 1  -- Success
+else
+    return 0  -- Insufficient funds
+end
+
+# Execute Lua script
+EVAL "local from_key = KEYS[1]; local to_key = KEYS[2]; local amount = tonumber(ARGV[1]); local from_balance = tonumber(redis.call('GET', from_key) or 0); if from_balance >= amount then redis.call('DECRBY', from_key, amount); redis.call('INCRBY', to_key, amount); return 1; else return 0; end" 2 user:1001:balance user:1002:balance 100
+
+# Rate limiting with Lua script
+"""
+Rate limiter: sliding window
+"""
+local key = KEYS[1]
+local window = tonumber(ARGV[1])
+local limit = tonumber(ARGV[2])
+local current_time = tonumber(ARGV[3])
+
+redis.call('ZREMRANGEBYSCORE', key, '-inf', current_time - window)
+local current_requests = redis.call('ZCARD', key)
+
+if current_requests < limit then
+    redis.call('ZADD', key, current_time, current_time)
+    redis.call('EXPIRE', key, window)
+    return 1  -- Request allowed
+else
+    return 0  -- Rate limit exceeded
+end
+
+# Complex inventory management script
+"""
+Atomic inventory update with reservations
+"""
+local product_key = KEYS[1]
+local reservation_key = KEYS[2]
+local quantity = tonumber(ARGV[1])
+local user_id = ARGV[2]
+
+local current_stock = tonumber(redis.call('HGET', product_key, 'stock') or 0)
+local reserved = tonumber(redis.call('HGET', reservation_key, user_id) or 0)
+
+if current_stock >= quantity then
+    redis.call('HINCRBY', product_key, 'stock', -quantity)
+    redis.call('HINCRBY', reservation_key, user_id, quantity)
+    redis.call('EXPIRE', reservation_key, 900)  -- 15 minute reservation
+    return {1, current_stock - quantity}  -- Success, new stock level
+else
+    return {0, current_stock}  -- Insufficient stock
+end
+
+# Leaderboard update with rankings
+"""
+Update leaderboard and return new rank
+"""
+local leaderboard_key = KEYS[1]
+local player = ARGV[1]
+local score = tonumber(ARGV[2])
+
+redis.call('ZADD', leaderboard_key, score, player)
+local rank = redis.call('ZREVRANK', leaderboard_key, player)
+local total_players = redis.call('ZCARD', leaderboard_key)
+
+return {rank + 1, total_players}  -- Return 1-based rank and total players
+```
+
+## Real-World Redis Applications
+
+Practical implementations showcase Redis's versatility across different industries and use cases.
+
+### Session Management and Caching
+
+```bash title="Session management and caching with Redis"
+# User session management
+HMSET session:user:1001 \
+  user_id 1001 \
+  username "john_doe" \
+  email "john@example.com" \
+  role "user" \
+  login_time "2024-06-29T10:00:00Z" \
+  last_activity "2024-06-29T10:30:00Z" \
+  ip_address "192.168.1.100" \
+  user_agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+
+EXPIRE session:user:1001 3600  # 1 hour session timeout
+
+# Session validation and updates
+HEXISTS session:user:1001 user_id  # Check if session exists
+HSET session:user:1001 last_activity "2024-06-29T10:35:00Z"  # Update activity
+EXPIRE session:user:1001 3600  # Reset session timeout
+
+# Multi-device session tracking
+SADD sessions:user:1001 "session:web:abc123" "session:mobile:def456"
+HMSET session:web:abc123 device "web" browser "Chrome" login_time "2024-06-29T10:00:00Z"
+HMSET session:mobile:def456 device "mobile" app_version "2.1.0" login_time "2024-06-29T09:30:00Z"
+
+# Application-level caching
+SET cache:user:1001:profile '{"id":1001,"name":"John Doe","email":"john@example.com","preferences":{"theme":"dark","notifications":true}}' EX 300
+
+SET cache:product:123:details '{"id":123,"name":"Laptop","price":999.99,"category":"Electronics","stock":25,"rating":4.5}' EX 600
+
+SET cache:homepage:featured_products '[{"id":123,"name":"Laptop","price":999.99},{"id":456,"name":"Mouse","price":29.99}]' EX 1800
+
+# Database query result caching
+SET cache:query:popular_products:electronics '{"results":[{"id":123,"name":"Laptop","views":1500},{"id":456,"name":"Mouse","views":1200}],"generated_at":"2024-06-29T10:30:00Z"}' EX 900
+
+# Cache invalidation patterns
+DEL cache:user:1001:profile  # Explicit invalidation
+DEL cache:product:123:details
+
+# Cache warming for critical data
+MSET cache:config:app_settings '{"maintenance_mode":false,"feature_flags":{"new_ui":true,"beta_features":false}}' \
+     cache:config:payment_gateways '{"stripe":{"enabled":true,"public_key":"pk_test_..."},"paypal":{"enabled":true}}' \
+     cache:config:email_templates '{"welcome":"Welcome to our platform!","password_reset":"Reset your password"}'
+
+# Fragment caching for web pages
+SET cache:fragment:navbar:user:1001 '<nav><ul><li><a href="/dashboard">Dashboard</a></li><li><a href="/profile">Profile</a></li></ul></nav>' EX 1800
+
+SET cache:fragment:sidebar:product_categories '<aside><h3>Categories</h3><ul><li>Electronics</li><li>Books</li><li>Clothing</li></ul></aside>' EX 3600
+
+# API response caching with versioning
+SET cache:api:v1:products:search:laptop:page:1 '{"products":[...],"total":150,"page":1,"per_page":20}' EX 300
+SET cache:api:v1:users:1001:orders '{"orders":[...],"total":5,"last_updated":"2024-06-29T10:30:00Z"}' EX 600
+```
+
+### Real-Time Analytics and Metrics
+
+```bash title="Real-time analytics and metrics collection with Redis"
+# Real-time page view tracking
+INCR stats:page_views:total
+INCR stats:page_views:daily:2024-06-29
+INCR stats:page_views:hourly:2024-06-29:10
+HINCRBY stats:page_views:by_page /products/laptop 1
+HINCRBY stats:page_views:by_referrer google.com 1
+
+# User activity tracking
+SADD stats:active_users:2024-06-29 "user:1001" "user:1002" "user:1003"
+SADD stats:active_users:hourly:2024-06-29:10 "user:1001" "user:1002"
+SCARD stats:active_users:2024-06-29  # Count daily active users
+
+# Real-time unique visitor counting (HyperLogLog)
+PFADD stats:unique_visitors:2024-06-29 "192.168.1.100" "192.168.1.101" "10.0.0.50"
+PFCOUNT stats:unique_visitors:2024-06-29  # Approximate unique count
+PFMERGE stats:unique_visitors:total stats:unique_visitors:2024-06-28 stats:unique_visitors:2024-06-29
+
+# Event tracking with streams
+XADD events:user_interactions * user_id 1001 action click element button_signup page landing timestamp 1719662400000
+XADD events:user_interactions * user_id 1001 action scroll position 1200 page products timestamp 1719662460000
+XADD events:user_interactions * user_id 1002 action purchase product_id 123 amount 999.99 timestamp 1719662520000
+
+# Performance metrics collection
+LPUSH metrics:response_times:api 125  # Response time in milliseconds
+LTRIM metrics:response_times:api 0 999  # Keep last 1000 measurements
+INCR metrics:errors:api:404
+INCR metrics:errors:api:500
+
+# Geographic analytics
+HINCRBY stats:visitors:by_country US 1
+HINCRBY stats:visitors:by_country UK 1
+HINCRBY stats:visitors:by_city "New York" 1
+HINCRBY stats:visitors:by_city "London" 1
+
+# A/B testing metrics
+HINCRBY experiments:checkout_button:variant_a views 1
+HINCRBY experiments:checkout_button:variant_a conversions 1
+HINCRBY experiments:checkout_button:variant_b views 1
+
+# Revenue tracking
+INCRBYFLOAT stats:revenue:daily:2024-06-29 999.99
+INCRBYFLOAT stats:revenue:monthly:2024-06 999.99
+HINCRBY stats:orders:by_category Electronics 1
+INCRBYFLOAT stats:revenue:by_category:Electronics 999.99
+
+# Sliding window analytics (using sorted sets)
+ZADD analytics:purchases:last_hour 1719662400 "purchase:1001:999.99"
+ZADD analytics:purchases:last_hour 1719662460 "purchase:1002:149.99"
+ZREMRANGEBYSCORE analytics:purchases:last_hour -inf 1719658800  # Remove entries older than 1 hour
+ZCARD analytics:purchases:last_hour  # Count purchases in last hour
+
+# Top products tracking
+ZINCRBY products:trending 1 "product:123"
+ZINCRBY products:trending 1 "product:456"
+ZREVRANGE products:trending 0 9 WITHSCORES  # Top 10 trending products
+
+# User engagement scoring
+ZINCRBY engagement:users 5 "user:1001"  # Login +5 points
+ZINCRBY engagement:users 10 "user:1001"  # Purchase +10 points
+ZINCRBY engagement:users 2 "user:1001"  # Page view +2 points
+ZREVRANGE engagement:users 0 99 WITHSCORES  # Top 100 engaged users
+```
+
+### E-commerce and Shopping Cart
+
+```bash title="E-commerce operations with Redis for shopping cart and inventory management"
+# Shopping cart management
+HSET cart:user:1001 product:123 2  # 2 units of product 123
+HSET cart:user:1001 product:456 1  # 1 unit of product 456
+HGET cart:user:1001 product:123   # Get quantity
+HGETALL cart:user:1001            # Get entire cart
+HDEL cart:user:1001 product:456   # Remove item from cart
+EXPIRE cart:user:1001 604800      # Cart expires in 7 days
+
+# Cart with detailed item information
+HMSET cart:detailed:user:1001:item:123 \
+  product_id 123 \
+  name "Gaming Laptop" \
+  price 999.99 \
+  quantity 2 \
+  added_at "2024-06-29T10:30:00Z"
+
+HMSET cart:detailed:user:1001:item:456 \
+  product_id 456 \
+  name "Wireless Mouse" \
+  price 29.99 \
+  quantity 1 \
+  added_at "2024-06-29T10:35:00Z"
+
+SADD cart:detailed:user:1001:items "item:123" "item:456"
+
+# Recently viewed products
+LPUSH recent:user:1001 "product:123"
+LPUSH recent:user:1001 "product:789"
+LTRIM recent:user:1001 0 9  # Keep only last 10 viewed products
+
+# Wishlist management
+SADD wishlist:user:1001 "product:555" "product:666"
+SISMEMBER wishlist:user:1001 "product:555"  # Check if in wishlist
+SCARD wishlist:user:1001  # Wishlist item count
+
+# Product recommendations
+SADD recommendations:user:1001 "product:111" "product:222" "product:333"
+SRANDMEMBER recommendations:user:1001 3  # Get 3 random recommendations
+
+# Inventory management with reservations
+HMSET inventory:product:123 stock 50 reserved 5 available 45
+HINCRBY inventory:product:123 reserved 2    # Reserve 2 units
+HINCRBY inventory:product:123 available -2  # Decrease available
+
+# Stock level alerts
+ZADD inventory:low_stock 10 "product:123"  # 10 units remaining
+ZADD inventory:low_stock 5 "product:456"   # 5 units remaining
+ZRANGEBYSCORE inventory:low_stock 0 15     # Products with <= 15 units
+
+# Order processing queue
+LPUSH orders:pending '{"order_id":"12345","user_id":"1001","total":999.99,"items":[{"product_id":"123","quantity":2}]}'
+LPUSH orders:pending '{"order_id":"12346","user_id":"1002","total":149.99,"items":[{"product_id":"456","quantity":1}]}'
+
+# Order processing
+BRPOP orders:pending 0  # Worker waits for orders
+LPUSH orders:processing '{"order_id":"12345","status":"processing","started_at":"2024-06-29T10:30:00Z"}'
+
+# Product pricing and discounts
+SET pricing:product:123 999.99
+SET pricing:product:123:discount 0.10  # 10% discount
+SET pricing:product:123:promotion_code "SUMMER2024"
+EXPIRE pricing:product:123:discount 2592000  # 30 day promotion
+
+# Customer segments for targeted offers
+SADD segment:vip "user:1001" "user:1002"
+SADD segment:new_customers "user:1003" "user:1004"
+SADD segment:at_risk "user:1005" "user:1006"
+
+# Flash sale management
+SETEX flash_sale:product:123:stock 3600 20  # 20 units available for 1 hour
+DECR flash_sale:product:123:stock  # Purchase decrements stock
+GET flash_sale:product:123:stock   # Check remaining stock
+```
+
+### Real-Time Gaming and Leaderboards
+
+```bash title="Real-time gaming operations with Redis for leaderboards and player statistics"
+# Player leaderboards
+ZADD leaderboard:global 15000 "player:alice" 12500 "player:bob" 18000 "player:charlie"
+ZADD leaderboard:weekly 5000 "player:alice" 4200 "player:bob" 6100 "player:charlie"
+ZADD leaderboard:daily 1200 "player:alice" 950 "player:bob" 1450 "player:charlie"
+
+# Player ranking queries
+ZREVRANK leaderboard:global "player:alice"    # Alice's global rank
+ZREVRANGE leaderboard:global 0 9 WITHSCORES  # Top 10 global players
+ZSCORE leaderboard:global "player:alice"     # Alice's score
+
+# Player statistics
+HMSET stats:player:alice \
+  level 47 \
+  xp 125750 \
+  currency 15420 \
+  wins 89 \
+  losses 23 \
+  total_playtime 245 \
+  last_login "2024-06-29T10:30:00Z"
+
+HINCRBY stats:player:alice wins 1      # Record a win
+HINCRBY stats:player:alice xp 500      # Award XP
+HINCRBY stats:player:alice currency 100  # Award currency
+
+# Achievement system
+SADD achievements:player:alice "first_win" "level_25" "collector" "speed_demon"
+SISMEMBER achievements:player:alice "first_win"  # Check if player has achievement
+SCARD achievements:player:alice  # Total achievements count
+
+# Player inventory
+HMSET inventory:player:alice \
+  sword_of_power 1 \
+  health_potion 15 \
+  magic_scroll 3 \
+  gold_coins 5420
+
+HINCRBY inventory:player:alice health_potion -1  # Use a health potion
+HINCRBY inventory:player:alice gold_coins 100    # Earn gold
+
+# Active game sessions
+HMSET session:game:12345 \
+  game_id "12345" \
+  mode "ranked_multiplayer" \
+  players '["alice","bob","charlie","diana"]' \
+  status "in_progress" \
+  started_at "2024-06-29T10:30:00Z" \
+  max_duration 1800
+
+EXPIRE session:game:12345 1800  # Session expires in 30 minutes
+
+# Real-time game events
+XADD events:game:12345 * event player_joined player alice timestamp 1719662400000
+XADD events:game:12345 * event player_died player bob killer alice timestamp 1719662460000
+XADD events:game:12345 * event round_completed winner alice score 2500 timestamp 1719662520000
+
+# Matchmaking queue
+ZADD matchmaking:queue 1500 "player:alice"    # Add player with skill rating
+ZADD matchmaking:queue 1450 "player:bob"
+ZADD matchmaking:queue 1520 "player:charlie"
+
+# Find players for match (similar skill levels)
+ZRANGEBYSCORE matchmaking:queue 1400 1600  # Players within skill range
+
+# Player friends and social features
+SADD friends:player:alice "player:bob" "player:charlie" "player:diana"
+SINTER friends:player:alice friends:player:bob  # Mutual friends
+SCARD friends:player:alice  # Friend count
+
+# Guild/team management
+SADD guild:warriors "player:alice" "player:bob" "player:charlie"
+HMSET guild:warriors:info \
+  name "Epic Warriors" \
+  level 15 \
+  members 25 \
+  created_at "2024-01-15T12:00:00Z" \
+  leader "player:alice"
+
+ZADD guild:rankings 15000 "guild:warriors" 12500 "guild:mages" 18000 "guild:assassins"
+
+# Daily challenges and quests
+HMSET quest:daily:1001 \
+  title "Defeat 10 Enemies" \
+  description "Defeat 10 enemies in any game mode" \
+  reward_xp 1000 \
+  reward_currency 500 \
+  progress 0 \
+  target 10 \
+  expires_at "2024-06-30T00:00:00Z"
+
+HINCRBY quest:daily:1001 progress 1  # Update quest progress
+
+# Tournament system
+ZADD tournament:summer_championship 0 "player:alice" 0 "player:bob" 0 "player:charlie"
+ZINCRBY tournament:summer_championship 100 "player:alice"  # Alice wins a match
+
+# Player messaging and notifications
+LPUSH messages:player:alice '{"from":"bob","message":"Good game!","timestamp":"2024-06-29T10:30:00Z"}'
+LPUSH notifications:player:alice '{"type":"achievement","title":"Level Up!","message":"You reached level 47","timestamp":"2024-06-29T10:30:00Z"}'
+```
+
+## Performance Optimization and Best Practices
+
+### Memory Optimization and Data Structure Selection
+
+```bash title="Memory optimization and data structure selection in Redis"
+# String optimization for small values
+SET config:max_users "1000"           # Better than using hash for single values
+SET flag:maintenance "true"           # Simple boolean flags
+SET counter:daily_signups "156"       # Simple counters
+
+# Hash optimization for objects (more memory efficient than multiple strings)
+HMSET user:1001 name "John" email "john@example.com" age "30"  # Better than separate keys
+# Avoid: SET user:1001:name "John"; SET user:1001:email "john@example.com"; SET user:1001:age "30"
+
+# List optimization for ordered collections
+LPUSH queue:tasks "task1" "task2" "task3"  # Memory efficient for queues
+LTRIM queue:tasks 0 999  # Limit list size to prevent memory bloat
+
+# Set optimization for unique collections
+SADD tags:article:123 "redis" "nosql" "database"  # Efficient for membership testing
+# Better than using multiple boolean flags
+
+# Sorted set optimization for rankings
+ZADD leaderboard 1000 "player1" 1500 "player2"  # Efficient for scored rankings
+# Avoid using separate score storage + manual sorting
+
+# Memory-efficient key naming patterns
+# Good: user:1001:profile, session:abc123, cart:user:1001
+# Avoid: very_long_descriptive_key_names_that_consume_memory
+
+# Use appropriate data types for ranges
+SETBIT user:1001:features 0 1    # Efficient for boolean flags (up to 2^32 flags)
+SETRANGE config:binary 0 "data"  # Efficient for fixed-position data
+
+# Pipeline operations for bulk operations
+# Instead of multiple round trips:
+redis_pipeline = redis.pipeline()
+redis_pipeline.set("key1", "value1")
+redis_pipeline.set("key2", "value2")
+redis_pipeline.set("key3", "value3")
+redis_pipeline.execute()
+
+# Memory usage analysis
+MEMORY USAGE user:1001:profile    # Check memory usage of specific key
+INFO memory                       # Overall memory statistics
+CLIENT LIST                       # Monitor client connections
+
+# Efficient expiration strategies
+EXPIRE session:user:1001 3600     # Set appropriate TTL
+SETEX cache:data "value" 300      # Set with expiration in one command
+
+# Avoid memory leaks with proper cleanup
+LTRIM logs:errors 0 999           # Limit list sizes
+ZREMRANGEBYRANK leaderboard 100 -1  # Remove low-ranking entries
+ZREMRANGEBYSCORE analytics:events 0 1719576000  # Remove old time-based data
+```
+
+### Connection and Performance Optimization
+
+```bash title="Connection and performance optimization in Redis"
+# Connection pooling configuration (application-level)
+# Use connection pools instead of creating new connections per request
+# Example pool settings: min_connections=5, max_connections=20
+
+# Pipelining for multiple commands
+# Group related commands to reduce network overhead
+MULTI
+SET user:1001:last_login "2024-06-29T10:30:00Z"
+INCR user:1001:login_count
+SADD active_users "user:1001"
+EXEC
+
+# Use MGET/MSET for multiple key operations
+MSET user:1001:name "John" user:1001:email "john@example.com" user:1001:age "30"
+MGET user:1001:name user:1001:email user:1001:age
+
+# Efficient scanning for large datasets
+SCAN 0 MATCH user:* COUNT 100     # Scan with pattern and cursor
+HSCAN user:1001 0 MATCH email*    # Scan hash fields
+SSCAN tags:global 0 COUNT 50      # Scan set members
+ZSCAN leaderboard 0 MATCH player:* # Scan sorted set members
+
+# Avoid blocking operations in production
+# Use BLPOP/BRPOP with reasonable timeouts
+BLPOP queue:tasks 5  # 5-second timeout instead of 0 (infinite)
+
+# Lua scripts for atomic operations (reduces round trips)
+EVAL "return redis.call('INCR', KEYS[1]) + redis.call('INCR', KEYS[2])" 2 counter1 counter2
+
+# Monitor slow operations
+SLOWLOG GET 10  # Get last 10 slow operations
+CONFIG SET slowlog-log-slower-than 10000  # Log operations slower than 10ms
+
+# Database selection for logical separation
+SELECT 0  # Use different databases for different data types
+SELECT 1  # e.g., cache in DB 0, sessions in DB 1
+
+# Efficient key patterns for sharding
+# Use consistent hashing patterns: user:{user_id}:profile
+# Avoid hotspots: timestamp-based keys can create hotspots
+
+# Monitor key distribution
+INFO keyspace  # Check keys per database
+DBSIZE         # Number of keys in current database
+
+# Optimize for read-heavy workloads
+# Use read replicas for scaling read operations
+# Implement proper caching strategies with appropriate TTLs
+
+# Monitor and tune configuration
+CONFIG GET maxmemory*     # Check memory limits
+CONFIG GET timeout        # Connection timeout settings
+CONFIG GET tcp-keepalive  # Network settings
+
+# Performance monitoring commands
+INFO stats               # Operation statistics
+INFO commandstats       # Per-command statistics
+LATENCY LATEST          # Latency information
+CLIENT LIST             # Active client connections
+```
+
+<BackToTop />
