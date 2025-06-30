@@ -1,0 +1,304 @@
+import BackToTop from "@/components/BackToTop";
+
+# Spring Boot Setup for Online Learning Platform
+
+## Introduction
+
+In this module, we'll set up our Spring Boot application, which will serve as the backend for our online learning platform. Spring Boot simplifies the development of production-ready applications by providing a convention-over-configuration approach with sensible defaults.
+
+## Spring Boot Project Setup
+
+### Prerequisites
+
+Ensure you have the following installed:
+
+- Java Development Kit (JDK) 17 or later
+- Maven or Gradle (we'll use Maven in this tutorial)
+
+### Using Spring Initializr
+
+The easiest way to create a Spring Boot project is through Spring Initializr:
+
+1. Go to [start.spring.io](https://start.spring.io/)
+2. Configure your project:
+   - Project: Maven
+   - Language: Java
+   - Spring Boot: 3.2.x (or latest stable)
+   - Group: com.example
+   - Artifact: learning-platform
+   - Name: learning-platform
+   - Description: Online Learning Platform Backend
+   - Package name: com.example.learningplatform
+   - Packaging: Jar
+   - Java: 17
+
+3. Add the following dependencies:
+   - Spring Web
+   - Spring Data MongoDB
+   - Spring Security
+   - Spring Boot DevTools
+   - Lombok
+   - Validation
+   - Spring Boot Actuator
+   - Spring Configuration Processor
+
+4. Click "Generate" to download the project as a ZIP file
+5. Extract the ZIP file to your workspace directory
+
+### Alternatively: Command Line Setup
+
+If you prefer the command line, you can use the Spring Boot CLI:
+
+```bash
+spring init --dependencies=web,data-mongodb,security,devtools,lombok,validation,actuator --build=maven --java-version=17 learning-platform
+```
+
+## Project Structure
+
+After extracting the project, you should have a structure like this:
+
+```
+learning-platform/
+├── src/
+│   ├── main/
+│   │   ├── java/
+│   │   │   └── com/
+│   │   │       └── example/
+│   │   │           └── learningplatform/
+│   │   │               └── LearningPlatformApplication.java
+│   │   └── resources/
+│   │       ├── application.properties
+│   │       ├── static/
+│   │       └── templates/
+│   └── test/
+│       └── java/
+│           └── com/
+│               └── example/
+│                   └── learningplatform/
+│                       └── LearningPlatformApplicationTests.java
+├── .gitignore
+├── mvnw
+├── mvnw.cmd
+└── pom.xml
+```
+
+## Configuring Spring Boot
+
+### Updating pom.xml
+
+Let's add a few more dependencies to our `pom.xml` file for additional functionality:
+
+```xml title="pom.xml"
+<dependencies>
+    <!-- For working with JSON -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-json</artifactId>
+    </dependency>
+
+    <!-- For JWT Authentication -->
+    <dependency>
+        <groupId>io.jsonwebtoken</groupId>
+        <artifactId>jjwt-api</artifactId>
+        <version>0.11.5</version>
+    </dependency>
+    <dependency>
+        <groupId>io.jsonwebtoken</groupId>
+        <artifactId>jjwt-impl</artifactId>
+        <version>0.11.5</version>
+        <scope>runtime</scope>
+    </dependency>
+    <dependency>
+        <groupId>io.jsonwebtoken</groupId>
+        <artifactId>jjwt-jackson</artifactId>
+        <version>0.11.5</version>
+        <scope>runtime</scope>
+    </dependency>
+
+    <!-- For Argon2 Password Hashing -->
+    <dependency>
+        <groupId>de.mkammerer</groupId>
+        <artifactId>argon2-jvm</artifactId>
+        <version>2.11</version>
+    </dependency>
+
+    <!-- For API Documentation -->
+    <dependency>
+        <groupId>org.springdoc</groupId>
+        <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+        <version>2.2.0</version>
+    </dependency>
+    <!-- For File Uploads -->
+</dependencies>
+```
+
+### Configuring application.properties
+
+Next, let's configure our `application.properties` file:
+
+```properties title="src/main/resources/application.properties"
+# Spring Boot application properties
+# Application name
+spring.application.name=learning-platform
+
+# Server configuration
+server.port=8080
+server.servlet.context-path=/api
+
+# MongoDB configuration
+spring.data.mongodb.uri=mongodb://localhost:27017/learning_platform_db
+# For MongoDB Atlas, use: spring.data.mongodb.uri=mongodb+srv://username:password@cluster0.mongodb.net/learning_platform_db
+
+# Logging configuration
+logging.level.org.springframework.data.mongodb.core.MongoTemplate=DEBUG
+logging.level.org.springframework.security=DEBUG
+
+# JWT configuration
+jwt.secret=your_jwt_secret_key_which_should_be_at_least_64_characters_long_for_hs512_algorithm
+jwt.expiration=86400000
+
+# File upload configuration
+spring.servlet.multipart.max-file-size=10MB
+spring.servlet.multipart.max-request-size=10MB
+
+# OpenAPI/Swagger configuration
+springdoc.api-docs.path=/api-docs
+springdoc.swagger-ui.path=/swagger-ui.html
+springdoc.swagger-ui.operationsSorter=method
+```
+
+For security, in a production environment, you should store sensitive information like MongoDB connection strings and JWT secrets in environment variables or a configuration server:
+
+```properties
+spring.data.mongodb.uri=${MONGODB_URI}
+jwt.secret=${JWT_SECRET}
+```
+
+<BackToTop />
+
+## Setting Up Basic Project Packages
+
+Let's create a basic package structure for our application:
+
+```
+src/main/java/com/example/learningplatform/
+├── config/          # Configuration classes
+├── controller/      # REST controllers
+├── exception/       # Custom exceptions and handlers
+├── model/           # Domain models/entities
+├── repository/      # MongoDB repositories
+├── security/        # Security configurations and JWT utilities
+├── service/         # Business logic services
+└── util/            # Utility classes
+```
+
+Here's how to create these packages:
+
+1. Right-click on `com.example.learningplatform` in your IDE
+2. Select "New" > "Package"
+3. Enter the package name (e.g., `com.example.learningplatform.config`)
+4. Repeat for all packages
+
+## Creating the Main Application Class
+
+The main application class is already created by Spring Initializr, but let's modify it to enable MongoDB repositories:
+
+```java title="src/main/java/com/example/learningplatform/LearningPlatformApplication.java"
+package com.example.learningplatform;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
+
+@SpringBootApplication
+@EnableMongoRepositories
+public class LearningPlatformApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(LearningPlatformApplication.class, args);
+    }
+}
+```
+
+## Checking the Setup
+
+Let's create a simple controller to verify our setup:
+
+```java title="src/main/java/com/example/learningplatform/controller/HealthController.java"
+package com.example.learningplatform.controller;
+
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.HashMap;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/")
+public class HealthController {
+
+    @GetMapping
+    public Map<String, Object> healthCheck() {
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "UP");
+        response.put("message", "Learning Platform API is running");
+        return response;
+    }
+}
+```
+
+<BackToTop />
+
+## Running the Application
+
+You can run the application in several ways:
+
+### Using Maven
+
+```bash
+cd learning-platform
+./mvnw spring-boot:run
+```
+
+### Using IDE
+
+Most IDEs like IntelliJ IDEA or Eclipse have built-in support for Spring Boot applications:
+
+1. Open the project in your IDE
+2. Find `LearningPlatformApplication.java`
+3. Right-click on it and select "Run"
+
+### Using JAR File
+
+You can also package the application as a JAR file and run it:
+
+```bash
+./mvnw clean package
+java -jar target/learning-platform-0.0.1-SNAPSHOT.jar
+```
+
+## Testing the Setup
+
+Once the application is running, open a web browser or use a tool like curl to access:
+
+```
+http://localhost:8080/api/
+```
+
+You should see a JSON response:
+
+```json
+{
+  "status": "UP",
+  "message": "Learning Platform API is running"
+}
+```
+
+## Next Steps
+
+Now that we have our Spring Boot application set up, in the next module we'll integrate it with MongoDB and start building our data models and repositories.
+
+[Next: Spring MongoDB Integration →](/proj-online-learning-platform-website/05-spring-mongodb-integration)
+
+<BackToTop />
