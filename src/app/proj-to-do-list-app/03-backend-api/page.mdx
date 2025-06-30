@@ -1,0 +1,558 @@
+# Backend API Development
+
+## Introduction
+
+In this module, we'll build the backend API for our To-Do List application using Express.js. This API will handle requests from the frontend, interact with our MySQL database through Sequelize models, and return the appropriate responses.
+
+## Setting Up Express Server
+
+First, let's create an Express server that will host our API endpoints.
+
+### Server Setup
+
+Create a file `src/server/index.ts`:
+
+```typescript
+import express, { Express } from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import { testConnection } from './config/database';
+import { syncDatabase } from '../models';
+import userRoutes from './routes/userRoutes';
+import taskRoutes from './routes/taskRoutes';
+import authRoutes from './routes/authRoutes';
+
+// Load environment variables
+dotenv.config();
+
+// Initialize Express app
+const app: Express = express();
+const PORT = process.env.PORT || 3001;
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Test database connection
+testConnection();
+
+// Sync database models (in development only)
+if (process.env.NODE_ENV === 'development') {
+  syncDatabase(false); // Set to true to force recreate tables
+}
+
+// Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/tasks', taskRoutes);
+
+// Basic route for testing
+app.get('/', (req, res) => {
+  res.json({ message: 'Welcome to the Todo API' });
+});
+
+// Start server
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
+
+export default app;
+```
+
+## Creating API Routes
+
+Now, let's create the routes for our API. We'll create three sets of routes: authentication, users, and tasks.
+
+### Authentication Routes
+
+Create a file `src/server/routes/authRoutes.ts`:
+
+```typescript
+import express from 'express';
+import { register, login } from '../controllers/authController';
+
+const router = express.Router();
+
+// Register a new user
+router.post('/register', register);
+
+// Login a user
+router.post('/login', login);
+
+export default router;
+```
+
+### User Routes
+
+Create a file `src/server/routes/userRoutes.ts`:
+
+```typescript
+import express from 'express';
+import { getProfile, updateProfile, deleteUser } from '../controllers/userController';
+import { authenticate } from '../middleware/auth';
+
+const router = express.Router();
+
+// All user routes require authentication
+router.use(authenticate);
+
+// Get user profile
+router.get('/profile', getProfile);
+
+// Update user profile
+router.put('/profile', updateProfile);
+
+// Delete user account
+router.delete('/', deleteUser);
+
+export default router;
+```
+
+### Task Routes
+
+Create a file `src/server/routes/taskRoutes.ts`:
+
+```typescript
+import express from 'express';
+import { 
+  getAllTasks, 
+  getTaskById, 
+  createTask, 
+  updateTask, 
+  deleteTask,
+  completeTask
+} from '../controllers/taskController';
+import { authenticate } from '../middleware/auth';
+
+const router = express.Router();
+
+// All task routes require authentication
+router.use(authenticate);
+
+// Get all tasks for the logged-in user
+router.get('/', getAllTasks);
+
+// Get a specific task
+router.get('/:id', getTaskById);
+
+// Create a new task
+router.post('/', createTask);
+
+// Update a task
+router.put('/:id', updateTask);
+
+// Mark a task as complete
+router.patch('/:id/complete', completeTask);
+
+// Delete a task
+router.delete('/:id', deleteTask);
+
+export default router;
+```
+
+## Creating Controllers
+
+Controllers handle the business logic for our API endpoints. Let's create controllers for authentication, users, and tasks.
+
+### Authentication Controller
+
+Create a file `src/server/controllers/authController.ts`:
+
+```typescript
+import { Request, Response } from 'express';
+import jwt from 'jsonwebtoken';
+import { User } from '../../models';
+
+// Register a new user
+export const register = async (req: Request, res: Response) => {
+  try {
+    const { username, email, password } = req.body;
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ 
+      where: { 
+        [Op.or]: [{ username }, { email }]
+      } 
+    });
+
+    if (existingUser) {
+      return res.status(400).json({ 
+        message: 'User with this username or email already exists' 
+      });
+    }
+
+    // Create new user
+    const user = await User.create({
+      username,
+      email,
+      password, // Password will be hashed by the User model hooks
+    });
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { id: user.id, username: user.username },
+      process.env.JWT_SECRET || 'default_secret',
+      { expiresIn: '24h' }
+    );
+
+    res.status(201).json({
+      message: 'User registered successfully',
+      token,
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+      },
+    });
+  } catch (error) {
+    console.error('Registration error:', error);
+    res.status(500).json({ message: 'Server error during registration' });
+  }
+};
+
+// Login a user
+export const login = async (req: Request, res: Response) => {
+  try {
+    const { username, password } = req.body;
+
+    // Find user by username
+    const user = await User.findOne({ where: { username } });
+
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    // Validate password
+    const isPasswordValid = await user.validatePassword(password);
+
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { id: user.id, username: user.username },
+      process.env.JWT_SECRET || 'default_secret',
+      { expiresIn: '24h' }
+    );
+
+    res.status(200).json({
+      message: 'Login successful',
+      token,
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+      },
+    });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ message: 'Server error during login' });
+  }
+};
+```
+
+### User Controller
+
+Create a file `src/server/controllers/userController.ts`:
+
+```typescript
+import { Request, Response } from 'express';
+import { User, Task } from '../../models';
+
+// Get user profile
+export const getProfile = async (req: Request, res: Response) => {
+  try {
+    // User is attached to request by the authenticate middleware
+    const userId = req.user?.id;
+    
+    const user = await User.findByPk(userId, {
+      attributes: ['id', 'username', 'email', 'createdAt'],
+      include: [
+        {
+          model: Task,
+          as: 'tasks',
+          attributes: ['id', 'title', 'completed'],
+        },
+      ],
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.status(200).json(user);
+  } catch (error) {
+    console.error('Profile retrieval error:', error);
+    res.status(500).json({ message: 'Server error retrieving profile' });
+  }
+};
+
+// Update user profile
+export const updateProfile = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    const { username, email, password } = req.body;
+
+    const user = await User.findByPk(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Update user fields
+    if (username) user.username = username;
+    if (email) user.email = email;
+    if (password) user.password = password;
+
+    await user.save();
+
+    res.status(200).json({
+      message: 'Profile updated successfully',
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+      },
+    });
+  } catch (error) {
+    console.error('Profile update error:', error);
+    res.status(500).json({ message: 'Server error updating profile' });
+  }
+};
+
+// Delete user account
+export const deleteUser = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.id;
+
+    const user = await User.findByPk(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Delete all user's tasks
+    await Task.destroy({ where: { userId } });
+
+    // Delete user
+    await user.destroy();
+
+    res.status(200).json({ message: 'User account deleted successfully' });
+  } catch (error) {
+    console.error('Account deletion error:', error);
+    res.status(500).json({ message: 'Server error deleting account' });
+  }
+};
+```
+
+### Task Controller
+
+Create a file `src/server/controllers/taskController.ts`:
+
+```typescript
+import { Request, Response } from 'express';
+import { Task } from '../../models';
+
+// Get all tasks for the logged-in user
+export const getAllTasks = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    
+    const tasks = await Task.findAll({
+      where: { userId },
+      order: [['createdAt', 'DESC']],
+    });
+
+    res.status(200).json(tasks);
+  } catch (error) {
+    console.error('Error fetching tasks:', error);
+    res.status(500).json({ message: 'Server error fetching tasks' });
+  }
+};
+
+// Get a specific task
+export const getTaskById = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    const taskId = req.params.id;
+    
+    const task = await Task.findOne({
+      where: { id: taskId, userId },
+    });
+
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    res.status(200).json(task);
+  } catch (error) {
+    console.error('Error fetching task:', error);
+    res.status(500).json({ message: 'Server error fetching task' });
+  }
+};
+
+// Create a new task
+export const createTask = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    const { title, description, dueDate } = req.body;
+
+    if (!title) {
+      return res.status(400).json({ message: 'Title is required' });
+    }
+
+    const task = await Task.create({
+      title,
+      description,
+      dueDate: dueDate ? new Date(dueDate) : undefined,
+      userId,
+    });
+
+    res.status(201).json(task);
+  } catch (error) {
+    console.error('Error creating task:', error);
+    res.status(500).json({ message: 'Server error creating task' });
+  }
+};
+
+// Update a task
+export const updateTask = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    const taskId = req.params.id;
+    const { title, description, dueDate, completed } = req.body;
+    
+    const task = await Task.findOne({
+      where: { id: taskId, userId },
+    });
+
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    // Update task fields
+    if (title !== undefined) task.title = title;
+    if (description !== undefined) task.description = description;
+    if (dueDate !== undefined) task.dueDate = dueDate ? new Date(dueDate) : null;
+    if (completed !== undefined) task.completed = completed;
+
+    await task.save();
+
+    res.status(200).json(task);
+  } catch (error) {
+    console.error('Error updating task:', error);
+    res.status(500).json({ message: 'Server error updating task' });
+  }
+};
+
+// Mark a task as complete
+export const completeTask = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    const taskId = req.params.id;
+    
+    const task = await Task.findOne({
+      where: { id: taskId, userId },
+    });
+
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    task.completed = !task.completed; // Toggle completion status
+    await task.save();
+
+    res.status(200).json(task);
+  } catch (error) {
+    console.error('Error completing task:', error);
+    res.status(500).json({ message: 'Server error completing task' });
+  }
+};
+
+// Delete a task
+export const deleteTask = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    const taskId = req.params.id;
+    
+    const task = await Task.findOne({
+      where: { id: taskId, userId },
+    });
+
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    await task.destroy();
+
+    res.status(200).json({ message: 'Task deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting task:', error);
+    res.status(500).json({ message: 'Server error deleting task' });
+  }
+};
+```
+
+## Creating Authentication Middleware
+
+Create a file `src/server/middleware/auth.ts`:
+
+```typescript
+import { Request, Response, NextFunction } from 'express';
+import jwt from 'jsonwebtoken';
+
+// Extend the Request interface to include user
+declare global {
+  namespace Express {
+    interface Request {
+      user?: {
+        id: number;
+        username: string;
+      };
+    }
+  }
+}
+
+export const authenticate = (req: Request, res: Response, next: NextFunction) => {
+  try {
+    // Get token from Authorization header
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+    
+    // Extract the token
+    const token = authHeader.split(' ')[1];
+    
+    if (!token) {
+      return res.status(401).json({ message: 'Authentication token missing' });
+    }
+    
+    // Verify the token
+    const decoded = jwt.verify(
+      token, 
+      process.env.JWT_SECRET || 'default_secret'
+    ) as { id: number; username: string };
+    
+    // Attach user data to request
+    req.user = {
+      id: decoded.id,
+      username: decoded.username,
+    };
+    
+    next();
+  } catch (error) {
+    console.error('Authentication error:', error);
+    res.status(401).json({ message: 'Invalid or expired token' });
+  }
+};
+```
+
+## Next Steps
+
+Our backend API is now complete. We have created API endpoints for authentication, user management, and task management. In the next module, we'll develop the frontend of our application using Next.js and Tailwind CSS.
+
+[Next: Frontend Development →](/proj-to-do-list-app/04-frontend-development)
