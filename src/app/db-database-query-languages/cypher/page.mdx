@@ -1,0 +1,1144 @@
+import BackToTop from "@/components/BackToTop";
+
+# Cypher Query Language
+
+## Table of Contents
+
+## Introduction
+
+Cypher is a declarative graph query language specifically designed for querying and manipulating graph databases, most notably Neo4j. Created by Neo4j in 2011, Cypher provides an intuitive and expressive syntax that closely resembles ASCII art patterns, making it natural to read and write queries that describe graph relationships. Unlike traditional SQL which operates on tables and rows, Cypher works with nodes, relationships, and properties that form graph structures.
+
+Cypher is essential for anyone working with graph databases, as it enables developers to leverage the power of connected data. Graph databases excel at handling complex relationships and interconnected data that would be cumbersome to model and query in relational databases. Whether you're building social networks, recommendation engines, fraud detection systems, or knowledge graphs, Cypher provides the tools to efficiently navigate and manipulate these complex data relationships.
+
+The language has gained significant adoption beyond Neo4j, with implementations in various graph databases and becoming an open standard through the openCypher project. This standardization ensures that Cypher skills are transferable across different graph database platforms, making it a valuable addition to any data professional's toolkit.
+
+### Real-World Applications
+
+Cypher powers many modern applications that rely on connected data:
+
+- Social media platforms use Cypher to find friends-of-friends, analyze social influence, and detect communities
+- E-commerce sites leverage Cypher for product recommendations based on user behavior and purchase patterns
+- Financial institutions employ Cypher for fraud detection by analyzing transaction patterns and relationships
+- Knowledge management systems use Cypher to navigate complex information hierarchies and semantic relationships
+- Network analysis applications utilize Cypher to understand infrastructure dependencies and optimize routing
+- Master data management systems rely on Cypher to resolve entity relationships and maintain data lineage
+
+### Key Concepts
+
+- **Graph Database**: A database that uses graph structures with nodes, edges, and properties to represent and store data, emphasizing relationships between entities.
+- **Node**: A fundamental entity in a graph that represents a distinct object, person, place, or concept. Nodes can have labels and properties.
+- **Relationship/Edge**: A connection between two nodes that represents how they are related. Relationships have a type and direction, and can also contain properties.
+- **Property**: A key-value pair that stores information about nodes or relationships. Properties can be strings, numbers, booleans, or arrays.
+- **Label**: A way to group nodes into categories or types. A node can have multiple labels, and labels help organize and query the graph.
+- **Path**: A sequence of connected nodes and relationships that represents a route through the graph data.
+- **Pattern Matching**: Cypher's core mechanism for describing graph structures using ASCII-art-like syntax to find matching subgraphs.
+- **Traversal**: The process of following relationships from node to node to explore the graph structure and find connected data.
+- **Index**: A data structure that speeds up node and relationship lookups based on labels and properties.
+- **Constraint**: A rule that ensures data integrity, such as uniqueness constraints or existence constraints.
+- **Transaction**: A unit of work that ensures data consistency, where all operations either succeed together or fail together.
+- **Projection**: The process of transforming query results into a specific output format, often used with aggregation functions.
+- **Aggregation**: Operations that combine multiple values into a single result, such as counting relationships or summing properties.
+- **Variable-Length Path**: A path pattern that can match sequences of relationships of varying lengths between nodes.
+- **Optional Match**: A pattern that may or may not exist, similar to LEFT JOIN in SQL, allowing for incomplete data.
+- **Union**: Combining results from multiple query parts, useful for handling different graph patterns.
+- **Subquery**: A nested query that can be used for complex filtering, aggregation, or data transformation within a larger query.
+
+### Benefits of Cypher
+
+- **Intuitive Syntax**: Cypher's ASCII-art-like syntax makes it easy to visualize and understand graph patterns, reducing the learning curve for developers.
+- **Relationship-First**: Unlike SQL which requires complex joins, Cypher naturally expresses and efficiently traverses relationships between entities.
+- **Expressive Patterns**: Complex graph patterns can be expressed concisely, making it easier to write and maintain queries for connected data.
+- **Performance**: Optimized for graph traversals, Cypher can efficiently navigate highly connected data that would be slow in relational databases.
+- **Flexibility**: Schema-optional design allows for dynamic data models and easy evolution of graph structures over time.
+- **Declarative**: Focus on what you want to find rather than how to find it, letting the database engine optimize the execution path.
+- **Pattern Matching**: Powerful pattern matching capabilities enable complex graph analysis with relatively simple query syntax.
+- **Aggregation**: Built-in support for aggregation functions that work naturally with graph data structures.
+- **Path Operations**: Native support for finding shortest paths, all paths, and variable-length paths between nodes.
+- **Community Support**: Strong community around Neo4j and openCypher, with extensive documentation and learning resources.
+- **Standardization**: OpenCypher initiative ensures portability across different graph database implementations.
+- **Integration**: Easy integration with popular programming languages and frameworks through official drivers and libraries.
+- **Scalability**: Designed to handle large-scale graph data with efficient memory usage and query optimization.
+- **Real-time Analysis**: Enables real-time graph analytics and pattern detection for live applications.
+- **Complex Queries**: Supports complex multi-part queries, conditional logic, and advanced data transformation operations.
+
+## Cypher Syntax Fundamentals
+
+Cypher syntax is built around pattern matching using ASCII-art-like representations of graph structures. Understanding the basic syntax elements is essential for writing effective graph queries.
+
+### Basic Syntax Elements
+
+- **Nodes**: Represented by parentheses `()` with optional labels and properties
+- **Relationships**: Represented by square brackets `[]` between arrows `->` or `<-` to show direction
+- **Variables**: Named references to nodes and relationships using identifiers
+- **Labels**: Node types prefixed with colon `:` to categorize nodes
+- **Properties**: Key-value pairs enclosed in curly braces `{}`
+- **Comments**: Single-line comments using `//` or multi-line comments using `/* ... */`
+
+```cypher title="Basic Cypher syntax elements"
+// Node with label and variable
+(person:Person)
+
+// Node with properties
+(person:Person {name: 'Alice', age: 30})
+
+// Relationship with type and direction
+(person:Person)-[:KNOWS]->(friend:Person)
+
+// Relationship with properties
+(person:Person)-[:KNOWS {since: 2020, strength: 'strong'}]->(friend:Person)
+
+// Multi-line comment
+/*
+This is a multi-line comment
+describing complex graph patterns
+*/
+```
+
+### Pattern Syntax
+
+```cypher title="Graph pattern representations"
+// Simple node pattern
+(n)
+
+// Node with label
+(person:Person)
+
+// Node with multiple labels
+(employee:Person:Worker)
+
+// Node with properties
+(person:Person {name: 'John', department: 'Engineering'})
+
+// Directed relationship
+(person:Person)-[:WORKS_FOR]->(company:Company)
+
+// Undirected relationship (bidirectional matching)
+(person:Person)-[:KNOWS]-(friend:Person)
+
+// Relationship with variable
+(person:Person)-[relationship:KNOWS]->(friend:Person)
+
+// Complex pattern with multiple relationships
+(person:Person)-[:WORKS_FOR]->(company:Company)<-[:WORKS_FOR]-(colleague:Person)
+```
+
+## Basic Graph Queries
+
+Basic graph queries form the foundation of Cypher, allowing you to find nodes, traverse relationships, and extract data from graph structures.
+
+### Finding Nodes with MATCH
+
+The `MATCH` clause is the primary way to specify patterns for finding data in the graph. It describes the graph pattern you want to find.
+
+```cypher title="Basic node matching patterns"
+// Find all persons
+MATCH (person:Person)
+RETURN person;
+
+// Find person by name
+MATCH (person:Person {name: 'Alice'})
+RETURN person;
+
+// Find persons with specific properties
+MATCH (person:Person)
+WHERE person.age > 25 AND person.department = 'Engineering'
+RETURN person.name, person.age, person.department;
+
+// Find nodes with multiple labels
+MATCH (employee:Person:Manager)
+RETURN employee.name, employee.title;
+```
+
+#### Real-World Node Queries
+
+```cypher title="Social network user discovery"
+// Find active users in a social network
+MATCH (user:User)
+WHERE user.status = 'active' AND user.lastLogin > date('2024-01-01')
+RETURN user.username, user.email, user.lastLogin
+ORDER BY user.lastLogin DESC;
+
+// Find users by location
+MATCH (user:User)
+WHERE user.city = 'San Francisco' OR user.city = 'New York'
+RETURN user.name, user.city, user.joinDate;
+
+// Find premium subscribers
+MATCH (user:User:PremiumSubscriber)
+WHERE user.subscriptionExpiry > datetime()
+RETURN user.name, user.email, user.subscriptionExpiry;
+```
+
+### Traversing Relationships
+
+```cypher title="Basic relationship traversal"
+// Find direct relationships
+MATCH (person:Person)-[:KNOWS]->(friend:Person)
+RETURN person.name AS person, friend.name AS friend;
+
+// Find bidirectional relationships
+MATCH (person:Person)-[:KNOWS]-(connected:Person)
+WHERE person.name = 'Alice'
+RETURN connected.name, connected.age;
+
+// Find specific relationship types
+MATCH (employee:Person)-[:WORKS_FOR]->(company:Company)
+RETURN employee.name, company.name, company.industry;
+
+// Traverse multiple relationship types
+MATCH (person:Person)-[:LIVES_IN]->(city:City)-[:LOCATED_IN]->(country:Country)
+RETURN person.name, city.name, country.name;
+```
+
+#### Complex Relationship Patterns
+
+```cypher title="Advanced relationship traversal patterns"
+// Find friends of friends
+MATCH (person:Person {name: 'Alice'})-[:KNOWS]->(friend:Person)-[:KNOWS]->(friendOfFriend:Person)
+WHERE person <> friendOfFriend  // Exclude the original person
+RETURN DISTINCT friendOfFriend.name, friendOfFriend.age;
+
+// Find employment hierarchies
+MATCH (manager:Person)-[:MANAGES]->(employee:Person)-[:WORKS_FOR]->(company:Company)
+RETURN manager.name AS managerName,
+       employee.name AS employeeName,
+       company.name AS companyName;
+
+// Find product recommendations through purchases
+MATCH (user:User)-[:PURCHASED]->(product:Product)<-[:PURCHASED]-(otherUser:User)-[:PURCHASED]->(recommendation:Product)
+WHERE user.userId = 'user123' AND NOT (user)-[:PURCHASED]->(recommendation)
+RETURN recommendation.name, recommendation.category, COUNT(*) AS frequency
+ORDER BY frequency DESC
+LIMIT 10;
+```
+
+### Filtering with WHERE
+
+The `WHERE` clause provides powerful filtering capabilities for both nodes and relationships.
+
+```cypher title="Advanced filtering patterns"
+// Property-based filtering
+MATCH (person:Person)
+WHERE person.age BETWEEN 25 AND 35
+  AND person.department IN ['Engineering', 'Data Science']
+RETURN person.name, person.age, person.department;
+
+// String pattern matching
+MATCH (user:User)
+WHERE user.email CONTAINS '@company.com'
+  AND user.name STARTS WITH 'A'
+RETURN user.name, user.email;
+
+// Regular expression matching
+MATCH (product:Product)
+WHERE product.sku =~ 'PRO-\\d{4}-[A-Z]{2}'
+RETURN product.name, product.sku, product.price;
+
+// Relationship property filtering
+MATCH (person:Person)-[knows:KNOWS]->(friend:Person)
+WHERE knows.since < date('2020-01-01') AND knows.strength = 'strong'
+RETURN person.name, friend.name, knows.since;
+```
+
+#### Advanced WHERE Patterns
+
+```cypher title="Complex filtering scenarios"
+// Filtering based on connected data
+MATCH (user:User)
+WHERE EXISTS {
+    MATCH (user)-[:PURCHASED]->(product:Product)
+    WHERE product.category = 'Electronics' AND product.price > 500
+}
+RETURN user.name, user.email;
+
+// Filtering with aggregation conditions
+MATCH (customer:Customer)
+WHERE SIZE((customer)-[:PLACED_ORDER]->(:Order)) > 5
+RETURN customer.name, customer.email;
+
+// Complex boolean logic
+MATCH (employee:Person)
+WHERE (employee.department = 'Engineering' AND employee.level >= 'Senior')
+   OR (employee.department = 'Management' AND employee.experience > 10)
+RETURN employee.name, employee.department, employee.level;
+```
+
+## Data Retrieval and Projection
+
+Data retrieval in Cypher involves not just finding patterns but also shaping and transforming the results to meet specific requirements.
+
+### RETURN Clause Fundamentals
+
+The `RETURN` clause specifies what data to retrieve and how to format the output.
+
+```cypher title="Basic return patterns"
+// Return node properties
+MATCH (person:Person)
+RETURN person.name, person.age, person.email;
+
+// Return entire nodes
+MATCH (person:Person)
+WHERE person.department = 'Engineering'
+RETURN person;
+
+// Return with aliases for clarity
+MATCH (person:Person)-[:WORKS_FOR]->(company:Company)
+RETURN person.name AS employeeName,
+       company.name AS companyName,
+       company.industry AS sector;
+
+// Return computed values
+MATCH (product:Product)
+RETURN product.name,
+       product.price,
+       product.price * 0.9 AS discountedPrice,
+       product.price > 100 AS isPremium;
+```
+
+### Data Transformation and Computation
+
+```cypher title="Advanced data transformation"
+// String manipulation
+MATCH (person:Person)
+RETURN person.name,
+       UPPER(person.name) AS upperName,
+       SUBSTRING(person.email, 0, SIZE(person.email) - 4) AS emailPrefix,
+       SPLIT(person.name, ' ')[0] AS firstName;
+
+// Date and time operations
+MATCH (order:Order)
+RETURN order.id,
+       order.orderDate,
+       DATE() AS today,
+       DURATION.BETWEEN(order.orderDate, DATE()) AS orderAge,
+       order.orderDate + DURATION('P30D') AS estimatedDelivery;
+
+// Mathematical operations
+MATCH (product:Product)-[:IN_CATEGORY]->(category:Category)
+RETURN category.name,
+       COUNT(product) AS productCount,
+       AVG(product.price) AS averagePrice,
+       MIN(product.price) AS cheapestPrice,
+       MAX(product.price) AS mostExpensive,
+       SUM(product.price) AS totalValue;
+```
+
+### Conditional Logic with CASE
+
+```cypher title="Conditional data transformation"
+// Customer segmentation using CASE
+MATCH (customer:Customer)
+OPTIONAL MATCH (customer)-[:PLACED_ORDER]->(order:Order)
+WITH customer, SUM(order.total) AS totalSpent
+RETURN customer.name,
+       totalSpent,
+       CASE
+           WHEN totalSpent IS NULL THEN 'No Purchases'
+           WHEN totalSpent < 100 THEN 'Bronze'
+           WHEN totalSpent < 500 THEN 'Silver'
+           WHEN totalSpent < 2000 THEN 'Gold'
+           ELSE 'Platinum'
+       END AS customerTier;
+
+// Product performance categorization
+MATCH (product:Product)
+OPTIONAL MATCH (product)<-[:CONTAINS]-(order:OrderItem)
+WITH product, COUNT(order) AS salesCount, SUM(order.quantity) AS unitsSold
+RETURN product.name,
+       salesCount,
+       unitsSold,
+       CASE
+           WHEN salesCount = 0 THEN 'No Sales'
+           WHEN salesCount < 10 THEN 'Low Performer'
+           WHEN salesCount < 50 THEN 'Good Performer'
+           ELSE 'Top Performer'
+       END AS performanceCategory,
+       CASE
+           WHEN product.stock < 10 THEN 'Low Stock'
+           WHEN product.stock < 50 THEN 'Normal Stock'
+           ELSE 'High Stock'
+       END AS stockLevel;
+```
+
+### Collection Operations
+
+```cypher title="Working with collections and lists"
+// Collect related data
+MATCH (person:Person)-[:KNOWS]->(friend:Person)
+RETURN person.name,
+       COLLECT(friend.name) AS friends,
+       SIZE(COLLECT(friend.name)) AS friendCount;
+
+// Advanced collection manipulation
+MATCH (user:User)-[:PURCHASED]->(product:Product)
+RETURN user.name,
+       COLLECT(DISTINCT product.category) AS purchasedCategories,
+       COLLECT(product.name)[0..5] AS recentPurchases,
+       [p IN COLLECT(product) WHERE p.price > 100 | p.name] AS expensivePurchases;
+
+// Collection filtering and transformation
+MATCH (company:Company)<-[:WORKS_FOR]-(employee:Person)
+RETURN company.name,
+       [emp IN COLLECT(employee) WHERE emp.level = 'Senior' | emp.name] AS seniorEmployees,
+       SIZE([emp IN COLLECT(employee) WHERE emp.department = 'Engineering']) AS engineeringCount;
+```
+
+## Aggregation and Analysis
+
+Cypher provides powerful aggregation functions that work naturally with graph structures, enabling sophisticated analysis of connected data.
+
+### Basic Aggregation Functions
+
+```cypher title="Fundamental aggregation operations"
+// Count relationships and nodes
+MATCH (person:Person)-[:KNOWS]->(friend:Person)
+RETURN person.name, COUNT(friend) AS friendCount
+ORDER BY friendCount DESC;
+
+// Sum and average calculations
+MATCH (customer:Customer)-[:PLACED_ORDER]->(order:Order)
+RETURN customer.name,
+       COUNT(order) AS totalOrders,
+       SUM(order.total) AS totalSpent,
+       AVG(order.total) AS averageOrderValue,
+       MIN(order.total) AS smallestOrder,
+       MAX(order.total) AS largestOrder;
+
+// Distinct counting
+MATCH (user:User)-[:PURCHASED]->(product:Product)-[:IN_CATEGORY]->(category:Category)
+RETURN user.name,
+       COUNT(DISTINCT product) AS uniqueProducts,
+       COUNT(DISTINCT category) AS categoriesPurchased,
+       COUNT(product) AS totalPurchases;
+```
+
+### Advanced Aggregation Patterns
+
+```cypher title="Complex business intelligence queries"
+// Customer behavior analysis
+MATCH (customer:Customer)-[:PLACED_ORDER]->(order:Order)-[:CONTAINS]->(item:OrderItem)-[:OF_PRODUCT]->(product:Product)
+RETURN customer.name,
+       COUNT(DISTINCT order) AS orderCount,
+       COUNT(DISTINCT product) AS uniqueProducts,
+       SUM(item.quantity * item.price) AS totalRevenue,
+       AVG(item.quantity * item.price) AS avgItemValue,
+       COLLECT(DISTINCT product.category) AS categoriesBought
+ORDER BY totalRevenue DESC
+LIMIT 20;
+
+// Product popularity and performance
+MATCH (product:Product)<-[:OF_PRODUCT]-(item:OrderItem)<-[:CONTAINS]-(order:Order)
+WHERE order.orderDate >= date('2024-01-01')
+RETURN product.name,
+       product.category,
+       COUNT(DISTINCT order) AS orderCount,
+       SUM(item.quantity) AS unitsSold,
+       SUM(item.quantity * item.price) AS revenue,
+       AVG(item.price) AS averageSellingPrice
+ORDER BY revenue DESC;
+```
+
+### Temporal Analysis
+
+```cypher title="Time-based aggregation and trends"
+// Monthly sales analysis
+MATCH (order:Order)-[:CONTAINS]->(item:OrderItem)
+WHERE order.orderDate >= date('2024-01-01')
+RETURN date.truncate('month', order.orderDate) AS month,
+       COUNT(DISTINCT order) AS orderCount,
+       SUM(item.quantity * item.price) AS monthlyRevenue,
+       AVG(item.quantity * item.price) AS avgOrderValue
+ORDER BY month;
+
+// Customer activity patterns by day of week
+MATCH (customer:Customer)-[:PLACED_ORDER]->(order:Order)
+WHERE order.orderDate >= date() - duration('P90D')
+RETURN apoc.temporal.format(order.orderDate, 'EEEE') AS dayOfWeek,
+       COUNT(order) AS orderCount,
+       COUNT(DISTINCT customer) AS uniqueCustomers,
+       SUM(order.total) AS dailyRevenue
+ORDER BY orderCount DESC;
+
+// Seasonal product performance
+MATCH (product:Product)<-[:OF_PRODUCT]-(item:OrderItem)<-[:CONTAINS]-(order:Order)
+WHERE order.orderDate >= date('2023-01-01')
+RETURN product.category,
+       CASE
+           WHEN order.orderDate.month IN [12, 1, 2] THEN 'Winter'
+           WHEN order.orderDate.month IN [3, 4, 5] THEN 'Spring'
+           WHEN order.orderDate.month IN [6, 7, 8] THEN 'Summer'
+           ELSE 'Fall'
+       END AS season,
+       SUM(item.quantity) AS unitsSold,
+       SUM(item.quantity * item.price) AS seasonalRevenue
+ORDER BY product.category, season;
+```
+
+## Path Finding and Graph Analysis
+
+One of Cypher's most powerful features is its ability to find and analyze paths through graph data, enabling complex relationship analysis and graph algorithms.
+
+### Basic Path Operations
+
+```cypher title="Fundamental path finding"
+// Find shortest path between two nodes
+MATCH path = shortestPath((start:Person {name: 'Alice'})-[*]-(end:Person {name: 'Bob'}))
+RETURN path, LENGTH(path) AS pathLength;
+
+// Find all paths between nodes
+MATCH path = (start:Person {name: 'Alice'})-[*1..4]-(end:Person {name: 'Bob'})
+RETURN path, LENGTH(path) AS pathLength
+ORDER BY pathLength;
+
+// Variable length relationships
+MATCH (person:Person {name: 'Alice'})-[:KNOWS*1..3]->(connected:Person)
+RETURN DISTINCT connected.name, LENGTH(path) AS degrees
+ORDER BY degrees;
+```
+
+### Advanced Path Analysis
+
+```cypher title="Complex path finding scenarios"
+// Find influence paths in social networks
+MATCH path = (influencer:Person {verified: true})-[:FOLLOWS*1..3]->(user:Person)
+WHERE influencer.followers > 10000
+RETURN influencer.name AS influencerName,
+       user.name AS reachableUser,
+       LENGTH(path) AS degreeOfSeparation,
+       [rel IN relationships(path) | rel.strength] AS connectionStrengths;
+
+// Supply chain path analysis
+MATCH path = (supplier:Company)-[:SUPPLIES*1..5]->(manufacturer:Company)-[:PRODUCES]->(product:Product)
+WHERE product.name = 'Smartphone Pro'
+RETURN supplier.name AS supplierName,
+       manufacturer.name AS manufacturerName,
+       LENGTH(path) AS supplyChainDepth,
+       [node IN nodes(path) WHERE 'Company' IN labels(node) | node.name] AS supplyChainPath;
+
+// Knowledge graph traversal
+MATCH path = (concept:Concept {name: 'Machine Learning'})-[:RELATED_TO|:SUBSET_OF*1..4]->(relatedConcept:Concept)
+RETURN concept.name,
+       relatedConcept.name,
+       LENGTH(path) AS relationshipDistance,
+       [rel IN relationships(path) | type(rel)] AS relationshipTypes;
+```
+
+### Graph Algorithms and Centrality
+
+```cypher title="Graph analysis and centrality measures"
+// Degree centrality (most connected nodes)
+MATCH (person:Person)
+OPTIONAL MATCH (person)-[:KNOWS]-(connected:Person)
+RETURN person.name,
+       COUNT(connected) AS degreeCount,
+       COLLECT(connected.name) AS connections
+ORDER BY degreeCount DESC
+LIMIT 10;
+
+// Betweenness centrality approximation
+MATCH (person:Person)
+WHERE EXISTS((person)-[:KNOWS]-())
+WITH person
+MATCH (start:Person)-[:KNOWS*2..4]-(end:Person)
+WHERE start <> end
+  AND start <> person
+  AND end <> person
+MATCH path = shortestPath((start)-[:KNOWS*]-(end))
+WHERE person IN nodes(path)
+RETURN person.name, COUNT(*) AS betweennessApprox
+ORDER BY betweennessApprox DESC;
+
+// Community detection through shared connections
+MATCH (person:Person)-[:KNOWS]-(mutual:Person)-[:KNOWS]-(other:Person)
+WHERE person <> other AND NOT (person)-[:KNOWS]-(other)
+RETURN person.name, other.name, COUNT(mutual) AS mutualFriends
+ORDER BY mutualFriends DESC
+LIMIT 20;
+```
+
+## Data Modification Operations
+
+Cypher provides comprehensive data modification capabilities for creating, updating, and deleting graph data.
+
+### Creating Nodes and Relationships
+
+```cypher title="Basic data creation operations"
+// Create individual nodes
+CREATE (person:Person {name: 'John Doe', age: 30, email: 'john@example.com'});
+
+// Create multiple nodes
+CREATE
+  (alice:Person {name: 'Alice Smith', age: 28, department: 'Engineering'}),
+  (bob:Person {name: 'Bob Johnson', age: 32, department: 'Marketing'}),
+  (company:Company {name: 'TechCorp', industry: 'Technology', founded: 2010});
+
+// Create nodes with relationships
+CREATE (alice:Person {name: 'Alice'})-[:WORKS_FOR {since: date('2022-01-15')}]->(company:Company {name: 'TechCorp'});
+
+// Create complex graph structures
+CREATE
+  (project:Project {name: 'AI Platform', budget: 500000}),
+  (team:Team {name: 'AI Team'}),
+  (alice:Person {name: 'Alice', role: 'Lead Developer'}),
+  (bob:Person {name: 'Bob', role: 'Data Scientist'}),
+  (alice)-[:MEMBER_OF]->(team),
+  (bob)-[:MEMBER_OF]->(team),
+  (team)-[:ASSIGNED_TO]->(project);
+```
+
+### Advanced Creation Patterns
+
+```cypher title="Complex data creation scenarios"
+// Create nodes with conditional logic
+MERGE (user:User {email: 'john@example.com'})
+ON CREATE SET
+  user.name = 'John Doe',
+  user.createdAt = datetime(),
+  user.status = 'active'
+ON MATCH SET
+  user.lastSeen = datetime();
+
+// Bulk data creation from existing data
+MATCH (customer:Customer)
+WHERE NOT EXISTS((customer)-[:HAS_PROFILE]->(:CustomerProfile))
+CREATE (customer)-[:HAS_PROFILE]->(profile:CustomerProfile {
+  tier: CASE
+    WHEN customer.totalSpent > 10000 THEN 'Platinum'
+    WHEN customer.totalSpent > 5000 THEN 'Gold'
+    WHEN customer.totalSpent > 1000 THEN 'Silver'
+    ELSE 'Bronze'
+  END,
+  createdAt: datetime()
+});
+
+// Create relationships based on patterns
+MATCH (person1:Person), (person2:Person)
+WHERE person1.department = person2.department
+  AND person1 <> person2
+  AND NOT EXISTS((person1)-[:COLLEAGUE]-(person2))
+CREATE (person1)-[:COLLEAGUE {department: person1.department}]->(person2);
+```
+
+### Updating Existing Data
+
+```cypher title="Data modification and updates"
+// Update node properties
+MATCH (person:Person {name: 'Alice'})
+SET person.age = 29,
+    person.lastUpdated = datetime(),
+    person.department = 'Senior Engineering';
+
+// Conditional updates
+MATCH (product:Product)
+WHERE product.stock < 10
+SET product.status = 'Low Stock',
+    product.reorderAlert = true;
+
+// Update based on calculations
+MATCH (customer:Customer)
+OPTIONAL MATCH (customer)-[:PLACED_ORDER]->(order:Order)
+WITH customer, SUM(order.total) AS totalSpent
+SET customer.totalSpent = COALESCE(totalSpent, 0),
+    customer.tier = CASE
+      WHEN totalSpent > 10000 THEN 'Platinum'
+      WHEN totalSpent > 5000 THEN 'Gold'
+      WHEN totalSpent > 1000 THEN 'Silver'
+      ELSE 'Bronze'
+    END;
+
+// Update relationship properties
+MATCH (person:Person)-[knows:KNOWS]->(friend:Person)
+WHERE knows.strength IS NULL
+SET knows.strength = 'medium',
+    knows.lastUpdated = datetime();
+```
+
+### Deleting Data
+
+```cypher title="Data removal operations"
+// Delete nodes (must delete relationships first)
+MATCH (person:Person {name: 'Test User'})
+DETACH DELETE person;
+
+// Delete specific relationships
+MATCH (person:Person)-[works:WORKS_FOR]->(company:Company)
+WHERE company.name = 'ClosedCompany'
+DELETE works;
+
+// Conditional deletion
+MATCH (session:UserSession)
+WHERE session.expiresAt < datetime()
+DELETE session;
+
+// Bulk deletion with constraints
+MATCH (product:Product)
+WHERE product.discontinued = true
+  AND NOT EXISTS((product)<-[:CONTAINS]-(:OrderItem))
+DETACH DELETE product;
+```
+
+## Advanced Cypher Operations
+
+Advanced Cypher operations enable sophisticated data manipulation, complex analytical queries, and efficient bulk operations.
+
+### MERGE Operations
+
+`MERGE` combines `CREATE` and `MATCH`, ensuring data uniqueness while handling both creation and updates.
+
+```cypher title="Intelligent data upsert operations"
+// Create or update user profiles
+MERGE (user:User {email: 'alice@example.com'})
+ON CREATE SET
+  user.name = 'Alice Smith',
+  user.createdAt = datetime(),
+  user.loginCount = 1
+ON MATCH SET
+  user.lastLogin = datetime(),
+  user.loginCount = user.loginCount + 1;
+
+// Complex merge with relationships
+MERGE (company:Company {name: 'TechCorp'})
+MERGE (person:Person {email: 'john@techcorp.com'})
+ON CREATE SET person.name = 'John Doe', person.joinDate = date()
+MERGE (person)-[employment:WORKS_FOR]->(company)
+ON CREATE SET employment.startDate = date(), employment.position = 'Developer'
+ON MATCH SET employment.lastUpdated = datetime();
+
+// Data integration and deduplication
+MERGE (product:Product {sku: 'PRO-123'})
+ON CREATE SET
+  product.name = 'Premium Widget',
+  product.price = 99.99,
+  product.createdAt = datetime()
+ON MATCH SET
+  product.lastSeen = datetime(),
+  product.updateCount = COALESCE(product.updateCount, 0) + 1;
+```
+
+### Subqueries and Advanced Patterns
+
+```cypher title="Complex analytical queries with subqueries"
+// Find customers with above-average spending
+CALL {
+  MATCH (customer:Customer)-[:PLACED_ORDER]->(order:Order)
+  RETURN AVG(order.total) AS avgOrderValue
+}
+WITH avgOrderValue
+MATCH (customer:Customer)-[:PLACED_ORDER]->(order:Order)
+WITH customer, AVG(order.total) AS customerAvg, avgOrderValue
+WHERE customerAvg > avgOrderValue
+RETURN customer.name, customerAvg, avgOrderValue
+ORDER BY customerAvg DESC;
+
+// Product recommendation engine
+MATCH (user:User {userId: 'user123'})-[:PURCHASED]->(product:Product)
+WITH user, COLLECT(product) AS purchasedProducts
+CALL {
+  WITH user, purchasedProducts
+  MATCH (similarUser:User)-[:PURCHASED]->(sharedProduct:Product)
+  WHERE sharedProduct IN purchasedProducts AND similarUser <> user
+  WITH similarUser, COUNT(sharedProduct) AS sharedCount
+  ORDER BY sharedCount DESC
+  LIMIT 10
+  MATCH (similarUser)-[:PURCHASED]->(recommendedProduct:Product)
+  WHERE NOT recommendedProduct IN purchasedProducts
+  RETURN recommendedProduct, COUNT(*) AS recommendationScore
+  ORDER BY recommendationScore DESC
+  LIMIT 5
+}
+RETURN recommendedProduct.name, recommendedProduct.category, recommendationScore;
+
+// Hierarchical data analysis
+MATCH (manager:Person)-[:MANAGES*1..3]->(subordinate:Person)
+WITH manager, COLLECT(subordinate) AS teamMembers
+CALL {
+  WITH teamMembers
+  UNWIND teamMembers AS member
+  MATCH (member)-[:WORKS_ON]->(project:Project)
+  RETURN COLLECT(DISTINCT project) AS teamProjects
+}
+RETURN manager.name,
+       SIZE(teamMembers) AS teamSize,
+       SIZE(teamProjects) AS activeProjects,
+       [member IN teamMembers | member.name] AS teamMemberNames;
+```
+
+### UNION and Data Combination
+
+```cypher title="Combining data from different graph patterns"
+// Comprehensive activity feed
+MATCH (user:User {userId: 'user123'})-[:POSTED]->(post:Post)
+RETURN post.content AS activity,
+       post.createdAt AS timestamp,
+       'post' AS activityType,
+       post.likes AS engagement
+
+UNION
+
+MATCH (user:User {userId: 'user123'})-[:COMMENTED_ON]->(comment:Comment)
+RETURN comment.text AS activity,
+       comment.createdAt AS timestamp,
+       'comment' AS activityType,
+       comment.replies AS engagement
+
+UNION
+
+MATCH (user:User {userId: 'user123'})-[:LIKED]->(content)
+RETURN 'Liked: ' + content.title AS activity,
+       content.likedAt AS timestamp,
+       'like' AS activityType,
+       1 AS engagement
+
+ORDER BY timestamp DESC
+LIMIT 20;
+
+// Multi-source data integration
+MATCH (product:Product)-[:SOLD_IN]->(order:OnlineOrder)
+RETURN product.name,
+       'Online' AS channel,
+       SUM(order.quantity) AS totalSold,
+       SUM(order.quantity * order.price) AS revenue
+
+UNION ALL
+
+MATCH (product:Product)-[:SOLD_IN]->(order:StoreOrder)
+RETURN product.name,
+       'In-Store' AS channel,
+       SUM(order.quantity) AS totalSold,
+       SUM(order.quantity * order.price) AS revenue
+
+ORDER BY product.name, channel;
+```
+
+### FOREACH and Batch Operations
+
+```cypher title="Efficient batch processing operations"
+// Bulk relationship creation
+MATCH (company:Company {name: 'TechCorp'})
+WITH company
+UNWIND ['Engineering', 'Marketing', 'Sales', 'HR'] AS deptName
+MERGE (dept:Department {name: deptName})
+MERGE (dept)-[:BELONGS_TO]->(company);
+
+// Batch data processing with FOREACH
+MATCH (customer:Customer)
+WHERE customer.totalOrders IS NULL
+WITH COLLECT(customer) AS customers
+FOREACH (c IN customers |
+  SET c.totalOrders = SIZE((c)-[:PLACED_ORDER]->(:Order)),
+      c.lastUpdated = datetime()
+);
+
+// Complex batch updates
+MATCH (product:Product)
+WHERE product.categoryPath IS NULL
+WITH product
+MATCH (product)-[:IN_CATEGORY]->(category:Category)
+OPTIONAL MATCH (category)-[:SUBCATEGORY_OF*]->(parentCategory:Category)
+WITH product, category, COLLECT(parentCategory.name) + [category.name] AS pathElements
+FOREACH (i IN RANGE(0, SIZE(pathElements)-1) |
+  SET product.categoryPath = REDUCE(path = '', element IN pathElements |
+    CASE WHEN path = '' THEN element ELSE path + ' > ' + element END)
+);
+```
+
+## Real-World Cypher Applications
+
+Understanding how Cypher is applied in real-world scenarios demonstrates its power for solving complex business problems with connected data.
+
+### Social Network Analysis
+
+```cypher title="Social media platform analytics"
+// Influencer identification and reach analysis
+MATCH (influencer:User)
+WHERE influencer.verified = true AND influencer.followers > 100000
+OPTIONAL MATCH (influencer)-[:POSTED]->(post:Post)-[:TAGGED_WITH]->(hashtag:Hashtag)
+WHERE post.createdAt >= datetime() - duration('P30D')
+RETURN influencer.username,
+       influencer.followers,
+       COUNT(DISTINCT post) AS postsLast30Days,
+       COUNT(DISTINCT hashtag) AS uniqueHashtags,
+       SUM(post.likes + post.shares + post.comments) AS totalEngagement,
+       AVG(post.likes + post.shares + post.comments) AS avgEngagementPerPost
+ORDER BY totalEngagement DESC
+LIMIT 20;
+
+// Community detection through shared interests
+MATCH (user1:User)-[:FOLLOWS]->(sharedFollow:User)<-[:FOLLOWS]-(user2:User)
+WHERE user1 <> user2 AND NOT (user1)-[:FOLLOWS]-(user2)
+WITH user1, user2, COUNT(sharedFollow) AS mutualFollows
+WHERE mutualFollows >= 5
+MATCH (user1)-[:INTERESTED_IN]->(interest:Interest)<-[:INTERESTED_IN]-(user2)
+RETURN user1.username,
+       user2.username,
+       mutualFollows,
+       COLLECT(interest.name) AS sharedInterests,
+       SIZE(COLLECT(interest.name)) AS commonInterestCount
+ORDER BY mutualFollows + commonInterestCount DESC;
+
+// Viral content propagation analysis
+MATCH path = (original:Post)-[:SHARED_FROM*1..5]->(share:Post)
+WHERE original.createdAt >= datetime() - duration('P7D')
+WITH original, COUNT(DISTINCT share) AS totalShares,
+     MAX(LENGTH(path)) AS maxPropagationDepth,
+     COLLECT(DISTINCT share.createdAt) AS shareTimestamps
+RETURN original.id,
+       original.content[0..100] + '...' AS contentPreview,
+       original.author.username AS originalAuthor,
+       totalShares,
+       maxPropagationDepth,
+       duration.between(original.createdAt, MAX(shareTimestamps)).hours AS hoursToMaxSpread
+ORDER BY totalShares DESC;
+```
+
+### E-commerce Recommendation Engine
+
+```cypher title="Advanced product recommendation system"
+// Collaborative filtering recommendations
+MATCH (targetUser:Customer {customerId: 'cust_123'})
+MATCH (targetUser)-[:PURCHASED]->(product:Product)<-[:PURCHASED]-(similarCustomer:Customer)
+WHERE similarCustomer <> targetUser
+WITH targetUser, similarCustomer, COUNT(product) AS sharedProducts
+ORDER BY sharedProducts DESC
+LIMIT 20
+
+WITH targetUser, COLLECT(similarCustomer) AS similarCustomers
+UNWIND similarCustomers AS simCustomer
+MATCH (simCustomer)-[:PURCHASED]->(recommendedProduct:Product)
+WHERE NOT EXISTS((targetUser)-[:PURCHASED]->(recommendedProduct))
+  AND NOT EXISTS((targetUser)-[:VIEWED]->(recommendedProduct))
+
+WITH recommendedProduct,
+     COUNT(simCustomer) AS recommendationStrength,
+     AVG(simCustomer.avgRating) AS avgCustomerRating
+MATCH (recommendedProduct)<-[:REVIEWED]-(review:Review)
+WITH recommendedProduct,
+     recommendationStrength,
+     avgCustomerRating,
+     AVG(review.rating) AS productRating,
+     COUNT(review) AS reviewCount
+
+RETURN recommendedProduct.name,
+       recommendedProduct.price,
+       recommendedProduct.category,
+       recommendationStrength,
+       productRating,
+       reviewCount,
+       (recommendationStrength * 0.4 + productRating * 0.6) AS finalScore
+ORDER BY finalScore DESC
+LIMIT 10;
+
+// Cross-sell and upsell analysis
+MATCH (customer:Customer)-[:PURCHASED]->(product:Product)
+WHERE customer.customerId = 'cust_123'
+WITH customer, COLLECT(DISTINCT product.category) AS purchasedCategories
+
+MATCH (product:Product)-[:FREQUENTLY_BOUGHT_WITH]->(complementary:Product)
+WHERE product.category IN purchasedCategories
+  AND NOT complementary.category IN purchasedCategories
+  AND NOT EXISTS((customer)-[:PURCHASED]->(complementary))
+
+WITH complementary, COUNT(*) AS crossSellOpportunity
+MATCH (complementary)<-[:PURCHASED]-(otherCustomer:Customer)
+WITH complementary, crossSellOpportunity, COUNT(otherCustomer) AS popularity
+
+RETURN complementary.name,
+       complementary.category,
+       complementary.price,
+       crossSellOpportunity,
+       popularity,
+       (crossSellOpportunity * 0.7 + popularity * 0.3) AS recommendationScore
+ORDER BY recommendationScore DESC;
+```
+
+### Fraud Detection System
+
+```cypher title="Financial fraud detection and pattern analysis"
+// Suspicious transaction pattern detection
+MATCH (account:Account)-[:MADE_TRANSACTION]->(transaction:Transaction)
+WHERE transaction.timestamp >= datetime() - duration('PT24H')
+WITH account,
+     COUNT(transaction) AS transactionCount,
+     SUM(transaction.amount) AS totalAmount,
+     COLLECT(transaction.amount) AS amounts,
+     AVG(transaction.amount) AS avgAmount
+
+WHERE transactionCount > 20 OR totalAmount > 50000
+WITH account, transactionCount, totalAmount, amounts, avgAmount,
+     REDUCE(variance = 0.0, amount IN amounts |
+       variance + (amount - avgAmount) * (amount - avgAmount)) / SIZE(amounts) AS variance
+
+MATCH (account)-[:MADE_TRANSACTION]->(recentTransaction:Transaction)
+WHERE recentTransaction.timestamp >= datetime() - duration('PT1H')
+OPTIONAL MATCH (recentTransaction)-[:TO_ACCOUNT]->(recipient:Account)
+
+RETURN account.accountNumber,
+       account.owner.name,
+       transactionCount AS transactions24h,
+       totalAmount AS total24h,
+       sqrt(variance) AS amountStdDev,
+       COLLECT(DISTINCT recipient.accountNumber) AS recentRecipients,
+       SIZE(COLLECT(DISTINCT recipient.accountNumber)) AS uniqueRecipients
+ORDER BY (transactionCount * 0.3 + (totalAmount/1000) * 0.4 + sqrt(variance)/1000 * 0.3) DESC;
+
+// Money laundering network detection
+MATCH path = (source:Account)-[:MADE_TRANSACTION*2..6]->(destination:Account)
+WHERE ALL(tx IN relationships(path) WHERE tx.amount >= 9000 AND tx.amount < 10000)
+  AND source <> destination
+WITH source, destination, path,
+     LENGTH(path) AS pathLength,
+     [tx IN relationships(path) | tx.amount] AS amounts,
+     [tx IN relationships(path) | duration.between(tx.timestamp, datetime()).hours] AS hoursAgo
+
+WHERE REDUCE(total = 0, amount IN amounts | total + amount) > 45000
+  AND MAX(hoursAgo) <= 72
+  AND pathLength >= 3
+
+RETURN source.accountNumber AS sourceAccount,
+       destination.accountNumber AS destinationAccount,
+       pathLength,
+       REDUCE(total = 0, amount IN amounts | total + amount) AS totalAmount,
+       amounts,
+       MIN(hoursAgo) AS hoursFromStart,
+       MAX(hoursAgo) AS hoursFromEnd
+ORDER BY totalAmount DESC;
+```
+
+### Knowledge Graph and Semantic Search
+
+```cypher title="Enterprise knowledge management system"
+// Semantic concept relationship discovery
+MATCH (concept:Concept {name: 'Machine Learning'})
+MATCH path = (concept)-[:RELATED_TO|:PART_OF|:IMPLEMENTS*1..4]->(related:Concept)
+WITH concept, related, path,
+     [rel IN relationships(path) | type(rel)] AS relationshipTypes,
+     LENGTH(path) AS distance
+
+WITH concept, related, distance, relationshipTypes,
+     CASE
+       WHEN 'PART_OF' IN relationshipTypes THEN 'hierarchical'
+       WHEN 'IMPLEMENTS' IN relationshipTypes THEN 'implementation'
+       ELSE 'associative'
+     END AS relationshipCategory
+
+MATCH (related)<-[:AUTHORED]-(paper:ResearchPaper)
+WHERE paper.publicationDate >= date() - duration('P2Y')
+
+RETURN related.name AS relatedConcept,
+       distance,
+       relationshipCategory,
+       COUNT(paper) AS recentPapers,
+       AVG(paper.citationCount) AS avgCitations,
+       COLLECT(paper.title)[0..3] AS samplePapers
+ORDER BY (3.0/distance) + (recentPapers * 0.1) + (avgCitations * 0.01) DESC
+LIMIT 15;
+
+// Expert finder based on knowledge domain
+MATCH (person:Person)-[:HAS_EXPERTISE]->(skill:Skill)
+WHERE skill.domain = 'Data Science'
+WITH person, COUNT(skill) AS skillCount, COLLECT(skill.name) AS skills
+
+MATCH (person)-[:AUTHORED]->(publication:Publication)
+OPTIONAL MATCH (publication)-[:CITED_BY]->(citing:Publication)
+WITH person, skillCount, skills,
+     COUNT(publication) AS publicationCount,
+     COUNT(citing) AS totalCitations
+
+MATCH (person)-[:WORKED_ON]->(project:Project)
+WHERE project.status = 'completed' AND project.domain = 'Data Science'
+WITH person, skillCount, skills, publicationCount, totalCitations,
+     COUNT(project) AS completedProjects,
+     AVG(project.successRating) AS avgProjectSuccess
+
+RETURN person.name,
+       person.department,
+       skillCount,
+       skills,
+       publicationCount,
+       totalCitations,
+       completedProjects,
+       avgProjectSuccess,
+       (skillCount * 2 + publicationCount * 3 + totalCitations * 0.1 +
+        completedProjects * 2 + avgProjectSuccess * 5) AS expertiseScore
+ORDER BY expertiseScore DESC;
+```
+
+## Performance Optimization and Best Practices
+
+### Query Optimization Strategies
+
+```cypher title="Performance-optimized query patterns"
+// Use indexes and constraints effectively
+CREATE INDEX FOR (p:Person) ON (p.email);
+CREATE INDEX FOR (p:Product) ON (p.sku);
+CREATE INDEX FOR (o:Order) ON (o.orderDate);
+CREATE CONSTRAINT FOR (u:User) REQUIRE u.userId IS UNIQUE;
+
+// Efficient filtering with early WHERE clauses
+MATCH (customer:Customer)
+WHERE customer.status = 'active'
+  AND customer.registrationDate >= date('2024-01-01')
+MATCH (customer)-[:PLACED_ORDER]->(order:Order)
+WHERE order.total > 100
+RETURN customer.name, COUNT(order) AS largeOrders;
+
+// Use LIMIT to control result size
+MATCH (product:Product)
+WHERE product.category = 'Electronics'
+RETURN product.name, product.price
+ORDER BY product.price DESC
+LIMIT 20;
+
+// Profile queries to identify bottlenecks
+PROFILE
+MATCH (user:User)-[:FOLLOWS]->(followed:User)-[:POSTED]->(post:Post)
+WHERE user.userId = 'user123'
+  AND post.createdAt >= datetime() - duration('P7D')
+RETURN COUNT(post) AS recentPosts;
+```
+
+### Data Modeling Best Practices
+
+```cypher title="Optimal graph data modeling patterns"
+// Model frequently queried patterns efficiently
+// Good: Direct relationship for common queries
+CREATE (user:User)-[:PURCHASED {date: date(), amount: 99.99}]->(product:Product);
+
+// Avoid: Deep hierarchies for frequently accessed data
+// Instead of: User -> Profile -> Preferences -> Setting
+// Use: User -> UserSettings (denormalized when appropriate)
+
+// Use appropriate data types and constraints
+CREATE CONSTRAINT FOR (p:Product) REQUIRE p.sku IS UNIQUE;
+CREATE CONSTRAINT FOR (u:User) REQUIRE u.email IS UNIQUE;
+CREATE INDEX FOR (o:Order) ON (o.orderDate, o.status);
+
+// Model many-to-many relationships properly
+CREATE (user:User {userId: 'u1'})-[:HAS_ROLE {assignedDate: date()}]->(role:Role {name: 'admin'});
+```
+
+### Memory and Performance Monitoring
+
+```cypher title="Query performance analysis and monitoring"
+// Monitor query execution plans
+EXPLAIN
+MATCH (customer:Customer)-[:PLACED_ORDER]->(order:Order)
+WHERE customer.tier = 'premium' AND order.total > 500
+RETURN customer.name, SUM(order.total) AS totalSpent;
+
+// Identify expensive operations
+PROFILE
+MATCH (user:User)
+WHERE user.email =~ '.*@company\\.com'
+OPTIONAL MATCH (user)-[:PURCHASED]->(product:Product)
+RETURN user.name, COUNT(product) AS purchases;
+
+// Optimize memory usage with pagination
+MATCH (product:Product)
+WHERE product.category = 'Electronics'
+RETURN product.name, product.price
+ORDER BY product.price
+SKIP 100 LIMIT 50;
+```
+
+<BackToTop />
