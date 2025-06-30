@@ -1,0 +1,1267 @@
+import BackToTop from "@/components/BackToTop";
+
+# Frontend Setup with React and TailwindCSS
+
+## Introduction
+
+In this module, we'll set up the frontend of our online learning platform using React.js and TailwindCSS. React is a popular JavaScript library for building user interfaces, and TailwindCSS is a utility-first CSS framework that allows for rapid UI development.
+
+## Setting Up a React Project
+
+We'll use Create React App to set up our project:
+
+```bash
+# Create a new React application
+npx create-react-app learning-platform-frontend
+cd learning-platform-frontend
+```
+
+## Installing Dependencies
+
+Let's install the necessary dependencies for our project:
+
+```bash
+# Install TailwindCSS
+npm install -D tailwindcss postcss autoprefixer
+
+# Install React Router for navigation
+npm install react-router-dom
+
+# Install Axios for API calls
+npm install axios
+
+# Install formik and yup for form handling and validation
+npm install formik yup
+
+# Install JWT decode for working with JWT tokens
+npm install jwt-decode
+
+# Install React Icons for UI icons
+npm install react-icons
+```
+
+## Configuring TailwindCSS
+
+Initialize TailwindCSS:
+
+```bash
+npx tailwindcss init -p
+```
+
+Update the `tailwind.config.js` file:
+
+```javascript title="tailwind.config.js"
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: ["./src/**/*.{js,jsx,ts,tsx}"],
+  theme: {
+    extend: {
+      colors: {
+        primary: {
+          50: "#f0f9ff",
+          100: "#e0f2fe",
+          200: "#bae6fd",
+          300: "#7dd3fc",
+          400: "#38bdf8",
+          500: "#0ea5e9",
+          600: "#0284c7",
+          700: "#0369a1",
+          800: "#075985",
+          900: "#0c4a6e",
+        },
+        secondary: {
+          50: "#f5f3ff",
+          100: "#ede9fe",
+          200: "#ddd6fe",
+          300: "#c4b5fd",
+          400: "#a78bfa",
+          500: "#8b5cf6",
+          600: "#7c3aed",
+          700: "#6d28d9",
+          800: "#5b21b6",
+          900: "#4c1d95",
+        },
+      },
+      fontFamily: {
+        sans: ["Inter", "sans-serif"],
+      },
+    },
+  },
+  plugins: [],
+};
+```
+
+Update the `src/index.css` file:
+
+```css title="src/index.css"
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-gray-50 text-gray-900;
+  }
+
+  h1 {
+    @apply text-3xl font-bold mb-4;
+  }
+
+  h2 {
+    @apply text-2xl font-bold mb-3;
+  }
+
+  h3 {
+    @apply text-xl font-bold mb-2;
+  }
+
+  a {
+    @apply text-primary-600 hover:text-primary-800 transition-colors;
+  }
+
+  button,
+  .button {
+    @apply px-4 py-2 rounded-md font-medium transition-colors;
+  }
+
+  .btn-primary {
+    @apply bg-primary-600 text-white hover:bg-primary-700;
+  }
+
+  .btn-secondary {
+    @apply bg-secondary-600 text-white hover:bg-secondary-700;
+  }
+
+  .btn-outline {
+    @apply border border-gray-300 hover:bg-gray-100;
+  }
+}
+```
+
+## Project Structure
+
+Let's organize our project structure:
+
+```
+src/
+├── assets/          # Static assets like images and icons
+├── components/      # Reusable UI components
+│   ├── common/      # Common UI components (buttons, inputs, etc.)
+│   ├── layout/      # Layout components (header, footer, sidebar)
+│   └── course/      # Course-specific components
+├── context/         # React context providers
+├── hooks/           # Custom React hooks
+├── pages/           # Page components
+├── services/        # API services
+├── utils/           # Utility functions
+└── App.js           # Main app component
+```
+
+Let's create these directories:
+
+```bash
+mkdir -p src/assets src/components/common src/components/layout src/components/course src/context src/hooks src/pages src/services src/utils
+```
+
+<BackToTop />
+
+## Setting Up API Service
+
+Let's create a service to handle API calls to our backend:
+
+```javascript
+// src/services/api.js
+import axios from "axios";
+
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8080/api";
+
+// Create axios instance
+const api = axios.create({
+  baseURL: API_URL,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
+// Add request interceptor for authentication
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      config.headers["Authorization"] = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Add response interceptor for handling token expiration
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      // Clear token and redirect to login
+      localStorage.removeItem("token");
+      window.location.href = "/login";
+    }
+    return Promise.reject(error);
+  }
+);
+
+export default api;
+```
+
+<BackToTop />
+
+## Authentication Service
+
+Create an authentication service:
+
+```javascript
+// src/services/authService.js
+import api from "./api";
+import jwtDecode from "jwt-decode";
+
+const AUTH_TOKEN_KEY = "token";
+const USER_INFO_KEY = "userInfo";
+
+const AuthService = {
+  login: async (credentials) => {
+    const response = await api.post("/auth/login", credentials);
+    const { token, user } = response.data;
+
+    // Store token and user info
+    localStorage.setItem(AUTH_TOKEN_KEY, token);
+    localStorage.setItem(USER_INFO_KEY, JSON.stringify(user));
+
+    return user;
+  },
+
+  register: async (userData) => {
+    const response = await api.post("/auth/register", userData);
+    return response.data;
+  },
+
+  logout: () => {
+    localStorage.removeItem(AUTH_TOKEN_KEY);
+    localStorage.removeItem(USER_INFO_KEY);
+  },
+
+  getCurrentUser: () => {
+    const userInfo = localStorage.getItem(USER_INFO_KEY);
+    return userInfo ? JSON.parse(userInfo) : null;
+  },
+
+  isAuthenticated: () => {
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    if (!token) return false;
+
+    try {
+      // Check if token is expired
+      const decoded = jwtDecode(token);
+      const currentTime = Date.now() / 1000;
+
+      return decoded.exp > currentTime;
+    } catch (err) {
+      return false;
+    }
+  },
+
+  hasRole: (role) => {
+    const user = AuthService.getCurrentUser();
+    return user && user.roles && user.roles.includes(role);
+  },
+
+  getToken: () => {
+    return localStorage.getItem(AUTH_TOKEN_KEY);
+  },
+};
+
+export default AuthService;
+```
+
+<BackToTop />
+
+## Course Service
+
+Create a service to handle course-related API calls:
+
+```javascript
+// src/services/courseService.js
+import api from "./api";
+
+const CourseService = {
+  // Get all published courses
+  getAllCourses: async () => {
+    const response = await api.get("/courses");
+    return response.data;
+  },
+
+  // Get a single course by ID
+  getCourseById: async (id) => {
+    const response = await api.get(`/courses/${id}`);
+    return response.data;
+  },
+
+  // Get courses created by an instructor
+  getInstructorCourses: async () => {
+    const response = await api.get("/courses/instructor");
+    return response.data;
+  },
+
+  // Create a new course
+  createCourse: async (courseData) => {
+    const response = await api.post("/courses", courseData);
+    return response.data;
+  },
+
+  // Update a course
+  updateCourse: async (id, courseData) => {
+    const response = await api.put(`/courses/${id}`, courseData);
+    return response.data;
+  },
+
+  // Delete a course
+  deleteCourse: async (id) => {
+    const response = await api.delete(`/courses/${id}`);
+    return response.data;
+  },
+
+  // Enroll in a course
+  enrollInCourse: async (courseId) => {
+    const response = await api.post("/enrollments", { courseId });
+    return response.data;
+  },
+
+  // Get user enrollments
+  getUserEnrollments: async () => {
+    const response = await api.get("/enrollments/user");
+    return response.data;
+  },
+};
+
+export default CourseService;
+```
+
+<BackToTop />
+
+## Auth Context
+
+Let's create an authentication context to manage auth state:
+
+```javascript
+// src/context/AuthContext.js
+import React, { createContext, useState, useEffect, useContext } from "react";
+import AuthService from "../services/authService";
+
+const AuthContext = createContext();
+
+export const useAuth = () => useContext(AuthContext);
+
+export const AuthProvider = ({ children }) => {
+  const [currentUser, setCurrentUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Initialize auth state
+    const user = AuthService.getCurrentUser();
+    setCurrentUser(user);
+    setLoading(false);
+  }, []);
+
+  const login = async (credentials) => {
+    try {
+      const user = await AuthService.login(credentials);
+      setCurrentUser(user);
+      return user;
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const register = async (userData) => {
+    try {
+      const result = await AuthService.register(userData);
+      return result;
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const logout = () => {
+    AuthService.logout();
+    setCurrentUser(null);
+  };
+
+  const hasRole = (role) => {
+    return currentUser && currentUser.roles && currentUser.roles.includes(role);
+  };
+
+  const value = {
+    currentUser,
+    isAuthenticated: !!currentUser,
+    loading,
+    login,
+    register,
+    logout,
+    hasRole,
+  };
+
+  return (
+    <AuthContext.Provider value={value}>
+      {!loading && children}
+    </AuthContext.Provider>
+  );
+};
+```
+
+<BackToTop />
+
+## Common Components
+
+Let's create some common components that we'll use throughout the application:
+
+### Button Component
+
+```jsx
+// src/components/common/Button.jsx
+import React from "react";
+import PropTypes from "prop-types";
+
+const Button = ({
+  children,
+  variant = "primary",
+  size = "md",
+  type = "button",
+  className = "",
+  fullWidth = false,
+  disabled = false,
+  onClick,
+  ...props
+}) => {
+  const baseClasses =
+    "rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2";
+
+  const variants = {
+    primary:
+      "bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500",
+    secondary:
+      "bg-secondary-600 text-white hover:bg-secondary-700 focus:ring-secondary-500",
+    outline:
+      "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:ring-primary-500",
+    danger: "bg-red-600 text-white hover:bg-red-700 focus:ring-red-500",
+    success: "bg-green-600 text-white hover:bg-green-700 focus:ring-green-500",
+  };
+
+  const sizes = {
+    sm: "px-2 py-1 text-sm",
+    md: "px-4 py-2",
+    lg: "px-6 py-3 text-lg",
+  };
+
+  const widthClasses = fullWidth ? "w-full" : "";
+  const disabledClasses = disabled ? "opacity-50 cursor-not-allowed" : "";
+
+  const buttonClasses = `${baseClasses} ${variants[variant]} ${sizes[size]} ${widthClasses} ${disabledClasses} ${className}`;
+
+  return (
+    <button
+      type={type}
+      className={buttonClasses}
+      disabled={disabled}
+      onClick={onClick}
+      {...props}
+    >
+      {children}
+    </button>
+  );
+};
+
+Button.propTypes = {
+  children: PropTypes.node.isRequired,
+  variant: PropTypes.oneOf([
+    "primary",
+    "secondary",
+    "outline",
+    "danger",
+    "success",
+  ]),
+  size: PropTypes.oneOf(["sm", "md", "lg"]),
+  type: PropTypes.oneOf(["button", "submit", "reset"]),
+  className: PropTypes.string,
+  fullWidth: PropTypes.bool,
+  disabled: PropTypes.bool,
+  onClick: PropTypes.func,
+};
+
+export default Button;
+```
+
+<BackToTop />
+
+### Input Component
+
+```jsx
+// src/components/common/Input.jsx
+import React from "react";
+import PropTypes from "prop-types";
+
+const Input = ({
+  id,
+  name,
+  type = "text",
+  label,
+  placeholder,
+  value,
+  onChange,
+  onBlur,
+  error,
+  touched,
+  required = false,
+  disabled = false,
+  className = "",
+  ...props
+}) => {
+  const baseInputClasses =
+    "block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm";
+  const errorClasses = touched && error ? "border-red-300" : "border-gray-300";
+  const disabledClasses = disabled
+    ? "bg-gray-100 cursor-not-allowed"
+    : "bg-white";
+
+  const inputClasses = `${baseInputClasses} ${errorClasses} ${disabledClasses} ${className}`;
+
+  return (
+    <div className="mb-4">
+      {label && (
+        <label
+          htmlFor={id}
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
+          {label} {required && <span className="text-red-500">*</span>}
+        </label>
+      )}
+
+      <input
+        id={id}
+        name={name}
+        type={type}
+        placeholder={placeholder}
+        value={value}
+        onChange={onChange}
+        onBlur={onBlur}
+        disabled={disabled}
+        className={inputClasses}
+        required={required}
+        {...props}
+      />
+
+      {touched && error && <p className="mt-1 text-sm text-red-600">{error}</p>}
+    </div>
+  );
+};
+
+Input.propTypes = {
+  id: PropTypes.string.isRequired,
+  name: PropTypes.string.isRequired,
+  type: PropTypes.string,
+  label: PropTypes.string,
+  placeholder: PropTypes.string,
+  value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  onChange: PropTypes.func.isRequired,
+  onBlur: PropTypes.func,
+  error: PropTypes.string,
+  touched: PropTypes.bool,
+  required: PropTypes.bool,
+  disabled: PropTypes.bool,
+  className: PropTypes.string,
+};
+
+export default Input;
+```
+
+<BackToTop />
+
+### Card Component
+
+```jsx
+// src/components/common/Card.jsx
+import React from "react";
+import PropTypes from "prop-types";
+
+const Card = ({
+  children,
+  title,
+  subtitle,
+  className = "",
+  headerClassName = "",
+  bodyClassName = "",
+  footerClassName = "",
+  footer,
+  ...props
+}) => {
+  return (
+    <div
+      className={`bg-white rounded-lg shadow-md overflow-hidden ${className}`}
+      {...props}
+    >
+      {(title || subtitle) && (
+        <div
+          className={`px-6 py-4 border-b border-gray-200 ${headerClassName}`}
+        >
+          {title && (
+            <h3 className="text-lg font-medium text-gray-900">{title}</h3>
+          )}
+          {subtitle && <p className="mt-1 text-sm text-gray-500">{subtitle}</p>}
+        </div>
+      )}
+
+      <div className={`px-6 py-4 ${bodyClassName}`}>{children}</div>
+
+      {footer && (
+        <div
+          className={`px-6 py-4 bg-gray-50 border-t border-gray-200 ${footerClassName}`}
+        >
+          {footer}
+        </div>
+      )}
+    </div>
+  );
+};
+
+Card.propTypes = {
+  children: PropTypes.node.isRequired,
+  title: PropTypes.node,
+  subtitle: PropTypes.node,
+  className: PropTypes.string,
+  headerClassName: PropTypes.string,
+  bodyClassName: PropTypes.string,
+  footerClassName: PropTypes.string,
+  footer: PropTypes.node,
+};
+
+export default Card;
+```
+
+<BackToTop />
+
+## Layout Components
+
+Let's create layout components for our application:
+
+### Navbar Component
+
+```jsx
+// src/components/layout/Navbar.jsx
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  FaBars,
+  FaTimes,
+  FaUser,
+  FaSignOutAlt,
+  FaBook,
+  FaGraduationCap,
+} from "react-icons/fa";
+import { useAuth } from "../../context/AuthContext";
+
+const Navbar = () => {
+  const { currentUser, isAuthenticated, logout, hasRole } = useAuth();
+  const navigate = useNavigate();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+
+  const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
+  const toggleProfile = () => setIsProfileOpen(!isProfileOpen);
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
+
+  const isInstructor = hasRole("ROLE_INSTRUCTOR");
+  const isAdmin = hasRole("ROLE_ADMIN");
+
+  return (
+    <nav className="bg-white shadow-sm">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between h-16">
+          <div className="flex">
+            <div className="flex-shrink-0 flex items-center">
+              <Link to="/" className="text-2xl font-bold text-primary-600">
+                LearningPlatform
+              </Link>
+            </div>
+
+            <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
+              <Link
+                to="/"
+                className="border-transparent text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+              >
+                Home
+              </Link>
+              <Link
+                to="/courses"
+                className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+              >
+                Courses
+              </Link>
+              {isInstructor && (
+                <Link
+                  to="/instructor/courses"
+                  className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                >
+                  My Courses
+                </Link>
+              )}
+              {isAdmin && (
+                <Link
+                  to="/admin/dashboard"
+                  className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                >
+                  Admin
+                </Link>
+              )}
+            </div>
+          </div>
+
+          <div className="hidden sm:ml-6 sm:flex sm:items-center">
+            {isAuthenticated ? (
+              <div className="ml-3 relative">
+                <div>
+                  <button
+                    onClick={toggleProfile}
+                    className="bg-white rounded-full flex text-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                    id="user-menu-button"
+                    aria-expanded="false"
+                    aria-haspopup="true"
+                  >
+                    <span className="sr-only">Open user menu</span>
+                    <div className="h-8 w-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-700">
+                      <FaUser />
+                    </div>
+                  </button>
+                </div>
+
+                {isProfileOpen && (
+                  <div
+                    className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-10"
+                    role="menu"
+                    aria-orientation="vertical"
+                    aria-labelledby="user-menu-button"
+                    tabIndex="-1"
+                  >
+                    <Link
+                      to="/profile"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      role="menuitem"
+                    >
+                      <span className="flex items-center">
+                        <FaUser className="mr-2" /> Profile
+                      </span>
+                    </Link>
+                    <Link
+                      to="/my-courses"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      role="menuitem"
+                    >
+                      <span className="flex items-center">
+                        <FaGraduationCap className="mr-2" /> My Learning
+                      </span>
+                    </Link>
+                    <button
+                      onClick={handleLogout}
+                      className="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      role="menuitem"
+                    >
+                      <span className="flex items-center">
+                        <FaSignOutAlt className="mr-2" /> Sign out
+                      </span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex space-x-4">
+                <Link
+                  to="/login"
+                  className="text-gray-500 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+                >
+                  Login
+                </Link>
+                <Link
+                  to="/register"
+                  className="bg-primary-600 text-white hover:bg-primary-700 px-3 py-2 rounded-md text-sm font-medium"
+                >
+                  Register
+                </Link>
+              </div>
+            )}
+          </div>
+
+          <div className="-mr-2 flex items-center sm:hidden">
+            <button
+              onClick={toggleMenu}
+              className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500"
+            >
+              <span className="sr-only">Open main menu</span>
+              {isMenuOpen ? (
+                <FaTimes className="block h-6 w-6" />
+              ) : (
+                <FaBars className="block h-6 w-6" />
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile menu */}
+      {isMenuOpen && (
+        <div className="sm:hidden">
+          <div className="pt-2 pb-3 space-y-1">
+            <Link
+              to="/"
+              className="bg-primary-50 border-primary-500 text-primary-700 block pl-3 pr-4 py-2 border-l-4 text-base font-medium"
+            >
+              Home
+            </Link>
+            <Link
+              to="/courses"
+              className="border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700 block pl-3 pr-4 py-2 border-l-4 text-base font-medium"
+            >
+              Courses
+            </Link>
+            {isInstructor && (
+              <Link
+                to="/instructor/courses"
+                className="border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700 block pl-3 pr-4 py-2 border-l-4 text-base font-medium"
+              >
+                My Courses
+              </Link>
+            )}
+            {isAdmin && (
+              <Link
+                to="/admin/dashboard"
+                className="border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700 block pl-3 pr-4 py-2 border-l-4 text-base font-medium"
+              >
+                Admin
+              </Link>
+            )}
+          </div>
+          <div className="pt-4 pb-3 border-t border-gray-200">
+            {isAuthenticated ? (
+              <>
+                <div className="flex items-center px-4">
+                  <div className="flex-shrink-0">
+                    <div className="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center text-primary-700">
+                      <FaUser />
+                    </div>
+                  </div>
+                  <div className="ml-3">
+                    <div className="text-base font-medium text-gray-800">
+                      {currentUser?.name || currentUser?.username}
+                    </div>
+                    <div className="text-sm font-medium text-gray-500">
+                      {currentUser?.email}
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-3 space-y-1">
+                  <Link
+                    to="/profile"
+                    className="block px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+                  >
+                    <span className="flex items-center">
+                      <FaUser className="mr-2" /> Profile
+                    </span>
+                  </Link>
+                  <Link
+                    to="/my-courses"
+                    className="block px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+                  >
+                    <span className="flex items-center">
+                      <FaGraduationCap className="mr-2" /> My Learning
+                    </span>
+                  </Link>
+                  <button
+                    onClick={handleLogout}
+                    className="w-full text-left block px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+                  >
+                    <span className="flex items-center">
+                      <FaSignOutAlt className="mr-2" /> Sign out
+                    </span>
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="mt-3 space-y-1">
+                <Link
+                  to="/login"
+                  className="block px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+                >
+                  Login
+                </Link>
+                <Link
+                  to="/register"
+                  className="block px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+                >
+                  Register
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </nav>
+  );
+};
+
+export default Navbar;
+```
+
+<BackToTop />
+
+### Footer Component
+
+```jsx
+// src/components/layout/Footer.jsx
+import React from "react";
+import { Link } from "react-router-dom";
+import { FaFacebook, FaTwitter, FaLinkedin, FaYoutube } from "react-icons/fa";
+
+const Footer = () => {
+  const currentYear = new Date().getFullYear();
+
+  return (
+    <footer className="bg-gray-800 text-white">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+          <div>
+            <h3 className="text-xl font-bold mb-4">Learning Platform</h3>
+            <p className="text-gray-300">
+              Empower your future with our online learning platform. Access
+              high-quality courses anytime, anywhere.
+            </p>
+          </div>
+
+          <div>
+            <h4 className="text-lg font-semibold mb-4">Quick Links</h4>
+            <ul className="space-y-2">
+              <li>
+                <Link
+                  to="/"
+                  className="text-gray-300 hover:text-white transition-colors"
+                >
+                  Home
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/courses"
+                  className="text-gray-300 hover:text-white transition-colors"
+                >
+                  Courses
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/about"
+                  className="text-gray-300 hover:text-white transition-colors"
+                >
+                  About Us
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/contact"
+                  className="text-gray-300 hover:text-white transition-colors"
+                >
+                  Contact
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="text-lg font-semibold mb-4">Legal</h4>
+            <ul className="space-y-2">
+              <li>
+                <Link
+                  to="/terms"
+                  className="text-gray-300 hover:text-white transition-colors"
+                >
+                  Terms of Service
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/privacy"
+                  className="text-gray-300 hover:text-white transition-colors"
+                >
+                  Privacy Policy
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/cookies"
+                  className="text-gray-300 hover:text-white transition-colors"
+                >
+                  Cookie Policy
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="text-lg font-semibold mb-4">Connect With Us</h4>
+            <div className="flex space-x-4">
+              <a
+                href="https://facebook.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-300 hover:text-white transition-colors"
+              >
+                <FaFacebook size={24} />
+              </a>
+              <a
+                href="https://twitter.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-300 hover:text-white transition-colors"
+              >
+                <FaTwitter size={24} />
+              </a>
+              <a
+                href="https://linkedin.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-300 hover:text-white transition-colors"
+              >
+                <FaLinkedin size={24} />
+              </a>
+              <a
+                href="https://youtube.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-300 hover:text-white transition-colors"
+              >
+                <FaYoutube size={24} />
+              </a>
+            </div>
+            <div className="mt-4">
+              <h4 className="text-lg font-semibold mb-2">
+                Subscribe to Our Newsletter
+              </h4>
+              <div className="flex">
+                <input
+                  type="email"
+                  placeholder="Your email"
+                  className="px-3 py-2 bg-gray-700 text-white rounded-l-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+                <button className="bg-primary-600 hover:bg-primary-700 px-4 py-2 rounded-r-md transition-colors">
+                  Subscribe
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-8 pt-8 border-t border-gray-700 text-gray-400 text-sm text-center">
+          <p>&copy; {currentYear} Learning Platform. All rights reserved.</p>
+        </div>
+      </div>
+    </footer>
+  );
+};
+
+export default Footer;
+```
+
+### Layout Component
+
+```jsx
+// src/components/layout/Layout.jsx
+import React from "react";
+import PropTypes from "prop-types";
+import Navbar from "./Navbar";
+import Footer from "./Footer";
+
+const Layout = ({ children }) => {
+  return (
+    <div className="flex flex-col min-h-screen">
+      <Navbar />
+      <main className="flex-grow">{children}</main>
+      <Footer />
+    </div>
+  );
+};
+
+Layout.propTypes = {
+  children: PropTypes.node.isRequired,
+};
+
+export default Layout;
+```
+
+<BackToTop />
+
+## Protected Route Component
+
+Let's create a protected route component to handle authentication:
+
+```jsx
+// src/components/common/ProtectedRoute.jsx
+import React from "react";
+import { Navigate } from "react-router-dom";
+import PropTypes from "prop-types";
+import { useAuth } from "../../context/AuthContext";
+
+const ProtectedRoute = ({ children, requiredRoles = [] }) => {
+  const { isAuthenticated, hasRole, loading } = useAuth();
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
+
+  // If specific roles are required, check if user has any of them
+  if (requiredRoles.length > 0) {
+    const hasRequiredRole = requiredRoles.some((role) => hasRole(role));
+    if (!hasRequiredRole) {
+      return <Navigate to="/unauthorized" />;
+    }
+  }
+
+  return children;
+};
+
+ProtectedRoute.propTypes = {
+  children: PropTypes.node.isRequired,
+  requiredRoles: PropTypes.arrayOf(PropTypes.string),
+};
+
+export default ProtectedRoute;
+```
+
+<BackToTop />
+
+## Setting Up App.js and Routes
+
+Let's set up our main App component with routing:
+
+```jsx
+// src/App.js
+import React from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "./context/AuthContext";
+import Layout from "./components/layout/Layout";
+import ProtectedRoute from "./components/common/ProtectedRoute";
+
+// Import pages (we'll create these next)
+import HomePage from "./pages/HomePage";
+import CoursesPage from "./pages/CoursesPage";
+import CourseDetailsPage from "./pages/CourseDetailsPage";
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
+import ProfilePage from "./pages/ProfilePage";
+import MyCoursesPage from "./pages/MyCoursesPage";
+import InstructorCoursesPage from "./pages/InstructorCoursesPage";
+import CourseEditorPage from "./pages/CourseEditorPage";
+import AdminDashboardPage from "./pages/AdminDashboardPage";
+import UnauthorizedPage from "./pages/UnauthorizedPage";
+import NotFoundPage from "./pages/NotFoundPage";
+
+function App() {
+  return (
+    <Router>
+      <AuthProvider>
+        <Layout>
+          <Routes>
+            {/* Public routes */}
+            <Route path="/" element={<HomePage />} />
+            <Route path="/courses" element={<CoursesPage />} />
+            <Route path="/courses/:id" element={<CourseDetailsPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/unauthorized" element={<UnauthorizedPage />} />
+
+            {/* Protected routes */}
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <ProfilePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/my-courses"
+              element={
+                <ProtectedRoute>
+                  <MyCoursesPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Instructor routes */}
+            <Route
+              path="/instructor/courses"
+              element={
+                <ProtectedRoute requiredRoles={["ROLE_INSTRUCTOR"]}>
+                  <InstructorCoursesPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/instructor/courses/create"
+              element={
+                <ProtectedRoute requiredRoles={["ROLE_INSTRUCTOR"]}>
+                  <CourseEditorPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/instructor/courses/edit/:id"
+              element={
+                <ProtectedRoute requiredRoles={["ROLE_INSTRUCTOR"]}>
+                  <CourseEditorPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Admin routes */}
+            <Route
+              path="/admin/dashboard"
+              element={
+                <ProtectedRoute requiredRoles={["ROLE_ADMIN"]}>
+                  <AdminDashboardPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Catch-all */}
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        </Layout>
+      </AuthProvider>
+    </Router>
+  );
+}
+
+export default App;
+```
+
+## Next Steps
+
+In the next module, we'll create the page components that we've referenced in our Routes, starting with the auth pages (Login and Register) and the home page. We'll then implement the course-related pages and features.
+
+[Next: Frontend Pages Implementation →](/proj-online-learning-platform-website/12-frontend-pages-implementation)
+
+<BackToTop />
