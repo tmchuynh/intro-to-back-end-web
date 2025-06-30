@@ -1,0 +1,1015 @@
+import BackToTop from "@/components/BackToTop";
+
+# Cassandra Query Language (CQL)
+
+## Table of Contents
+
+## Introduction
+
+Cassandra Query Language (CQL) is a SQL-like query language designed specifically for Apache Cassandra, a highly scalable, distributed NoSQL database system. Developed by DataStax and the Apache Cassandra community, CQL provides a familiar interface for developers who have experience with SQL while accommodating the unique characteristics of a distributed, column-family database. Unlike traditional relational databases, CQL operates on a data model optimized for high availability, fault tolerance, and linear scalability across multiple nodes.
+
+CQL is essential for developers working with large-scale, distributed applications that require high availability and can tolerate eventual consistency. Cassandra excels at handling massive amounts of data across multiple data centers with no single point of failure. Whether you're building real-time analytics platforms, IoT data collection systems, messaging applications, or time-series databases, CQL provides the tools to efficiently store, retrieve, and manipulate data in a distributed environment.
+
+The language bridges the gap between the familiar SQL syntax and the distributed nature of Cassandra, making it accessible to developers while leveraging Cassandra's strengths in handling write-heavy workloads, providing linear scalability, and maintaining high availability even during node failures. CQL abstracts much of the complexity involved in working with distributed data while still allowing developers to optimize for Cassandra's specific data modeling requirements.
+
+### Real-World Applications
+
+CQL powers many modern applications that require massive scale and high availability:
+
+- Social media platforms use Cassandra for user timelines, activity feeds, and messaging systems that need to handle millions of concurrent users
+- IoT and sensor networks leverage CQL for collecting and analyzing time-series data from thousands of devices in real-time
+- Financial services employ Cassandra for fraud detection, real-time analytics, and transaction processing across global operations
+- E-commerce platforms utilize CQL for product catalogs, recommendation engines, and customer activity tracking
+- Gaming companies rely on Cassandra for player profiles, leaderboards, and real-time game state management
+- Telecommunications providers use CQL for network monitoring, call detail records, and subscriber management
+- Media and entertainment companies leverage Cassandra for content delivery, user preferences, and viewing analytics
+- Healthcare systems employ CQL for patient data, medical records, and research data that require high availability
+
+### Key Concepts
+
+- **Keyspace**: The top-level namespace in Cassandra, similar to a database in relational systems. Contains tables and defines replication strategy.
+- **Table**: A collection of related data organized in rows and columns, similar to SQL tables but optimized for distributed storage.
+- **Column Family**: The original term for tables in Cassandra, reflecting the column-oriented storage model.
+- **Partition Key**: One or more columns that determine how data is distributed across nodes in the cluster. Critical for performance and scalability.
+- **Clustering Key**: Additional columns that determine the sort order of rows within a partition and enable range queries.
+- **Primary Key**: Combination of partition key and clustering key that uniquely identifies a row within a table.
+- **Row**: A collection of columns identified by a unique primary key, representing a single entity or record.
+- **Column**: A name-value pair with a timestamp, representing a single piece of data within a row.
+- **Replication Factor**: The number of copies of data maintained across different nodes for fault tolerance and availability.
+- **Consistency Level**: Determines how many replicas must respond to a read or write operation before it's considered successful.
+- **Token**: A hash value derived from the partition key that determines which nodes store the data.
+- **Node**: A single instance of Cassandra running on a server, part of the larger cluster.
+- **Cluster**: A collection of nodes that together form a Cassandra database system.
+- **Data Center**: A logical grouping of nodes, often corresponding to physical locations or availability zones.
+- **Gossip Protocol**: The communication mechanism nodes use to share information about cluster state and topology.
+- **Compaction**: Background process that merges SSTables to optimize storage and improve read performance.
+- **SSTable**: Immutable data files that store sorted data on disk in Cassandra.
+- **Memtable**: In-memory structure that accumulates writes before being flushed to disk as SSTables.
+- **Commit Log**: Write-ahead log that ensures durability by recording all mutations before they're applied.
+- **Tombstone**: Marker that indicates deleted data, used in the distributed deletion process.
+- **Time-to-Live (TTL)**: Automatic expiration mechanism for data, useful for temporary or time-sensitive information.
+
+### Benefits of CQL
+
+- **Familiar Syntax**: SQL-like syntax makes it accessible to developers with relational database experience while leveraging NoSQL advantages.
+- **Linear Scalability**: Ability to scale horizontally by adding more nodes without degrading performance or requiring downtime.
+- **High Availability**: No single point of failure with automatic replication and failover capabilities across multiple data centers.
+- **Fault Tolerance**: Continues operating even when nodes fail, with automatic recovery and data repair mechanisms.
+- **Flexible Data Modeling**: Schema-flexible design allows for denormalized data models optimized for specific query patterns.
+- **High Write Performance**: Optimized for write-heavy workloads with excellent performance even under heavy concurrent writes.
+- **Multi-Data Center Support**: Built-in support for geographically distributed deployments with configurable consistency levels.
+- **Tunable Consistency**: Choice between strong and eventual consistency based on application requirements.
+- **Time-Series Optimization**: Natural fit for time-series data with built-in support for time-based partitioning and TTL.
+- **No Single Point of Failure**: Peer-to-peer architecture eliminates master-slave bottlenecks and single points of failure.
+- **Automatic Data Distribution**: Transparent data distribution across cluster nodes based on partition keys.
+- **Incremental Scalability**: Add or remove nodes without application downtime or complex data migration procedures.
+- **Column-Level TTL**: Granular control over data expiration at the individual column level.
+- **Concurrent Operations**: Excellent support for concurrent reads and writes across the distributed cluster.
+- **Integration Ecosystem**: Rich ecosystem of tools and integrations for monitoring, backup, analytics, and development.
+
+## CQL Syntax Fundamentals
+
+CQL syntax is designed to be familiar to SQL developers while accommodating the unique aspects of distributed, column-family databases.
+
+### Basic Syntax Elements
+
+- **`SELECT`**: Retrieves data from tables with support for partition and clustering key optimization
+- **`INSERT`**: Adds new rows to tables with automatic distribution across cluster nodes
+- **`UPDATE`**: Modifies existing data with upsert semantics (creates if not exists)
+- **`DELETE`**: Removes data with tombstone markers for eventual consistency
+- **`CREATE`**: Defines keyspaces, tables, indexes, and other database objects
+- **`ALTER`**: Modifies existing database structures and schema
+- **`DROP`**: Removes database objects like tables, keyspaces, and indexes
+- **`USE`**: Switches the current keyspace context for subsequent operations
+- **Comments**: Single-line comments using `--` or multi-line comments using `/* ... */`
+
+```cql title="Basic CQL syntax elements"
+-- Keyspace selection
+USE ecommerce;
+
+-- Simple data selection
+SELECT * FROM products;
+
+-- Column projection with conditions
+SELECT product_id, name, price FROM products
+WHERE category = 'electronics';
+
+-- Data insertion
+INSERT INTO customers (customer_id, name, email, created_at)
+VALUES (uuid(), 'John Doe', 'john@example.com', toTimestamp(now()));
+
+-- Data updating
+UPDATE products SET price = 299.99, stock = 100
+WHERE product_id = 123e4567-e89b-12d3-a456-426614174000;
+
+-- Multi-line comment
+/*
+This query retrieves customer orders
+with specific filtering criteria
+*/
+```
+
+### Data Types and Collections
+
+```cql title="CQL data types and collection usage"
+-- Basic data types
+CREATE TABLE users (
+    user_id UUID PRIMARY KEY,
+    username TEXT,
+    age INT,
+    balance DECIMAL,
+    is_active BOOLEAN,
+    created_at TIMESTAMP,
+    last_login_ip INET
+);
+
+-- Collection types
+CREATE TABLE user_profiles (
+    user_id UUID PRIMARY KEY,
+    skills SET<TEXT>,                    -- Set collection
+    scores LIST<INT>,                    -- List collection
+    preferences MAP<TEXT, TEXT>,         -- Map collection
+    tags FROZEN<LIST<TEXT>>              -- Frozen collection
+);
+
+-- Working with collections
+INSERT INTO user_profiles (user_id, skills, scores, preferences)
+VALUES (uuid(), {'Java', 'Python', 'CQL'}, [95, 87, 92], {'theme': 'dark', 'lang': 'en'});
+
+-- Updating collections
+UPDATE user_profiles SET skills = skills + {'Cassandra'}
+WHERE user_id = 123e4567-e89b-12d3-a456-426614174000;
+```
+
+## Data Modeling and Schema Design
+
+Effective CQL usage requires understanding Cassandra's distributed data model and query-driven design principles.
+
+### Keyspace Creation and Management
+
+```cql title="Keyspace definition and configuration"
+-- Create keyspace with simple replication
+CREATE KEYSPACE ecommerce
+WITH REPLICATION = {
+    'class': 'SimpleStrategy',
+    'replication_factor': 3
+};
+
+-- Create keyspace with network topology (production)
+CREATE KEYSPACE analytics
+WITH REPLICATION = {
+    'class': 'NetworkTopologyStrategy',
+    'datacenter1': 3,
+    'datacenter2': 2
+} AND DURABLE_WRITES = true;
+
+-- Alter keyspace replication
+ALTER KEYSPACE ecommerce
+WITH REPLICATION = {
+    'class': 'NetworkTopologyStrategy',
+    'us_east': 3,
+    'us_west': 2,
+    'europe': 1
+};
+
+-- Switch to keyspace
+USE ecommerce;
+```
+
+### Table Design Patterns
+
+```cql title="Optimized table design for distributed queries"
+-- Time-series data pattern
+CREATE TABLE sensor_readings (
+    sensor_id UUID,
+    reading_date DATE,
+    reading_time TIMESTAMP,
+    temperature DOUBLE,
+    humidity DOUBLE,
+    battery_level INT,
+    PRIMARY KEY ((sensor_id, reading_date), reading_time)
+) WITH CLUSTERING ORDER BY (reading_time DESC);
+
+-- User activity log pattern
+CREATE TABLE user_activities (
+    user_id UUID,
+    activity_date DATE,
+    activity_time TIMESTAMP,
+    activity_type TEXT,
+    details MAP<TEXT, TEXT>,
+    ip_address INET,
+    PRIMARY KEY ((user_id, activity_date), activity_time)
+) WITH CLUSTERING ORDER BY (activity_time DESC)
+  AND default_time_to_live = 2592000;  -- 30 days TTL
+
+-- Product catalog with denormalization
+CREATE TABLE products_by_category (
+    category TEXT,
+    product_id UUID,
+    name TEXT,
+    price DECIMAL,
+    brand TEXT,
+    rating DOUBLE,
+    tags SET<TEXT>,
+    specifications MAP<TEXT, TEXT>,
+    PRIMARY KEY (category, price, product_id)
+) WITH CLUSTERING ORDER BY (price ASC);
+```
+
+#### Advanced Schema Patterns
+
+```cql title="Complex data modeling patterns"
+-- Materialized view for different query patterns
+CREATE MATERIALIZED VIEW products_by_brand AS
+SELECT category, brand, product_id, name, price, rating
+FROM products_by_category
+WHERE category IS NOT NULL
+  AND brand IS NOT NULL
+  AND product_id IS NOT NULL
+PRIMARY KEY (brand, category, product_id);
+
+-- Counter table for real-time metrics
+CREATE TABLE page_views (
+    page_url TEXT,
+    view_date DATE,
+    view_count COUNTER,
+    PRIMARY KEY (page_url, view_date)
+);
+
+-- User-defined types for complex structures
+CREATE TYPE address (
+    street TEXT,
+    city TEXT,
+    state TEXT,
+    zip_code TEXT,
+    country TEXT
+);
+
+CREATE TABLE customers (
+    customer_id UUID PRIMARY KEY,
+    name TEXT,
+    email TEXT,
+    billing_address FROZEN<address>,
+    shipping_addresses LIST<FROZEN<address>>,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP
+);
+```
+
+## Basic Data Operations
+
+CQL provides comprehensive operations for managing data in a distributed environment with considerations for consistency and performance.
+
+### Data Insertion and Upserts
+
+```cql title="Inserting data with various options"
+-- Basic insertion
+INSERT INTO customers (customer_id, name, email, created_at)
+VALUES (uuid(), 'Alice Johnson', 'alice@example.com', toTimestamp(now()));
+
+-- Insertion with TTL (time to live)
+INSERT INTO session_data (session_id, user_id, data, created_at)
+VALUES (uuid(), 123e4567-e89b-12d3-a456-426614174000, {'cart_items': '5'}, toTimestamp(now()))
+USING TTL 3600;  -- Expires in 1 hour
+
+-- Conditional insertion (lightweight transaction)
+INSERT INTO usernames (username, user_id, created_at)
+VALUES ('alice_j', uuid(), toTimestamp(now()))
+IF NOT EXISTS;
+
+-- Batch insertion for atomic operations
+BEGIN BATCH
+    INSERT INTO customers (customer_id, name, email)
+    VALUES (uuid(), 'Bob Smith', 'bob@example.com');
+    INSERT INTO customer_preferences (customer_id, theme, notifications)
+    VALUES (123e4567-e89b-12d3-a456-426614174000, 'dark', true);
+APPLY BATCH;
+```
+
+#### Bulk Data Loading
+
+```cql title="Efficient bulk data operations"
+-- Prepared statement for bulk loading (typically used with drivers)
+PREPARE insert_order AS
+INSERT INTO orders (order_id, customer_id, order_date, total, status)
+VALUES (?, ?, ?, ?, ?);
+
+-- Batch operations with size limits
+BEGIN UNLOGGED BATCH
+    INSERT INTO orders (order_id, customer_id, order_date, total)
+    VALUES (uuid(), 123e4567-e89b-12d3-a456-426614174000, toTimestamp(now()), 299.99);
+    INSERT INTO order_items (order_id, product_id, quantity, price)
+    VALUES (456e7890-e89b-12d3-a456-426614174000, 789e0123-e89b-12d3-a456-426614174000, 2, 149.99);
+APPLY BATCH;
+
+-- Collection updates
+UPDATE user_profiles SET
+    skills = skills + {'Cassandra', 'CQL'},
+    scores = [95] + scores,
+    preferences['theme'] = 'light'
+WHERE user_id = 123e4567-e89b-12d3-a456-426614174000;
+```
+
+### Data Retrieval and Querying
+
+```cql title="Efficient data retrieval patterns"
+-- Query by partition key (most efficient)
+SELECT * FROM orders
+WHERE customer_id = 123e4567-e89b-12d3-a456-426614174000;
+
+-- Query with clustering key range
+SELECT * FROM sensor_readings
+WHERE sensor_id = 456e7890-e89b-12d3-a456-426614174000
+  AND reading_date = '2024-06-29'
+  AND reading_time >= '2024-06-29 10:00:00'
+  AND reading_time < '2024-06-29 11:00:00';
+
+-- Pagination with token function
+SELECT * FROM products_by_category
+WHERE category = 'electronics'
+  AND TOKEN(category) > TOKEN('electronics_previous_token')
+LIMIT 100;
+
+-- Query with secondary index
+CREATE INDEX ON customers (email);
+SELECT * FROM customers WHERE email = 'alice@example.com';
+```
+
+#### Advanced Query Patterns
+
+```cql title="Complex querying and filtering"
+-- Range queries with clustering columns
+SELECT product_id, name, price FROM products_by_category
+WHERE category = 'electronics'
+  AND price >= 100.00
+  AND price <= 500.00
+ORDER BY price ASC
+LIMIT 20;
+
+-- Collection queries
+SELECT * FROM user_profiles
+WHERE user_id = 123e4567-e89b-12d3-a456-426614174000;
+
+-- Check collection membership
+SELECT * FROM products_by_category
+WHERE category = 'electronics'
+  AND tags CONTAINS 'wireless';
+
+-- Aggregation functions (limited support)
+SELECT COUNT(*) FROM orders
+WHERE customer_id = 123e4567-e89b-12d3-a456-426614174000;
+
+-- Function usage
+SELECT user_id, name, toDate(created_at) AS signup_date
+FROM customers
+WHERE created_at >= '2024-01-01 00:00:00';
+```
+
+### Data Updates and Modifications
+
+```cql title="Data modification operations"
+-- Simple updates
+UPDATE customers SET
+    email = 'newemail@example.com',
+    updated_at = toTimestamp(now())
+WHERE customer_id = 123e4567-e89b-12d3-a456-426614174000;
+
+-- Conditional updates (compare-and-swap)
+UPDATE customers SET email = 'updated@example.com'
+WHERE customer_id = 123e4567-e89b-12d3-a456-426614174000
+IF email = 'old@example.com';
+
+-- TTL updates
+UPDATE session_data USING TTL 7200
+SET data = {'last_page': '/checkout'}
+WHERE session_id = 789e0123-e89b-12d3-a456-426614174000;
+
+-- Counter updates
+UPDATE page_views SET view_count = view_count + 1
+WHERE page_url = '/products/laptop-pro'
+  AND view_date = '2024-06-29';
+```
+
+#### Collection Modifications
+
+```cql title="Advanced collection update operations"
+-- Set operations
+UPDATE user_profiles SET skills = skills + {'Machine Learning'}
+WHERE user_id = 123e4567-e89b-12d3-a456-426614174000;
+
+UPDATE user_profiles SET skills = skills - {'Outdated Skill'}
+WHERE user_id = 123e4567-e89b-12d3-a456-426614174000;
+
+-- List operations
+UPDATE user_profiles SET scores = [100] + scores  -- Prepend
+WHERE user_id = 123e4567-e89b-12d3-a456-426614174000;
+
+UPDATE user_profiles SET scores = scores + [98]   -- Append
+WHERE user_id = 123e4567-e89b-12d3-a456-426614174000;
+
+-- Map operations
+UPDATE user_profiles SET preferences = preferences + {'language': 'Spanish'}
+WHERE user_id = 123e4567-e89b-12d3-a456-426614174000;
+
+UPDATE user_profiles SET preferences = preferences - {'old_setting'}
+WHERE user_id = 123e4567-e89b-12d3-a456-426614174000;
+```
+
+## Time-Series Data and Analytics
+
+Cassandra excels at handling time-series data, making CQL particularly powerful for analytics and monitoring applications.
+
+### Time-Series Table Design
+
+```cql title="Optimized time-series data modeling"
+-- IoT sensor data with time-based partitioning
+CREATE TABLE iot_readings (
+    device_id UUID,
+    reading_date DATE,
+    reading_timestamp TIMESTAMP,
+    sensor_type TEXT,
+    value DOUBLE,
+    units TEXT,
+    location TEXT,
+    PRIMARY KEY ((device_id, reading_date), reading_timestamp, sensor_type)
+) WITH CLUSTERING ORDER BY (reading_timestamp DESC, sensor_type ASC)
+  AND compaction = {'class': 'TimeWindowCompactionStrategy'};
+
+-- Application metrics with bucket-based partitioning
+CREATE TABLE application_metrics (
+    metric_name TEXT,
+    time_bucket TEXT,  -- e.g., '2024-06-29-10' for hourly buckets
+    timestamp TIMESTAMP,
+    value DOUBLE,
+    tags MAP<TEXT, TEXT>,
+    PRIMARY KEY ((metric_name, time_bucket), timestamp)
+) WITH CLUSTERING ORDER BY (timestamp DESC)
+  AND default_time_to_live = 604800;  -- 7 days retention
+
+-- User activity tracking
+CREATE TABLE user_events (
+    user_id UUID,
+    event_date DATE,
+    event_timestamp TIMESTAMP,
+    event_type TEXT,
+    session_id UUID,
+    page_url TEXT,
+    user_agent TEXT,
+    referrer TEXT,
+    properties MAP<TEXT, TEXT>,
+    PRIMARY KEY ((user_id, event_date), event_timestamp)
+) WITH CLUSTERING ORDER BY (event_timestamp DESC);
+```
+
+### Analytics Queries
+
+```cql title="Time-series analytics and aggregation"
+-- Recent sensor readings for a device
+SELECT device_id, reading_timestamp, sensor_type, value, units
+FROM iot_readings
+WHERE device_id = 123e4567-e89b-12d3-a456-426614174000
+  AND reading_date >= '2024-06-29'
+  AND reading_timestamp >= '2024-06-29 10:00:00'
+ORDER BY reading_timestamp DESC
+LIMIT 100;
+
+-- Application metrics for specific time range
+SELECT metric_name, timestamp, value, tags
+FROM application_metrics
+WHERE metric_name = 'response_time'
+  AND time_bucket IN ('2024-06-29-10', '2024-06-29-11', '2024-06-29-12')
+  AND timestamp >= '2024-06-29 10:00:00'
+  AND timestamp < '2024-06-29 13:00:00'
+ORDER BY timestamp DESC;
+
+-- User activity patterns
+SELECT user_id, event_timestamp, event_type, page_url, session_id
+FROM user_events
+WHERE user_id = 456e7890-e89b-12d3-a456-426614174000
+  AND event_date = '2024-06-29'
+ORDER BY event_timestamp DESC;
+```
+
+#### Advanced Time-Series Analysis
+
+```cql title="Complex analytics and data processing"
+-- Temperature anomaly detection setup
+CREATE TABLE temperature_anomalies (
+    sensor_id UUID,
+    detection_date DATE,
+    anomaly_timestamp TIMESTAMP,
+    temperature DOUBLE,
+    expected_range FROZEN<LIST<DOUBLE>>,  -- [min, max]
+    severity TEXT,
+    alert_sent BOOLEAN,
+    PRIMARY KEY ((sensor_id, detection_date), anomaly_timestamp)
+) WITH CLUSTERING ORDER BY (anomaly_timestamp DESC);
+
+-- Batch processing for daily aggregations
+CREATE TABLE daily_sensor_summaries (
+    sensor_id UUID,
+    summary_date DATE,
+    min_temperature DOUBLE,
+    max_temperature DOUBLE,
+    avg_temperature DOUBLE,
+    reading_count BIGINT,
+    anomaly_count INT,
+    PRIMARY KEY (sensor_id, summary_date)
+) WITH CLUSTERING ORDER BY (summary_date DESC);
+
+-- Real-time dashboard data
+CREATE TABLE dashboard_metrics (
+    dashboard_id TEXT,
+    metric_type TEXT,
+    time_window TEXT,  -- '1m', '5m', '1h', '1d'
+    timestamp TIMESTAMP,
+    value DOUBLE,
+    metadata MAP<TEXT, TEXT>,
+    PRIMARY KEY ((dashboard_id, metric_type, time_window), timestamp)
+) WITH CLUSTERING ORDER BY (timestamp DESC)
+  AND default_time_to_live = 86400;  -- 24 hours for real-time data
+```
+
+## Advanced CQL Features
+
+CQL provides sophisticated features for complex data operations, consistency control, and performance optimization.
+
+### Lightweight Transactions (LWT)
+
+```cql title="Atomic operations with conditional logic"
+-- Conditional inserts for uniqueness
+INSERT INTO usernames (username, user_id, created_at)
+VALUES ('john_doe', uuid(), toTimestamp(now()))
+IF NOT EXISTS;
+
+-- Conditional updates with compare-and-swap
+UPDATE account_balances SET
+    balance = balance - 100.00,
+    last_transaction = toTimestamp(now())
+WHERE account_id = 123e4567-e89b-12d3-a456-426614174000
+IF balance >= 100.00;
+
+-- Complex conditional logic
+UPDATE product_inventory SET
+    stock_count = stock_count - 5,
+    last_updated = toTimestamp(now()),
+    reserved_count = reserved_count + 5
+WHERE product_id = 456e7890-e89b-12d3-a456-426614174000
+IF stock_count >= 5 AND status = 'available';
+
+-- Conditional deletes
+DELETE FROM active_sessions
+WHERE user_id = 789e0123-e89b-12d3-a456-426614174000
+  AND session_id = 321e6547-e89b-12d3-a456-426614174000
+IF last_activity < '2024-06-29 09:00:00';
+```
+
+### Batch Operations and Transactions
+
+```cql title="Atomic batch operations across partitions"
+-- Logged batch for atomicity (same partition recommended)
+BEGIN BATCH
+    INSERT INTO orders (order_id, customer_id, order_date, status, total)
+    VALUES (uuid(), 123e4567-e89b-12d3-a456-426614174000, toTimestamp(now()), 'pending', 299.99);
+
+    UPDATE customer_stats SET
+        total_orders = total_orders + 1,
+        lifetime_value = lifetime_value + 299.99
+    WHERE customer_id = 123e4567-e89b-12d3-a456-426614174000;
+APPLY BATCH;
+
+-- Unlogged batch for performance (different partitions acceptable)
+BEGIN UNLOGGED BATCH
+    INSERT INTO user_activity_log (user_id, activity_date, timestamp, action)
+    VALUES (123e4567-e89b-12d3-a456-426614174000, '2024-06-29', toTimestamp(now()), 'login');
+
+    UPDATE user_profiles SET last_login = toTimestamp(now())
+    WHERE user_id = 123e4567-e89b-12d3-a456-426614174000;
+
+    INSERT INTO login_events (event_id, user_id, ip_address, timestamp)
+    VALUES (uuid(), 123e4567-e89b-12d3-a456-426614174000, '192.168.1.100', toTimestamp(now()));
+APPLY BATCH;
+
+-- Conditional batch operations
+BEGIN BATCH
+    INSERT INTO reservations (reservation_id, user_id, resource_id, start_time)
+    VALUES (uuid(), 123e4567-e89b-12d3-a456-426614174000, 456e7890-e89b-12d3-a456-426614174000, '2024-06-30 14:00:00')
+    IF NOT EXISTS;
+
+    UPDATE resource_availability SET is_available = false
+    WHERE resource_id = 456e7890-e89b-12d3-a456-426614174000
+      AND time_slot = '2024-06-30 14:00:00'
+    IF is_available = true;
+APPLY BATCH;
+```
+
+### User-Defined Functions and Aggregates
+
+```cql title="Custom functions for complex operations"
+-- User-defined function for business logic
+CREATE FUNCTION calculate_discount(total DOUBLE, tier TEXT)
+CALLED ON NULL INPUT
+RETURNS DOUBLE
+LANGUAGE java AS
+'
+    double discountRate = 0.0;
+    switch (tier) {
+        case "bronze": discountRate = 0.05; break;
+        case "silver": discountRate = 0.10; break;
+        case "gold": discountRate = 0.15; break;
+        case "platinum": discountRate = 0.20; break;
+    }
+    return total * discountRate;
+';
+
+-- Using UDF in queries
+SELECT order_id, total, customer_tier,
+       calculate_discount(total, customer_tier) AS discount_amount,
+       total - calculate_discount(total, customer_tier) AS final_total
+FROM orders
+WHERE customer_id = 123e4567-e89b-12d3-a456-426614174000;
+
+-- User-defined aggregate for custom calculations
+CREATE AGGREGATE weighted_average(DOUBLE, DOUBLE)
+SFUNC weight_sum
+STYPE TUPLE<DOUBLE, DOUBLE>
+FINALFUNC weight_final
+INITCOND (0.0, 0.0);
+```
+
+### Consistency Levels and Performance Tuning
+
+```cql title="Consistency level control and optimization"
+-- Read with specific consistency level
+CONSISTENCY QUORUM;
+SELECT * FROM critical_data
+WHERE partition_key = 'important_value';
+
+-- Write with LOCAL_QUORUM for multi-DC setups
+CONSISTENCY LOCAL_QUORUM;
+INSERT INTO user_data (user_id, data, timestamp)
+VALUES (uuid(), 'sensitive_information', toTimestamp(now()));
+
+-- Eventually consistent reads for better performance
+CONSISTENCY ONE;
+SELECT * FROM analytics_data
+WHERE date_partition = '2024-06-29';
+
+-- Strong consistency for financial transactions
+CONSISTENCY ALL;
+UPDATE account_balances SET balance = balance - 1000.00
+WHERE account_id = 123e4567-e89b-12d3-a456-426614174000;
+```
+
+## Real-World CQL Applications
+
+Understanding practical applications demonstrates CQL's power in solving real-world distributed systems challenges.
+
+### IoT and Sensor Data Management
+
+```cql title="Comprehensive IoT data platform"
+-- Device management and telemetry
+CREATE TABLE device_registry (
+    device_id UUID PRIMARY KEY,
+    device_type TEXT,
+    manufacturer TEXT,
+    model TEXT,
+    firmware_version TEXT,
+    location TEXT,
+    installation_date TIMESTAMP,
+    last_maintenance TIMESTAMP,
+    status TEXT,
+    configuration MAP<TEXT, TEXT>
+);
+
+CREATE TABLE sensor_telemetry (
+    device_id UUID,
+    collection_date DATE,
+    timestamp TIMESTAMP,
+    sensor_readings MAP<TEXT, DOUBLE>,  -- temperature, humidity, pressure, etc.
+    battery_level INT,
+    signal_strength INT,
+    error_codes LIST<TEXT>,
+    PRIMARY KEY ((device_id, collection_date), timestamp)
+) WITH CLUSTERING ORDER BY (timestamp DESC)
+  AND compaction = {'class': 'TimeWindowCompactionStrategy', 'compaction_window_unit': 'HOURS', 'compaction_window_size': 1};
+
+-- Real-time device status monitoring
+SELECT device_id, timestamp, sensor_readings, battery_level
+FROM sensor_telemetry
+WHERE device_id = 123e4567-e89b-12d3-a456-426614174000
+  AND collection_date = '2024-06-29'
+  AND timestamp >= '2024-06-29 10:00:00'
+ORDER BY timestamp DESC
+LIMIT 100;
+
+-- Device health analytics
+CREATE TABLE device_health_metrics (
+    device_id UUID,
+    metric_date DATE,
+    uptime_percentage DOUBLE,
+    avg_battery_level DOUBLE,
+    error_count INT,
+    data_points_collected BIGINT,
+    last_communication TIMESTAMP,
+    health_score DOUBLE,
+    PRIMARY KEY (device_id, metric_date)
+) WITH CLUSTERING ORDER BY (metric_date DESC);
+
+-- Anomaly detection and alerting
+CREATE TABLE sensor_anomalies (
+    device_id UUID,
+    detection_date DATE,
+    anomaly_timestamp TIMESTAMP,
+    sensor_type TEXT,
+    actual_value DOUBLE,
+    expected_range FROZEN<LIST<DOUBLE>>,
+    severity_level TEXT,
+    alert_triggered BOOLEAN,
+    investigation_notes TEXT,
+    PRIMARY KEY ((device_id, detection_date), anomaly_timestamp, sensor_type)
+) WITH CLUSTERING ORDER BY (anomaly_timestamp DESC);
+```
+
+### E-commerce and Customer Analytics
+
+```cql title="Scalable e-commerce data architecture"
+-- Customer behavior tracking
+CREATE TABLE customer_interactions (
+    customer_id UUID,
+    interaction_date DATE,
+    timestamp TIMESTAMP,
+    interaction_type TEXT,  -- view, click, cart_add, purchase, etc.
+    product_id UUID,
+    category TEXT,
+    session_id UUID,
+    device_type TEXT,
+    page_url TEXT,
+    referrer TEXT,
+    metadata MAP<TEXT, TEXT>,
+    PRIMARY KEY ((customer_id, interaction_date), timestamp)
+) WITH CLUSTERING ORDER BY (timestamp DESC)
+  AND default_time_to_live = 7776000;  -- 90 days retention
+
+-- Real-time recommendation engine data
+CREATE TABLE product_affinity (
+    product_id UUID,
+    related_product_id UUID,
+    affinity_score DOUBLE,
+    interaction_count BIGINT,
+    last_updated TIMESTAMP,
+    PRIMARY KEY (product_id, affinity_score, related_product_id)
+) WITH CLUSTERING ORDER BY (affinity_score DESC);
+
+-- Customer purchase history and analytics
+CREATE TABLE purchase_analytics (
+    customer_id UUID,
+    purchase_date DATE,
+    order_timestamp TIMESTAMP,
+    order_id UUID,
+    product_details LIST<FROZEN<MAP<TEXT, TEXT>>>,
+    total_amount DECIMAL,
+    discount_applied DECIMAL,
+    payment_method TEXT,
+    shipping_method TEXT,
+    PRIMARY KEY ((customer_id, purchase_date), order_timestamp)
+) WITH CLUSTERING ORDER BY (order_timestamp DESC);
+
+-- Personalized recommendations
+SELECT pa.related_product_id, pa.affinity_score, p.name, p.price
+FROM product_affinity pa, products p
+WHERE pa.product_id IN (
+    SELECT DISTINCT product_id
+    FROM customer_interactions
+    WHERE customer_id = 123e4567-e89b-12d3-a456-426614174000
+      AND interaction_date >= '2024-06-22'
+      AND interaction_type IN ('view', 'cart_add')
+)
+AND p.product_id = pa.related_product_id
+ORDER BY pa.affinity_score DESC
+LIMIT 20;
+```
+
+### Financial Services and Trading
+
+```cql title="High-frequency financial data processing"
+-- Trading data with microsecond precision
+CREATE TABLE market_data (
+    symbol TEXT,
+    trading_date DATE,
+    timestamp TIMESTAMP,
+    price DECIMAL,
+    volume BIGINT,
+    bid_price DECIMAL,
+    ask_price DECIMAL,
+    exchange TEXT,
+    trade_type TEXT,
+    PRIMARY KEY ((symbol, trading_date), timestamp)
+) WITH CLUSTERING ORDER BY (timestamp ASC);
+
+-- Risk management and position tracking
+CREATE TABLE portfolio_positions (
+    account_id UUID,
+    position_date DATE,
+    symbol TEXT,
+    quantity BIGINT,
+    average_cost DECIMAL,
+    current_price DECIMAL,
+    unrealized_pnl DECIMAL,
+    realized_pnl DECIMAL,
+    last_updated TIMESTAMP,
+    PRIMARY KEY ((account_id, position_date), symbol)
+);
+
+-- Fraud detection patterns
+CREATE TABLE transaction_patterns (
+    account_id UUID,
+    pattern_date DATE,
+    transaction_timestamp TIMESTAMP,
+    transaction_type TEXT,
+    amount DECIMAL,
+    merchant_category TEXT,
+    location TEXT,
+    device_fingerprint TEXT,
+    risk_score DOUBLE,
+    is_flagged BOOLEAN,
+    PRIMARY KEY ((account_id, pattern_date), transaction_timestamp)
+) WITH CLUSTERING ORDER BY (transaction_timestamp DESC);
+
+-- Real-time fraud scoring
+UPDATE transaction_patterns SET
+    risk_score = 0.85,
+    is_flagged = true
+WHERE account_id = 123e4567-e89b-12d3-a456-426614174000
+  AND pattern_date = '2024-06-29'
+  AND transaction_timestamp = '2024-06-29 15:30:45.123'
+IF risk_score < 0.80;
+```
+
+### Social Media and Content Platforms
+
+```cql title="Social media data management at scale"
+-- User activity feeds
+CREATE TABLE user_timeline (
+    user_id UUID,
+    timeline_date DATE,
+    activity_timestamp TIMESTAMP,
+    activity_id UUID,
+    activity_type TEXT,  -- post, like, comment, share, follow
+    content_id UUID,
+    target_user_id UUID,
+    content_snippet TEXT,
+    metadata MAP<TEXT, TEXT>,
+    PRIMARY KEY ((user_id, timeline_date), activity_timestamp)
+) WITH CLUSTERING ORDER BY (activity_timestamp DESC);
+
+-- Content engagement metrics
+CREATE TABLE content_engagement (
+    content_id UUID,
+    engagement_date DATE,
+    engagement_timestamp TIMESTAMP,
+    user_id UUID,
+    engagement_type TEXT,  -- like, share, comment, view
+    engagement_duration INT,  -- for views
+    device_type TEXT,
+    location TEXT,
+    PRIMARY KEY ((content_id, engagement_date), engagement_timestamp)
+) WITH CLUSTERING ORDER BY (engagement_timestamp DESC);
+
+-- Social graph relationships
+CREATE TABLE user_relationships (
+    user_id UUID,
+    relationship_type TEXT,  -- following, follower, friend, blocked
+    target_user_id UUID,
+    relationship_timestamp TIMESTAMP,
+    relationship_strength DOUBLE,
+    interaction_frequency INT,
+    last_interaction TIMESTAMP,
+    PRIMARY KEY ((user_id, relationship_type), target_user_id)
+);
+
+-- Trending content discovery
+CREATE TABLE trending_content (
+    trend_category TEXT,
+    time_window TEXT,  -- hourly, daily, weekly
+    content_id UUID,
+    engagement_score DOUBLE,
+    velocity_score DOUBLE,
+    total_engagements BIGINT,
+    unique_users BIGINT,
+    trend_timestamp TIMESTAMP,
+    PRIMARY KEY ((trend_category, time_window), engagement_score, content_id)
+) WITH CLUSTERING ORDER BY (engagement_score DESC)
+  AND default_time_to_live = 604800;  -- 7 days
+```
+
+## Performance Optimization and Best Practices
+
+### Query Optimization Strategies
+
+```cql title="Performance-optimized query patterns"
+-- Efficient partition key usage (good)
+SELECT * FROM orders
+WHERE customer_id = 123e4567-e89b-12d3-a456-426614174000
+  AND order_date >= '2024-06-01';
+
+-- Avoid full table scans (bad - avoid)
+-- SELECT * FROM orders WHERE total > 1000;  -- This requires ALLOW FILTERING
+
+-- Use clustering key ranges efficiently
+SELECT * FROM sensor_readings
+WHERE device_id = 456e7890-e89b-12d3-a456-426614174000
+  AND reading_date = '2024-06-29'
+  AND reading_timestamp >= '2024-06-29 10:00:00'
+  AND reading_timestamp < '2024-06-29 11:00:00';
+
+-- Optimize with appropriate LIMIT
+SELECT * FROM user_timeline
+WHERE user_id = 789e0123-e89b-12d3-a456-426614174000
+  AND timeline_date = '2024-06-29'
+ORDER BY activity_timestamp DESC
+LIMIT 50;
+
+-- Use IN clauses efficiently (limited number of values)
+SELECT * FROM products
+WHERE product_id IN (
+    123e4567-e89b-12d3-a456-426614174000,
+    456e7890-e89b-12d3-a456-426614174000,
+    789e0123-e89b-12d3-a456-426614174000
+);
+```
+
+### Data Modeling Best Practices
+
+```cql title="Optimized data modeling for performance"
+-- Denormalize for query patterns
+CREATE TABLE order_summary_by_customer (
+    customer_id UUID,
+    order_date DATE,
+    order_id UUID,
+    total_amount DECIMAL,
+    item_count INT,
+    status TEXT,
+    products LIST<TEXT>,  -- Denormalized product names
+    PRIMARY KEY ((customer_id), order_date, order_id)
+) WITH CLUSTERING ORDER BY (order_date DESC, order_id DESC);
+
+-- Bucket time-series data appropriately
+CREATE TABLE metrics_hourly (
+    metric_name TEXT,
+    time_bucket TEXT,  -- 'YYYY-MM-DD-HH' format
+    timestamp TIMESTAMP,
+    value DOUBLE,
+    tags MAP<TEXT, TEXT>,
+    PRIMARY KEY ((metric_name, time_bucket), timestamp)
+) WITH CLUSTERING ORDER BY (timestamp DESC);
+
+-- Use appropriate collection sizes
+CREATE TABLE user_preferences (
+    user_id UUID PRIMARY KEY,
+    favorite_categories SET<TEXT>,        -- Reasonable size set
+    recent_searches LIST<TEXT>,           -- Keep limited size
+    settings MAP<TEXT, TEXT>              -- Moderate number of keys
+);
+
+-- Optimize for write patterns
+CREATE TABLE event_log (
+    event_type TEXT,
+    event_date DATE,
+    event_id TIMEUUID,  -- Natural ordering with timestamp
+    user_id UUID,
+    event_data MAP<TEXT, TEXT>,
+    PRIMARY KEY ((event_type, event_date), event_id)
+) WITH CLUSTERING ORDER BY (event_id DESC);
+```
+
+### Monitoring and Maintenance
+
+```cql title="Database maintenance and monitoring queries"
+-- Monitor table statistics
+SELECT keyspace_name, table_name, bloom_filter_fp_chance,
+       caching, comment, compaction, compression
+FROM system_schema.tables
+WHERE keyspace_name = 'ecommerce';
+
+-- Check token ranges and data distribution
+SELECT token(partition_key), count(*)
+FROM your_table
+GROUP BY token(partition_key);
+
+-- Monitor repair and compaction
+DESCRIBE TABLE system.compaction_history;
+
+-- TTL and tombstone management
+SELECT writetime(column_name), ttl(column_name)
+FROM your_table
+WHERE partition_key = 'some_value';
+
+-- Performance tuning with tracing
+TRACING ON;
+SELECT * FROM orders
+WHERE customer_id = 123e4567-e89b-12d3-a456-426614174000;
+TRACING OFF;
+```
+
+<BackToTop />
