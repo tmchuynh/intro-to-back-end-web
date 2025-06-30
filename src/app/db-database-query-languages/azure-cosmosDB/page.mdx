@@ -1,0 +1,1445 @@
+import BackToTop from "@/components/BackToTop";
+
+# Azure Cosmos DB SQL API Query Language
+
+## Table of Contents
+
+## Introduction
+
+Azure Cosmos DB SQL API provides a SQL-like query language specifically designed for querying JSON documents in a NoSQL database environment. Despite being called "SQL API," it's important to understand that this is not traditional relational SQL, but rather a JSON-oriented query language that borrows familiar SQL syntax while operating on document structures. Developed by Microsoft as part of Azure Cosmos DB, this query language enables developers to leverage their existing SQL knowledge while working with flexible, schema-free JSON documents.
+
+The Cosmos DB SQL API is essential for developers building modern applications that require global distribution, elastic scalability, and flexible data models. Unlike traditional relational databases that require rigid schemas, Cosmos DB allows documents to have varying structures within the same container, making it ideal for evolving applications and diverse data types. The SQL-like syntax makes it accessible to developers familiar with relational databases while providing the flexibility needed for modern, cloud-native applications.
+
+Azure Cosmos DB's SQL API is part of Microsoft's globally distributed, multi-model database service that guarantees single-digit millisecond latencies and 99.999% availability. The query language is optimized for JSON document operations and provides automatic indexing, making queries performant without requiring manual index management in most cases.
+
+### Real-World Applications
+
+Azure Cosmos DB SQL API powers many modern applications across various industries:
+
+- E-commerce platforms use Cosmos DB for product catalogs, user profiles, and real-time inventory management across global regions
+- Gaming applications leverage it for player profiles, leaderboards, and session data that needs to scale globally
+- IoT solutions employ Cosmos DB for time-series data, device telemetry, and real-time analytics
+- Content management systems utilize it for flexible content schemas and global content distribution
+- Financial services use it for real-time fraud detection, customer 360 views, and trading data
+- Social media applications rely on it for user feeds, social graphs, and real-time messaging
+- Mobile applications benefit from its offline sync capabilities and global distribution
+- Retail applications use it for recommendation engines, inventory tracking, and customer analytics
+
+### Key Concepts
+
+- **Document**: A JSON object that represents a single entity or record in Cosmos DB. Documents can have nested structures and varying schemas.
+- **Container**: A collection of JSON documents, similar to a table in relational databases but without enforced schema constraints.
+- **Item**: Another term for a document within a Cosmos DB container, representing a single JSON entity.
+- **Partition Key**: A property used to distribute documents across multiple physical partitions for scalability and performance.
+- **Request Unit (RU)**: The normalized currency for measuring the cost of database operations in Cosmos DB.
+- **Indexing**: Automatic indexing of all document properties by default, with customizable indexing policies for optimization.
+- **Change Feed**: A persistent record of changes to documents in a container, enabling event-driven architectures.
+- **Time to Live (TTL)**: Automatic expiration of documents after a specified time period.
+- **Stored Procedure**: Server-side JavaScript functions that execute within the database engine for atomic operations.
+- **User-Defined Function (UDF)**: Custom JavaScript functions that can be used within SQL queries for complex computations.
+- **Trigger**: JavaScript code that executes automatically before or after document operations.
+- **Cross-Document Transaction**: ACID transactions that can span multiple documents within the same logical partition.
+- **Global Distribution**: Ability to replicate data across multiple Azure regions with configurable consistency levels.
+- **Consistency Level**: Five different consistency models (Strong, Bounded Staleness, Session, Consistent Prefix, Eventual).
+- **Multi-Master**: Capability to write to multiple regions simultaneously with conflict resolution policies.
+- **Analytical Store**: Column-oriented storage for running analytical queries without affecting transactional workloads.
+
+### Benefits of Azure Cosmos DB SQL API
+
+- **Familiar Syntax**: SQL-like query syntax makes it easy for developers with relational database experience to start querying NoSQL data.
+- **Schema Flexibility**: No rigid schema requirements allow for evolving data models and diverse document structures within the same container.
+- **Global Distribution**: Built-in global distribution with automatic failover and multi-region writes for worldwide applications.
+- **Elastic Scalability**: Automatic scaling of throughput and storage based on application demands without downtime.
+- **Multiple Consistency Models**: Five consistency levels to choose from, balancing between consistency and performance based on application needs.
+- **Automatic Indexing**: All document properties are automatically indexed by default, eliminating the need for manual index management.
+- **Real-time Analytics**: Integration with Azure Synapse Analytics for real-time analytical queries without affecting operational workloads.
+- **Multi-API Support**: Same data can be accessed through multiple APIs (SQL, MongoDB, Cassandra, Gremlin, Table) for different use cases.
+- **Serverless Option**: Pay-per-request pricing model for applications with unpredictable or intermittent traffic patterns.
+- **Enterprise Security**: Built-in security features including encryption at rest and in transit, private endpoints, and role-based access control.
+- **SLA Guarantees**: Industry-leading SLAs for availability, latency, throughput, and consistency across global deployments.
+- **Change Feed**: Native change data capture for building event-driven architectures and real-time data pipelines.
+- **Offline Sync**: Mobile SDK support for offline scenarios with automatic synchronization when connectivity returns.
+- **Cost Optimization**: Reserved capacity options and autoscale features to optimize costs based on usage patterns.
+- **Developer Productivity**: Rich SDKs for multiple programming languages and integration with popular frameworks and tools.
+
+## SQL API Syntax Fundamentals
+
+The Azure Cosmos DB SQL API syntax is designed to be familiar to SQL developers while accommodating the unique aspects of JSON document querying. It supports a wide range of operations, including document selection, filtering, aggregation, and transformation. The following sections provide an overview of the basic syntax elements and querying capabilities.
+
+### Basic Syntax Elements
+
+- **`SELECT`**: Specifies which properties to return from documents, with support for projections and transformations
+- **`FROM`**: Specifies the container to query, with support for document iteration and property access
+- **`WHERE`**: Filters documents based on conditions, with support for complex JSON property paths
+- **`ORDER BY`**: Sorts results by one or more properties, including nested properties
+- **`JOIN`**: Performs intra-document joins between arrays and nested objects
+- **`GROUP BY`**: Groups documents by specified properties for aggregation operations
+- **Comments**: Single-line comments using `--` or multi-line comments using `/* ... */`
+
+```sql title="Basic Cosmos DB SQL API syntax elements"
+-- Simple document selection
+SELECT * FROM c
+
+-- Property projection
+SELECT c.id, c.name, c.email FROM c
+
+-- Nested property access
+SELECT c.id, c.address.city, c.address.zipCode FROM c
+
+-- Array property access
+SELECT c.name, c.orders[0].total FROM c
+
+-- Property aliasing
+SELECT c.firstName + " " + c.lastName AS fullName FROM c
+```
+
+These examples illustrate the basic syntax elements of the Cosmos DB SQL API, including document selection, property projection, nested property access, array property access, and property aliasing. The `c` alias represents the current document being queried, and properties can be accessed using dot notation for nested objects or array indexing for elements within arrays.
+
+The `c` alias is a common convention in Cosmos DB SQL API queries, representing the current document being processed. It allows developers to refer to properties of the document without repeating the full path, making queries more concise and readable.
+
+For example, in the query `SELECT c.id, c.name FROM c`, the `FROM c` clause assigns the alias `c` to each document in the container, and you can then use `c.propertyName` to access properties of each document. This is similar to table aliases in traditional SQL, but in Cosmos DB, it is especially useful for working with nested JSON structures and arrays.
+
+Using aliases also enables more advanced query patterns, such as joining with array elements (`JOIN item IN c.items`) or referencing the same container multiple times in self-joins. Consistently using `c` as the document alias is a best practice for clarity and maintainability in Cosmos DB SQL API queries.
+
+### Document Structure Querying
+
+Cosmos DB SQL API allows querying JSON documents with complex structures, including nested objects and arrays. This section covers how to work with these structures effectively.
+
+```sql title="Working with JSON document structures"
+-- Query documents with specific properties
+SELECT c.id, c.productName, c.price
+FROM c
+WHERE c.category = "Electronics"
+
+-- Access nested objects
+SELECT c.customer.name, c.customer.address.city, c.orderTotal
+FROM c
+WHERE c.customer.address.country = "USA"
+
+-- Work with arrays
+SELECT c.orderId, t.productName, t.quantity
+FROM c
+JOIN t IN c.orderItems
+WHERE t.price > 100
+
+-- Check for property existence
+SELECT c.id, c.name
+FROM c
+WHERE IS_DEFINED(c.email) AND NOT IS_NULL(c.email)
+```
+
+In the above examples, we demonstrate how to query documents with specific properties, access nested objects, work with arrays, and check for property existence. The `JOIN` clause allows us to iterate over array elements within documents, enabling complex queries on nested data structures.
+
+## Basic Document Queries
+
+Basic queries in Cosmos DB SQL API focus on retrieving and filtering JSON documents based on their properties and structure. It includes fundamental operations such as selecting documents, filtering by conditions, and accessing nested properties.
+
+### Document Selection and Filtering
+
+These queries demonstrate fundamental document querying patterns, including simple property selection, filtering by conditions, and accessing nested properties. They are essential for understanding how to work with JSON documents in Cosmos DB.
+
+```sql title="Fundamental document querying patterns"
+-- Select all documents
+SELECT * FROM c
+
+-- Filter by simple property
+SELECT c.id, c.name, c.email
+FROM c
+WHERE c.status = "active"
+
+-- Filter by multiple conditions
+SELECT c.id, c.name, c.lastLoginDate
+FROM c
+WHERE c.accountType = "premium"
+  AND c.lastLoginDate >= "2024-01-01T00:00:00Z"
+
+-- Filter by nested properties
+SELECT c.id, c.profile.displayName, c.profile.location.city
+FROM c
+WHERE c.profile.location.country = "United States"
+  AND c.profile.preferences.newsletter = true
+```
+
+These queries illustrate how to select documents based on specific properties, filter them using conditions, and access nested properties within JSON documents. The use of `WHERE` clauses allows for precise filtering, while the ability to access nested properties enables more complex data structures to be queried effectively.
+
+#### Real-World Document Queries
+
+```sql title="E-commerce product catalog queries"
+-- Find products in specific category with price range
+SELECT c.productId, c.name, c.price, c.rating
+FROM c
+WHERE c.category = "Electronics"
+  AND c.price BETWEEN 100 AND 500
+  AND c.inStock = true
+ORDER BY c.rating DESC
+
+-- Search products by name or description
+SELECT c.productId, c.name, c.description, c.price
+FROM c
+WHERE CONTAINS(UPPER(c.name), UPPER("wireless"))
+   OR CONTAINS(UPPER(c.description), UPPER("bluetooth"))
+
+-- Find products with specific attributes
+SELECT c.name, c.specifications.brand, c.specifications.model
+FROM c
+WHERE c.specifications.brand = "Apple"
+  AND ARRAY_CONTAINS(c.tags, "smartphone")
+```
+
+In this example, we demonstrate how to query an e-commerce product catalog by filtering products based on category, price range, and attributes. The use of `CONTAINS` allows for flexible text search within product names and descriptions. Here, `ARRAY_CONTAINS` is used to check if a product has a specific tag, showcasing how to work with arrays in document properties.
+
+### Working with Arrays and Nested Data
+
+This is helpful when dealing with complex document structures that include arrays or nested objects. It allows for more advanced querying capabilities, such as filtering based on array contents or joining with array elements. The following examples demonstrate how to navigate and manipulate such structures effectively.
+
+```sql title="Complex document structure navigation"
+-- Query documents with array properties
+SELECT c.customerId, c.name, c.orderHistory
+FROM c
+WHERE ARRAY_LENGTH(c.orderHistory) > 5
+
+-- Join with array elements
+SELECT c.customerId, c.name, o.orderId, o.total, o.orderDate
+FROM c
+JOIN o IN c.orders
+WHERE o.status = "completed"
+  AND o.orderDate >= "2024-01-01T00:00:00Z"
+
+-- Filter by array contents
+SELECT c.productId, c.name, c.price
+FROM c
+WHERE ARRAY_CONTAINS(c.categories, "electronics")
+  AND ARRAY_CONTAINS(c.features, "wireless")
+
+-- Complex nested querying
+SELECT c.userId, c.profile.name, s.skillName, s.level
+FROM c
+JOIN s IN c.profile.skills
+WHERE s.level >= 8
+  AND s.category = "programming"
+```
+
+In these examples, we demonstrate how to query documents with array properties, join with array elements, filter based on array contents, and perform complex nested queries. These operations are essential for applications that require advanced data manipulation and analysis of JSON documents with intricate structures.
+
+#### Advanced Array Operations
+
+```sql title="Sophisticated array manipulation and filtering"
+-- Find users with specific combinations of skills
+SELECT c.userId, c.profile.name,
+       ARRAY_LENGTH(c.profile.skills) AS totalSkills
+FROM c
+WHERE EXISTS(
+    SELECT VALUE s
+    FROM s IN c.profile.skills
+    WHERE s.name = "JavaScript" AND s.level >= 7
+)
+AND EXISTS(
+    SELECT VALUE s
+    FROM s IN c.profile.skills
+    WHERE s.name = "React" AND s.level >= 6
+)
+
+-- Aggregate data from nested arrays
+SELECT c.orderId, c.customerName,
+       (SELECT VALUE SUM(item.price * item.quantity)
+        FROM item IN c.items)[0] AS orderTotal
+FROM c
+WHERE c.orderDate >= "2024-01-01T00:00:00Z"
+
+-- Filter by array element properties
+SELECT c.eventId, c.eventName, c.attendees
+FROM c
+WHERE EXISTS(
+    SELECT VALUE a
+    FROM a IN c.attendees
+    WHERE a.registrationDate >= "2024-06-01T00:00:00Z"
+      AND a.ticketType = "VIP"
+)
+```
+
+In these examples, we demonstrate how to query documents with array properties, join with array elements, filter based on array contents, and perform complex nested queries.
+
+Working with arrays in JSON documents is common when dealing with data that can have multiple values for a single property, such as tags, categories, or lists of related items. Querying array properties allows you to find documents that contain specific values or patterns within these arrays.
+
+Joining with array elements means you can relate documents based on shared items within their arrays, enabling more powerful data relationships and aggregations. Filtering based on array contents lets you retrieve only those documents where the arrays meet certain criteria, such as containing a specific value or matching a condition.
+
+Performing complex nested queries is useful when your data includes arrays within objects, or objects within arrays, requiring you to traverse multiple levels of the document structure. These operations are essential for applications that require advanced data manipulation and analysis of JSON documents with intricate structures, such as analytics dashboards, recommendation systems, or content management platforms.
+
+## Data Projection and Transformation
+
+Cosmos DB SQL API provides powerful capabilities for transforming and reshaping query results to match application requirements. This includes selecting specific properties, creating nested objects, and performing computed transformations. It allows developers to tailor the output of queries to fit the needs of their applications, enabling efficient data retrieval and manipulation, which is essential for building responsive and data-driven applications. By using projections and transformations, developers can optimize data retrieval, reduce payload sizes, and enhance application performance.
+
+### SELECT Projections
+
+These queries demonstrate how to project specific properties from documents, create nested objects, and perform transformations on the data. They are essential for shaping query results to match application requirements.
+
+- **Property Projection**: Select only the fields you need, reducing network payload and improving performance.
+- **Aliasing**: Rename properties or create computed fields for clarity and usability in client applications.
+- **Nested Object Construction**: Build structured objects within the result set, grouping related fields together for easier consumption.
+- **Array Transformation**: Use subqueries and array expressions to reshape arrays, aggregate values, or extract specific elements.
+- **Computed Properties**: Perform calculations, string manipulations, or conditional logic directly in the query to enrich the result set.
+- **Conditional Selection**: Dynamically select or shape properties based on document type or property values, enabling flexible data contracts.
+
+By leveraging these projection and transformation techniques, you can optimize data retrieval, minimize unnecessary data transfer, and ensure that your application receives exactly the data it needs in the desired format. This is especially valuable for mobile apps, APIs, and microservices where efficiency and clear data contracts are critical.
+
+#### Property Projection with Aliasing
+
+```sql title="Basic property projection"
+-- Select specific properties from documents without unnecessary fields
+SELECT c.id, c.name, c.email
+FROM c
+```
+
+In the above example, we select only the `id`, `name`, and `email` properties from documents in the container. This reduces the amount of data transferred over the network and focuses on the relevant fields needed by the application.
+
+```sql title="Advanced property projection with transformations"
+-- Select with computed properties
+SELECT c.id, c.name, c.email, c.createdDate,
+       DateTimeDiff("day", c.createdDate, GetCurrentDateTime()) AS daysSince
+FROM c
+```
+
+In this example, we not only select specific properties but also compute a new property `daysSince` that calculates the number of days since the document was created. This transformation is done directly in the query, allowing for more efficient data retrieval.
+
+```sql title="Array projection and transformation"
+-- Project nested array properties
+SELECT c.id, c.name,
+       ARRAY(SELECT VALUE o.orderId FROM o IN c.orders WHERE o.status = "completed") AS completedOrders
+FROM c
+```
+
+In this query, we project a nested array of completed order IDs from the `orders` array within each document. The `ARRAY` function allows us to reshape the data, extracting only the relevant order IDs based on a condition.
+
+```sql title="Computed properties and nested objects"
+-- Create nested objects and computed properties
+SELECT c.id, c.name,
+       {
+           "contact": {
+               "email": c.email,
+               "phone": c.phone
+           },
+           "accountAge": DateTimeDiff("day", c.createdDate, GetCurrentDateTime()) AS daysOld
+       } AS userProfile
+FROM c
+```
+
+In this example, we create a nested object `contact` that groups the `email` and `phone` properties together. We also compute the `accountAge` property, which calculates the number of days since the account was created. This allows for a more structured and meaningful representation of the user's profile data.
+
+```sql title="Conditional property selection"
+-- Select properties conditionally based on document type
+SELECT c.id,
+       c.type,
+       (c.type = "user" ? {
+           "name": c.profile.name,
+           "email": c.profile.email,
+           "lastLogin": c.lastLoginDate
+       } : c.type = "product" ? {
+           "name": c.productName,
+           "price": c.price,
+           "category": c.category
+       } : {
+           "name": c.name,
+           "description": c.description
+       }) AS entityData
+FROM c
+```
+
+In this query, we conditionally select properties based on the `type` of the document. If the document is a `user`, we include the user's profile information; if it's a `product`, we include product details; otherwise, we fall back to a generic structure. This allows for flexible data representation based on the document type, enabling applications to handle different data structures seamlessly.
+
+### Nested Object Construction
+
+These queries demonstrate how to create nested objects within the result set, allowing for structured data representation. This is useful for grouping related fields together and providing a clear contract for client applications.
+
+```sql title="Nested object construction"
+-- Create nested objects for structured data representation
+SELECT c.id, c.name,
+       {
+           "contact": {
+               "email": c.email,
+               "phone": c.phone
+           },
+           "address": {
+               "city": c.address.city,
+               "state": c.address.state,
+               "zipCode": c.address.zipCode
+           },
+           "preferences": {
+               "newsletter": c.preferences.newsletter,
+               "notifications": c.preferences.notifications
+           }
+       } AS userProfile
+FROM c
+```
+
+In this example, we construct a nested object `userProfile` that groups the user's contact information, address, and preferences into a structured format. This makes it easier for client applications to consume and understand the data, as related fields are logically grouped together.
+
+### Array Transformation and Computed Properties
+
+These queries showcase how to transform arrays and compute new properties based on existing data. This is useful for reshaping data, aggregating values, or extracting specific elements from arrays.
+
+```sql title="Array transformation and computed properties"
+-- Transform arrays and compute new properties
+SELECT c.id, c.name,
+       ARRAY(SELECT VALUE o.orderId FROM o IN c.orders WHERE o.status = "completed") AS completedOrders,
+       (SELECT VALUE COUNT(o.orderId) FROM o IN c.orders WHERE o.status = "completed")[0] AS totalCompletedOrders,
+       (SELECT VALUE SUM(o.total) FROM o IN c.orders WHERE o.status = "completed")[0] AS totalSpent
+FROM c
+```
+
+In this query, we transform the `orders` array to extract completed order IDs into a new array `completedOrders`. We also compute the total number of completed orders and the total amount spent on those orders. This allows for efficient aggregation and reshaping of data directly within the query.
+
+```sql title="Dynamic property selection"
+-- Select properties dynamically based on document type
+SELECT c.id,
+       c.type,
+       (c.type = "user" ? {
+           "name": c.profile.name,
+           "email": c.profile.email,
+           "lastLogin": c.lastLoginDate
+       } : c.type = "product" ? {
+           "name": c.productName,
+           "price": c.price,
+           "category": c.category
+       } : {
+           "name": c.name,
+           "description": c.description
+       }) AS entityData
+FROM c
+```
+
+In this query, we dynamically select properties based on the `type` of the document. If the document is a `user`, we include the user's profile information; if it's a `product`, we include product details; otherwise, we fall back to a generic structure. This allows for flexible data representation based on the document type, enabling applications to handle different data structures seamlessly.
+
+### Computed Properties and Functions
+
+These queries showcase how to use built-in functions for data transformation, including string manipulation, mathematical operations, date and time functions, and conditional logic. They are useful for performing calculations and formatting data directly within queries.
+
+```sql title="Data transformation using built-in functions"
+-- String manipulation
+SELECT c.id,
+       UPPER(c.lastName) AS lastNameUpper,
+       LOWER(c.email) AS emailLower,
+       SUBSTRING(c.phone, 0, 3) AS areaCode,
+       LENGTH(c.description) AS descriptionLength
+FROM c
+
+-- Mathematical operations
+SELECT c.productId,
+       c.price,
+       c.price * 0.9 AS discountedPrice,
+       ROUND(c.price * 1.08, 2) AS priceWithTax,
+       CEILING(c.rating) AS ratingCeiling
+FROM c
+
+-- Date and time functions
+SELECT c.id,
+       c.createdDate,
+       GetCurrentDateTime() AS queryTime,
+       DateTimeDiff("day", c.createdDate, GetCurrentDateTime()) AS daysOld,
+       DateTimeAdd("month", 1, c.expirationDate) AS extendedExpiration
+FROM c
+
+-- Conditional logic
+SELECT c.customerId,
+       c.totalPurchases,
+       (c.totalPurchases >= 10000 ? "Platinum" :
+        c.totalPurchases >= 5000 ? "Gold" :
+        c.totalPurchases >= 1000 ? "Silver" : "Bronze") AS customerTier
+FROM c
+```
+
+The above queries demonstrate the use of built-in functions in Cosmos DB SQL API for a variety of data transformation tasks. You can manipulate strings (such as converting to upper or lower case, extracting substrings, or measuring length), perform mathematical operations (including calculations, rounding, and applying discounts or taxes), and work with date and time values (such as calculating differences, adding intervals, or retrieving the current date and time). Additionally, conditional logic enables you to derive new properties or classifications based on existing data, such as assigning customer tiers or dynamically formatting output.
+
+These capabilities are especially valuable for generating custom reports, performing analytics, and shaping data to meet specific application requirements—all directly within your queries, without the need for additional processing in your application code. By leveraging these functions, you can streamline data workflows, reduce network payloads, and improve the efficiency of your data-driven applications.
+
+### Conditional Property Selection
+
+Conditional property selection allows you to dynamically choose which properties to include in the result set based on certain conditions. This is useful for applications that need to handle different document types or structures without requiring multiple queries.
+
+```sql title="Conditional property selection"
+-- Select properties conditionally based on document type
+SELECT c.id,
+       c.type,
+       (c.type = "user" ? {
+           "name": c.profile.name,
+           "email": c.profile.email,
+           "lastLogin": c.lastLoginDate
+       } : c.type = "product" ? {
+           "name": c.productName,
+           "price": c.price,
+           "category": c.category
+       } : {
+           "name": c.name,
+           "description": c.description
+       }) AS entityData
+FROM c
+```
+
+In this query, we conditionally select properties based on the `type` of the document. If the document is a `user`, we include the user's profile information; if it's a `product`, we include product details; otherwise, we fall back to a generic structure. This allows for flexible data representation based on the document type, enabling applications to handle different data structures seamlessly.
+
+### Advanced Transformations
+
+These queries demonstrate complex data transformation patterns, including customer order summaries, product performance metrics, and dynamic property selection based on document types. They are useful for aggregating and reshaping data to meet specific application needs.
+
+```sql title="Complex data transformation patterns"
+-- Customer order summary with calculations
+SELECT c.customerId,
+       c.customerName,
+       ARRAY_LENGTH(c.orders) AS totalOrders,
+       (SELECT VALUE SUM(o.total) FROM o IN c.orders)[0] AS lifetimeValue,
+       (SELECT VALUE AVG(o.total) FROM o IN c.orders)[0] AS averageOrderValue,
+       (SELECT VALUE MAX(o.orderDate) FROM o IN c.orders)[0] AS lastOrderDate
+FROM c
+WHERE ARRAY_LENGTH(c.orders) > 0
+
+-- Product performance metrics
+SELECT c.productId,
+       c.name,
+       c.category,
+       {
+           "sales": {
+               "totalUnits": (SELECT VALUE SUM(s.quantity) FROM s IN c.salesHistory)[0],
+               "totalRevenue": (SELECT VALUE SUM(s.quantity * s.price) FROM s IN c.salesHistory)[0],
+               "averagePrice": (SELECT VALUE AVG(s.price) FROM s IN c.salesHistory)[0]
+           },
+           "inventory": {
+               "currentStock": c.currentStock,
+               "reorderLevel": c.reorderLevel,
+               "needsReorder": c.currentStock <= c.reorderLevel
+           }
+       } AS productMetrics
+FROM c
+
+-- Dynamic property selection based on document type
+SELECT c.id,
+       c.type,
+       (c.type = "user" ? {
+           "name": c.profile.name,
+           "email": c.profile.email,
+           "lastLogin": c.lastLoginDate
+       } : c.type = "product" ? {
+           "name": c.productName,
+           "price": c.price,
+           "category": c.category
+       } : {
+           "name": c.name,
+           "description": c.description
+       }) AS entityData
+FROM c
+```
+
+The above examples demonstrate how to summarize customer orders by calculating metrics such as total orders, lifetime value, and average order value. They also show how to analyze product performance, including sales and inventory, and how to dynamically select properties based on document type for flexible data shaping.
+
+These advanced transformation queries enable developers to generate tailored data representations, supporting a wide range of application scenarios and reporting needs.
+
+By understanding and applying these patterns, you can efficiently query, aggregate, and transform JSON data in Azure Cosmos DB, unlocking the full potential of the SQL API for modern, scalable applications.
+
+## Aggregation and Analytics
+
+Cosmos DB SQL API provides comprehensive aggregation capabilities for analytical queries and business intelligence. It allows developers to perform complex aggregations, statistical calculations, and data transformations directly within the query language. This is particularly useful for applications that require real-time analytics, reporting, and data summarization. By leveraging aggregation functions, developers can derive insights from large datasets, perform customer segmentation, analyze product performance, and generate business metrics without needing to move data to external analytics platforms. The following sections illustrate various aggregation patterns and advanced analytics techniques using Cosmos DB SQL API.
+
+### Basic Aggregation Functions
+
+Cosmos DB SQL API supports a range of aggregation functions that allow developers to perform calculations on document properties. These functions include counting documents, summing values, calculating averages, and finding minimum and maximum values. The following examples demonstrate fundamental aggregation operations that are commonly used in data analysis.
+
+```sql title="Count operations"
+-- Count documents with specific conditions
+SELECT COUNT(1) AS totalOrders
+FROM c
+WHERE c.orderDate >= "2024-01-01T00:00:00Z"
+
+-- Count distinct values
+SELECT COUNT(DISTINCT c.customerId) AS uniqueCustomers
+FROM c
+WHERE c.orderDate >= "2024-01-01T00:00:00Z"
+
+-- Count documents with specific conditions
+SELECT COUNT(1) AS totalOrders
+FROM c
+WHERE c.orderDate >= "2024-01-01T00:00:00Z"
+
+-- Count distinct values
+SELECT COUNT(DISTINCT c.customerId) AS uniqueCustomers
+FROM c
+WHERE c.orderDate >= "2024-01-01T00:00:00Z"
+```
+
+In these examples, we demonstrate how to count documents based on specific conditions, such as counting total orders placed since a certain date or counting unique customers who have placed orders. The `COUNT` function is essential for generating reports and understanding the scale of data in applications.
+
+```sql title="Sum, average, min, and max calculations"
+-- Sum of a property
+SELECT SUM(c.orderTotal) AS totalRevenue
+FROM c
+WHERE c.orderDate >= "2024-01-01T00:00:00Z"
+
+-- Average of a property
+SELECT AVG(c.orderTotal) AS averageOrderValue
+FROM c
+WHERE c.orderDate >= "2024-01-01T00:00:00Z"
+
+-- Minimum and maximum values
+SELECT MIN(c.orderTotal) AS smallestOrder,
+       MAX(c.orderTotal) AS largestOrder
+FROM c
+WHERE c.orderDate >= "2024-01-01T00:00:00Z"
+```
+
+In these examples, we calculate the total revenue from orders placed since a specific date, the average order value, and the minimum and maximum order totals. These aggregation functions are crucial for financial reporting, sales analysis, and understanding customer behavior.
+
+```sql title="Group by operations"
+-- Group by a property and perform aggregations
+SELECT c.category,
+       COUNT(1) AS productCount,
+       SUM(c.salesLastMonth) AS totalSales,
+       AVG(c.rating) AS averageRating
+FROM c
+WHERE IS_DEFINED(c.salesLastMonth)
+GROUP BY c.category
+
+-- Group by multiple properties
+SELECT c.orderDate,
+       c.status,
+       COUNT(1) AS orderCount,
+       SUM(c.total) AS totalRevenue,
+       AVG(c.total) AS averageOrderValue
+FROM c
+WHERE c.orderDate >= "2024-01-01T00:00:00Z"
+GROUP BY c.orderDate, c.status
+
+-- Group by multiple properties with nested aggregation
+SELECT c.customerId,
+       c.region,
+       COUNT(1) AS orderCount,
+       SUM(c.total) AS totalSpent,
+       AVG(c.total) AS averageOrderValue
+FROM c
+WHERE c.orderDate >= "2024-01-01T00:00:00Z"
+GROUP BY c.customerId, c.region
+```
+
+In these examples, we demonstrate how to group documents by specific properties, such as category, order date, and customer ID. We perform aggregations like counting products in each category, summing sales for each category, and calculating average ratings. Grouping is essential for generating insights at different levels of granularity, such as product performance by category or customer spending patterns.
+
+### Advanced Aggregation Patterns
+
+Cosmos DB SQL API supports advanced aggregation patterns that enable developers to perform complex data analysis and derive insights from large datasets. These patterns include nested aggregations, conditional aggregations, and aggregations on arrays and nested structures. The following examples illustrate how to implement these advanced aggregation techniques effectively.
+
+```sql title="Nested aggregations"
+-- Nested aggregation with subqueries
+SELECT c.category,
+       COUNT(1) AS productCount,
+       (SELECT VALUE SUM(p.salesLastMonth) FROM p IN c.products)[0] AS totalSales,
+       (SELECT VALUE AVG(p.rating) FROM p IN c.products)[0] AS averageRating
+FROM c
+WHERE IS_DEFINED(c.products)
+GROUP BY c.category
+```
+
+In this example, we perform nested aggregations by using subqueries to calculate total sales and average ratings for products within each category. This allows us to derive insights from nested structures, such as product arrays within categories.
+
+```sql title="Conditional aggregations"
+-- Conditional aggregation based on document properties
+SELECT c.status,
+       COUNT(1) AS orderCount,
+       SUM(c.total) AS totalRevenue,
+       AVG(c.total) AS averageOrderValue,
+       SUM(CASE WHEN c.status = "completed" THEN c.total ELSE 0 END) AS completedRevenue,
+       SUM(CASE WHEN c.status = "pending" THEN c.total ELSE 0 END) AS pendingRevenue
+FROM c
+WHERE c.orderDate >= "2024-01-01T00:00:00Z"
+GROUP BY c.status
+```
+
+In this query, we perform conditional aggregations based on the `status` of orders. We calculate total revenue, average order value, and separate sums for completed and pending orders. This allows us to analyze order performance based on different statuses, providing insights into the business's operational efficiency.
+
+```sql title="Aggregation with arrays"
+-- Aggregate data from arrays
+SELECT c.customerId,
+       COUNT(1) AS totalOrders,
+       SUM(ARRAY_LENGTH(c.orders)) AS totalItems,
+       AVG(ARRAY_LENGTH(c.orders)) AS averageItemsPerOrder,
+       (SELECT VALUE SUM(o.total) FROM o IN c.orders)[0] AS totalSpent
+FROM c
+WHERE ARRAY_LENGTH(c.orders) > 0
+GROUP BY c.customerId
+```
+
+In this example, we aggregate data from an array of orders within each customer document. We count the total number of orders, sum the lengths of the orders array to get total items, calculate the average number of items per order, and compute the total amount spent by each customer. This demonstrates how to work with arrays in aggregation queries, enabling insights into customer behavior and order patterns.
+
+```sql title="Aggregation with nested structures"
+-- Aggregate data from nested structures
+SELECT c.orderId,
+       COUNT(1) AS totalItems,
+       SUM(item.price * item.quantity) AS totalOrderValue,
+       AVG(item.price) AS averageItemPrice
+FROM c
+JOIN item IN c.items
+WHERE c.status = "completed"
+GROUP BY c.orderId
+```
+
+In this query, we aggregate data from nested structures by joining with an array of items within each order document. We count the total number of items in completed orders, calculate the total order value, and find the average item price. This showcases how to perform aggregations on nested arrays, enabling complex analytics scenarios.
+
+### Aggregation with Arrays
+
+Cosmos DB SQL API allows for aggregation operations on arrays, enabling developers to perform calculations and transformations on data stored in array properties. This is particularly useful for scenarios where documents contain lists of related items, such as order items, product features, or customer interactions. The following examples illustrate how to work with arrays in aggregation queries, including counting items, summing values, and performing nested aggregations.
+
+```sql title="Aggregation on arrays"
+-- Count items in an array
+SELECT c.customerId,
+       COUNT(1) AS totalOrders,
+       SUM(ARRAY_LENGTH(c.orders)) AS totalItems,
+       AVG(ARRAY_LENGTH(c.orders)) AS averageItemsPerOrder,
+       (SELECT VALUE SUM(o.total) FROM o IN c.orders)[0] AS totalSpent
+FROM c
+WHERE ARRAY_LENGTH(c.orders) > 0
+GROUP BY c.customerId
+```
+
+In this example, we count the total number of orders for each customer, sum the lengths of the orders array to get the total number of items, calculate the average number of items per order, and compute the total amount spent by each customer. This demonstrates how to aggregate data from arrays effectively.
+
+```sql title="Nested aggregations with arrays"
+-- Aggregate data from nested arrays
+SELECT c.productId,
+       COUNT(1) AS orderFrequency,
+       SUM(item.quantity) AS totalQuantitySold,
+       AVG(item.price) AS averageSellingPrice
+FROM c
+JOIN item IN c.items
+WHERE c.orderDate >= "2024-01-01T00:00:00Z"
+GROUP BY c.productId, c.productName
+ORDER BY totalQuantitySold DESC
+```
+
+In this query, we join with an array of items within each order document to aggregate data on product performance. We count the frequency of orders for each product, sum the quantities sold, and calculate the average selling price. This allows us to analyze product popularity and sales trends based on order items,providing insights into customer preferences and inventory management.
+
+```sql title="Aggregation with nested structures"
+-- Aggregate order items within orders
+SELECT c.orderId,
+       COUNT(1) AS totalItems,
+       SUM(item.price * item.quantity) AS totalOrderValue,
+       AVG(item.price) AS averageItemPrice
+FROM c
+JOIN item IN c.items
+WHERE c.status = "completed"
+GROUP BY c.orderId
+```
+
+In this example, we aggregate data from nested structures by joining with an array of items within each order document. We count the total number of items in completed orders, calculate the total order value, and find the average item price. This showcases how to perform aggregations on nested arrays, enabling complex analytics scenarios.
+
+```sql title="Customer interaction analysis"
+-- Customer interaction analysis
+SELECT c.customerId,
+       ARRAY_LENGTH(c.interactions) AS totalInteractions,
+       (SELECT VALUE COUNT(1) FROM i IN c.interactions WHERE i.type = "purchase")[0] AS purchases,
+       (SELECT VALUE COUNT(1) FROM i IN c.interactions WHERE i.type = "view")[0] AS pageViews,
+       (SELECT VALUE COUNT(1) FROM i IN c.interactions WHERE i.type = "cart")[0] AS cartAdds
+FROM c
+WHERE ARRAY_LENGTH(c.interactions) > 0
+```
+
+In this query, we analyze customer interactions by counting the total number of interactions, as well as categorizing them into purchases, page views, and cart additions. This allows us to understand customer behavior patterns and engagement levels, providing valuable insights for marketing and customer relationship management.
+
+### Aggregation with Nested Structures
+
+Cosmos DB SQL API allows for aggregation operations on nested structures, such as arrays and objects within documents. This enables developers to perform complex aggregations on data that is not flat, such as order items within orders or nested arrays of properties. The following examples demonstrate how to work with nested structures in aggregation queries.
+
+```sql title="Aggregation on nested structures"
+-- Aggregate order items within orders
+SELECT c.orderId,
+       COUNT(1) AS totalItems,
+       SUM(item.price * item.quantity) AS totalOrderValue,
+       AVG(item.price) AS averageItemPrice
+FROM c
+JOIN item IN c.items
+WHERE c.status = "completed"
+GROUP BY c.orderId
+-- Analyze product ratings across categories
+SELECT c.category,
+       COUNT(1) AS productCount,
+       AVG(c.rating) AS averageRating,
+       SUM(c.salesLastMonth) AS totalSales
+FROM c
+WHERE IS_DEFINED(c.salesLastMonth)
+GROUP BY c.category
+-- Customer interaction analysis
+SELECT c.customerId,
+       ARRAY_LENGTH(c.interactions) AS totalInteractions,
+       (SELECT VALUE COUNT(1) FROM i IN c.interactions WHERE i.type = "purchase")[0] AS purchases,
+       (SELECT VALUE COUNT(1) FROM i IN c.interactions WHERE i.type = "view")[0] AS pageViews,
+       (SELECT VALUE COUNT(1) FROM i IN c.interactions WHERE i.type = "cart")[0] AS cartAdds
+FROM c
+WHERE ARRAY_LENGTH(c.interactions) > 0
+```
+
+In this example, we find the total number of items in completed orders, calculate the total order value, and analyze product ratings across categories. We also extract customer interaction patterns from nested arrays. These queries demonstrate how to aggregate data from nested structures effectively, enabling more complex analytics scenarios.
+
+### Aggregation with Arrays and Nested Structures
+
+Cosmos DB SQL API allows for aggregation operations on arrays and nested structures, enabling developers to perform complex calculations and transformations on data stored in these formats. This is particularly useful for scenarios where documents contain lists of related items, such as order items, product features, or customer interactions. The following examples illustrate how to work with arrays and nested structures in aggregation queries, including counting items, summing values, and performing nested aggregations.
+
+```sql title="Aggregation on arrays and nested structures"
+-- Count items in an array
+SELECT c.customerId,
+       COUNT(1) AS totalOrders,
+       SUM(ARRAY_LENGTH(c.orders)) AS totalItems,
+       AVG(ARRAY_LENGTH(c.orders)) AS averageItemsPerOrder,
+       (SELECT VALUE SUM(o.total) FROM o IN c.orders)[0] AS totalSpent
+FROM c
+WHERE ARRAY_LENGTH(c.orders) > 0
+GROUP BY c.customerId
+-- Aggregate order items within orders
+SELECT c.orderId,
+       COUNT(1) AS totalItems,
+       SUM(item.price * item.quantity) AS totalOrderValue,
+       AVG(item.price) AS averageItemPrice
+FROM c
+JOIN item IN c.items
+WHERE c.status = "completed"
+GROUP BY c.orderId
+-- Analyze product ratings across categories
+SELECT c.category,
+       COUNT(1) AS productCount,
+       AVG(c.rating) AS averageRating,
+       SUM(c.salesLastMonth) AS totalSales
+FROM c
+WHERE IS_DEFINED(c.salesLastMonth)
+GROUP BY c.category
+-- Customer interaction analysis
+SELECT c.customerId,
+       ARRAY_LENGTH(c.interactions) AS totalInteractions,
+       (SELECT VALUE COUNT(1) FROM i IN c.interactions WHERE i.type = "purchase")[0] AS purchases,
+       (SELECT VALUE COUNT(1) FROM i IN c.interactions WHERE i.type = "view")[0] AS pageViews,
+       (SELECT VALUE COUNT(1) FROM i IN c.interactions WHERE i.type = "cart")[0] AS cartAdds
+FROM c
+WHERE ARRAY_LENGTH(c.interactions) > 0
+```
+
+In these examples, we demonstrate how to aggregate data from arrays and nested structures effectively. We count the total number of orders for each customer, sum the lengths of the orders array to get the total number of items, calculate the average number of items per order, and compute the total amount spent by each customer. We also aggregate order items within completed orders, analyze product ratings across categories, and extract customer interaction patterns from nested arrays. These queries showcase how to perform aggregations on arrays and nested structures, enabling complex analytics scenarios.
+
+### Advanced Analytics
+
+Cosmos DB SQL API supports advanced analytics capabilities that enable developers to perform complex data analysis, business intelligence, and statistical calculations. These queries often involve grouping, filtering, and aggregating data to derive insights and metrics that are crucial for decision-making. The following examples illustrate various advanced analytics patterns, including customer segmentation, product performance analysis, and time-based sales analysis.
+
+```sql title="Business intelligence and complex analytics"
+-- Customer segmentation analysis
+SELECT
+    (c.totalSpent >= 10000 ? "High Value" :
+     c.totalSpent >= 5000 ? "Medium Value" :
+     c.totalSpent >= 1000 ? "Low Value" : "New") AS customerSegment,
+    COUNT(1) AS customerCount,
+    AVG(c.totalSpent) AS averageSpending,
+    SUM(c.totalSpent) AS segmentRevenue
+FROM c
+GROUP BY (c.totalSpent >= 10000 ? "High Value" :
+          c.totalSpent >= 5000 ? "Medium Value" :
+          c.totalSpent >= 1000 ? "Low Value" : "New")
+
+-- Product performance by category and price range
+SELECT c.category,
+       (c.price < 50 ? "Budget" :
+        c.price < 200 ? "Mid-Range" : "Premium") AS priceRange,
+       COUNT(1) AS productCount,
+       AVG(c.rating) AS averageRating,
+       SUM(c.salesLastMonth) AS totalSales
+FROM c
+WHERE IS_DEFINED(c.salesLastMonth)
+GROUP BY c.category,
+         (c.price < 50 ? "Budget" :
+          c.price < 200 ? "Mid-Range" : "Premium")
+
+-- Time-based sales analysis
+SELECT DateTimePart("year", c.orderDate) AS year,
+       DateTimePart("month", c.orderDate) AS month,
+       COUNT(1) AS orderCount,
+       SUM(c.total) AS monthlyRevenue,
+       AVG(c.total) AS averageOrderValue,
+       COUNT(DISTINCT c.customerId) AS uniqueCustomers
+FROM c
+WHERE c.orderDate >= "2023-01-01T00:00:00Z"
+GROUP BY DateTimePart("year", c.orderDate),
+         DateTimePart("month", c.orderDate)
+ORDER BY year, month
+```
+
+The above examples illustrate how to segment customers by spending, evaluate product performance across categories and price ranges, and analyze sales trends over time. These advanced analytics queries highlight the capabilities of Cosmos DB SQL API for extracting actionable insights from complex data, supporting informed business decisions.
+
+## Advanced Query Patterns
+
+Advanced querying in Cosmos DB SQL API enables sophisticated data analysis and complex business logic implementation. It includes subqueries, correlated queries, window functions, and advanced join operations. These features allow developers to perform intricate data manipulations, aggregations, and transformations directly within the query language. The following sections illustrate various advanced query patterns that are essential for building complex applications and performing in-depth data analysis.
+
+### Subqueries and Correlated Queries
+
+Subqueries and correlated queries are powerful features in Cosmos DB SQL API that allow developers to perform nested queries and access related data within documents. They enable complex filtering, aggregation, and data retrieval patterns that are essential for advanced data analysis. The following examples demonstrate how to use subqueries and correlated queries effectively.
+
+```sql title="Complex subquery patterns"
+-- Find customers with above-average spending
+SELECT c.customerId, c.name, c.totalSpent
+FROM c
+WHERE c.totalSpent > (
+    SELECT VALUE AVG(customer.totalSpent)
+    FROM customer IN c
+)[0]
+
+-- Products with sales above category average
+SELECT p.productId, p.name, p.category, p.monthlySales
+FROM c p
+WHERE p.monthlySales > (
+    SELECT VALUE AVG(product.monthlySales)
+    FROM product IN c
+    WHERE product.category = p.category
+)[0]
+
+-- Customers with recent high-value orders
+SELECT c.customerId, c.name, c.email
+FROM c
+WHERE EXISTS(
+    SELECT VALUE o
+    FROM o IN c.orders
+    WHERE o.orderDate >= "2024-06-01T00:00:00Z"
+      AND o.total > 1000
+)
+```
+
+In this example, we find customers with above-average spending, products with sales above the category average, and customers with recent high-value orders. The use of subqueries allows for dynamic filtering based on aggregate values, making it easier to derive insights from complex datasets.
+
+```sql title="Correlated subqueries"
+-- Find customers with orders in the last month
+SELECT c.customerId, c.name, c.email
+FROM c
+WHERE EXISTS(
+    SELECT VALUE o
+    FROM o IN c.orders
+    WHERE o.orderDate >= DateTimeAdd("month", -1, GetCurrentDateTime())
+)
+-- Products with reviews above average rating
+SELECT p.productId, p.name, p.category, p.averageRating
+FROM c p
+WHERE p.averageRating > (
+    SELECT VALUE AVG(r.rating)
+    FROM r IN p.reviews
+)[0]
+-- Customers with orders exceeding average order value
+SELECT c.customerId, c.name, c.email
+FROM c
+WHERE EXISTS(
+    SELECT VALUE o
+    FROM o IN c.orders
+    WHERE o.total > (
+        SELECT VALUE AVG(order.total)
+        FROM order IN c.orders
+    )[0]
+    )
+```
+
+In these queries, we use correlated subqueries to filter customers based on their orders in the last month, products with reviews above average ratings, and customers with orders exceeding the average order value. Correlated subqueries allow us to reference outer query values within the inner query, enabling dynamic filtering based on related data.
+
+### Window Functions and Ranking
+
+```sql title="Ranking and analytical functions"
+-- Top customers by spending per region
+SELECT c.customerId, c.name, c.region, c.totalSpent,
+       RANK() OVER (PARTITION BY c.region ORDER BY c.totalSpent DESC) AS regionRank
+FROM c
+WHERE c.status = "active"
+
+-- Product sales ranking within categories
+SELECT p.productId, p.name, p.category, p.salesLastMonth,
+       ROW_NUMBER() OVER (PARTITION BY p.category ORDER BY p.salesLastMonth DESC) AS categoryRank
+FROM c p
+WHERE IS_DEFINED(p.salesLastMonth)
+
+-- Running totals and moving averages
+SELECT o.orderId, o.orderDate, o.total,
+       SUM(o.total) OVER (ORDER BY o.orderDate ROWS UNBOUNDED PRECEDING) AS runningTotal,
+       AVG(o.total) OVER (ORDER BY o.orderDate ROWS 6 PRECEDING) AS movingAverage
+FROM c o
+WHERE o.customerId = "customer123"
+ORDER BY o.orderDate
+```
+
+Window functions and ranking operations in Cosmos DB SQL API allow developers to perform advanced analytics on datasets, such as ranking customers by spending within regions, ranking products by sales within categories, and calculating running totals and moving averages. These features enable complex data analysis directly within the query language, providing insights into customer behavior and product performance.
+
+### Advanced JOIN Operations
+
+```sql title="Complex document joins and relationships"
+-- Self-join for hierarchical data
+SELECT parent.categoryId AS parentId,
+       parent.name AS parentName,
+       child.categoryId AS childId,
+       child.name AS childName
+FROM c parent
+JOIN c child ON child.parentCategoryId = parent.categoryId
+
+-- Multi-level array joins
+SELECT c.orderId, c.customerId, item.productId, review.rating, review.comment
+FROM c
+JOIN item IN c.items
+JOIN review IN item.reviews
+WHERE review.rating >= 4
+
+-- Cross-container logical joins (using multiple queries)
+SELECT c.customerId, c.name,
+       (SELECT VALUE p.productName
+        FROM p IN c.purchaseHistory
+        WHERE p.category = "Electronics") AS electronicsPurchases
+FROM c
+WHERE EXISTS(
+    SELECT VALUE p
+    FROM p IN c.purchaseHistory
+    WHERE p.category = "Electronics"
+)
+```
+
+Advanced JOIN operations in Cosmos DB SQL API enable developers to work with complex relationships between documents, including self-joins for hierarchical data, multi-level array joins for nested structures, and logical joins across containers. These operations allow for sophisticated data retrieval patterns, enabling applications to access related data efficiently.
+
+## Real-World Cosmos DB Applications
+
+Understanding practical applications of Cosmos DB SQL API demonstrates its versatility across different industries and use cases. The following sections illustrate how Cosmos DB SQL API can be applied in various domains, including e-commerce, IoT, gaming, and more. Each example showcases specific query patterns and data structures that are commonly used in real-world applications.
+
+### E-commerce and Retail
+
+```sql title="E-commerce platform queries"
+-- Customer 360 view with purchase history
+SELECT c.customerId,
+       c.profile.name,
+       c.profile.email,
+       c.profile.loyaltyTier,
+       {
+           "totalOrders": ARRAY_LENGTH(c.orders),
+           "lifetimeValue": (SELECT VALUE SUM(o.total) FROM o IN c.orders)[0],
+           "averageOrderValue": (SELECT VALUE AVG(o.total) FROM o IN c.orders)[0],
+           "lastOrderDate": (SELECT VALUE MAX(o.orderDate) FROM o IN c.orders)[0],
+           "favoriteCategories": c.preferences.categories,
+           "recentPurchases": ARRAY(
+               SELECT VALUE {
+                   "orderId": o.orderId,
+                   "date": o.orderDate,
+                   "total": o.total,
+                   "itemCount": ARRAY_LENGTH(o.items)
+               }
+               FROM o IN c.orders
+               WHERE o.orderDate >= DateTimeAdd("month", -3, GetCurrentDateTime())
+           )
+       } AS customerSummary
+FROM c
+WHERE c.type = "customer"
+
+-- Real-time inventory management
+SELECT p.productId,
+       p.name,
+       p.currentStock,
+       p.reorderLevel,
+       (p.currentStock <= p.reorderLevel) AS needsReorder,
+       (SELECT VALUE SUM(item.quantity)
+        FROM order IN c
+        FROM item IN order.items
+        WHERE item.productId = p.productId
+          AND order.status = "pending"
+          AND order.orderDate >= DateTimeAdd("day", -7, GetCurrentDateTime())
+       )[0] AS pendingOrders,
+       {
+           "weeklyDemand": (SELECT VALUE SUM(s.quantity)
+                           FROM s IN p.salesHistory
+                           WHERE s.date >= DateTimeAdd("day", -7, GetCurrentDateTime()))[0],
+           "monthlyDemand": (SELECT VALUE SUM(s.quantity)
+                            FROM s IN p.salesHistory
+                            WHERE s.date >= DateTimeAdd("month", -1, GetCurrentDateTime()))[0]
+       } AS demandMetrics
+FROM c p
+WHERE p.type = "product"
+  AND p.active = true
+
+-- Product recommendation engine
+SELECT r.productId,
+       r.productName,
+       r.category,
+       r.price,
+       r.rating,
+       {
+           "recommendationScore": r.score,
+           "reason": r.reason,
+           "basedonCustomers": r.similarCustomers,
+           "trending": r.trendingScore > 0.7
+       } AS recommendationData
+FROM c
+JOIN r IN c.recommendations
+WHERE c.customerId = "customer123"
+  AND r.score > 0.5
+ORDER BY r.score DESC
+```
+
+### IoT and Time-Series Data
+
+```sql title="IoT device management and analytics"
+-- Device telemetry analysis
+SELECT d.deviceId,
+       d.deviceType,
+       d.location,
+       {
+           "currentStatus": d.status,
+           "lastSeen": d.lastHeartbeat,
+           "batteryLevel": d.batteryLevel,
+           "isOnline": DateTimeDiff("minute", d.lastHeartbeat, GetCurrentDateTime()) < 5,
+           "alertsLast24h": (SELECT VALUE COUNT(1)
+                            FROM alert IN d.alerts
+                            WHERE alert.timestamp >= DateTimeAdd("day", -1, GetCurrentDateTime()))[0],
+           "averageTemp": (SELECT VALUE AVG(reading.temperature)
+                          FROM reading IN d.sensorReadings
+                          WHERE reading.timestamp >= DateTimeAdd("hour", -1, GetCurrentDateTime()))[0]
+       } AS deviceMetrics
+FROM c d
+WHERE d.type = "device"
+
+-- Anomaly detection in sensor data
+SELECT s.deviceId,
+       s.sensorType,
+       s.timestamp,
+       s.value,
+       s.normalRange.min AS expectedMin,
+       s.normalRange.max AS expectedMax,
+       (s.value < s.normalRange.min OR s.value > s.normalRange.max) AS isAnomaly,
+       ABS(s.value - ((s.normalRange.min + s.normalRange.max) / 2)) AS deviationFromNormal
+FROM c
+JOIN s IN c.sensorReadings
+WHERE s.timestamp >= DateTimeAdd("hour", -2, GetCurrentDateTime())
+  AND (s.value < s.normalRange.min OR s.value > s.normalRange.max)
+ORDER BY s.timestamp DESC
+
+-- Fleet management dashboard
+SELECT f.fleetId,
+       f.fleetName,
+       COUNT(1) AS totalVehicles,
+       (SELECT VALUE COUNT(1) FROM v IN f.vehicles WHERE v.status = "active")[0] AS activeVehicles,
+       (SELECT VALUE COUNT(1) FROM v IN f.vehicles WHERE v.maintenanceRequired = true)[0] AS needsMaintenance,
+       (SELECT VALUE AVG(v.fuelLevel) FROM v IN f.vehicles)[0] AS averageFuelLevel,
+       (SELECT VALUE SUM(v.milesThisMonth) FROM v IN f.vehicles)[0] AS totalMilesThisMonth
+FROM c f
+WHERE f.type = "fleet"
+GROUP BY f.fleetId, f.fleetName
+```
+
+### Gaming and User Analytics
+
+```sql title="Gaming platform analytics and player insights"
+-- Player performance dashboard
+SELECT p.playerId,
+       p.username,
+       p.level,
+       p.xpPoints,
+       {
+           "gamesPlayed": ARRAY_LENGTH(p.gameHistory),
+           "winRate": (SELECT VALUE COUNT(1) FROM g IN p.gameHistory WHERE g.result = "win")[0] /
+                     ARRAY_LENGTH(p.gameHistory),
+           "averageScore": (SELECT VALUE AVG(g.score) FROM g IN p.gameHistory)[0],
+           "bestScore": (SELECT VALUE MAX(g.score) FROM g IN p.gameHistory)[0],
+           "recentActivity": ARRAY(
+               SELECT VALUE {
+                   "gameId": g.gameId,
+                   "timestamp": g.timestamp,
+                   "score": g.score,
+                   "result": g.result
+               }
+               FROM g IN p.gameHistory
+               WHERE g.timestamp >= DateTimeAdd("day", -7, GetCurrentDateTime())
+               ORDER BY g.timestamp DESC
+           )[0..4]
+       } AS playerStats
+FROM c p
+WHERE p.type = "player"
+  AND p.isActive = true
+
+-- Leaderboard generation
+SELECT l.gameMode,
+       ARRAY(
+           SELECT VALUE {
+               "rank": ROW_NUMBER() OVER (ORDER BY s.score DESC),
+               "playerId": s.playerId,
+               "username": s.username,
+               "score": s.score,
+               "timestamp": s.timestamp
+           }
+           FROM s IN l.scores
+           WHERE s.timestamp >= DateTimeAdd("day", -30, GetCurrentDateTime())
+           ORDER BY s.score DESC
+       )[0..99] AS topPlayers
+FROM c l
+WHERE l.type = "leaderboard"
+
+-- Game analytics and player behavior
+SELECT g.gameId,
+       g.gameName,
+       COUNT(1) AS totalSessions,
+       AVG(g.sessionDuration) AS averageSessionLength,
+       (SELECT VALUE COUNT(1) FROM s IN g.sessions WHERE s.completed = true)[0] AS completedSessions,
+       (SELECT VALUE AVG(s.score) FROM s IN g.sessions)[0] AS averageScore,
+       {
+           "popularFeatures": ARRAY(
+               SELECT VALUE f.featureName
+               FROM f IN g.featureUsage
+               WHERE f.usageCount > 100
+               ORDER BY f.usageCount DESC
+           )[0..4],
+           "churnPoints": ARRAY(
+               SELECT VALUE {
+                   "level": cp.level,
+                   "churnRate": cp.playersLeft / cp.playersReached
+               }
+               FROM cp IN g.churnAnalysis
+               WHERE cp.churnRate > 0.2
+           )
+       } AS gameInsights
+FROM c g
+WHERE g.type = "gameAnalytics"
+  AND g.analysisDate >= DateTimeAdd("month", -1, GetCurrentDateTime())
+```
+
+### Social Media and Content Platforms
+
+```sql title="Social media platform queries"
+-- User profile and activity summary
+SELECT u.userId,
+       u.username,
+       u.profilePicture,
+       u.bio,
+       {
+           "followersCount": ARRAY_LENGTH(u.followers),
+           "followingCount": ARRAY_LENGTH(u.following),
+           "postsCount": ARRAY_LENGTH(u.posts),
+           "likesReceived": (SELECT VALUE SUM(p.likes) FROM p IN u.posts)[0],
+           "commentsReceived": (SELECT VALUE SUM(p.comments) FROM p IN u.posts)[0],
+           "recentPosts": ARRAY(
+               SELECT VALUE {
+                   "postId": p.postId,
+                   "content": p.content,
+                   "timestamp": p.timestamp,
+                   "likes": p.likes,
+                   "comments": p.comments
+               }
+               FROM p IN u.posts
+               WHERE p.timestamp >= DateTimeAdd("day", -30, GetCurrentDateTime())
+               ORDER BY p.timestamp DESC
+           )[0..5]
+         } AS userSummary
+FROM c u
+WHERE u.type = "user"
+-- Trending topics and hashtags
+SELECT t.topic,
+       COUNT(1) AS mentionCount,
+       (SELECT VALUE COUNT(1) FROM p IN t.posts WHERE p.timestamp >= DateTimeAdd("day", -7, GetCurrentDateTime()))[0] AS recentMentions,
+       (SELECT VALUE AVG(p.likes) FROM p IN t.posts)[0] AS averageLikes,
+       (SELECT VALUE AVG(p.comments) FROM p IN t.posts)[0] AS averageComments
+FROM c t
+WHERE t.type = "topic"
+GROUP BY t.topic
+-- Content engagement analysis
+SELECT c.contentId,
+       c.authorId,
+       c.contentType,
+       c.title,
+       c.publishDate,
+       {
+           "totalViews": c.views,
+           "totalLikes": c.likes,
+           "totalComments": c.comments,
+           "engagementRate": (c.likes + c.comments) / c.views,
+           "recentEngagement": ARRAY(
+               SELECT VALUE {
+                   "userId": e.userId,
+                   "timestamp": e.timestamp,
+                   "action": e.action
+               }
+               FROM e IN c.engagements
+               WHERE e.timestamp >= DateTimeAdd("day", -30, GetCurrentDateTime())
+               ORDER BY e.timestamp DESC
+           )[0..10]
+       } AS contentMetrics
+FROM c c
+WHERE c.type = "content"
+```
+
+## Performance Optimization and Best Practices
+
+### Query Optimization Strategies
+
+Performance optimization in Cosmos DB SQL API is crucial for ensuring efficient data retrieval and minimizing resource consumption. The following strategies and best practices can help developers optimize their queries for better performance:
+
+```sql title="Performance-optimized query patterns"
+-- Use efficient filtering with indexed properties
+SELECT c.id, c.name, c.email
+FROM c
+WHERE c.status = "active"  -- Indexed property
+  AND c.createdDate >= "2024-01-01T00:00:00Z"  -- Range filter on indexed property
+ORDER BY c.createdDate DESC
+
+-- Optimize projection to reduce RU consumption
+SELECT c.id, c.name, c.email  -- Only select needed properties
+FROM c
+WHERE c.accountType = "premium"
+
+-- Use TOP for limiting results efficiently
+SELECT TOP 50 c.id, c.name, c.score
+FROM c
+WHERE c.gameType = "puzzle"
+ORDER BY c.score DESC
+
+-- Optimize array queries with specific conditions
+SELECT c.orderId, c.customerId, c.total
+FROM c
+WHERE ARRAY_CONTAINS(c.tags, "express-shipping", true)  -- Use third parameter for efficiency
+```
+
+In these examples, we demonstrate how to use indexed properties for efficient filtering, optimize projections to reduce resource usage, limit results with the `TOP` clause, and efficiently query arrays using `ARRAY_CONTAINS`. These strategies help improve query performance and reduce the overall cost of operations in Cosmos DB.
+
+### Indexing Best Practices
+
+Indexing is a critical aspect of performance optimization in Cosmos DB SQL API. Properly configured indexes can significantly improve query performance by reducing the amount of data scanned during query execution. The following examples illustrate best practices for indexing in Cosmos DB:
+
+```json title="Index policy configuration"
+{
+  "indexingMode": "consistent",
+  "automatic": true,
+  "includedPaths": [
+    {
+      "path": "/status/?",
+      "indexes": [
+        {
+          "kind": "Range",
+          "dataType": "String"
+        }
+      ]
+    },
+    {
+      "path": "/createdDate/?",
+      "indexes": [
+        {
+          "kind": "Range",
+          "dataType": "DateTime"
+        }
+      ]
+    }
+  ],
+  "excludedPaths": [
+    {
+      "path": "/description/*"  -- Exclude large text fields from indexing
+    },
+    {
+      "path": "/metadata/*"  -- Exclude metadata that's not queried
+    }
+  ]
+}
+```
+
+```sql title="Index policy optimization examples"
+-- Query patterns that benefit from proper indexing
+SELECT c.productId, c.name, c.price
+FROM c
+WHERE c.category = "Electronics"  -- Should be indexed
+  AND c.inStock = true  -- Should be indexed
+  AND c.price BETWEEN 100 AND 500  -- Range index beneficial
+ORDER BY c.rating DESC  -- Rating should be indexed for sorting
+```
+
+In this example, we configure the index policy to include specific paths that are frequently queried, such as `status`, `createdDate`, and `category`. We also exclude large text fields and metadata that are not essential for query performance. This helps reduce the index size and improves query execution times.
+
+### Query Execution and Diagnostics
+
+Query execution diagnostics in Cosmos DB SQL API provide insights into query performance, resource usage, and potential bottlenecks. Developers can use these diagnostics to optimize their queries and improve overall application performance. The following examples illustrate how to analyze query execution metrics and optimize queries based on diagnostic information.
+
+```sql title="Query diagnostics and execution metrics"
+-- Enable query diagnostics in the SDK or portal
+-- Example of a query with diagnostics enabled
+SELECT c.id, c.name, c.email
+FROM c
+WHERE c.status = "active"
+  AND c.createdDate >= "2024-01-01T00:00:00Z"
+ORDER BY c.createdDate DESC
+```
+
+```json title="Query diagnostics output"
+{
+  "queryMetrics": {
+    "requestCharge": 15.5, // RU consumption
+    "indexHitRatio": 0.95, // Percentage of queries served from index
+    "durationMs": 120, // Query execution time in milliseconds
+    "itemCount": 100, // Number of items returned
+    "outputDocumentSizeBytes": 2048 // Size of the output document
+  },
+  "diagnosticInfo": {
+    "partitionKeyRangeId": "0",
+    "activityId": "12345678-1234-1234-1234-123456789012",
+    "queryPlan": {
+      "steps": [
+        {
+          "operationType": "Scan",
+          "indexUsed": "/status/?",
+          "filterApplied": true
+        }
+      ]
+    }
+  }
+}
+```
+
+In this example, we enable query diagnostics to capture metrics such as request charge (RU consumption), index hit ratio, execution duration, item count, and output document size. The diagnostic information also includes details about the partition key range used and the query plan steps, which can help identify potential performance issues and optimize the query accordingly.
+
+### Cost Optimization
+
+Cost optimization in Cosmos DB SQL API involves minimizing the Request Units (RUs) consumed by queries while maintaining acceptable performance levels. The following examples illustrate various techniques to optimize RU consumption and reduce costs:
+
+```sql title="Request Unit (RU) optimization techniques"
+-- Use pagination to control RU consumption
+SELECT c.id, c.name, c.price
+FROM c
+WHERE c.category = "Electronics"
+ORDER BY c.price
+OFFSET 0 LIMIT 25
+
+-- Optimize aggregations by filtering early
+SELECT COUNT(1) AS activeUsers
+FROM c
+WHERE c.status = "active"  -- Filter before aggregation
+  AND c.lastLoginDate >= "2024-01-01T00:00:00Z"
+
+-- Use continuation tokens for large result sets
+-- (Implemented in application code with SDK)
+
+-- Minimize cross-partition queries when possible
+SELECT c.id, c.data
+FROM c
+WHERE c.partitionKey = "specific-value"  -- Single partition query
+```
+
+In these examples, we demonstrate how to use pagination to control RU consumption, filter data early in aggregations to reduce the amount of data processed, and minimize cross-partition queries by targeting specific partitions. These techniques help optimize query performance and reduce costs associated with high RU consumption.
+
+### Advanced Performance Patterns
+
+Advanced performance patterns in Cosmos DB SQL API involve leveraging specific query techniques and optimizations to achieve high throughput and low latency for large-scale applications. The following examples illustrate high-performance query patterns that can be applied to scale applications effectively:
+
+```sql title="High-performance query patterns for scale"
+-- Batch operations for related documents
+SELECT c.customerId, c.orders
+FROM c
+WHERE c.customerId IN ("cust1", "cust2", "cust3")  -- Fetch multiple customers efficiently
+
+-- Use DISTINCT carefully with large datasets
+SELECT DISTINCT c.category
+FROM c
+WHERE c.isActive = true
+ORDER BY c.category
+
+-- Optimize JOIN operations
+SELECT c.orderId, item.productId, item.quantity
+FROM c
+JOIN item IN c.items  -- Intra-document join is efficient
+WHERE c.orderDate >= "2024-01-01T00:00:00Z"
+  AND item.price > 50
+
+-- Use UDFs for complex calculations that are reused
+-- (UDF would be defined separately)
+SELECT c.id, c.revenue, udf.calculateTax(c.revenue, c.region) AS taxAmount
+FROM c
+WHERE c.revenue > 1000
+```
+
+In these examples, we demonstrate how to batch operations for related documents, use `DISTINCT` efficiently, optimize JOIN operations within documents, and leverage User-Defined Functions (UDFs) for complex calculations. These high-performance patterns help applications scale effectively while maintaining low latency and high throughput.
+
+<BackToTop />
