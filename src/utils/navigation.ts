@@ -645,6 +645,22 @@ function getPriority(title: string): number {
 // Helper function to sort navigation items with priority logic
 function sortNavigationItems(items: NavigationItem[]): NavigationItem[] {
   return items.sort((a, b) => {
+    // Extract numeric prefixes like "01-", "02-", etc.
+    const numericPrefixRegexA = a.title.match(/^(\d+)[-\s]/);
+    const numericPrefixRegexB = b.title.match(/^(\d+)[-\s]/);
+    
+    // If both items have numeric prefixes, sort by those numbers
+    if (numericPrefixRegexA && numericPrefixRegexB) {
+      const numA = parseInt(numericPrefixRegexA[1], 10);
+      const numB = parseInt(numericPrefixRegexB[1], 10);
+      return numA - numB;
+    }
+    
+    // If only one has a numeric prefix, prioritize it
+    if (numericPrefixRegexA) return -1;
+    if (numericPrefixRegexB) return 1;
+    
+    // If neither has a numeric prefix, use the priority system
     const priorityA = getPriority(a.title);
     const priorityB = getPriority(b.title);
 
