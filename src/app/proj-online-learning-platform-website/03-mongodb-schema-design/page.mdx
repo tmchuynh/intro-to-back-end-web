@@ -1,0 +1,393 @@
+import BackToTop from "@/components/BackToTop";
+
+# MongoDB Schema Design for Online Learning Platform
+
+## Introduction
+
+In this module, we'll design the MongoDB schema for our online learning platform. Unlike relational databases, MongoDB's document model gives us flexibility in how we structure our data. We'll design our collections (similar to tables in SQL) and documents (similar to rows) to efficiently support our application's features.
+
+## Schema Design Principles for MongoDB
+
+Before diving into specific collections, let's review some MongoDB schema design principles:
+
+1. **Embed vs. Reference**: Decide when to embed documents within others and when to reference them
+2. **Data Access Patterns**: Design based on how the data will be queried and updated
+3. **Document Size**: Be mindful of the 16MB document size limit
+4. **Indexing Strategy**: Plan for proper indexing to optimize query performance
+
+<BackToTop />
+
+## Core Collections Design
+
+Let's design the main collections for our learning platform:
+
+### Users Collection
+
+The `users` collection will store all user-related information:
+
+```json title="users.json"
+{
+  "_id": ObjectId("..."),
+  "username": "johndoe",
+  "email": "john.doe@example.com",
+  "passwordHash": "argon2$hash...",  // Argon2 hashed password
+  "firstName": "John",
+  "lastName": "Doe",
+  "role": ["STUDENT"],  // Can be STUDENT, INSTRUCTOR, ADMIN
+  "profileImage": "/images/profiles/johndoe.jpg",
+  "bio": "Software developer interested in machine learning...",
+  "createdAt": ISODate("2025-06-20T14:30:00Z"),
+  "lastLogin": ISODate("2025-06-29T09:15:00Z"),
+  "isActive": true,
+  "preferences": {
+    "emailNotifications": true,
+    "darkMode": false
+  },
+  "socialProfiles": {
+    "linkedin": "https://linkedin.com/in/johndoe",
+    "github": "https://github.com/johndoe"
+  }
+}
+```
+
+### Courses Collection
+
+The `courses` collection will store course information:
+
+```json title="courses.json"
+{
+  "_id": ObjectId("..."),
+  "title": "Introduction to MongoDB",
+  "slug": "introduction-to-mongodb",
+  "description": "Learn the basics of MongoDB, including...",
+  "instructorId": ObjectId("..."),  // Reference to user
+  "instructorName": "Jane Smith",   // Denormalized for quick access
+  "thumbnailUrl": "/images/courses/mongodb-intro.jpg",
+  "price": 49.99,
+  "level": "BEGINNER",  // BEGINNER, INTERMEDIATE, ADVANCED
+  "tags": ["database", "mongodb", "nosql"],
+  "averageRating": 4.7,
+  "ratingsCount": 128,
+  "enrolledCount": 1520,
+  "isPublished": true,
+  "createdAt": ISODate("2025-01-15T10:00:00Z"),
+  "updatedAt": ISODate("2025-06-10T14:25:00Z"),
+  "status": "ACTIVE",  // ACTIVE, DRAFT, ARCHIVED
+  "requirements": [
+    "Basic understanding of databases",
+    "JavaScript knowledge recommended"
+  ],
+  "learningObjectives": [
+    "Understand NoSQL database concepts",
+    "Install and configure MongoDB",
+    "Perform CRUD operations",
+    "Design effective MongoDB schemas"
+  ]
+}
+```
+
+### Modules Collection
+
+The `modules` collection will organize course content into modules:
+
+```json title="modules.json"
+{
+  "_id": ObjectId("..."),
+  "courseId": ObjectId("..."),  // Reference to course
+  "title": "Getting Started with MongoDB",
+  "description": "Setup your environment and learn basic commands",
+  "orderIndex": 1,  // For sorting modules in order
+  "duration": 120,  // In minutes
+  "lessons": [
+    {
+      "_id": ObjectId("..."),
+      "title": "Installing MongoDB",
+      "type": "VIDEO",  // VIDEO, READING, QUIZ
+      "content": {
+        "videoUrl": "https://storage.example.com/videos/mongodb-install.mp4",
+        "duration": 15  // In minutes
+      },
+      "orderIndex": 1,
+      "isRequired": true,
+      "resources": [
+        {
+          "title": "Installation Guide PDF",
+          "url": "/resources/mongodb-installation-guide.pdf",
+          "type": "PDF"
+        }
+      ]
+    },
+    {
+      "_id": ObjectId("..."),
+      "title": "Basic MongoDB Commands",
+      "type": "READING",
+      "content": {
+        "htmlContent": "<h2>Basic Commands</h2><p>In this lesson...</p>"
+      },
+      "orderIndex": 2,
+      "isRequired": true
+    }
+    // More lessons...
+  ]
+}
+```
+
+### Enrollments Collection
+
+The `enrollments` collection tracks user enrollments in courses:
+
+```json title="enrollments.json"
+{
+  "_id": ObjectId("..."),
+  "userId": ObjectId("..."),
+  "courseId": ObjectId("..."),
+  "enrollmentDate": ISODate("2025-06-15T08:30:00Z"),
+  "lastAccessDate": ISODate("2025-06-29T16:45:00Z"),
+  "completionDate": null,
+  "progressPercentage": 35,
+  "certificateIssued": false,
+  "status": "IN_PROGRESS",  // NOT_STARTED, IN_PROGRESS, COMPLETED, DROPPED
+  "completedLessons": [
+    {
+      "lessonId": ObjectId("..."),
+      "completedAt": ISODate("2025-06-17T14:20:00Z")
+    },
+    {
+      "lessonId": ObjectId("..."),
+      "completedAt": ISODate("2025-06-18T19:10:00Z")
+    }
+    // More completed lessons...
+  ],
+  "notes": [
+    {
+      "lessonId": ObjectId("..."),
+      "content": "Remember to check the MongoDB documentation for more examples.",
+      "createdAt": ISODate("2025-06-17T14:25:00Z")
+    }
+    // More notes...
+  ]
+}
+```
+
+### Discussions Collection
+
+The `discussions` collection stores forum discussions:
+
+```json title="discussions.json"
+{
+  "_id": ObjectId("..."),
+  "courseId": ObjectId("..."),
+  "lessonId": ObjectId("..."),  // Optional, if tied to specific lesson
+  "title": "Help with MongoDB aggregation",
+  "content": "I'm trying to use the $group operator but...",
+  "authorId": ObjectId("..."),
+  "authorName": "John Doe",  // Denormalized for quick access
+  "createdAt": ISODate("2025-06-28T10:15:00Z"),
+  "updatedAt": ISODate("2025-06-28T10:15:00Z"),
+  "views": 42,
+  "isResolved": false,
+  "tags": ["aggregation", "help"],
+  "comments": [
+    {
+      "_id": ObjectId("..."),
+      "authorId": ObjectId("..."),
+      "authorName": "Jane Smith",
+      "content": "You need to structure your pipeline like this...",
+      "createdAt": ISODate("2025-06-28T11:30:00Z"),
+      "updatedAt": ISODate("2025-06-28T11:30:00Z"),
+      "isAcceptedAnswer": false,
+      "votes": 3
+    }
+    // More comments...
+  ]
+}
+```
+
+### Assessments Collection
+
+The `assessments` collection stores quizzes and tests:
+
+```json title="assessments.json"
+{
+  "_id": ObjectId("..."),
+  "courseId": ObjectId("..."),
+  "moduleId": ObjectId("..."),
+  "title": "MongoDB Basics Quiz",
+  "description": "Test your knowledge of MongoDB fundamentals",
+  "type": "QUIZ",  // QUIZ, ASSIGNMENT, EXAM
+  "timeLimit": 30,  // In minutes
+  "passingScore": 70,  // Percentage
+  "attempts": 2,  // Number of attempts allowed
+  "isRandomized": true,
+  "questions": [
+    {
+      "_id": ObjectId("..."),
+      "question": "Which of the following is NOT a valid MongoDB data type?",
+      "type": "MULTIPLE_CHOICE",
+      "points": 10,
+      "options": [
+        "String",
+        "Integer",
+        "Boolean",
+        "Float"  // Correct answer
+      ],
+      "correctAnswerIndex": 3,
+      "explanation": "MongoDB uses Double for floating-point values, not Float."
+    },
+    {
+      "_id": ObjectId("..."),
+      "question": "Write a query to find all documents where age > 25.",
+      "type": "CODING",
+      "points": 20,
+      "expectedOutput": "db.collection.find({ age: { $gt: 25 } })",
+      "hints": [
+        "Use the $gt operator",
+        "The syntax is field: { operator: value }"
+      ]
+    }
+    // More questions...
+  ]
+}
+```
+
+### Submissions Collection
+
+The `submissions` collection stores assessment submissions:
+
+```json title="submissions.json"
+{
+  "_id": ObjectId("..."),
+  "userId": ObjectId("..."),
+  "assessmentId": ObjectId("..."),
+  "courseId": ObjectId("..."),
+  "startedAt": ISODate("2025-06-28T15:00:00Z"),
+  "submittedAt": ISODate("2025-06-28T15:25:00Z"),
+  "score": 85,  // Percentage
+  "status": "GRADED",  // IN_PROGRESS, SUBMITTED, GRADED
+  "timeSpent": 25,  // In minutes
+  "attemptNumber": 1,
+  "answers": [
+    {
+      "questionId": ObjectId("..."),
+      "selectedOptionIndex": 3,
+      "isCorrect": true,
+      "pointsEarned": 10
+    },
+    {
+      "questionId": ObjectId("..."),
+      "codeSubmission": "db.collection.find({ age: { $gt: 25 } })",
+      "isCorrect": true,
+      "pointsEarned": 20
+    }
+    // More answers...
+  ],
+  "feedback": "Good understanding of MongoDB query syntax. Review data types."
+}
+```
+
+### Notifications Collection
+
+The `notifications` collection stores user notifications:
+
+```json title="notifications.json"
+{
+  "_id": ObjectId("..."),
+  "userId": ObjectId("..."),
+  "type": "COURSE_ANNOUNCEMENT",  // COURSE_ANNOUNCEMENT, DISCUSSION_REPLY, GRADE_POSTED, etc.
+  "title": "New module released",
+  "message": "The advanced aggregation module is now available.",
+  "relatedId": ObjectId("..."),  // ID of related entity (course, discussion, etc.)
+  "createdAt": ISODate("2025-06-29T08:00:00Z"),
+  "isRead": false,
+  "metadata": {
+    "courseId": ObjectId("..."),
+    "courseTitle": "Introduction to MongoDB"
+  }
+}
+```
+
+<BackToTop />
+
+## Indexing Strategy
+
+For optimal performance, we'll need to create appropriate indexes:
+
+```javascript title="MongoDB Shell"
+// Users collection indexes
+db.users.createIndex({ email: 1 }, { unique: true });
+db.users.createIndex({ username: 1 }, { unique: true });
+
+// Courses collection indexes
+db.courses.createIndex({ slug: 1 }, { unique: true });
+db.courses.createIndex({ instructorId: 1 });
+db.courses.createIndex({ tags: 1 });
+
+// Modules collection indexes
+db.modules.createIndex({ courseId: 1, orderIndex: 1 });
+
+// Enrollments collection indexes
+db.enrollments.createIndex({ userId: 1, courseId: 1 }, { unique: true });
+db.enrollments.createIndex({ courseId: 1 });
+
+// Discussions collection indexes
+db.discussions.createIndex({ courseId: 1 });
+db.discussions.createIndex({ lessonId: 1 });
+db.discussions.createIndex({ authorId: 1 });
+
+// Assessments collection indexes
+db.assessments.createIndex({ courseId: 1 });
+
+// Submissions collection indexes
+db.submissions.createIndex({ userId: 1, assessmentId: 1 });
+
+// Notifications collection indexes
+db.notifications.createIndex({ userId: 1, isRead: 1 });
+db.notifications.createIndex({ createdAt: 1 });
+```
+
+## Data Validation with JSON Schema
+
+MongoDB allows us to enforce a schema for each collection using JSON Schema validation. Here's an example for the users collection:
+
+```javascript title="MongoDB Shell"
+// Create users collection with JSON Schema validation
+db.createCollection("users", {
+  validator: {
+    $jsonSchema: {
+      bsonType: "object",
+      required: ["username", "email", "passwordHash", "role"],
+      properties: {
+        username: {
+          bsonType: "string",
+          description: "Username must be a string and is required",
+        },
+        email: {
+          bsonType: "string",
+          pattern: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$",
+          description: "Email must be a valid email address and is required",
+        },
+        passwordHash: {
+          bsonType: "string",
+          description: "Password hash must be a string and is required",
+        },
+        role: {
+          bsonType: "array",
+          items: {
+            enum: ["STUDENT", "INSTRUCTOR", "ADMIN"],
+            description: "Role must be one of the predefined roles",
+          },
+        },
+        // More property validations...
+      },
+    },
+  },
+});
+```
+
+## Next Steps
+
+Now that we've designed our MongoDB schema, in the next module we'll set up our Spring Boot application and configure it to connect to our MongoDB database.
+
+[Next: Spring Boot Setup →](/proj-online-learning-platform-website/04-spring-boot-setup)
+
+<BackToTop />
