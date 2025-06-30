@@ -7,11 +7,13 @@ In this module, we'll set up the foundation for our full-stack To-Do List applic
 ## Technologies Used
 
 ### Frontend
+
 - **Next.js**: A React framework that enables server-side rendering and static site generation
 - **TypeScript**: A strongly typed programming language that builds on JavaScript
 - **Tailwind CSS**: A utility-first CSS framework for rapidly building custom user interfaces
 
 ### Backend
+
 - **Node.js**: A JavaScript runtime built on Chrome's V8 JavaScript engine
 - **Express**: A minimal and flexible Node.js web application framework
 - **MySQL**: An open-source relational database management system
@@ -20,6 +22,7 @@ In this module, we'll set up the foundation for our full-stack To-Do List applic
 ## Prerequisites
 
 Before starting, ensure you have the following installed:
+
 - Node.js (v14 or later)
 - npm or yarn
 - MySQL (v5.7 or later)
@@ -50,19 +53,19 @@ npx tailwindcss init -p
 
 4. Update your `tailwind.config.js` file:
 
-```javascript
+```javascript title="tailwind.config.js"
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
-    './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
-    './src/components/**/*.{js,ts,jsx,tsx,mdx}',
-    './src/app/**/*.{js,ts,jsx,tsx,mdx}',
+    "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
     extend: {},
   },
   plugins: [],
-}
+};
 ```
 
 5. Create a basic project structure:
@@ -88,7 +91,8 @@ todo-app/
 
 6. Create a `.env` file in the root directory to store environment variables:
 
-```
+```dotenv title=".env"
+# Environment Variables
 # Database Configuration
 DB_HOST=localhost
 DB_USER=root
@@ -99,7 +103,9 @@ DB_NAME=todo_app_db
 JWT_SECRET=your_jwt_secret_key
 ```
 
-**Note**: Never commit your `.env` file to version control. Add it to your `.gitignore` file.
+##### CAUTION
+
+> Never commit your `.env` file to version control. Add it to your `.gitignore` file.
 
 ## Next Steps
 
