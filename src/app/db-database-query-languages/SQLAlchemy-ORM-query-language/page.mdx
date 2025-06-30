@@ -25,13 +25,13 @@ While SQLAlchemy is based off of SQL, it provides a Pythonic interface for const
 
 To get started with SQLAlchemy, you need to install the library. You can do this using pip:
 
-```bash
+```bash title="terminal"
 pip install sqlalchemy
 ```
 
 Verify the installation by checking the version:
 
-```bash
+```bash title="terminal"
 python -c "import sqlalchemy; print(sqlalchemy.__version__)"
 ```
 
@@ -41,24 +41,28 @@ This will display the installed version of SQLAlchemy, confirming that the insta
 
 To effectively use SQLAlchemy in your Python projects, it's a good practice to organize your code into a structured directory layout. Here’s a recommended project structure:
 
-```txt
-my_sqlalchemy_app/
-├── app.py
-├── __init__.py
-├── models/
+```txt title="project_structure"
+my_flask_app/
+├── app/
 │   ├── __init__.py
-│   ├── user.py
-│   └── item.py
-├── crud/
+│   ├── models/
+│   │   ├── __init__.py
+│   │   ├── user.py
+│   │   └── item.py
+│   ├── routes/
+│   │   ├── __init__.py
+│   │   ├── user_routes.py
+│   │   └── item_routes.py
+│   ├── crud/
+│   │   ├── __init__.py
+│   │   ├── user_crud.py
+│   │   └── item_crud.py
+│   ├── config.py
+│   └── extensions.py
+├── migrations/
+│   └── (alembic files)
+├── tests/
 │   ├── __init__.py
-│   ├── user_crud.py
-│   └── item_crud.py
-├── alembic/
-│   ├── versions/
-│   └── env.py
-└── tests/
-    ├── __init__.py
-    └── test_models.py
 ```
 
 This structure separates your application logic, models, CRUD operations, migration scripts, and tests, making it easier to manage and maintain your codebase.
@@ -69,7 +73,7 @@ This structure separates your application logic, models, CRUD operations, migrat
 
 When creating an engine, you need to specify the database URL. The format of the URL depends on the database you are using. Here are some common examples:
 
-```python title="app.py"
+```python title="app/config.py"
 # SQLite database
 engine = create_engine('sqlite:///example.db')
 # PostgreSQL database
@@ -84,7 +88,7 @@ This code shows how to create an engine for different databases. Replace `user`,
 
 To connect to a database using SQLAlchemy, you need to create an engine that specifies the database URL. Here’s how you can do it:
 
-```python title="app.py"
+```python title="app/config.py"
 from sqlalchemy import create_engine
 # Create an engine to connect to a SQLite database
 engine = create_engine('sqlite:///example.db')
@@ -96,7 +100,7 @@ This example creates a connection to a SQLite database named `example.db`. You c
 
 To define models in SQLAlchemy, you need to create a declarative base class. This base class is used to define your models and their mappings to database tables.
 
-```python title="models/__init__.py"
+```python title="app/models/__init__.py"
 from sqlalchemy.orm import declarative_base
 Base = declarative_base()
 ```
@@ -107,7 +111,7 @@ This code imports the `declarative_base` function from SQLAlchemy and creates a 
 
 To interact with the database, you need to create a session. A session is used to manage database transactions and allows you to add, query, update, and delete records.
 
-```python title="app.py"
+```python title="app/extensions.py"
 from sqlalchemy.orm import sessionmaker
 # Create a session factory
 Session = sessionmaker(bind=engine)
@@ -121,7 +125,7 @@ This code imports the `sessionmaker` function from SQLAlchemy and creates a sess
 
 To define models in SQLAlchemy, you create Python classes that inherit from `Base`, which is a declarative base class provided by SQLAlchemy. Each class represents a table in the database, and class attributes represent columns.
 
-```python title="models/user.py"
+```python title="app/models/user.py"
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.ext.declarative import declarative_base
 Base = declarative_base()
@@ -140,7 +144,7 @@ This example defines a `User` model with three columns: `id`, `name`, and `email
 
 To create the database schema based on your defined models, you can use the `create_all` method of the engine. This will create all tables defined in your models.
 
-```python title="app.py"
+```python title="app/__init__.py"
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from models.user import Base
@@ -160,7 +164,7 @@ CRUD stands for Create, Read, Update, and Delete, which are the four basic opera
 
 To add records to the database, you create instances of your model classes and add them to the session. After adding the records, you need to commit the session to save the changes to the database.
 
-```python title="app.py"
+```python title="app/crud/user_crud.py"
 from models.user import User
 # Create a new user instance
 new_user = User(name='John Doe',email="john@sample.com")
@@ -176,7 +180,7 @@ This code creates a new `User` instance, adds it to the session. This marks the 
 
 You can also add multiple records at once using the `session.add_all()` method, which takes a list of model instances:
 
-```python title="app.py"
+```python title="app/crud/user_crud.py"
 # Create multiple user instances
 users = [
     User(name='Alice Smith', name='Janie Bowers', name='Bob Johnson')
@@ -191,7 +195,7 @@ session.commit()
 
 To insert records into the database, you can use the `insert()` method provided by SQLAlchemy. This method allows you to construct an insert statement and execute it directly.
 
-```python title="app.py"
+```python title="app/crud/bulk_operations.py"
 from sqlalchemy import insert
 # Create an insert statement for the User table
 stmt = insert(User).values(name='Jane Doe',name="Lucas Ellis", name="Eula Guerrero", name="Ryan Santos", name="Lydia Mcclain")
@@ -207,7 +211,7 @@ This code constructs an insert statement for the `User` table and executes it us
 
 To retrieve records from the database, you can use the `session.query()` method. This method allows you to perform queries on your models and retrieve results as Python objects.
 
-```python title="app.py"
+```python title="app/routes/user_routes.py"
 # Query all users
 users = session.query(User).all()
 for user in users:
@@ -220,7 +224,7 @@ This code retrieves all users from the database and prints their details. The `s
 
 To update existing records, you first retrieve the record you want to update, modify its attributes, and then commit the session to save the changes.
 
-```python title="app.py"
+```python title="app/crud/user_crud.py"
 # Retrieve a user by ID
 user_to_update = session.query(User).filter(User.id == 1).first()
 if user_to_update:
@@ -234,7 +238,7 @@ This code retrieves a user with ID 1, updates their name to "Jane Doe", and comm
 
 To delete records from the database, you can retrieve the record you want to delete and then call the `delete` method on the session.
 
-```python title="app.py"
+```python title="app/crud/user_crud.py"
 # Retrieve a user by ID
 user_to_delete = session.query(User).filter(User.id == 1).first()
 if user_to_delete:
@@ -250,7 +254,7 @@ This code retrieves a user with ID 1 and deletes them from the database, committ
 
 To query records from the database, you can use the `filter()` method to apply conditions to your queries. This allows you to retrieve specific records based on certain criteria.
 
-```python title="app.py"
+```python title="app/routes/user_routes.py"
 from sqlalchemy import select
 # Create a select statement for the User table
 stmt = select(User).filter(User.name == 'John Doe')
@@ -266,7 +270,7 @@ This code constructs a select statement to retrieve users with the name "John Do
 
 You can also use the `filter_by()` method for simpler queries, which allows you to specify conditions using keyword arguments:
 
-```python title="app.py"
+```python title="app/routes/user_routes.py"
 # Query users by name using filter_by
 users = session.query(User).filter_by(name='John Doe').all()
 for user in users:
@@ -279,7 +283,7 @@ This code retrieves users with the name "John Doe" using the `filter_by()` metho
 
 To filter records using the `where()` method, you can construct a select statement with specific conditions. This method is similar to `filter()`, but it allows for more complex conditions and expressions.
 
-```python title="app.py"
+```python title="app/routes/user_routes.py"
 from sqlalchemy import select
 # Create a select statement with a where condition
 stmt = select(User).where(User.age > 30)
@@ -297,7 +301,7 @@ This code constructs a select statement that retrieves users with an age greater
 
 SQLAlchemy provides a rich set of operators that you can use to build complex queries. You can use comparison operators like `==`, `!=`, `<`, `>`, `<=`, and `>=` to filter records based on specific conditions.
 
-```python title="app.py"
+```python title="app/routes/advanced_queries.py"
 from sqlalchemy import and_, or_, not_
 # Create a select statement with multiple conditions
 stmt = select(User).filter(
@@ -320,7 +324,7 @@ This code constructs a select statement that retrieves users with the name "John
 
 To filter grouped results, you can use the `having()` method. This allows you to apply conditions to aggregated data after grouping.
 
-```python title="app.py"
+```python title="app/routes/analytics.py"
 # Create a select statement to group users by name and filter those with more than one user
 stmt = select(User.name, func.count(User.id).label('user_count')).group_by(User.name).having(func.count(User.id) > 1)
 # Execute the select statement
@@ -337,7 +341,7 @@ This code constructs a select statement that groups users by their names and fil
 
 To combine results from multiple queries, you can use the `union()` method. This allows you to perform set operations on query results, such as combining results from different tables or conditions.
 
-```python title="app.py"
+```python title="app/routes/advanced_queries.py"
 from sqlalchemy import union
 # Create two select statements for different conditions
 stmt1 = select(User).filter(User.name == 'John Doe')
@@ -358,7 +362,7 @@ This code constructs two select statements for users with names "John Doe" and "
 
 To retrieve unique records from a query, you can use the `distinct()` method. This allows you to eliminate duplicate records based on specific columns.
 
-```python title="app.py"
+```python title="app/routes/user_routes.py"
 # Create a select statement to retrieve distinct user names
 stmt = select(User.name).distinct()
 # Execute the select statement
@@ -375,7 +379,7 @@ This code constructs a select statement that retrieves distinct user names from 
 
 To limit the number of records returned by a query, you can use the `limit()` method. This allows you to specify the maximum number of records to retrieve.
 
-```python title="app.py"
+```python title="app/routes/pagination.py"
 # Create a select statement to limit the number of users to 10
 stmt = select(User).limit(10)
 # Execute the select statement
@@ -390,7 +394,7 @@ This code constructs a select statement that limits the number of users retrieve
 
 To skip a certain number of records before starting to return results, you can use the `offset()` method. This is useful for pagination scenarios.
 
-```python title="app.py"
+```python title="app/routes/pagination.py"
 # Create a select statement to skip the first 5 users and return the next 5
 stmt = select(User).offset(5).limit(5)
 # Execute the select statement
@@ -409,7 +413,7 @@ This code constructs a select statement that skips the first 5 users and retriev
 
 To sort query results, you can use the `order_by()` method. This allows you to specify the order in which records should be returned based on one or more columns.
 
-```python title="app.py"
+```python title="app/routes/sorting.py"
 # Create a select statement with descending order
 stmt = select(User).order_by(desc(User.name))  # Descending order by name
 # Execute the select statement
@@ -426,7 +430,7 @@ This code constructs a select statement that retrieves users sorted by their nam
 
 To group query results based on one or more columns, you can use the `group_by()` method. This allows you to aggregate data based on specific criteria.
 
-```python title="app.py"
+```python title="app/routes/analytics.py"
 # Create a select statement to group users by their names and count them
 stmt = select(User.name, func.count(User.id).label('user_count')).group_by(User.name)
 # Execute the select statement
@@ -447,7 +451,7 @@ To retrieve related records from multiple tables, you can use joins. SQLAlchemy 
 
 To perform an inner join between two tables, you can use the `join()` method. This allows you to retrieve records that have matching values in both tables.
 
-```python title="app.py"
+```python title="app/routes/relationship_queries.py"
 from sqlalchemy.orm import joinedload
 # Assuming you have another model called Item
 from models.item import Item
@@ -467,7 +471,7 @@ This code performs an inner join between the `User` and `Item` tables, retrievin
 
 To perform an outer join, you can use the `outerjoin()` method. This allows you to retrieve records from one table even if there are no matching records in the other table.
 
-```python title="app.py"
+```python title="app/routes/relationship_queries.py"
 # Create a select statement with an outer join
 stmt = select(User).outerjoin(Item).filter(User.id == Item.user_id)
 # Execute the select statement
@@ -484,7 +488,7 @@ This code performs an outer join between the `User` and `Item` tables, retrievin
 
 To chain multiple joins, you can use the `join()` method multiple times in a single query. This allows you to retrieve records from multiple related tables in one go.
 
-```python title="app.py"
+```python title="app/routes/complex_queries.py"
 # Assuming you have another model called Order
 from models.order import Order
 # Create a select statement with multiple joins
@@ -503,7 +507,7 @@ This code performs multiple joins between the `User`, `Item`, and `Order` tables
 
 To specify custom join conditions, you can use the `onclause` parameter in the `join()` method. This allows you to define how the tables should be joined based on specific conditions.
 
-```python title="app.py"
+```python title="app/routes/relationship_queries.py"
 # Create a select statement with a custom join condition
 stmt = select(User).join(Item, User.id == Item.user_id)
 # Execute the select statement
@@ -520,7 +524,7 @@ This code performs a join between the `User` and `Item` tables using a custom co
 
 To perform aggregations, such as counting records or calculating averages, you can use functions like `count()`, `sum()`, `avg()`, etc. SQLAlchemy provides a way to use these functions in your queries.
 
-```python title="app.py"
+```python title="app/routes/analytics.py"
 # Create a select statement to calculate the average age of users
 stmt = select(func.avg(User.age).label('average_age'))
 # Execute the select statement
@@ -536,7 +540,7 @@ This code constructs a select statement that calculates the average age of users
 
 To perform subqueries, you can use the `subquery()` method. This allows you to nest queries within other queries, enabling complex data retrieval scenarios.
 
-```python title="app.py"
+```python title="app/routes/complex_queries.py"
 from sqlalchemy import select, func
 # Create a subquery to count users
 subquery = select(func.count(User.id).label('user_count')).subquery()
@@ -555,7 +559,7 @@ This code creates a subquery to count the number of users and then uses that sub
 
 To manage transactions in SQLAlchemy, you can use the `begin()` method to start a transaction and the `commit()` or `rollback()` methods to finalize or revert changes.
 
-```python title="app.py"
+```python title="app/utils/transactions.py"
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 # Create an engine to connect to a SQLite database
