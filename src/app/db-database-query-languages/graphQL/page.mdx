@@ -187,6 +187,8 @@ This query retrieves the `name` and `email` fields of a user with the ID of "1".
 
 This response contains only the fields specified in the query, demonstrating GraphQL's ability to return exactly the data requested by the client.
 
+<BackToTop />
+
 ### More Query Examples
 
 Let's explore a few more query examples to better understand GraphQL's flexibility:
@@ -262,6 +264,8 @@ This query requests a user and their 2 most recent published posts. The response
   }
 }
 ```
+
+<BackToTop />
 
 ## Queries
 
@@ -392,6 +396,8 @@ type Post {
 
 This schema defines two types: `User` and `Post`. The `User` type has fields for `id`, `name`, `email`, and a list of `posts`. The `Post` type has fields for `id`, `title`, and `content`. The exclamation mark (`!`) indicates that the field is non-nullable, meaning it must always have a value.
 
+<BackToTop />
+
 ## Mutations
 
 Mutations are used to modify data on the server, such as creating, updating, or deleting records. They are similar to queries but are designed for operations that change the state of the data.
@@ -480,6 +486,8 @@ mutation {
 
 This mutation deletes the user with ID "1" and returns the `id`, `name`, and `email` of the deleted user. The server responds with a JSON object containing the deleted user's data.
 
+<BackToTop />
+
 ### Multiple Mutations
 
 GraphQL allows you to execute multiple mutations in a single request. This is useful when you need to perform several related operations at once. You can group multiple mutations within a single `mutation` block. Here’s an example:
@@ -546,6 +554,8 @@ mutation {
 
 This approach makes mutations more maintainable and easier to extend when you need to add new fields.
 
+<BackToTop />
+
 ### File Upload Mutations
 
 GraphQL can also handle file uploads with the right server setup (like apollo-server-express with graphql-upload):
@@ -581,6 +591,8 @@ function ProfileUploader() {
 }
 ```
 
+<BackToTop />
+
 ## Subscriptions
 
 Subscriptions allow clients to receive real-time updates from the server when data changes. This is useful for applications that require live updates, such as chat applications or collaborative tools. Subscriptions are defined in the schema and can be executed using the `subscription` keyword. Here’s an example of a subscription to receive updates when a new user is created:
@@ -609,6 +621,8 @@ subscription {
 
 This subscription listens for the `userCreated` event and returns the `id`, `name`, and `email` of the newly created user. When a new user is created on the server, the client will receive real-time updates with the user's data.
 
+<BackToTop />
+
 ### Filtered Subscriptions
 
 You can also filter subscriptions to only receive updates for specific events. Here's an example of a subscription that only listens for posts created by a specific user:
@@ -631,6 +645,8 @@ subscription {
   }
 }
 ```
+
+<BackToTop />
 
 ### Implementing Subscriptions with Apollo Server
 
@@ -728,6 +744,8 @@ server.listen().then(({ url, subscriptionsUrl }) => {
 });
 ```
 
+<BackToTop />
+
 ## Validations
 
 GraphQL provides built-in validation mechanisms to ensure that queries and mutations conform to the schema. When a query is executed, the server checks if the requested fields exist in the schema and if the input parameters are of the correct type. If any validation errors occur, the server responds with an error message indicating the issue.
@@ -761,6 +779,8 @@ GraphQL provides a standardized way to handle errors in queries and mutations. W
 ```
 
 This response indicates that the requested field `email` is not defined in the `User` type. The `locations` field provides information about where the error occurred in the query.
+
+<BackToTop />
 
 ### Custom Error Handling in GraphQL
 
@@ -815,6 +835,8 @@ const resolvers = {
   },
 };
 ```
+
+<BackToTop />
 
 ### Handling Errors on the Client Side
 

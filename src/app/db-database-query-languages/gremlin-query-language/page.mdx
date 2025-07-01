@@ -168,6 +168,8 @@ g.V().hasLabel('person').group().by('name').by(out('knows').values('name').fold(
 
 The power of Gremlin comes from combining these steps in different ways to express complex traversal patterns.ts
 
+<BackToTop />
+
 ## Traversal Steps
 
 Gremlin provides a rich set of traversal steps that allow you to navigate and manipulate the graph. Here are some common steps:
@@ -394,6 +396,8 @@ g.V().has('person', 'name', 'Alice')
 
 In these examples, we use `outE()` to traverse outgoing edges, `inV()` to get the vertices at the end of those edges, and `project()` to create a structured output. The `order()` step sorts the results based on edge properties like 'since', allowing us to analyze relationships over time.
 
+<BackToTop />
+
 ### Filtering and Mapping
 
 #### has()
@@ -498,6 +502,8 @@ g.V().hasLabel('person')
   .filter(values('name').is(P.startingWith('A')))
 ```
 
+<BackToTop />
+
 ### Aggregation and Grouping
 
 #### count()
@@ -586,6 +592,8 @@ g.V().hasLabel('person').values('age').mean()
 g.V().hasLabel('person').values('age').max()
 ```
 
+<BackToTop />
+
 ### Path Traversal
 
 #### path()
@@ -671,6 +679,8 @@ g.V().has('person', 'name', 'Alice')
   .path()
   .by('name')
 ```
+
+<BackToTop />
 
 ## Graph Analysis Techniques
 
@@ -1181,6 +1191,8 @@ g.V().has('person', 'name', 'Alice')
   .path().by('name')
 ```
 
+<BackToTop />
+
 ## Performance Optimization
 
 ### Indexing
@@ -1202,6 +1214,8 @@ When optimizing Gremlin queries, start with specific entry points such as `g.V()
 For operations where you only need a single element, prefer `.next()` over `.toList()`, and use `.hasNext()` to check for existence instead of evaluating the size of a list. When working with large datasets, process data in batches to manage memory usage and improve performance. Caching frequently accessed results can also help reduce repeated computation.
 
 Gremlin provides traversal strategies and the `profile()` step to analyze and optimize query performance. Use `profile()` to inspect how your query executes and identify bottlenecks. For frequently accessed data, consider storing traversal results for reuse. By following these practices, you can write Gremlin queries that are both efficient and scalable.
+
+<BackToTop />
 
 ## Real-World Use Cases
 
@@ -1239,6 +1253,8 @@ g.V().has('topic', 'name', 'Machine Learning')
   .dedup()
   .values('name')
 ```
+
+<BackToTop />
 
 ## Integration with Programming Languages
 
@@ -1375,6 +1391,8 @@ async function main() {
 main().catch((error) => console.error(error));
 ```
 
+<BackToTop />
+
 ## Common Challenges and Solutions
 
 ### Handling Large Result Sets
@@ -1497,6 +1515,8 @@ When working with graphs that might contain cycles:
      .select('a', 'b')
      .by('name')
    ```
+
+<BackToTop />
 
 ### Error Handling in Different Languages
 

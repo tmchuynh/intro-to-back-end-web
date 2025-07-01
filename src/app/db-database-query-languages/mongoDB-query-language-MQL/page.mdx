@@ -113,6 +113,8 @@ db.orders.countDocuments({
 db.inventory.findOne({ productId: "ABC123", quantity: { $gt: 0 } });
 ```
 
+<BackToTop />
+
 ### Query Operators and Expressions
 
 ```javascript title="Essential MQL operators for filtering and comparison"
@@ -179,6 +181,8 @@ db.articles.find({
   },
 });
 ```
+
+<BackToTop />
 
 ## CRUD Operations in Detail
 
@@ -256,6 +260,8 @@ try {
 }
 ```
 
+<BackToTop />
+
 ### Read Operations (Find and Query)
 
 ```javascript title="Advanced querying techniques and patterns"
@@ -331,6 +337,8 @@ db.posts.find({
   },
 });
 ```
+
+<BackToTop />
 
 ### Update Operations
 
@@ -430,6 +438,8 @@ db.users.updateOne(
 );
 ```
 
+<BackToTop />
+
 ### Delete Operations
 
 ```javascript title="Document deletion with various conditions"
@@ -482,6 +492,8 @@ db.users.updateMany(
   }
 );
 ```
+
+<BackToTop />
 
 ## Advanced Querying Techniques
 
@@ -652,6 +664,8 @@ db.customers.aggregate([
 ]);
 ```
 
+<BackToTop />
+
 ### Text Search and Indexing
 
 ```javascript title="Full-text search capabilities and optimization"
@@ -743,6 +757,8 @@ db.articles.aggregate([
 ]);
 ```
 
+<BackToTop />
+
 ### Geospatial Queries
 
 ```javascript title="Location-based queries and spatial analysis"
@@ -818,6 +834,8 @@ db.zones.find({
   },
 });
 ```
+
+<BackToTop />
 
 ## Real-World MQL Applications
 
@@ -990,6 +1008,8 @@ db.articles.aggregate([
   },
 ]);
 ```
+
+<BackToTop />
 
 ### E-commerce Analytics
 
@@ -1218,6 +1238,8 @@ db.products.aggregate([
   },
 ]);
 ```
+
+<BackToTop />
 
 ### IoT and Time-Series Data
 
@@ -1505,6 +1527,8 @@ db.equipmentLogs.aggregate([
 ]);
 ```
 
+<BackToTop />
+
 ## Performance Optimization and Best Practices
 
 ### Index Strategy and Query Optimization
@@ -1594,6 +1618,8 @@ db.users
   )
   .hint({ department: 1, status: 1, name: 1, email: 1 });
 ```
+
+<BackToTop />
 
 ### Query Performance Patterns
 

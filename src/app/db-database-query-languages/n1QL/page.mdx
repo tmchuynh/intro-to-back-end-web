@@ -125,6 +125,8 @@ WHERE a.country = "United States"
 ORDER BY route_count DESC;
 ```
 
+<BackToTop />
+
 ### JSON-Specific Operators and Functions
 
 ```sql title="Working with JSON data structures and nested fields"
@@ -185,6 +187,8 @@ SELECT name,
 FROM `travel-sample`.`inventory`.`hotel`
 WHERE price IS NOT NULL;
 ```
+
+<BackToTop />
 
 ## Advanced N1QL Operations
 
@@ -258,6 +262,8 @@ GROUP BY city
 HAVING COUNT(*) >= 3;
 ```
 
+<BackToTop />
+
 ### JOIN Operations and Document Relationships
 
 ```sql title="Connecting related documents across collections"
@@ -329,6 +335,8 @@ GROUP BY r1.sourceairport
 ORDER BY connection_count DESC;
 ```
 
+<BackToTop />
+
 ### Window Functions and Advanced Analytics
 
 ```sql title="Advanced analytical queries with window functions"
@@ -396,6 +404,8 @@ WHERE booking_date >= "2024-01-01"
 GROUP BY DATE_PART_STR(booking_date, "year"), DATE_PART_STR(booking_date, "month")
 ORDER BY year, month;
 ```
+
+<BackToTop />
 
 ## Data Manipulation Operations
 
@@ -510,6 +520,8 @@ WHERE r.distance IS NOT NULL
   AND r.airline IS NOT NULL;
 ```
 
+<BackToTop />
+
 ### UPDATE Operations
 
 ```sql title="Document modification with JSON-specific operations"
@@ -590,6 +602,8 @@ SET metrics = OBJECT_PUT(
     )
 WHERE META().id = "airline_tech_air";
 ```
+
+<BackToTop />
 
 ### UPSERT and MERGE Operations
 
@@ -702,6 +716,8 @@ LEFT JOIN `travel-sample`.`inventory`.`airline_config` existing
   ON existing.airline_code = a.iata
 WHERE a.status = "active";
 ```
+
+<BackToTop />
 
 ## Real-World N1QL Applications
 
@@ -829,6 +845,8 @@ GROUP BY country, city, month
 HAVING COUNT(*) >= 2  -- At least 2 years of data
 ORDER BY country, city, month;
 ```
+
+<BackToTop />
 
 ### E-commerce Product Analytics
 
@@ -998,6 +1016,8 @@ GROUP BY p.category, p.brand
 ORDER BY total_revenue DESC;
 ```
 
+<BackToTop />
+
 ## Performance Optimization and Best Practices
 
 ### Indexing Strategies and Query Optimization
@@ -1067,6 +1087,8 @@ FROM system:indexes
 WHERE keyspace_id = "travel-sample"
 ORDER BY num_requests DESC;
 ```
+
+<BackToTop />
 
 ### Query Optimization Patterns
 

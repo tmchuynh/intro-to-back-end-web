@@ -154,6 +154,8 @@ GET user:1001:profile
 
 In this example, we store JSON-like data as a string. Redis does not have native JSON support, but strings can be used to store serialized JSON objects. The `GET` command retrieves the entire JSON string, which can then be parsed by the application.
 
+<BackToTop />
+
 ### Hash Commands
 
 Hashes store field-value pairs, ideal for representing objects and structured data.
@@ -232,6 +234,8 @@ EXPIRE session:user:1001 3600  # 1 hour session
 ```
 
 In this example, we manage user sessions using hashes. The `HMSET` command initializes the session with user ID, login time, last activity timestamp, IP address, and user agent. The `EXPIRE` command sets a time-to-live for the session, automatically removing it after 1 hour of inactivity.
+
+<BackToTop />
 
 ### List Commands
 
@@ -328,6 +332,8 @@ BLPOP queue:high_priority queue:normal_priority queue:low_priority 1
 ```
 
 In this example, we implement worker polling across multiple queues by priority. The `BLPOP` command blocks until an element is available in any of the specified queues, allowing workers to process tasks based on their priority levels.
+
+<BackToTop />
 
 ### Set Commands
 
@@ -438,6 +444,8 @@ SISMEMBER blacklist:ips "192.168.1.100"  # Check if IP is blacklisted
 
 In this example, we manage an IP address blacklist using sets. The `SADD` command adds IP addresses to the blacklist, ensuring uniqueness. The `SISMEMBER` command checks if a specific IP address is blacklisted, allowing for security and access control.
 
+<BackToTop />
+
 ### Sorted Set Commands
 
 Sorted sets combine the uniqueness of sets with ordering by score, perfect for rankings and leaderboards.
@@ -532,6 +540,8 @@ ZCARD event_log:2024-06-29  # Count of events for the day
 
 In this example, we use sorted sets to track events for a specific day. The `ZADD` command adds events with their timestamps. The `ZRANGEBYSCORE` command retrieves events within a specific time range, while `ZREMRANGEBYSCORE` removes events older than a specified time. The `ZCARD` command counts the total number of events for the day.
 
+<BackToTop />
+
 ### Advanced Sorted Set Commands
 
 Sorted sets can also be used for more complex scenarios such as time-based scoring, priority queues, and real-time analytics.
@@ -602,6 +612,8 @@ ZCARD user_interaction:1001  # Count of interactions for the user
 
 In this example, we use sorted sets to track user interactions with timestamps. The `ZADD` command adds interactions with their corresponding timestamps. The `ZRANGEBYSCORE` command retrieves interactions within a specific time range, while `ZREMRANGEBYSCORE` removes interactions older than a specified time. The `ZCARD` command counts the total number of interactions for the user.
 
+<BackToTop />
+
 ### HyperLogLog Commands
 
 HyperLogLog is a probabilistic data structure for approximating the cardinality of large sets with minimal memory usage.
@@ -644,6 +656,8 @@ PFCOUNT real_time_events:2024-06-29  # Estimate unique real-time events for the 
 PFCOUNT real_time_events:2024-06-30  # Estimate unique real-time events for the next day
 PFMERGE real_time_events:all real_time_events:2024-06-29 real_time_events:2024-06-30  # Merge real-time event logs
 ```
+
+<BackToTop />
 
 ### Bitmap Commands
 
@@ -697,6 +711,8 @@ GETBIT user_interaction:1001 0  # Check if user liked post
 GETBIT user_interaction:1001 1  # Check if user commented on post
 GETBIT user_interaction:1001 2  # Check if user shared post
 ```
+
+<BackToTop />
 
 ## Advanced Redis Operations
 
@@ -771,6 +787,8 @@ PUBLISH events:user:created '{"user_id":"1001","email":"john@example.com","times
 PUBLISH events:order:placed '{"order_id":"12345","user_id":"1001","total":299.99,"timestamp":"2024-06-29T10:30:00Z"}'
 PUBLISH events:payment:processed '{"payment_id":"67890","order_id":"12345","amount":299.99,"timestamp":"2024-06-29T10:30:30Z"}'
 ```
+
+<BackToTop />
 
 ### Stream Commands
 
@@ -888,6 +906,8 @@ XTRIM events:user_activity MAXLEN 10000  # Keep only last 10,000 entries
 XTRIM metrics:cpu_usage MAXLEN ~ 1000   # Approximately 1,000 entries (more efficient)
 ```
 
+<BackToTop />
+
 ### Transactions and Lua Scripts
 
 ```bash title="Transaction operations for atomic operations and data integrity"
@@ -991,6 +1011,8 @@ local total_players = redis.call('ZCARD', leaderboard_key)
 return {rank + 1, total_players}  -- Return 1-based rank and total players
 ```
 
+<BackToTop />
+
 ## Real-World Redis Applications
 
 Practical implementations showcase Redis's versatility across different industries and use cases.
@@ -1049,6 +1071,8 @@ SET cache:fragment:sidebar:product_categories '<aside><h3>Categories</h3><ul><li
 SET cache:api:v1:products:search:laptop:page:1 '{"products":[...],"total":150,"page":1,"per_page":20}' EX 300
 SET cache:api:v1:users:1001:orders '{"orders":[...],"total":5,"last_updated":"2024-06-29T10:30:00Z"}' EX 600
 ```
+
+<BackToTop />
 
 ### Real-Time Analytics and Metrics
 
@@ -1115,6 +1139,8 @@ ZINCRBY engagement:users 10 "user:1001"  # Purchase +10 points
 ZINCRBY engagement:users 2 "user:1001"  # Page view +2 points
 ZREVRANGE engagement:users 0 99 WITHSCORES  # Top 100 engaged users
 ```
+
+<BackToTop />
 
 ### E-commerce and Shopping Cart
 
@@ -1192,6 +1218,8 @@ SETEX flash_sale:product:123:stock 3600 20  # 20 units available for 1 hour
 DECR flash_sale:product:123:stock  # Purchase decrements stock
 GET flash_sale:product:123:stock   # Check remaining stock
 ```
+
+<BackToTop />
 
 ### Real-Time Gaming and Leaderboards
 
@@ -1296,6 +1324,8 @@ LPUSH messages:player:alice '{"from":"bob","message":"Good game!","timestamp":"2
 LPUSH notifications:player:alice '{"type":"achievement","title":"Level Up!","message":"You reached level 47","timestamp":"2024-06-29T10:30:00Z"}'
 ```
 
+<BackToTop />
+
 ## Performance Optimization and Best Practices
 
 ### Memory Optimization and Data Structure Selection
@@ -1352,6 +1382,8 @@ LTRIM logs:errors 0 999           # Limit list sizes
 ZREMRANGEBYRANK leaderboard 100 -1  # Remove low-ranking entries
 ZREMRANGEBYSCORE analytics:events 0 1719576000  # Remove old time-based data
 ```
+
+<BackToTop />
 
 ### Connection and Performance Optimization
 
