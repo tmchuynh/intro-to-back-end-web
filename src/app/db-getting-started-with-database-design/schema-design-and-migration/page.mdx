@@ -60,6 +60,413 @@ ERDs can be created using various diagramming tools, such as Lucidchart, Draw.io
 
 ERDs play a vital role in database design by offering a clear visual representation of entities and their relationships. They help identify the main data components and how they interact, which is essential for building an effective database structure. ERDs are typically developed during the conceptual design phase and serve as a communication tool among stakeholders, ensuring a shared understanding of the data model. These diagrams also guide the transition from conceptual to logical and physical database design. ERDs can be created using diagramming tools such as Lucidchart, Draw.io, or dedicated database modeling software, and they remain a valuable reference throughout the development and implementation process.
 
+### Normalization and Denormalization
+
+Normalization is a systematic approach to organizing data in a database to reduce redundancy and improve data integrity. It involves decomposing tables into smaller, related tables and defining relationships between them. The process follows a series of rules called normal forms, each building upon the previous one.
+
+#### Normal Forms
+
+**First Normal Form (1NF)**
+- Eliminates repeating groups and ensures each column contains atomic values
+- Each table cell should contain only a single value
+- Each record should be unique
+
+```sql
+-- Example: Before 1NF (Violates atomicity)
+CREATE TABLE students_bad (
+    student_id INT,
+    name VARCHAR(100),
+    courses VARCHAR(255) -- Contains multiple values
+);
+
+-- After 1NF (Atomic values)
+CREATE TABLE students (
+    student_id INT PRIMARY KEY,
+    name VARCHAR(100)
+);
+
+CREATE TABLE student_courses (
+    student_id INT,
+    course_name VARCHAR(100),
+    PRIMARY KEY (student_id, course_name),
+    FOREIGN KEY (student_id) REFERENCES students(student_id)
+);
+```
+
+**Second Normal Form (2NF)**
+- Must be in 1NF
+- Eliminates partial dependencies on composite primary keys
+- All non-key attributes must be fully functionally dependent on the primary key
+
+```sql
+-- Example: Before 2NF (Partial dependency)
+CREATE TABLE course_enrollment_bad (
+    student_id INT,
+    course_id INT,
+    student_name VARCHAR(100), -- Depends only on student_id
+    course_name VARCHAR(100),  -- Depends only on course_id
+    grade CHAR(1),
+    PRIMARY KEY (student_id, course_id)
+);
+
+-- After 2NF (Eliminate partial dependencies)
+CREATE TABLE students (
+    student_id INT PRIMARY KEY,
+    student_name VARCHAR(100)
+);
+
+CREATE TABLE courses (
+    course_id INT PRIMARY KEY,
+    course_name VARCHAR(100)
+);
+
+CREATE TABLE enrollments (
+    student_id INT,
+    course_id INT,
+    grade CHAR(1),
+    PRIMARY KEY (student_id, course_id),
+    FOREIGN KEY (student_id) REFERENCES students(student_id),
+    FOREIGN KEY (course_id) REFERENCES courses(course_id)
+);
+```
+
+**Third Normal Form (3NF)**
+- Must be in 2NF
+- Eliminates transitive dependencies
+- No non-key attribute should depend on another non-key attribute
+
+```sql
+-- Example: Before 3NF (Transitive dependency)
+CREATE TABLE employees_bad (
+    employee_id INT PRIMARY KEY,
+    name VARCHAR(100),
+    department_id INT,
+    department_name VARCHAR(100), -- Depends on department_id, not employee_id
+    department_location VARCHAR(100) -- Depends on department_id, not employee_id
+);
+
+-- After 3NF (Eliminate transitive dependencies)
+CREATE TABLE departments (
+    department_id INT PRIMARY KEY,
+    department_name VARCHAR(100),
+    department_location VARCHAR(100)
+);
+
+CREATE TABLE employees (
+    employee_id INT PRIMARY KEY,
+    name VARCHAR(100),
+    department_id INT,
+    FOREIGN KEY (department_id) REFERENCES departments(department_id)
+);
+```
+
+#### Denormalization
+
+Denormalization is the process of intentionally introducing redundancy into a database design to improve query performance. While it goes against normalization principles, it can be beneficial in certain scenarios:
+
+**When to Consider Denormalization:**
+- Read-heavy workloads where query performance is critical
+- Complex joins that impact performance
+- Reporting and analytics requirements
+- Data warehousing scenarios
+
+```sql
+-- Example: Denormalized table for reporting
+CREATE TABLE sales_report (
+    sale_id INT PRIMARY KEY,
+    sale_date DATE,
+    product_id INT,
+    product_name VARCHAR(100),     -- Denormalized from products table
+    category_name VARCHAR(100),    -- Denormalized from categories table
+    customer_id INT,
+    customer_name VARCHAR(100),    -- Denormalized from customers table
+    customer_region VARCHAR(50),   -- Denormalized from customers table
+    quantity INT,
+    unit_price DECIMAL(10,2),
+    total_amount DECIMAL(10,2)
+);
+```
+
+### Schema Design Patterns
+
+#### Common Design Patterns
+
+**1. Single Table Inheritance**
+Used when entities share common attributes but have specific differences.
+
+```sql
+-- Single table for different types of users
+CREATE TABLE users (
+    id INT PRIMARY KEY,
+    type VARCHAR(20) NOT NULL, -- 'customer', 'admin', 'vendor'
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    -- Customer-specific fields
+    shipping_address TEXT,
+    loyalty_points INT,
+    -- Admin-specific fields
+    permissions JSON,
+    last_login TIMESTAMP,
+    -- Vendor-specific fields
+    company_name VARCHAR(100),
+    tax_id VARCHAR(50),
+    commission_rate DECIMAL(5,2)
+);
+```
+
+**2. Class Table Inheritance**
+Separate tables for each entity type with a shared base table.
+
+```sql
+-- Base table
+CREATE TABLE users (
+    id INT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Specific tables
+CREATE TABLE customers (
+    user_id INT PRIMARY KEY,
+    shipping_address TEXT,
+    loyalty_points INT DEFAULT 0,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+CREATE TABLE admins (
+    user_id INT PRIMARY KEY,
+    permissions JSON,
+    last_login TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+CREATE TABLE vendors (
+    user_id INT PRIMARY KEY,
+    company_name VARCHAR(100),
+    tax_id VARCHAR(50),
+    commission_rate DECIMAL(5,2),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+```
+
+**3. Polymorphic Associations**
+Allow a model to belong to more than one other model on a single association.
+
+```sql
+CREATE TABLE comments (
+    id INT PRIMARY KEY,
+    content TEXT NOT NULL,
+    commentable_type VARCHAR(50) NOT NULL, -- 'Post', 'Product', etc.
+    commentable_id INT NOT NULL,
+    user_id INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    INDEX idx_commentable (commentable_type, commentable_id)
+);
+```
+
+**4. Audit Trail Pattern**
+Track changes to important data over time.
+
+```sql
+CREATE TABLE product_audit (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    product_id INT NOT NULL,
+    field_name VARCHAR(50) NOT NULL,
+    old_value TEXT,
+    new_value TEXT,
+    changed_by INT NOT NULL,
+    changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    operation VARCHAR(10) NOT NULL, -- 'INSERT', 'UPDATE', 'DELETE'
+    FOREIGN KEY (product_id) REFERENCES products(id),
+    FOREIGN KEY (changed_by) REFERENCES users(id)
+);
+```
+
+### Database Constraints and Indexes
+
+#### Constraints
+
+**Primary Key Constraints**
+```sql
+-- Single column primary key
+CREATE TABLE users (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    username VARCHAR(50) UNIQUE NOT NULL
+);
+
+-- Composite primary key
+CREATE TABLE order_items (
+    order_id INT,
+    product_id INT,
+    quantity INT NOT NULL,
+    price DECIMAL(10,2) NOT NULL,
+    PRIMARY KEY (order_id, product_id),
+    FOREIGN KEY (order_id) REFERENCES orders(id),
+    FOREIGN KEY (product_id) REFERENCES products(id)
+);
+```
+
+**Foreign Key Constraints**
+```sql
+CREATE TABLE orders (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    customer_id INT NOT NULL,
+    order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status VARCHAR(20) DEFAULT 'pending',
+    FOREIGN KEY (customer_id) REFERENCES customers(id) 
+        ON DELETE RESTRICT 
+        ON UPDATE CASCADE
+);
+```
+
+**Check Constraints**
+```sql
+CREATE TABLE products (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(100) NOT NULL,
+    price DECIMAL(10,2) NOT NULL,
+    category_id INT,
+    status VARCHAR(20) DEFAULT 'active',
+    CONSTRAINT chk_price CHECK (price > 0),
+    CONSTRAINT chk_status CHECK (status IN ('active', 'inactive', 'discontinued')),
+    FOREIGN KEY (category_id) REFERENCES categories(id)
+);
+```
+
+**Unique Constraints**
+```sql
+CREATE TABLE users (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    username VARCHAR(50) NOT NULL,
+    email VARCHAR(100) NOT NULL,
+    phone VARCHAR(20),
+    UNIQUE KEY uk_username (username),
+    UNIQUE KEY uk_email (email),
+    UNIQUE KEY uk_phone (phone)
+);
+```
+
+#### Indexes
+
+**Single Column Indexes**
+```sql
+-- Create index on frequently queried column
+CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_orders_date ON orders(order_date);
+CREATE INDEX idx_products_category ON products(category_id);
+```
+
+**Composite Indexes**
+```sql
+-- Index for queries filtering by multiple columns
+CREATE INDEX idx_orders_customer_date ON orders(customer_id, order_date);
+CREATE INDEX idx_products_category_price ON products(category_id, price);
+```
+
+**Partial Indexes**
+```sql
+-- Index only active products (PostgreSQL example)
+CREATE INDEX idx_active_products ON products(name) WHERE status = 'active';
+```
+
+**Full-Text Indexes**
+```sql
+-- MySQL full-text index
+CREATE FULLTEXT INDEX idx_products_search ON products(name, description);
+
+-- Usage
+SELECT * FROM products 
+WHERE MATCH(name, description) AGAINST('laptop gaming' IN NATURAL LANGUAGE MODE);
+```
+
+### Data Types and Field Selection
+
+#### Choosing Appropriate Data Types
+
+**Numeric Types**
+```sql
+CREATE TABLE financial_data (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    
+    -- Integer types
+    small_count TINYINT,        -- -128 to 127 (1 byte)
+    medium_count SMALLINT,      -- -32,768 to 32,767 (2 bytes)
+    large_count INT,            -- -2,147,483,648 to 2,147,483,647 (4 bytes)
+    huge_count BIGINT,          -- Very large numbers (8 bytes)
+    
+    -- Decimal types for precise calculations
+    price DECIMAL(10,2),        -- Fixed precision for money
+    tax_rate DECIMAL(5,4),      -- High precision for percentages
+    
+    -- Floating point (avoid for financial data)
+    approximate_value FLOAT,    -- Less precise
+    scientific_value DOUBLE     -- More precise but still approximate
+);
+```
+
+**String Types**
+```sql
+CREATE TABLE content_data (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    
+    -- Fixed length (use when length is consistent)
+    country_code CHAR(2),       -- Always 2 characters
+    phone_number CHAR(10),      -- Fixed format phone numbers
+    
+    -- Variable length
+    username VARCHAR(50),       -- Up to 50 characters
+    email VARCHAR(255),         -- Standard email length
+    
+    -- Large text content
+    description TEXT,           -- Up to 65,535 characters
+    article_content LONGTEXT    -- Up to 4GB of text
+);
+```
+
+**Date and Time Types**
+```sql
+CREATE TABLE temporal_data (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    
+    -- Date only
+    birth_date DATE,            -- YYYY-MM-DD
+    
+    -- Time only
+    meeting_time TIME,          -- HH:MM:SS
+    
+    -- Date and time
+    created_at DATETIME,        -- YYYY-MM-DD HH:MM:SS
+    updated_at TIMESTAMP,       -- Auto-updating timestamp
+    
+    -- Year only
+    graduation_year YEAR        -- YYYY
+);
+```
+
+**JSON and Advanced Types**
+```sql
+-- Modern databases support JSON
+CREATE TABLE user_preferences (
+    user_id INT PRIMARY KEY,
+    settings JSON,
+    metadata JSON,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+-- Example JSON data
+INSERT INTO user_preferences (user_id, settings) VALUES 
+(1, '{"theme": "dark", "notifications": {"email": true, "sms": false}, "language": "en"}');
+
+-- Query JSON data
+SELECT user_id, JSON_EXTRACT(settings, '$.theme') as theme
+FROM user_preferences 
+WHERE JSON_EXTRACT(settings, '$.notifications.email') = true;
+```
+
+<BackToTop />
+
 ## Data Migration
 
 Data migration is the process of transferring data from one database to another or modifying the structure of an existing database. It is essential for maintaining data integrity, ensuring compatibility with new applications, and optimizing performance. Migration can involve various tasks, such as schema changes, data transformations, and data validation.
@@ -90,6 +497,8 @@ For example, if a company is migrating from an on-premises SQL Server database t
 - Executing the migration by transferring data using the chosen tool.
 - Validating the data in the PostgreSQL database to ensure accuracy and completeness.
 
+<BackToTop />
+
 ### Types of Database Migration
 
 - **Migration-Based Migration**: This type of migration involves moving data from one database to another, often between different database management systems (DBMS). It typically includes transferring data, schema, and relationships while ensuring data integrity and compatibility with the new system.
@@ -108,6 +517,1205 @@ State-based migration is a process that focuses on modifying the structure of an
 
 Schema migration is a process that specifically deals with changes to the database schema, such as adding new tables, modifying existing ones, or changing relationships between tables. Schema migrations are often used to adapt the database structure to evolving application needs. They can involve creating new tables, altering existing tables, or modifying relationships between tables to ensure that the database can support new features or improve performance.
 
+<BackToTop />
+
+### Migration Strategies
+
+#### Blue-Green Deployment
+This strategy involves maintaining two identical production environments (blue and green), where one serves live traffic while the other is updated.
+
+```sql
+-- Example: Blue-Green migration script
+-- Step 1: Create new schema version in green environment
+CREATE DATABASE ecommerce_v2;
+USE ecommerce_v2;
+
+-- Create updated schema
+CREATE TABLE users (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    first_name VARCHAR(50),
+    last_name VARCHAR(50),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- Step 2: Migrate data from blue to green
+INSERT INTO ecommerce_v2.users (username, email, password_hash, first_name, last_name, created_at)
+SELECT username, email, password_hash, first_name, last_name, created_at
+FROM ecommerce_v1.users;
+
+-- Step 3: Switch traffic to green environment (handled by load balancer)
+-- Step 4: Keep blue as fallback until migration is confirmed successful
+```
+
+#### Rolling Deployment
+Gradual migration where changes are applied incrementally to minimize downtime.
+
+```sql
+-- Phase 1: Add new columns without breaking existing functionality
+ALTER TABLE products 
+ADD COLUMN new_category_id INT,
+ADD COLUMN migration_status ENUM('pending', 'migrated') DEFAULT 'pending';
+
+-- Phase 2: Populate new columns gradually
+UPDATE products 
+SET new_category_id = category_id, 
+    migration_status = 'migrated'
+WHERE migration_status = 'pending'
+LIMIT 1000;
+
+-- Phase 3: Update application to use new columns
+-- Phase 4: Remove old columns after confirming new system works
+ALTER TABLE products 
+DROP COLUMN category_id;
+
+ALTER TABLE products 
+CHANGE COLUMN new_category_id category_id INT;
+```
+
+#### Shadow Migration
+Run new and old systems in parallel to validate the migration.
+
+```sql
+-- Create shadow table structure
+CREATE TABLE products_new LIKE products;
+
+-- Add new columns to shadow table
+ALTER TABLE products_new 
+ADD COLUMN enhanced_description TEXT,
+ADD COLUMN seo_keywords JSON;
+
+-- Trigger to keep shadow table in sync
+DELIMITER //
+CREATE TRIGGER sync_products_shadow
+AFTER INSERT ON products
+FOR EACH ROW
+BEGIN
+    INSERT INTO products_new (id, name, description, price, category_id, created_at)
+    VALUES (NEW.id, NEW.name, NEW.description, NEW.price, NEW.category_id, NEW.created_at);
+END;//
+DELIMITER ;
+```
+<BackToTop />
+
+
+### Migration Tools and Techniques
+
+#### Database Migration Scripts
+
+**SQL Migration Example**
+```sql
+-- migration_001_create_users_table.sql
+CREATE TABLE users (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- migration_002_add_user_profiles.sql
+CREATE TABLE user_profiles (
+    user_id INT PRIMARY KEY,
+    first_name VARCHAR(50),
+    last_name VARCHAR(50),
+    bio TEXT,
+    avatar_url VARCHAR(255),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- migration_003_add_email_verification.sql
+ALTER TABLE users 
+ADD COLUMN email_verified BOOLEAN DEFAULT FALSE,
+ADD COLUMN email_verification_token VARCHAR(255),
+ADD COLUMN email_verified_at TIMESTAMP NULL;
+```
+
+**Python Migration Script Example**
+```python
+import mysql.connector
+from datetime import datetime
+import logging
+
+class DatabaseMigrator:
+    def __init__(self, connection_config):
+        self.connection = mysql.connector.connect(**connection_config)
+        self.cursor = self.connection.cursor()
+        self.setup_migration_table()
+    
+    def setup_migration_table(self):
+        """Create migration tracking table"""
+        self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS migrations (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                migration_name VARCHAR(255) UNIQUE NOT NULL,
+                executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        self.connection.commit()
+    
+    def run_migration(self, migration_name, migration_sql):
+        """Execute a migration if not already run"""
+        # Check if migration already executed
+        self.cursor.execute(
+            "SELECT id FROM migrations WHERE migration_name = %s",
+            (migration_name,)
+        )
+        
+        if self.cursor.fetchone():
+            logging.info(f"Migration {migration_name} already executed")
+            return
+        
+        try:
+            # Execute migration
+            for statement in migration_sql.split(';'):
+                if statement.strip():
+                    self.cursor.execute(statement)
+            
+            # Record migration
+            self.cursor.execute(
+                "INSERT INTO migrations (migration_name) VALUES (%s)",
+                (migration_name,)
+            )
+            
+            self.connection.commit()
+            logging.info(f"Migration {migration_name} completed successfully")
+            
+        except Exception as e:
+            self.connection.rollback()
+            logging.error(f"Migration {migration_name} failed: {e}")
+            raise
+    
+    def rollback_migration(self, migration_name, rollback_sql):
+        """Rollback a specific migration"""
+        try:
+            for statement in rollback_sql.split(';'):
+                if statement.strip():
+                    self.cursor.execute(statement)
+            
+            self.cursor.execute(
+                "DELETE FROM migrations WHERE migration_name = %s",
+                (migration_name,)
+            )
+            
+            self.connection.commit()
+            logging.info(f"Migration {migration_name} rolled back successfully")
+            
+        except Exception as e:
+            self.connection.rollback()
+            logging.error(f"Rollback of {migration_name} failed: {e}")
+            raise
+
+# Usage example
+migrator = DatabaseMigrator({
+    'host': 'localhost',
+    'user': 'root',
+    'password': 'password',
+    'database': 'ecommerce'
+})
+
+# Run migrations
+migrator.run_migration(
+    'add_product_categories',
+    """
+    CREATE TABLE categories (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        name VARCHAR(100) NOT NULL,
+        description TEXT,
+        parent_id INT,
+        FOREIGN KEY (parent_id) REFERENCES categories(id)
+    );
+    
+    ALTER TABLE products 
+    ADD COLUMN category_id INT,
+    ADD FOREIGN KEY (category_id) REFERENCES categories(id);
+    """
+)
+```
+
+#### ETL (Extract, Transform, Load) Processes
+
+**Python ETL Example**
+```python
+import pandas as pd
+import sqlalchemy
+from sqlalchemy import create_engine
+import logging
+
+class ETLProcessor:
+    def __init__(self, source_db_url, target_db_url):
+        self.source_engine = create_engine(source_db_url)
+        self.target_engine = create_engine(target_db_url)
+    
+    def extract_data(self, query):
+        """Extract data from source database"""
+        try:
+            df = pd.read_sql(query, self.source_engine)
+            logging.info(f"Extracted {len(df)} rows")
+            return df
+        except Exception as e:
+            logging.error(f"Data extraction failed: {e}")
+            raise
+    
+    def transform_data(self, df, transformations):
+        """Apply transformations to the data"""
+        for transformation in transformations:
+            df = transformation(df)
+        return df
+    
+    def load_data(self, df, table_name, if_exists='append'):
+        """Load data into target database"""
+        try:
+            df.to_sql(table_name, self.target_engine, 
+                     if_exists=if_exists, index=False)
+            logging.info(f"Loaded {len(df)} rows to {table_name}")
+        except Exception as e:
+            logging.error(f"Data loading failed: {e}")
+            raise
+    
+    def migrate_users_table(self):
+        """Example: Migrate users table with transformations"""
+        
+        # Extract
+        users_df = self.extract_data("""
+            SELECT id, username, email, first_name, last_name, 
+                   created_at, is_active
+            FROM legacy_users
+            WHERE created_at >= '2020-01-01'
+        """)
+        
+        # Transform
+        def clean_email(df):
+            df['email'] = df['email'].str.lower().str.strip()
+            return df
+        
+        def create_full_name(df):
+            df['full_name'] = df['first_name'] + ' ' + df['last_name']
+            return df
+        
+        def convert_status(df):
+            df['status'] = df['is_active'].map({True: 'active', False: 'inactive'})
+            return df.drop('is_active', axis=1)
+        
+        transformed_df = self.transform_data(users_df, [
+            clean_email,
+            create_full_name,
+            convert_status
+        ])
+        
+        # Load
+        self.load_data(transformed_df, 'users', if_exists='replace')
+
+# Usage
+etl = ETLProcessor(
+    'mysql://user:pass@old-server/legacy_db',
+    'postgresql://user:pass@new-server/new_db'
+)
+etl.migrate_users_table()
+```
+
+<BackToTop />
+
+### Migration Best Practices
+
+#### 1. Always Backup Before Migration
+```bash
+#!/bin/bash
+# Backup script before migration
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+BACKUP_FILE="backup_${TIMESTAMP}.sql"
+
+echo "Creating backup: $BACKUP_FILE"
+mysqldump -u root -p --single-transaction --routines --triggers ecommerce > $BACKUP_FILE
+
+if [ $? -eq 0 ]; then
+    echo "Backup created successfully"
+    gzip $BACKUP_FILE
+    echo "Backup compressed to ${BACKUP_FILE}.gz"
+else
+    echo "Backup failed!"
+    exit 1
+fi
+```
+
+#### 2. Test Migrations in Non-Production Environment
+```python
+def test_migration():
+    """Test migration process"""
+    
+    # Create test database
+    test_engine = create_engine('sqlite:///test_migration.db')
+    
+    # Setup test data
+    test_data = pd.DataFrame({
+        'id': [1, 2, 3],
+        'name': ['Product A', 'Product B', 'Product C'],
+        'old_category': ['electronics', 'books', 'clothing']
+    })
+    test_data.to_sql('products', test_engine, index=False)
+    
+    # Run migration
+    migrator = DatabaseMigrator(test_engine)
+    migrator.run_migration('update_categories', """
+        CREATE TABLE categories (
+            id INTEGER PRIMARY KEY,
+            name VARCHAR(100)
+        );
+        
+        INSERT INTO categories (name) VALUES 
+        ('Electronics'), ('Books'), ('Clothing');
+        
+        ALTER TABLE products ADD COLUMN category_id INTEGER;
+        
+        UPDATE products SET category_id = 1 WHERE old_category = 'electronics';
+        UPDATE products SET category_id = 2 WHERE old_category = 'books';
+        UPDATE products SET category_id = 3 WHERE old_category = 'clothing';
+    """)
+    
+    # Validate migration results
+    result = pd.read_sql("SELECT * FROM products", test_engine)
+    assert all(result['category_id'].notna()), "All products should have category_id"
+    
+    print("Migration test passed!")
+
+test_migration()
+```
+
+#### 3. Use Transactions for Atomicity
+```sql
+-- Migration with transaction
+START TRANSACTION;
+
+-- Create new table
+CREATE TABLE user_preferences (
+    user_id INT PRIMARY KEY,
+    theme VARCHAR(20) DEFAULT 'light',
+    language VARCHAR(10) DEFAULT 'en',
+    notifications JSON,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+-- Populate with default values
+INSERT INTO user_preferences (user_id, theme, language)
+SELECT id, 'light', 'en' FROM users;
+
+-- Verify the migration
+SELECT COUNT(*) as user_count FROM users;
+SELECT COUNT(*) as pref_count FROM user_preferences;
+
+-- If counts match, commit; otherwise rollback
+COMMIT;
+-- ROLLBACK; -- Use this if verification fails
+```
+<BackToTop />
+
+
+### Common Migration Challenges
+
+#### 1. Data Type Incompatibilities
+```sql
+-- Challenge: Converting VARCHAR to JSON
+-- Old schema
+CREATE TABLE user_settings (
+    user_id INT,
+    settings_text TEXT  -- Stored as comma-separated values
+);
+
+-- New schema
+CREATE TABLE user_settings_new (
+    user_id INT,
+    settings JSON
+);
+
+-- Migration solution
+INSERT INTO user_settings_new (user_id, settings)
+SELECT 
+    user_id,
+    JSON_OBJECT(
+        'theme', SUBSTRING_INDEX(SUBSTRING_INDEX(settings_text, ',', 1), '=', -1),
+        'language', SUBSTRING_INDEX(SUBSTRING_INDEX(settings_text, ',', 2), '=', -1)
+    )
+FROM user_settings
+WHERE settings_text IS NOT NULL;
+```
+
+#### 2. Handling Large Tables
+```sql
+-- Challenge: Adding index to large table
+-- Solution: Online DDL or batched approach
+
+-- MySQL 5.6+ supports online DDL
+ALTER TABLE large_orders 
+ADD INDEX idx_customer_date (customer_id, order_date),
+ALGORITHM=INPLACE, LOCK=NONE;
+
+-- For older versions, use pt-online-schema-change
+-- pt-online-schema-change --alter "ADD INDEX idx_customer_date (customer_id, order_date)" 
+-- D=ecommerce,t=orders --execute
+```
+
+#### 3. Foreign Key Constraint Issues
+```sql
+-- Challenge: Removing referenced table
+-- Solution: Handle foreign keys properly
+
+-- Step 1: Identify dependent tables
+SELECT 
+    TABLE_NAME,
+    COLUMN_NAME,
+    CONSTRAINT_NAME,
+    REFERENCED_TABLE_NAME,
+    REFERENCED_COLUMN_NAME
+FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+WHERE REFERENCED_TABLE_NAME = 'categories';
+
+-- Step 2: Drop foreign key constraints
+ALTER TABLE products DROP FOREIGN KEY fk_products_category;
+
+-- Step 3: Migrate data if needed
+UPDATE products p
+JOIN category_mapping cm ON p.category_id = cm.old_id
+SET p.category_id = cm.new_id;
+
+-- Step 4: Recreate foreign key with new reference
+ALTER TABLE products 
+ADD CONSTRAINT fk_products_new_category 
+FOREIGN KEY (category_id) REFERENCES new_categories(id);
+```
+
+<BackToTop />
+
+## Schema Evolution and Versioning
+
+### Version Control for Database Schemas
+
+#### Git-Based Schema Versioning
+```
+migrations/
+├── v1.0.0/
+│   ├── 001_create_users_table.sql
+│   ├── 002_create_products_table.sql
+│   └── 003_create_orders_table.sql
+├── v1.1.0/
+│   ├── 004_add_user_profiles.sql
+│   └── 005_add_product_categories.sql
+├── v1.2.0/
+│   ├── 006_add_payment_methods.sql
+│   ├── 007_modify_orders_structure.sql
+│   └── rollback/
+│       ├── 006_rollback_payment_methods.sql
+│       └── 007_rollback_orders_structure.sql
+└── README.md
+```
+
+#### Schema Version Tracking
+```sql
+CREATE TABLE schema_versions (
+    version VARCHAR(20) PRIMARY KEY,
+    applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    applied_by VARCHAR(100),
+    description TEXT,
+    rollback_sql TEXT
+);
+
+-- Track schema changes
+INSERT INTO schema_versions (version, applied_by, description) VALUES 
+('1.0.0', 'admin', 'Initial schema creation'),
+('1.1.0', 'developer1', 'Added user profiles and product categories'),
+('1.2.0', 'developer2', 'Added payment system');
+```
+
+<BackToTop />
+
+### Backward Compatibility Strategies
+
+#### Graceful Column Addition
+```sql
+-- Add column with default value to maintain compatibility
+ALTER TABLE users 
+ADD COLUMN phone VARCHAR(20) DEFAULT NULL;
+
+-- Applications can continue working without immediate updates
+-- New applications can utilize the phone field
+```
+
+#### View-Based Compatibility Layer
+```sql
+-- Original table structure (modified)
+ALTER TABLE products 
+ADD COLUMN category_id INT,
+ADD COLUMN brand_id INT;
+
+-- Maintain old interface through view
+CREATE VIEW products_legacy AS
+SELECT 
+    id,
+    name,
+    description,
+    price,
+    CONCAT(c.name, ' - ', b.name) as category_brand,
+    created_at
+FROM products p
+LEFT JOIN categories c ON p.category_id = c.id
+LEFT JOIN brands b ON p.brand_id = b.id;
+
+-- Old applications continue to work with products_legacy view
+```
+
+<BackToTop />
+
+## Performance Considerations
+
+### Index Strategy for Schema Design
+
+#### Query-Driven Index Design
+```sql
+-- Analyze common query patterns
+-- Query 1: Find user by email
+SELECT * FROM users WHERE email = 'user@example.com';
+
+-- Query 2: Get orders for a customer in date range
+SELECT * FROM orders 
+WHERE customer_id = 123 
+AND order_date BETWEEN '2024-01-01' AND '2024-12-31';
+
+-- Query 3: Search products by category and price range
+SELECT * FROM products 
+WHERE category_id = 5 
+AND price BETWEEN 100 AND 500
+ORDER BY created_at DESC;
+
+-- Corresponding indexes
+CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_orders_customer_date ON orders(customer_id, order_date);
+CREATE INDEX idx_products_category_price_date ON products(category_id, price, created_at);
+```
+
+#### Monitoring Index Usage
+```sql
+-- MySQL: Check index usage
+SELECT 
+    OBJECT_SCHEMA,
+    OBJECT_NAME,
+    INDEX_NAME,
+    COUNT_FETCH,
+    COUNT_INSERT,
+    COUNT_UPDATE,
+    COUNT_DELETE
+FROM performance_schema.table_io_waits_summary_by_index_usage
+WHERE OBJECT_SCHEMA = 'ecommerce'
+ORDER BY COUNT_FETCH DESC;
+
+-- Identify unused indexes
+SELECT 
+    CONCAT(OBJECT_SCHEMA, '.', OBJECT_NAME) AS table_name,
+    INDEX_NAME
+FROM performance_schema.table_io_waits_summary_by_index_usage
+WHERE OBJECT_SCHEMA = 'ecommerce'
+AND COUNT_FETCH = 0
+AND INDEX_NAME IS NOT NULL;
+```
+
+### Partitioning Strategies
+
+#### Time-Based Partitioning
+```sql
+-- Partition orders table by year
+CREATE TABLE orders (
+    id INT AUTO_INCREMENT,
+    customer_id INT NOT NULL,
+    order_date DATE NOT NULL,
+    total_amount DECIMAL(10,2),
+    status VARCHAR(20),
+    PRIMARY KEY (id, order_date),
+    FOREIGN KEY (customer_id) REFERENCES customers(id)
+)
+PARTITION BY RANGE (YEAR(order_date)) (
+    PARTITION p2022 VALUES LESS THAN (2023),
+    PARTITION p2023 VALUES LESS THAN (2024),
+    PARTITION p2024 VALUES LESS THAN (2025),
+    PARTITION p_future VALUES LESS THAN MAXVALUE
+);
+```
+
+#### Hash Partitioning
+```sql
+-- Distribute users across partitions by hash
+CREATE TABLE users (
+    id INT AUTO_INCREMENT,
+    username VARCHAR(50),
+    email VARCHAR(100),
+    created_at TIMESTAMP,
+    PRIMARY KEY (id)
+)
+PARTITION BY HASH(id)
+PARTITIONS 4;
+```
+
+<BackToTop />
+
+## Security in Schema Design
+
+### Column-Level Security
+
+#### Sensitive Data Handling
+```sql
+-- Encrypt sensitive data at rest
+CREATE TABLE users (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    username VARCHAR(50) NOT NULL,
+    email VARCHAR(100) NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,  -- Always hash passwords
+    ssn VARBINARY(255),  -- Encrypted SSN
+    credit_card_hash VARCHAR(255),  -- Hashed credit card for comparison
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Store encryption keys separately from data
+CREATE TABLE encryption_keys (
+    key_id VARCHAR(50) PRIMARY KEY,
+    key_value VARBINARY(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP
+);
+```
+
+#### Row-Level Security (PostgreSQL)
+```sql
+-- Enable row-level security
+CREATE TABLE customer_orders (
+    id SERIAL PRIMARY KEY,
+    customer_id INTEGER NOT NULL,
+    order_data JSONB,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+ALTER TABLE customer_orders ENABLE ROW LEVEL SECURITY;
+
+-- Policy: Users can only see their own orders
+CREATE POLICY customer_orders_policy ON customer_orders
+    FOR ALL
+    TO app_user
+    USING (customer_id = current_setting('app.current_customer_id')::INTEGER);
+```
+
+<BackToTop />
+
+### Access Control Design
+
+#### Role-Based Access Control Schema
+```sql
+CREATE TABLE roles (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(50) UNIQUE NOT NULL,
+    description TEXT
+);
+
+CREATE TABLE permissions (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(50) UNIQUE NOT NULL,
+    resource VARCHAR(50) NOT NULL,
+    action VARCHAR(50) NOT NULL
+);
+
+CREATE TABLE role_permissions (
+    role_id INT,
+    permission_id INT,
+    PRIMARY KEY (role_id, permission_id),
+    FOREIGN KEY (role_id) REFERENCES roles(id),
+    FOREIGN KEY (permission_id) REFERENCES permissions(id)
+);
+
+CREATE TABLE user_roles (
+    user_id INT,
+    role_id INT,
+    assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    assigned_by INT,
+    PRIMARY KEY (user_id, role_id),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (role_id) REFERENCES roles(id),
+    FOREIGN KEY (assigned_by) REFERENCES users(id)
+);
+
+-- Sample data
+INSERT INTO roles (name, description) VALUES 
+('admin', 'Full system access'),
+('customer', 'Customer portal access'),
+('support', 'Customer support access');
+
+INSERT INTO permissions (name, resource, action) VALUES 
+('view_all_orders', 'orders', 'read'),
+('modify_orders', 'orders', 'write'),
+('view_customer_data', 'customers', 'read');
+```
+
+<BackToTop />
+
+## Testing and Validation
+
+### Migration Testing Framework
+
+#### Automated Migration Testing
+```python
+import unittest
+import mysql.connector
+from unittest.mock import patch
+
+class MigrationTestCase(unittest.TestCase):
+    def setUp(self):
+        """Set up test database"""
+        self.test_db_config = {
+            'host': 'localhost',
+            'user': 'test_user',
+            'password': 'test_pass',
+            'database': 'test_migration'
+        }
+        
+        self.connection = mysql.connector.connect(**self.test_db_config)
+        self.cursor = self.connection.cursor()
+        
+        # Create test tables
+        self.setup_test_data()
+    
+    def tearDown(self):
+        """Clean up test database"""
+        self.cursor.execute("DROP DATABASE IF EXISTS test_migration")
+        self.connection.close()
+    
+    def setup_test_data(self):
+        """Create test data for migration testing"""
+        self.cursor.execute("""
+            CREATE TABLE users_old (
+                id INT PRIMARY KEY,
+                name VARCHAR(100),
+                email VARCHAR(100),
+                old_field VARCHAR(50)
+            )
+        """)
+        
+        test_data = [
+            (1, 'John Doe', 'john@example.com', 'old_value1'),
+            (2, 'Jane Smith', 'jane@example.com', 'old_value2')
+        ]
+        
+        self.cursor.executemany(
+            "INSERT INTO users_old VALUES (%s, %s, %s, %s)",
+            test_data
+        )
+        self.connection.commit()
+    
+    def test_migration_preserves_data(self):
+        """Test that migration preserves existing data"""
+        # Count records before migration
+        self.cursor.execute("SELECT COUNT(*) FROM users_old")
+        count_before = self.cursor.fetchone()[0]
+        
+        # Run migration
+        migration_sql = """
+            CREATE TABLE users_new (
+                id INT PRIMARY KEY,
+                full_name VARCHAR(100),
+                email VARCHAR(100),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+            
+            INSERT INTO users_new (id, full_name, email)
+            SELECT id, name, email FROM users_old;
+        """
+        
+        for statement in migration_sql.split(';'):
+            if statement.strip():
+                self.cursor.execute(statement)
+        
+        # Count records after migration
+        self.cursor.execute("SELECT COUNT(*) FROM users_new")
+        count_after = self.cursor.fetchone()[0]
+        
+        self.assertEqual(count_before, count_after, 
+                        "Migration should preserve all records")
+    
+    def test_migration_data_integrity(self):
+        """Test that migrated data maintains integrity"""
+        # Run migration
+        self.cursor.execute("""
+            CREATE TABLE users_new (
+                id INT PRIMARY KEY,
+                full_name VARCHAR(100),
+                email VARCHAR(100) UNIQUE
+            );
+            
+            INSERT INTO users_new (id, full_name, email)
+            SELECT id, name, email FROM users_old;
+        """)
+        
+        # Test data integrity
+        self.cursor.execute("""
+            SELECT u_old.id, u_old.email, u_new.email
+            FROM users_old u_old
+            JOIN users_new u_new ON u_old.id = u_new.id
+            WHERE u_old.email != u_new.email
+        """)
+        
+        mismatched_emails = self.cursor.fetchall()
+        self.assertEqual(len(mismatched_emails), 0, 
+                        "Email addresses should match between old and new tables")
+
+if __name__ == '__main__':
+    unittest.main()
+```
+
+<BackToTop />
+
+### Data Validation Scripts
+
+#### Post-Migration Validation
+```python
+def validate_migration_results(db_config):
+    """Comprehensive validation after migration"""
+    
+    connection = mysql.connector.connect(**db_config)
+    cursor = connection.cursor()
+    
+    validation_results = {
+        'table_counts': {},
+        'foreign_key_integrity': True,
+        'data_quality_issues': [],
+        'performance_metrics': {}
+    }
+    
+    # 1. Validate record counts
+    tables_to_check = ['users', 'products', 'orders', 'order_items']
+    
+    for table in tables_to_check:
+        cursor.execute(f"SELECT COUNT(*) FROM {table}")
+        count = cursor.fetchone()[0]
+        validation_results['table_counts'][table] = count
+        
+        # Check for null values in required fields
+        cursor.execute(f"""
+            SELECT COUNT(*) FROM {table} 
+            WHERE id IS NULL OR created_at IS NULL
+        """)
+        null_count = cursor.fetchone()[0]
+        
+        if null_count > 0:
+            validation_results['data_quality_issues'].append(
+                f"{table}: {null_count} records with null required fields"
+            )
+    
+    # 2. Validate foreign key integrity
+    cursor.execute("""
+        SELECT 
+            TABLE_NAME,
+            COLUMN_NAME,
+            CONSTRAINT_NAME,
+            REFERENCED_TABLE_NAME,
+            REFERENCED_COLUMN_NAME
+        FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+        WHERE REFERENCED_TABLE_NAME IS NOT NULL
+        AND TABLE_SCHEMA = DATABASE()
+    """)
+    
+    foreign_keys = cursor.fetchall()
+    
+    for fk in foreign_keys:
+        table, column, constraint, ref_table, ref_column = fk
+        
+        # Check for orphaned records
+        cursor.execute(f"""
+            SELECT COUNT(*) FROM {table} t
+            LEFT JOIN {ref_table} r ON t.{column} = r.{ref_column}
+            WHERE t.{column} IS NOT NULL AND r.{ref_column} IS NULL
+        """)
+        
+        orphaned_count = cursor.fetchone()[0]
+        if orphaned_count > 0:
+            validation_results['foreign_key_integrity'] = False
+            validation_results['data_quality_issues'].append(
+                f"Foreign key violation: {table}.{column} has {orphaned_count} orphaned records"
+            )
+    
+    # 3. Performance validation
+    test_queries = [
+        ("User lookup by email", "SELECT * FROM users WHERE email = 'test@example.com'"),
+        ("Orders by customer", "SELECT * FROM orders WHERE customer_id = 1"),
+        ("Product search", "SELECT * FROM products WHERE name LIKE '%laptop%'")
+    ]
+    
+    for query_name, query in test_queries:
+        start_time = time.time()
+        cursor.execute(f"EXPLAIN {query}")
+        execution_plan = cursor.fetchall()
+        cursor.execute(query)
+        results = cursor.fetchall()
+        end_time = time.time()
+        
+        validation_results['performance_metrics'][query_name] = {
+            'execution_time': end_time - start_time,
+            'result_count': len(results),
+            'uses_index': any('index' in str(row).lower() for row in execution_plan)
+        }
+    
+    return validation_results
+
+# Usage
+results = validate_migration_results(db_config)
+print("Migration validation results:", results)
+```
+
+<BackToTop />
+
+## Case Studies and Examples
+
+### Case Study 1: E-commerce Platform Migration
+
+#### Scenario
+Migrate from a monolithic e-commerce database to a microservices-ready schema with improved performance and scalability.
+
+#### Original Schema Issues
+```sql
+-- Problematic original design
+CREATE TABLE products (
+    id INT PRIMARY KEY,
+    name VARCHAR(255),
+    description TEXT,
+    price DECIMAL(10,2),
+    category VARCHAR(100),  -- Should be normalized
+    inventory_count INT,
+    supplier_info TEXT,     -- Should be separate table
+    seo_keywords TEXT,      -- Should be separate table
+    created_at TIMESTAMP
+);
+```
+
+#### Improved Schema Design
+```sql
+-- Normalized and optimized design
+CREATE TABLE categories (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(100) UNIQUE NOT NULL,
+    slug VARCHAR(100) UNIQUE NOT NULL,
+    description TEXT,
+    parent_id INT,
+    FOREIGN KEY (parent_id) REFERENCES categories(id),
+    INDEX idx_slug (slug),
+    INDEX idx_parent (parent_id)
+);
+
+CREATE TABLE suppliers (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(100) NOT NULL,
+    contact_email VARCHAR(100),
+    contact_phone VARCHAR(20),
+    address TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE products (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(255) NOT NULL,
+    slug VARCHAR(255) UNIQUE NOT NULL,
+    description TEXT,
+    price DECIMAL(10,2) NOT NULL,
+    category_id INT NOT NULL,
+    supplier_id INT,
+    status ENUM('active', 'inactive', 'discontinued') DEFAULT 'active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    FOREIGN KEY (category_id) REFERENCES categories(id),
+    FOREIGN KEY (supplier_id) REFERENCES suppliers(id),
+    
+    INDEX idx_slug (slug),
+    INDEX idx_category (category_id),
+    INDEX idx_status (status),
+    INDEX idx_price (price),
+    FULLTEXT INDEX idx_search (name, description)
+);
+
+CREATE TABLE product_inventory (
+    product_id INT PRIMARY KEY,
+    quantity INT NOT NULL DEFAULT 0,
+    reserved_quantity INT NOT NULL DEFAULT 0,
+    reorder_level INT DEFAULT 10,
+    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+    INDEX idx_low_stock (quantity, reorder_level)
+);
+
+CREATE TABLE product_seo (
+    product_id INT PRIMARY KEY,
+    meta_title VARCHAR(255),
+    meta_description TEXT,
+    keywords JSON,
+    canonical_url VARCHAR(255),
+    
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+);
+```
+
+#### Migration Strategy
+```python
+def migrate_ecommerce_schema():
+    """Complete migration strategy for e-commerce platform"""
+    
+    # Phase 1: Create new tables
+    print("Phase 1: Creating new schema...")
+    execute_migration_file('001_create_categories.sql')
+    execute_migration_file('002_create_suppliers.sql')
+    execute_migration_file('003_create_products_new.sql')
+    execute_migration_file('004_create_inventory.sql')
+    execute_migration_file('005_create_seo.sql')
+    
+    # Phase 2: Migrate data
+    print("Phase 2: Migrating data...")
+    
+    # Migrate categories
+    cursor.execute("""
+        INSERT IGNORE INTO categories (name, slug)
+        SELECT DISTINCT 
+            category,
+            LOWER(REPLACE(REPLACE(category, ' ', '-'), '&', 'and'))
+        FROM products_old 
+        WHERE category IS NOT NULL
+    """)
+    
+    # Migrate suppliers (extract from supplier_info)
+    cursor.execute("""
+        INSERT INTO suppliers (name, contact_email)
+        SELECT DISTINCT
+            SUBSTRING_INDEX(supplier_info, '|', 1) as name,
+            SUBSTRING_INDEX(supplier_info, '|', -1) as email
+        FROM products_old 
+        WHERE supplier_info IS NOT NULL
+        AND supplier_info LIKE '%|%'
+    """)
+    
+    # Migrate products
+    cursor.execute("""
+        INSERT INTO products (id, name, slug, description, price, category_id, supplier_id)
+        SELECT 
+            p.id,
+            p.name,
+            LOWER(REPLACE(REPLACE(p.name, ' ', '-'), '&', 'and')),
+            p.description,
+            p.price,
+            c.id,
+            s.id
+        FROM products_old p
+        LEFT JOIN categories c ON p.category = c.name
+        LEFT JOIN suppliers s ON SUBSTRING_INDEX(p.supplier_info, '|', 1) = s.name
+    """)
+    
+    # Migrate inventory
+    cursor.execute("""
+        INSERT INTO product_inventory (product_id, quantity)
+        SELECT id, COALESCE(inventory_count, 0)
+        FROM products_old
+    """)
+    
+    # Migrate SEO data
+    cursor.execute("""
+        INSERT INTO product_seo (product_id, keywords)
+        SELECT 
+            id, 
+            CASE 
+                WHEN seo_keywords IS NOT NULL 
+                THEN JSON_ARRAY(seo_keywords)
+                ELSE JSON_ARRAY()
+            END
+        FROM products_old
+        WHERE seo_keywords IS NOT NULL
+    """)
+    
+    # Phase 3: Validation
+    print("Phase 3: Validating migration...")
+    validation_results = validate_migration_results()
+    
+    if validation_results['success']:
+        print("Phase 4: Switching to new schema...")
+        # Update application configuration
+        # Drop old tables after confirmation
+        print("Migration completed successfully!")
+    else:
+        print("Migration validation failed:", validation_results['errors'])
+        return False
+    
+    return True
+```
+
+<BackToTop />
+
+### Case Study 2: Social Media Platform Schema Evolution
+
+#### Adding Real-time Features
+```sql
+-- Original simple posts table
+CREATE TABLE posts (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT,
+    content TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Evolution for real-time features
+CREATE TABLE posts_new (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    content TEXT NOT NULL,
+    content_type ENUM('text', 'image', 'video', 'link') DEFAULT 'text',
+    metadata JSON,  -- Flexible data for different content types
+    visibility ENUM('public', 'friends', 'private') DEFAULT 'public',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    INDEX idx_user_created (user_id, created_at),
+    INDEX idx_visibility_created (visibility, created_at)
+);
+
+-- Real-time engagement tracking
+CREATE TABLE post_engagements (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    post_id INT NOT NULL,
+    user_id INT NOT NULL,
+    engagement_type ENUM('like', 'comment', 'share', 'view') NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    FOREIGN KEY (post_id) REFERENCES posts_new(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    
+    UNIQUE KEY uk_user_post_engagement (user_id, post_id, engagement_type),
+    INDEX idx_post_type_created (post_id, engagement_type, created_at),
+    INDEX idx_user_type_created (user_id, engagement_type, created_at)
+);
+
+-- Real-time activity feed
+CREATE TABLE activity_feed (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    actor_id INT NOT NULL,
+    action_type VARCHAR(50) NOT NULL,
+    target_type VARCHAR(50) NOT NULL,
+    target_id INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (actor_id) REFERENCES users(id),
+    
+    INDEX idx_user_created (user_id, created_at),
+    INDEX idx_target (target_type, target_id)
+) PARTITION BY RANGE (UNIX_TIMESTAMP(created_at)) (
+    PARTITION p202401 VALUES LESS THAN (UNIX_TIMESTAMP('2024-02-01')),
+    PARTITION p202402 VALUES LESS THAN (UNIX_TIMESTAMP('2024-03-01')),
+    PARTITION p202403 VALUES LESS THAN (UNIX_TIMESTAMP('2024-04-01')),
+    PARTITION p_future VALUES LESS THAN MAXVALUE
+);
+```
+
 ## Next Steps
 
 ### Immediate Actions
@@ -120,9 +1728,9 @@ Schema migration is a process that specifically deals with changes to the databa
 
 ### Optional Actions
 
-| Action                                                                                                        | Purpose                                                             |
-| ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| [Design Patterns](/adv-software-principles/design-patterns)                                                                         | Explore common design patterns used in database development         |
-| [Software Design Principles](/adv-software-principles/software-design-principles)                                                   | Learn about key software design principles that impact database design |
+| Action                                                                            | Purpose                                                                |
+| --------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| [Design Patterns](/adv-software-principles/design-patterns)                       | Explore common design patterns used in database development            |
+| [Software Design Principles](/adv-software-principles/software-design-principles) | Learn about key software design principles that impact database design |
 
 <BackToTop />

@@ -63,6 +63,8 @@ Sixth Normal Form (6NF) is a relatively advanced normalization form that deals w
 
 ![Database Normalization Spliting Large Database Table](https://miro.medium.com/v2/resize:fit:927/0*zmKwN4cd5FG2JwL1.png)
 
+<BackToTop />
+
 ## Relationships in Databases
 
 In relational databases, relationships define how data in one table relates to data in another. Understanding these relationships is essential for effective database design and normalization. The main types of relationships are:
@@ -93,6 +95,8 @@ A many-to-one relationship is the inverse of a one-to-many relationship. In this
 ### Many-to-Many (M:N) Relationships
 
 A many-to-many relationship occurs when records in Table A can relate to multiple records in Table B, and records in Table B can relate to multiple records in Table A. This relationship is typically implemented using a junction table that contains foreign keys referencing the primary keys of both related tables. An example is students enrolling in multiple courses, where each course can have multiple students. In this case, a junction table called "enrollments" can be created, which contains foreign keys referencing both the students and courses tables. This allows for efficient querying and management of the many-to-many relationship, enabling operations such as retrieving all courses a student is enrolled in or all students enrolled in a specific course.
+
+<BackToTop />
 
 ### Table Joins
 
