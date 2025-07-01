@@ -1,0 +1,1713 @@
+import BackToTop from "@/components/BackToTop";
+
+# File Upload System
+
+## Table of Contents
+
+## Introduction
+
+In this module, we'll implement a comprehensive file upload system that handles various file types, provides secure storage, implements virus scanning, and manages file access permissions. The system will support multiple cloud storage providers and include features like file compression, thumbnail generation, and download tracking.
+
+## File Upload Features
+
+### Core Upload Components
+
+1. **Multi-format Support**
+   - Documents (PDF, DOC, DOCX, PPT, PPTX)
+   - Images (JPG, PNG, GIF, WebP)
+   - Videos (MP4, WebM, MOV)
+   - Audio (MP3, WAV, OGG)
+   - Archives (ZIP, RAR, 7Z)
+
+2. **Upload Methods**
+   - Drag and drop interface
+   - File browser selection
+   - Bulk file uploads
+   - URL-based uploads
+
+3. **Security Features**
+   - File type validation
+   - Virus scanning
+   - Size limitations
+   - Access control
+
+4. **Processing Features**
+   - Thumbnail generation
+   - Image compression
+   - Video transcoding
+   - Metadata extraction
+
+## Backend Implementation
+
+### File Models
+
+```java
+@Document(collection = "uploaded_files")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class UploadedFile {
+    @Id
+    private String id;
+
+    // File information
+    private String originalName;
+    private String fileName; // Unique generated name
+    private String mimeType;
+    private long fileSize;
+    private String fileExtension;
+    private String checksum; // MD5 or SHA256
+
+    // Storage information
+    private String storageProvider; // LOCAL, AWS_S3, GOOGLE_CLOUD, etc.
+    private String storagePath;
+    private String publicUrl;
+    private String downloadUrl;
+
+    // Ownership and context
+    private String uploadedBy;
+    private String courseId;
+    private String lessonId;
+    private String assignmentId;
+    private FileContext context; // COURSE_MATERIAL, ASSIGNMENT_SUBMISSION, PROFILE_PICTURE, etc.
+
+    // File metadata
+    private FileType fileType;
+    private Map<String, Object> metadata;
+    private String description;
+    private List<String> tags;
+
+    // Processing status
+    private ProcessingStatus processingStatus;
+    private String processingError;
+    private Map<String, String> processedVariants; // thumbnails, compressed versions, etc.
+
+    // Security
+    private ScanStatus virusScanStatus;
+    private String scanResult;
+    private LocalDateTime scannedAt;
+
+    // Access control
+    private FileVisibility visibility;
+    private List<String> allowedUsers;
+    private List<String> allowedRoles;
+    private boolean isPublic;
+    private boolean requiresAuthentication;
+
+    // Statistics
+    private long downloadCount;
+    private LocalDateTime lastDownloadedAt;
+    private String lastDownloadedBy;
+
+    // Lifecycle
+    private LocalDateTime expiresAt;
+    private boolean isArchived;
+    private LocalDateTime archivedAt;
+
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+}
+
+@Document(collection = "file_download_logs")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class FileDownloadLog {
+    @Id
+    private String id;
+
+    private String fileId;
+    private String userId;
+    private String userAgent;
+    private String ipAddress;
+    private String downloadMethod; // DIRECT, STREAM, TORRENT
+
+    private LocalDateTime downloadedAt;
+    private long bytesTransferred;
+    private boolean completed;
+    private String failureReason;
+}
+
+@Document(collection = "upload_sessions")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class UploadSession {
+    @Id
+    private String id;
+
+    private String userId;
+    private String courseId;
+    private FileContext context;
+
+    // Session details
+    private UploadMethod uploadMethod;
+    private int totalFiles;
+    private long totalSize;
+    private int filesCompleted;
+    private long bytesUploaded;
+
+    // Status
+    private SessionStatus status;
+    private String errorMessage;
+    private List<String> uploadedFileIds;
+    private List<String> failedFiles;
+
+    // Progress tracking
+    private double progressPercentage;
+    private long estimatedTimeRemaining;
+
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+    private LocalDateTime completedAt;
+}
+
+public enum FileType {
+    DOCUMENT,
+    IMAGE,
+    VIDEO,
+    AUDIO,
+    ARCHIVE,
+    SPREADSHEET,
+    PRESENTATION,
+    CODE,
+    OTHER
+}
+
+public enum FileContext {
+    COURSE_MATERIAL,
+    LESSON_CONTENT,
+    ASSIGNMENT_SUBMISSION,
+    FORUM_ATTACHMENT,
+    PROFILE_PICTURE,
+    COURSE_THUMBNAIL,
+    CERTIFICATE,
+    BACKUP
+}
+
+public enum ProcessingStatus {
+    PENDING,
+    IN_PROGRESS,
+    COMPLETED,
+    FAILED,
+    SKIPPED
+}
+
+public enum ScanStatus {
+    PENDING,
+    SCANNING,
+    CLEAN,
+    INFECTED,
+    FAILED
+}
+
+public enum FileVisibility {
+    PUBLIC,
+    COURSE_MEMBERS,
+    INSTRUCTORS_ONLY,
+    PRIVATE
+}
+
+public enum UploadMethod {
+    SINGLE_FILE,
+    MULTIPLE_FILES,
+    DRAG_DROP,
+    URL_IMPORT,
+    BULK_UPLOAD
+}
+
+public enum SessionStatus {
+    ACTIVE,
+    COMPLETED,
+    FAILED,
+    CANCELLED,
+    EXPIRED
+}
+```
+
+### File Storage Service
+
+```java
+@Service
+public class FileStorageService {
+
+    @Value("${app.file-storage.provider:LOCAL}")
+    private String defaultStorageProvider;
+
+    @Value("${app.file-storage.max-file-size:104857600}") // 100MB
+    private long maxFileSize;
+
+    @Value("${app.file-storage.allowed-types}")
+    private List<String> allowedMimeTypes;
+
+    @Autowired
+    private UploadedFileRepository fileRepository;
+
+    @Autowired
+    private UploadSessionRepository sessionRepository;
+
+    @Autowired
+    private FileDownloadLogRepository downloadLogRepository;
+
+    @Autowired
+    private LocalFileStorageProvider localStorageProvider;
+
+    @Autowired
+    private S3FileStorageProvider s3StorageProvider;
+
+    @Autowired
+    private VirusScanService virusScanService;
+
+    @Autowired
+    private FileProcessingService processingService;
+
+    @Autowired
+    private NotificationService notificationService;
+
+    // Create upload session
+    public UploadSession createUploadSession(CreateUploadSessionRequest request, String userId) {
+        UploadSession session = UploadSession.builder()
+            .userId(userId)
+            .courseId(request.getCourseId())
+            .context(request.getContext())
+            .uploadMethod(request.getUploadMethod())
+            .totalFiles(request.getTotalFiles())
+            .totalSize(request.getTotalSize())
+            .filesCompleted(0)
+            .bytesUploaded(0L)
+            .status(SessionStatus.ACTIVE)
+            .uploadedFileIds(new ArrayList<>())
+            .failedFiles(new ArrayList<>())
+            .progressPercentage(0.0)
+            .createdAt(LocalDateTime.now())
+            .updatedAt(LocalDateTime.now())
+            .build();
+
+        return sessionRepository.save(session);
+    }
+
+    // Upload single file
+    @Async
+    public CompletableFuture<UploadedFile> uploadFile(
+            MultipartFile file,
+            UploadFileRequest request,
+            String userId,
+            String sessionId) {
+
+        try {
+            // Validate file
+            validateFile(file);
+
+            // Generate unique filename
+            String uniqueFileName = generateUniqueFileName(file.getOriginalFilename());
+
+            // Create file record
+            UploadedFile uploadedFile = UploadedFile.builder()
+                .originalName(file.getOriginalFilename())
+                .fileName(uniqueFileName)
+                .mimeType(file.getContentType())
+                .fileSize(file.getSize())
+                .fileExtension(getFileExtension(file.getOriginalFilename()))
+                .checksum(calculateChecksum(file))
+                .uploadedBy(userId)
+                .courseId(request.getCourseId())
+                .lessonId(request.getLessonId())
+                .assignmentId(request.getAssignmentId())
+                .context(request.getContext())
+                .fileType(determineFileType(file.getContentType()))
+                .description(request.getDescription())
+                .tags(request.getTags())
+                .processingStatus(ProcessingStatus.PENDING)
+                .virusScanStatus(ScanStatus.PENDING)
+                .visibility(request.getVisibility())
+                .allowedUsers(request.getAllowedUsers())
+                .allowedRoles(request.getAllowedRoles())
+                .isPublic(request.isPublic())
+                .requiresAuthentication(request.isRequiresAuthentication())
+                .downloadCount(0L)
+                .isArchived(false)
+                .expiresAt(request.getExpiresAt())
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
+
+            uploadedFile = fileRepository.save(uploadedFile);
+
+            // Upload to storage provider
+            FileStorageProvider storageProvider = getStorageProvider(defaultStorageProvider);
+            StorageResult result = storageProvider.uploadFile(file, uniqueFileName, request.getContext());
+
+            uploadedFile.setStorageProvider(defaultStorageProvider);
+            uploadedFile.setStoragePath(result.getStoragePath());
+            uploadedFile.setPublicUrl(result.getPublicUrl());
+            uploadedFile.setDownloadUrl(result.getDownloadUrl());
+
+            uploadedFile = fileRepository.save(uploadedFile);
+
+            // Update upload session
+            updateUploadSession(sessionId, uploadedFile.getId(), true);
+
+            // Start virus scan
+            virusScanService.scanFileAsync(uploadedFile.getId());
+
+            // Start file processing
+            processingService.processFileAsync(uploadedFile.getId());
+
+            return CompletableFuture.completedFuture(uploadedFile);
+
+        } catch (Exception e) {
+            log.error("Failed to upload file: " + file.getOriginalFilename(), e);
+            updateUploadSession(sessionId, file.getOriginalFilename(), false);
+            throw new FileUploadException("Failed to upload file: " + e.getMessage());
+        }
+    }
+
+    // Upload multiple files
+    @Async
+    public CompletableFuture<List<UploadedFile>> uploadMultipleFiles(
+            MultipartFile[] files,
+            UploadMultipleFilesRequest request,
+            String userId) {
+
+        // Create upload session
+        UploadSession session = createUploadSession(
+            CreateUploadSessionRequest.builder()
+                .courseId(request.getCourseId())
+                .context(request.getContext())
+                .uploadMethod(UploadMethod.MULTIPLE_FILES)
+                .totalFiles(files.length)
+                .totalSize(Arrays.stream(files).mapToLong(MultipartFile::getSize).sum())
+                .build(),
+            userId
+        );
+
+        List<CompletableFuture<UploadedFile>> uploadFutures = Arrays.stream(files)
+            .map(file -> {
+                UploadFileRequest fileRequest = UploadFileRequest.builder()
+                    .courseId(request.getCourseId())
+                    .lessonId(request.getLessonId())
+                    .context(request.getContext())
+                    .visibility(request.getVisibility())
+                    .isPublic(request.isPublic())
+                    .requiresAuthentication(request.isRequiresAuthentication())
+                    .build();
+
+                return uploadFile(file, fileRequest, userId, session.getId());
+            })
+            .collect(Collectors.toList());
+
+        return CompletableFuture.allOf(uploadFutures.toArray(new CompletableFuture[0]))
+            .thenApply(v -> uploadFutures.stream()
+                .map(CompletableFuture::join)
+                .collect(Collectors.toList()));
+    }
+
+    // Download file
+    public ResponseEntity<Resource> downloadFile(String fileId, String userId, HttpServletRequest request) {
+        UploadedFile file = fileRepository.findById(fileId)
+            .orElseThrow(() -> new FileNotFoundException("File not found"));
+
+        // Check access permissions
+        if (!hasDownloadAccess(file, userId)) {
+            throw new UnauthorizedException("Access denied to this file");
+        }
+
+        // Check virus scan status
+        if (file.getVirusScanStatus() == ScanStatus.INFECTED) {
+            throw new SecurityException("File is infected and cannot be downloaded");
+        }
+
+        try {
+            FileStorageProvider storageProvider = getStorageProvider(file.getStorageProvider());
+            Resource resource = storageProvider.getFileAsResource(file.getStoragePath());
+
+            // Log download
+            logDownload(file, userId, request);
+
+            // Update download statistics
+            updateDownloadStats(file, userId);
+
+            // Handle range requests for large files
+            String rangeHeader = request.getHeader("Range");
+            if (rangeHeader != null && rangeHeader.startsWith("bytes=")) {
+                return handleRangeRequest(resource, rangeHeader, file);
+            }
+
+            return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(file.getMimeType()))
+                .contentLength(file.getFileSize())
+                .header("Content-Disposition",
+                    "attachment; filename=\"" + file.getOriginalName() + "\"")
+                .body(resource);
+
+        } catch (Exception e) {
+            throw new FileDownloadException("Failed to download file: " + e.getMessage());
+        }
+    }
+
+    // Stream file (for videos, audio)
+    public ResponseEntity<Resource> streamFile(String fileId, String userId, HttpServletRequest request) {
+        UploadedFile file = fileRepository.findById(fileId)
+            .orElseThrow(() -> new FileNotFoundException("File not found"));
+
+        // Check access permissions
+        if (!hasDownloadAccess(file, userId)) {
+            throw new UnauthorizedException("Access denied to this file");
+        }
+
+        if (file.getFileType() != FileType.VIDEO && file.getFileType() != FileType.AUDIO) {
+            throw new IllegalArgumentException("File type not suitable for streaming");
+        }
+
+        try {
+            FileStorageProvider storageProvider = getStorageProvider(file.getStorageProvider());
+            Resource resource = storageProvider.getFileAsResource(file.getStoragePath());
+
+            // Log stream access
+            logDownload(file, userId, request, "STREAM");
+
+            String rangeHeader = request.getHeader("Range");
+            if (rangeHeader != null) {
+                return handleRangeRequest(resource, rangeHeader, file);
+            }
+
+            return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(file.getMimeType()))
+                .header("Accept-Ranges", "bytes")
+                .body(resource);
+
+        } catch (Exception e) {
+            throw new FileStreamException("Failed to stream file: " + e.getMessage());
+        }
+    }
+
+    // Get file thumbnail
+    public ResponseEntity<Resource> getFileThumbnail(String fileId, String size, String userId) {
+        UploadedFile file = fileRepository.findById(fileId)
+            .orElseThrow(() -> new FileNotFoundException("File not found"));
+
+        // Check access permissions
+        if (!hasDownloadAccess(file, userId)) {
+            throw new UnauthorizedException("Access denied to this file");
+        }
+
+        // Get thumbnail from processed variants
+        String thumbnailKey = "thumbnail_" + size;
+        String thumbnailPath = file.getProcessedVariants().get(thumbnailKey);
+
+        if (thumbnailPath == null) {
+            // Return default thumbnail based on file type
+            return getDefaultThumbnail(file.getFileType());
+        }
+
+        try {
+            FileStorageProvider storageProvider = getStorageProvider(file.getStorageProvider());
+            Resource resource = storageProvider.getFileAsResource(thumbnailPath);
+
+            return ResponseEntity.ok()
+                .contentType(MediaType.IMAGE_JPEG)
+                .body(resource);
+
+        } catch (Exception e) {
+            return getDefaultThumbnail(file.getFileType());
+        }
+    }
+
+    // Delete file
+    public void deleteFile(String fileId, String userId) {
+        UploadedFile file = fileRepository.findById(fileId)
+            .orElseThrow(() -> new FileNotFoundException("File not found"));
+
+        // Check delete permissions
+        if (!hasDeleteAccess(file, userId)) {
+            throw new UnauthorizedException("Cannot delete this file");
+        }
+
+        try {
+            // Delete from storage provider
+            FileStorageProvider storageProvider = getStorageProvider(file.getStorageProvider());
+            storageProvider.deleteFile(file.getStoragePath());
+
+            // Delete processed variants
+            if (file.getProcessedVariants() != null) {
+                file.getProcessedVariants().values().forEach(variantPath -> {
+                    try {
+                        storageProvider.deleteFile(variantPath);
+                    } catch (Exception e) {
+                        log.warn("Failed to delete variant: " + variantPath, e);
+                    }
+                });
+            }
+
+            // Delete from database
+            fileRepository.delete(file);
+
+        } catch (Exception e) {
+            throw new FileDeletionException("Failed to delete file: " + e.getMessage());
+        }
+    }
+
+    // Get user files
+    public Page<UploadedFile> getUserFiles(String userId, FileContext context,
+                                         String courseId, Pageable pageable) {
+
+        Criteria criteria = Criteria.where("uploadedBy").is(userId)
+            .and("isArchived").is(false);
+
+        if (context != null) {
+            criteria.and("context").is(context);
+        }
+
+        if (courseId != null) {
+            criteria.and("courseId").is(courseId);
+        }
+
+        Query query = new Query(criteria);
+        query.with(Sort.by(Sort.Direction.DESC, "createdAt"));
+        query.with(pageable);
+
+        List<UploadedFile> files = mongoTemplate.find(query, UploadedFile.class);
+        long total = mongoTemplate.count(Query.of(query).limit(-1).skip(-1), UploadedFile.class);
+
+        return new PageImpl<>(files, pageable, total);
+    }
+
+    // Search files
+    public List<UploadedFile> searchFiles(String query, String userId, String courseId) {
+        Criteria criteria = new Criteria();
+
+        // Text search
+        if (query != null && !query.trim().isEmpty()) {
+            criteria.orOperator(
+                Criteria.where("originalName").regex(query, "i"),
+                Criteria.where("description").regex(query, "i"),
+                Criteria.where("tags").in(query)
+            );
+        }
+
+        // Access control
+        criteria.andOperator(
+            new Criteria().orOperator(
+                Criteria.where("isPublic").is(true),
+                Criteria.where("uploadedBy").is(userId),
+                Criteria.where("allowedUsers").in(userId)
+            )
+        );
+
+        if (courseId != null) {
+            criteria.and("courseId").is(courseId);
+        }
+
+        criteria.and("isArchived").is(false);
+        criteria.and("virusScanStatus").ne(ScanStatus.INFECTED);
+
+        Query searchQuery = new Query(criteria);
+        searchQuery.with(Sort.by(Sort.Direction.DESC, "createdAt"));
+        searchQuery.limit(50);
+
+        return mongoTemplate.find(searchQuery, UploadedFile.class);
+    }
+
+    private void validateFile(MultipartFile file) {
+        if (file.isEmpty()) {
+            throw new FileValidationException("File is empty");
+        }
+
+        if (file.getSize() > maxFileSize) {
+            throw new FileValidationException("File size exceeds maximum allowed size");
+        }
+
+        String mimeType = file.getContentType();
+        if (mimeType == null || !allowedMimeTypes.contains(mimeType)) {
+            throw new FileValidationException("File type not allowed: " + mimeType);
+        }
+
+        // Additional security checks
+        String filename = file.getOriginalFilename();
+        if (filename != null && (filename.contains("..") || filename.contains("/"))) {
+            throw new FileValidationException("Invalid filename");
+        }
+    }
+
+    private boolean hasDownloadAccess(UploadedFile file, String userId) {
+        // Public files
+        if (file.isPublic()) {
+            return true;
+        }
+
+        // File owner
+        if (file.getUploadedBy().equals(userId)) {
+            return true;
+        }
+
+        // Explicitly allowed users
+        if (file.getAllowedUsers() != null && file.getAllowedUsers().contains(userId)) {
+            return true;
+        }
+
+        // Course-based access
+        if (file.getVisibility() == FileVisibility.COURSE_MEMBERS && file.getCourseId() != null) {
+            return enrollmentService.isStudentEnrolledInCourse(userId, file.getCourseId()) ||
+                   courseService.isInstructorOfCourse(file.getCourseId(), userId);
+        }
+
+        // Instructor-only access
+        if (file.getVisibility() == FileVisibility.INSTRUCTORS_ONLY && file.getCourseId() != null) {
+            return courseService.isInstructorOfCourse(file.getCourseId(), userId);
+        }
+
+        return false;
+    }
+
+    private void logDownload(UploadedFile file, String userId, HttpServletRequest request) {
+        logDownload(file, userId, request, "DIRECT");
+    }
+
+    private void logDownload(UploadedFile file, String userId, HttpServletRequest request, String method) {
+        FileDownloadLog log = FileDownloadLog.builder()
+            .fileId(file.getId())
+            .userId(userId)
+            .userAgent(request.getHeader("User-Agent"))
+            .ipAddress(getClientIpAddress(request))
+            .downloadMethod(method)
+            .downloadedAt(LocalDateTime.now())
+            .bytesTransferred(file.getFileSize())
+            .completed(true)
+            .build();
+
+        downloadLogRepository.save(log);
+    }
+
+    private FileStorageProvider getStorageProvider(String providerName) {
+        switch (providerName.toUpperCase()) {
+            case "LOCAL":
+                return localStorageProvider;
+            case "AWS_S3":
+                return s3StorageProvider;
+            default:
+                return localStorageProvider;
+        }
+    }
+}
+```
+
+### File Processing Service
+
+```java
+@Service
+public class FileProcessingService {
+
+    @Autowired
+    private UploadedFileRepository fileRepository;
+
+    @Autowired
+    private ImageProcessingService imageProcessingService;
+
+    @Autowired
+    private VideoProcessingService videoProcessingService;
+
+    @Autowired
+    private DocumentProcessingService documentProcessingService;
+
+    @Async
+    public void processFileAsync(String fileId) {
+        try {
+            UploadedFile file = fileRepository.findById(fileId)
+                .orElseThrow(() -> new FileNotFoundException("File not found"));
+
+            file.setProcessingStatus(ProcessingStatus.IN_PROGRESS);
+            fileRepository.save(file);
+
+            Map<String, String> processedVariants = new HashMap<>();
+
+            switch (file.getFileType()) {
+                case IMAGE:
+                    processedVariants = processImage(file);
+                    break;
+                case VIDEO:
+                    processedVariants = processVideo(file);
+                    break;
+                case DOCUMENT:
+                    processedVariants = processDocument(file);
+                    break;
+                default:
+                    // No processing needed for other types
+                    break;
+            }
+
+            file.setProcessedVariants(processedVariants);
+            file.setProcessingStatus(ProcessingStatus.COMPLETED);
+            file.setUpdatedAt(LocalDateTime.now());
+            fileRepository.save(file);
+
+        } catch (Exception e) {
+            log.error("Failed to process file: " + fileId, e);
+            updateFileProcessingStatus(fileId, ProcessingStatus.FAILED, e.getMessage());
+        }
+    }
+
+    private Map<String, String> processImage(UploadedFile file) {
+        Map<String, String> variants = new HashMap<>();
+
+        try {
+            // Generate thumbnails
+            variants.put("thumbnail_small", imageProcessingService.generateThumbnail(file, 150, 150));
+            variants.put("thumbnail_medium", imageProcessingService.generateThumbnail(file, 300, 300));
+            variants.put("thumbnail_large", imageProcessingService.generateThumbnail(file, 600, 600));
+
+            // Generate compressed version
+            variants.put("compressed", imageProcessingService.compressImage(file, 0.8f));
+
+            // Generate WebP version for web
+            variants.put("webp", imageProcessingService.convertToWebP(file));
+
+        } catch (Exception e) {
+            log.error("Failed to process image: " + file.getId(), e);
+        }
+
+        return variants;
+    }
+
+    private Map<String, String> processVideo(UploadedFile file) {
+        Map<String, String> variants = new HashMap<>();
+
+        try {
+            // Generate thumbnail from first frame
+            variants.put("thumbnail_small", videoProcessingService.generateThumbnail(file, 150, 150));
+            variants.put("thumbnail_medium", videoProcessingService.generateThumbnail(file, 300, 300));
+
+            // Generate preview (first 30 seconds)
+            variants.put("preview", videoProcessingService.generatePreview(file, 30));
+
+            // Generate different quality versions
+            variants.put("quality_360p", videoProcessingService.transcode(file, 360));
+            variants.put("quality_720p", videoProcessingService.transcode(file, 720));
+
+        } catch (Exception e) {
+            log.error("Failed to process video: " + file.getId(), e);
+        }
+
+        return variants;
+    }
+
+    private Map<String, String> processDocument(UploadedFile file) {
+        Map<String, String> variants = new HashMap<>();
+
+        try {
+            // Generate thumbnail of first page
+            variants.put("thumbnail_small", documentProcessingService.generateThumbnail(file, 150, 150));
+            variants.put("thumbnail_medium", documentProcessingService.generateThumbnail(file, 300, 300));
+
+            // Extract text for search indexing
+            String extractedText = documentProcessingService.extractText(file);
+            if (extractedText != null) {
+                // Store extracted text in metadata
+                Map<String, Object> metadata = file.getMetadata() != null ?
+                    new HashMap<>(file.getMetadata()) : new HashMap<>();
+                metadata.put("extractedText", extractedText);
+                file.setMetadata(metadata);
+            }
+
+        } catch (Exception e) {
+            log.error("Failed to process document: " + file.getId(), e);
+        }
+
+        return variants;
+    }
+}
+```
+
+### File Upload Controller
+
+```java
+@RestController
+@RequestMapping("/api/files")
+public class FileUploadController {
+
+    @Autowired
+    private FileStorageService fileStorageService;
+
+    // Create upload session
+    @PostMapping("/upload-session")
+    public ResponseEntity<UploadSession> createUploadSession(
+            @RequestBody @Valid CreateUploadSessionRequest request,
+            Authentication authentication) {
+
+        String userId = authentication.getName();
+        UploadSession session = fileStorageService.createUploadSession(request, userId);
+        return ResponseEntity.status(HttpStatus.CREATED).body(session);
+    }
+
+    // Upload single file
+    @PostMapping("/upload")
+    public ResponseEntity<UploadedFile> uploadFile(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "courseId", required = false) String courseId,
+            @RequestParam(value = "lessonId", required = false) String lessonId,
+            @RequestParam(value = "context") FileContext context,
+            @RequestParam(value = "description", required = false) String description,
+            @RequestParam(value = "visibility", defaultValue = "COURSE_MEMBERS") FileVisibility visibility,
+            @RequestParam(value = "isPublic", defaultValue = "false") boolean isPublic,
+            @RequestParam(value = "sessionId", required = false) String sessionId,
+            Authentication authentication) {
+
+        String userId = authentication.getName();
+
+        UploadFileRequest request = UploadFileRequest.builder()
+            .courseId(courseId)
+            .lessonId(lessonId)
+            .context(context)
+            .description(description)
+            .visibility(visibility)
+            .isPublic(isPublic)
+            .requiresAuthentication(!isPublic)
+            .build();
+
+        try {
+            CompletableFuture<UploadedFile> uploadFuture =
+                fileStorageService.uploadFile(file, request, userId, sessionId);
+            UploadedFile uploadedFile = uploadFuture.get();
+            return ResponseEntity.status(HttpStatus.CREATED).body(uploadedFile);
+        } catch (Exception e) {
+            throw new FileUploadException("Upload failed: " + e.getMessage());
+        }
+    }
+
+    // Upload multiple files
+    @PostMapping("/upload-multiple")
+    public ResponseEntity<List<UploadedFile>> uploadMultipleFiles(
+            @RequestParam("files") MultipartFile[] files,
+            @RequestParam(value = "courseId", required = false) String courseId,
+            @RequestParam(value = "lessonId", required = false) String lessonId,
+            @RequestParam(value = "context") FileContext context,
+            @RequestParam(value = "visibility", defaultValue = "COURSE_MEMBERS") FileVisibility visibility,
+            @RequestParam(value = "isPublic", defaultValue = "false") boolean isPublic,
+            Authentication authentication) {
+
+        String userId = authentication.getName();
+
+        UploadMultipleFilesRequest request = UploadMultipleFilesRequest.builder()
+            .courseId(courseId)
+            .lessonId(lessonId)
+            .context(context)
+            .visibility(visibility)
+            .isPublic(isPublic)
+            .requiresAuthentication(!isPublic)
+            .build();
+
+        try {
+            CompletableFuture<List<UploadedFile>> uploadFuture =
+                fileStorageService.uploadMultipleFiles(files, request, userId);
+            List<UploadedFile> uploadedFiles = uploadFuture.get();
+            return ResponseEntity.status(HttpStatus.CREATED).body(uploadedFiles);
+        } catch (Exception e) {
+            throw new FileUploadException("Upload failed: " + e.getMessage());
+        }
+    }
+
+    // Download file
+    @GetMapping("/{fileId}/download")
+    public ResponseEntity<Resource> downloadFile(
+            @PathVariable String fileId,
+            HttpServletRequest request,
+            Authentication authentication) {
+
+        String userId = authentication.getName();
+        return fileStorageService.downloadFile(fileId, userId, request);
+    }
+
+    // Stream file
+    @GetMapping("/{fileId}/stream")
+    public ResponseEntity<Resource> streamFile(
+            @PathVariable String fileId,
+            HttpServletRequest request,
+            Authentication authentication) {
+
+        String userId = authentication.getName();
+        return fileStorageService.streamFile(fileId, userId, request);
+    }
+
+    // Get file thumbnail
+    @GetMapping("/{fileId}/thumbnail")
+    public ResponseEntity<Resource> getFileThumbnail(
+            @PathVariable String fileId,
+            @RequestParam(defaultValue = "medium") String size,
+            Authentication authentication) {
+
+        String userId = authentication.getName();
+        return fileStorageService.getFileThumbnail(fileId, size, userId);
+    }
+
+    // Get file info
+    @GetMapping("/{fileId}")
+    public ResponseEntity<UploadedFile> getFileInfo(
+            @PathVariable String fileId,
+            Authentication authentication) {
+
+        String userId = authentication.getName();
+        UploadedFile file = fileStorageService.getFileInfo(fileId, userId);
+        return ResponseEntity.ok(file);
+    }
+
+    // Get user files
+    @GetMapping("/my-files")
+    public ResponseEntity<Page<UploadedFile>> getUserFiles(
+            @RequestParam(required = false) FileContext context,
+            @RequestParam(required = false) String courseId,
+            @PageableDefault(size = 20) Pageable pageable,
+            Authentication authentication) {
+
+        String userId = authentication.getName();
+        Page<UploadedFile> files = fileStorageService.getUserFiles(userId, context, courseId, pageable);
+        return ResponseEntity.ok(files);
+    }
+
+    // Search files
+    @GetMapping("/search")
+    public ResponseEntity<List<UploadedFile>> searchFiles(
+            @RequestParam String query,
+            @RequestParam(required = false) String courseId,
+            Authentication authentication) {
+
+        String userId = authentication.getName();
+        List<UploadedFile> files = fileStorageService.searchFiles(query, userId, courseId);
+        return ResponseEntity.ok(files);
+    }
+
+    // Delete file
+    @DeleteMapping("/{fileId}")
+    public ResponseEntity<Void> deleteFile(
+            @PathVariable String fileId,
+            Authentication authentication) {
+
+        String userId = authentication.getName();
+        fileStorageService.deleteFile(fileId, userId);
+        return ResponseEntity.noContent().build();
+    }
+
+    // Get upload session status
+    @GetMapping("/upload-session/{sessionId}")
+    public ResponseEntity<UploadSession> getUploadSession(
+            @PathVariable String sessionId,
+            Authentication authentication) {
+
+        String userId = authentication.getName();
+        UploadSession session = fileStorageService.getUploadSession(sessionId, userId);
+        return ResponseEntity.ok(session);
+    }
+}
+```
+
+## Frontend Implementation
+
+### File Upload Component
+
+```jsx
+import React, { useState, useCallback, useRef } from "react";
+import { useDropzone } from "react-dropzone";
+import { Upload, X, File, Image, Video, FileText, Archive } from "lucide-react";
+import { fileService } from "../services/fileService";
+
+const FileUpload = ({
+  courseId,
+  lessonId,
+  context = "COURSE_MATERIAL",
+  multiple = false,
+  maxFiles = 10,
+  maxSize = 100 * 1024 * 1024, // 100MB
+  acceptedTypes = {},
+  onUploadComplete,
+  onUploadError,
+}) => {
+  const [files, setFiles] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({});
+  const [uploadSession, setUploadSession] = useState(null);
+  const uploadRef = useRef();
+
+  const onDrop = useCallback(
+    (acceptedFiles, rejectedFiles) => {
+      if (rejectedFiles.length > 0) {
+        rejectedFiles.forEach(({ file, errors }) => {
+          errors.forEach((error) => {
+            if (error.code === "file-too-large") {
+              onUploadError?.(
+                `File "${file.name}" is too large. Maximum size is ${maxSize / 1024 / 1024}MB`
+              );
+            } else if (error.code === "file-invalid-type") {
+              onUploadError?.(`File "${file.name}" has invalid type`);
+            }
+          });
+        });
+      }
+
+      const newFiles = acceptedFiles.map((file) => ({
+        file,
+        id: Math.random().toString(36).substring(7),
+        status: "pending",
+        progress: 0,
+        error: null,
+      }));
+
+      setFiles((prev) => (multiple ? [...prev, ...newFiles] : newFiles));
+    },
+    [multiple, maxSize, onUploadError]
+  );
+
+  const { getRootProps, getInputProps, isDragActive, isDragReject } =
+    useDropzone({
+      onDrop,
+      multiple,
+      maxFiles,
+      maxSize,
+      accept: acceptedTypes,
+    });
+
+  const removeFile = (fileId) => {
+    setFiles((prev) => prev.filter((f) => f.id !== fileId));
+  };
+
+  const uploadFiles = async () => {
+    if (files.length === 0) return;
+
+    try {
+      setUploading(true);
+
+      // Create upload session
+      const sessionResponse = await fileService.createUploadSession({
+        courseId,
+        context,
+        uploadMethod: multiple ? "MULTIPLE_FILES" : "SINGLE_FILE",
+        totalFiles: files.length,
+        totalSize: files.reduce((sum, f) => sum + f.file.size, 0),
+      });
+
+      setUploadSession(sessionResponse.data);
+
+      // Upload files one by one
+      const uploadPromises = files.map(async (fileItem) => {
+        try {
+          setFiles((prev) =>
+            prev.map((f) =>
+              f.id === fileItem.id ? { ...f, status: "uploading" } : f
+            )
+          );
+
+          const formData = new FormData();
+          formData.append("file", fileItem.file);
+          formData.append("courseId", courseId);
+          if (lessonId) formData.append("lessonId", lessonId);
+          formData.append("context", context);
+          formData.append("sessionId", sessionResponse.data.id);
+
+          const response = await fileService.uploadFile(formData, {
+            onUploadProgress: (progressEvent) => {
+              const progress = Math.round(
+                (progressEvent.loaded * 100) / progressEvent.total
+              );
+              setUploadProgress((prev) => ({
+                ...prev,
+                [fileItem.id]: progress,
+              }));
+            },
+          });
+
+          setFiles((prev) =>
+            prev.map((f) =>
+              f.id === fileItem.id
+                ? { ...f, status: "completed", uploadedFile: response.data }
+                : f
+            )
+          );
+
+          return response.data;
+        } catch (error) {
+          setFiles((prev) =>
+            prev.map((f) =>
+              f.id === fileItem.id
+                ? { ...f, status: "error", error: error.message }
+                : f
+            )
+          );
+          throw error;
+        }
+      });
+
+      const uploadedFiles = await Promise.allSettled(uploadPromises);
+      const successfulUploads = uploadedFiles
+        .filter((result) => result.status === "fulfilled")
+        .map((result) => result.value);
+
+      if (successfulUploads.length > 0) {
+        onUploadComplete?.(successfulUploads);
+      }
+
+      // Clear completed uploads after a delay
+      setTimeout(() => {
+        setFiles((prev) => prev.filter((f) => f.status !== "completed"));
+        setUploadProgress({});
+      }, 3000);
+    } catch (error) {
+      onUploadError?.(error.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const getFileIcon = (file) => {
+    const mimeType = file.type;
+
+    if (mimeType.startsWith("image/"))
+      return <Image size={24} className="text-blue-500" />;
+    if (mimeType.startsWith("video/"))
+      return <Video size={24} className="text-purple-500" />;
+    if (mimeType.includes("pdf") || mimeType.includes("document"))
+      return <FileText size={24} className="text-red-500" />;
+    if (mimeType.includes("zip") || mimeType.includes("archive"))
+      return <Archive size={24} className="text-yellow-500" />;
+
+    return <File size={24} className="text-gray-500" />;
+  };
+
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Drop Zone */}
+      <div
+        {...getRootProps()}
+        className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+          isDragActive
+            ? isDragReject
+              ? "border-red-500 bg-red-50"
+              : "border-blue-500 bg-blue-50"
+            : "border-gray-300 hover:border-gray-400"
+        }`}
+      >
+        <input {...getInputProps()} ref={uploadRef} />
+        <Upload className="mx-auto mb-4 text-gray-400" size={48} />
+
+        {isDragActive ? (
+          isDragReject ? (
+            <p className="text-red-600">Some files are not supported</p>
+          ) : (
+            <p className="text-blue-600">Drop files here...</p>
+          )
+        ) : (
+          <div>
+            <p className="text-gray-600 mb-2">
+              Drag and drop {multiple ? "files" : "a file"} here, or{" "}
+              <span className="text-blue-600 font-medium">browse</span>
+            </p>
+            <p className="text-sm text-gray-500">
+              Maximum file size: {formatFileSize(maxSize)}
+              {multiple && ` • Maximum files: ${maxFiles}`}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* File List */}
+      {files.length > 0 && (
+        <div className="space-y-2">
+          <h4 className="font-medium text-gray-900">
+            Files to upload ({files.length})
+          </h4>
+
+          <div className="space-y-2 max-h-64 overflow-y-auto">
+            {files.map((fileItem) => (
+              <div
+                key={fileItem.id}
+                className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg"
+              >
+                {getFileIcon(fileItem.file)}
+
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">
+                    {fileItem.file.name}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {formatFileSize(fileItem.file.size)}
+                  </p>
+
+                  {/* Progress Bar */}
+                  {fileItem.status === "uploading" && (
+                    <div className="mt-2">
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                          className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                          style={{
+                            width: `${uploadProgress[fileItem.id] || 0}%`,
+                          }}
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {uploadProgress[fileItem.id] || 0}%
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Status Messages */}
+                  {fileItem.status === "completed" && (
+                    <p className="text-xs text-green-600 mt-1">
+                      Upload completed
+                    </p>
+                  )}
+
+                  {fileItem.status === "error" && (
+                    <p className="text-xs text-red-600 mt-1">
+                      Error: {fileItem.error}
+                    </p>
+                  )}
+                </div>
+
+                {/* Status Icon */}
+                <div className="flex items-center gap-2">
+                  {fileItem.status === "completed" && (
+                    <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
+                      <svg
+                        className="w-4 h-4 text-green-600"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </div>
+                  )}
+
+                  {fileItem.status === "error" && (
+                    <div className="w-6 h-6 bg-red-100 rounded-full flex items-center justify-center">
+                      <X className="w-4 h-4 text-red-600" />
+                    </div>
+                  )}
+
+                  {fileItem.status === "pending" && (
+                    <button
+                      onClick={() => removeFile(fileItem.id)}
+                      className="text-gray-400 hover:text-red-500"
+                    >
+                      <X size={16} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Upload Button */}
+      {files.length > 0 && files.some((f) => f.status === "pending") && (
+        <div className="flex gap-3">
+          <button
+            onClick={uploadFiles}
+            disabled={uploading}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {uploading
+              ? "Uploading..."
+              : `Upload ${files.filter((f) => f.status === "pending").length} file(s)`}
+          </button>
+
+          <button
+            onClick={() => setFiles([])}
+            disabled={uploading}
+            className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 disabled:opacity-50"
+          >
+            Clear All
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default FileUpload;
+```
+
+### File Manager Component
+
+```jsx
+import React, { useState, useEffect } from "react";
+import {
+  Search,
+  Download,
+  Trash2,
+  Eye,
+  Grid,
+  List,
+  Filter,
+} from "lucide-react";
+import { fileService } from "../services/fileService";
+import FileUpload from "./FileUpload";
+
+const FileManager = ({ courseId, context }) => {
+  const [files, setFiles] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState("grid");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [showUpload, setShowUpload] = useState(false);
+  const [filter, setFilter] = useState("all");
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+
+  useEffect(() => {
+    fetchFiles();
+  }, [courseId, context, filter]);
+
+  const fetchFiles = async (pageNum = 0, append = false) => {
+    try {
+      setLoading(!append);
+      const response = await fileService.getUserFiles({
+        courseId,
+        context: context !== "all" ? context : undefined,
+        page: pageNum,
+        size: 20,
+      });
+
+      if (append) {
+        setFiles((prev) => [...prev, ...response.data.content]);
+      } else {
+        setFiles(response.data.content);
+      }
+
+      setHasMore(!response.data.last);
+      setPage(pageNum);
+    } catch (error) {
+      console.error("Failed to fetch files:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSearch = async () => {
+    if (searchQuery.trim()) {
+      try {
+        const response = await fileService.searchFiles(searchQuery, courseId);
+        setFiles(response.data);
+        setHasMore(false);
+      } catch (error) {
+        console.error("Search failed:", error);
+      }
+    } else {
+      fetchFiles();
+    }
+  };
+
+  const handleDownload = async (fileId, fileName) => {
+    try {
+      const response = await fileService.downloadFile(fileId);
+
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Download failed:", error);
+    }
+  };
+
+  const handleDelete = async (fileId) => {
+    if (!window.confirm("Are you sure you want to delete this file?")) {
+      return;
+    }
+
+    try {
+      await fileService.deleteFile(fileId);
+      setFiles((prev) => prev.filter((file) => file.id !== fileId));
+    } catch (error) {
+      console.error("Delete failed:", error);
+    }
+  };
+
+  const handleUploadComplete = (uploadedFiles) => {
+    setFiles((prev) => [...uploadedFiles, ...prev]);
+    setShowUpload(false);
+  };
+
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  const filteredFiles = files.filter((file) => {
+    if (filter === "all") return true;
+    return file.fileType.toLowerCase() === filter.toLowerCase();
+  });
+
+  if (loading && files.length === 0) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        Loading files...
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-gray-900">File Manager</h2>
+        <button
+          onClick={() => setShowUpload(!showUpload)}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+        >
+          Upload Files
+        </button>
+      </div>
+
+      {/* Upload Section */}
+      {showUpload && (
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">
+            Upload New Files
+          </h3>
+          <FileUpload
+            courseId={courseId}
+            context={context}
+            multiple={true}
+            onUploadComplete={handleUploadComplete}
+            onUploadError={(error) => console.error("Upload error:", error)}
+          />
+        </div>
+      )}
+
+      {/* Search and Filters */}
+      <div className="bg-white rounded-lg shadow p-4">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex-1 relative">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyPress={(e) => e.key === "Enter" && handleSearch()}
+              placeholder="Search files..."
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+            <Search
+              className="absolute left-3 top-2.5 text-gray-400"
+              size={20}
+            />
+          </div>
+
+          <select
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">All Types</option>
+            <option value="document">Documents</option>
+            <option value="image">Images</option>
+            <option value="video">Videos</option>
+            <option value="audio">Audio</option>
+          </select>
+
+          <div className="flex gap-2">
+            <button
+              onClick={() => setViewMode("grid")}
+              className={`p-2 rounded ${viewMode === "grid" ? "bg-blue-100 text-blue-600" : "text-gray-400"}`}
+            >
+              <Grid size={20} />
+            </button>
+            <button
+              onClick={() => setViewMode("list")}
+              className={`p-2 rounded ${viewMode === "list" ? "bg-blue-100 text-blue-600" : "text-gray-400"}`}
+            >
+              <List size={20} />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Files Display */}
+      <div className="bg-white rounded-lg shadow">
+        {filteredFiles.length === 0 ? (
+          <div className="p-8 text-center text-gray-500">
+            No files found. Upload some files to get started.
+          </div>
+        ) : viewMode === "grid" ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-6">
+            {filteredFiles.map((file) => (
+              <div
+                key={file.id}
+                className="border rounded-lg p-4 hover:shadow-md transition-shadow"
+              >
+                <div className="aspect-square bg-gray-100 rounded-lg mb-3 flex items-center justify-center overflow-hidden">
+                  {file.fileType === "IMAGE" ? (
+                    <img
+                      src={`/api/files/${file.id}/thumbnail?size=medium`}
+                      alt={file.originalName}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="text-4xl text-gray-400">
+                      {file.fileType === "VIDEO"
+                        ? "🎥"
+                        : file.fileType === "AUDIO"
+                          ? "🎵"
+                          : file.fileType === "DOCUMENT"
+                            ? "📄"
+                            : "📁"}
+                    </div>
+                  )}
+                </div>
+
+                <h3
+                  className="font-medium text-gray-900 truncate"
+                  title={file.originalName}
+                >
+                  {file.originalName}
+                </h3>
+                <p className="text-sm text-gray-500">
+                  {formatFileSize(file.fileSize)}
+                </p>
+                <p className="text-xs text-gray-400">
+                  {formatDate(file.createdAt)}
+                </p>
+
+                <div className="flex gap-1 mt-3">
+                  <button
+                    onClick={() => handleDownload(file.id, file.originalName)}
+                    className="flex-1 bg-blue-100 text-blue-700 py-1 px-2 rounded text-sm hover:bg-blue-200"
+                  >
+                    <Download size={14} className="inline mr-1" />
+                    Download
+                  </button>
+                  <button
+                    onClick={() => handleDelete(file.id)}
+                    className="bg-red-100 text-red-700 py-1 px-2 rounded text-sm hover:bg-red-200"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-200">
+            {filteredFiles.map((file) => (
+              <div
+                key={file.id}
+                className="p-4 flex items-center justify-between hover:bg-gray-50"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                    {file.fileType === "IMAGE"
+                      ? "🖼️"
+                      : file.fileType === "VIDEO"
+                        ? "🎥"
+                        : file.fileType === "AUDIO"
+                          ? "🎵"
+                          : file.fileType === "DOCUMENT"
+                            ? "📄"
+                            : "📁"}
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-gray-900">
+                      {file.originalName}
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      {formatFileSize(file.fileSize)} •{" "}
+                      {formatDate(file.createdAt)}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleDownload(file.id, file.originalName)}
+                    className="text-blue-600 hover:text-blue-800"
+                  >
+                    <Download size={18} />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(file.id)}
+                    className="text-red-600 hover:text-red-800"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Load More */}
+        {hasMore && !loading && (
+          <div className="p-4 border-t border-gray-200">
+            <button
+              onClick={() => fetchFiles(page + 1, true)}
+              className="w-full bg-gray-100 text-gray-700 py-2 rounded-lg hover:bg-gray-200"
+            >
+              Load More Files
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default FileManager;
+```
+
+## Key Features Implemented
+
+1. **Comprehensive File Support**
+   - Multiple file formats and types
+   - Automatic file type detection
+   - File validation and security checks
+
+2. **Advanced Upload Features**
+   - Drag and drop interface
+   - Bulk file uploads
+   - Progress tracking and session management
+
+3. **File Processing Pipeline**
+   - Thumbnail generation for images and videos
+   - File compression and optimization
+   - Metadata extraction and indexing
+
+4. **Security and Access Control**
+   - Virus scanning integration
+   - Role-based access permissions
+   - Download tracking and logging
+
+5. **User Experience**
+   - Intuitive file manager interface
+   - Search and filter capabilities
+   - Multiple view modes (grid/list)
+
+[← Previous: Discussion Forum](/proj-online-learning-platform-website/18-discussion-forum) | [Next: Search Functionality →](/proj-online-learning-platform-website/20-search-functionality)
+
+<BackToTop />
