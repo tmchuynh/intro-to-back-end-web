@@ -1,0 +1,1573 @@
+# Step 8: Comments System
+
+## Objective
+
+Build a comprehensive commenting system with user interaction features, moderation capabilities, nested replies, real-time updates, and spam protection for your blog platform.
+
+## What You'll Learn
+
+- How to implement threaded/nested comments
+- How to create comment moderation tools
+- How to add real-time comment updates
+- How to implement comment voting and reactions
+- How to build spam protection and content filtering
+- How to create user notifications for comments
+- How to handle comment deletion and editing
+
+## Prerequisites
+
+- Completed [Step 7: Blog Posts & Content Management](../07-blog-posts)
+- Understanding of real-time features
+- Basic knowledge of comment threading concepts
+
+## Comment System Architecture
+
+```
+Comment Features:
+├── Core Functionality
+│   ├── Create, edit, delete comments
+│   ├── Nested replies (threaded)
+│   ├── User authentication required
+│   └── Rich text formatting
+├── Moderation
+│   ├── Admin approval workflow
+│   ├── Spam detection
+│   ├── Content filtering
+│   └── User reporting
+├── Interactions
+│   ├── Like/dislike voting
+│   ├── Comment reactions
+│   ├── User mentions
+│   └── Reply notifications
+└── Real-time Updates
+    ├── Live comment feed
+    ├── Typing indicators
+    ├── Instant notifications
+    └── Auto-refresh
+```
+
+## Step-by-Step Instructions
+
+### 1. Install Additional Dependencies
+
+```bash
+# Real-time functionality
+npm install pusher pusher-js
+
+# Content filtering and validation
+npm install bad-words
+npm install validator
+
+# Date formatting
+npm install date-fns
+
+# Rich text for comments
+npm install react-textarea-autosize
+
+# Notification system
+npm install react-hot-toast
+
+# User mentions
+npm install @tiptap/extension-mention
+```
+
+### 2. Update Database Schema
+
+Update your `prisma/schema.prisma` to include comment features:
+
+```prisma
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  // Nested comments (self-referential)
+  parentId  String?
+  parent    Comment? @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   Comment[] @relation("CommentReplies")
+
+  // Moderation
+  status    CommentStatus @default(PENDING)
+  moderatedBy String?
+  moderatedAt DateTime?
+  moderator   User? @relation("ModeratedComments", fields: [moderatedBy], references: [id])
+
+  // Interactions
+  likes     CommentLike[]
+  reports   CommentReport[]
+
+  // Metadata
+  ipAddress String?
+  userAgent String?
+  isEdited  Boolean @default(false)
+  editedAt  DateTime?
+
+  @@map("comments")
+}
+
+model CommentLike {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  commentId String
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  type      LikeType @default(LIKE)
+
+  @@unique([userId, commentId])
+  @@map("comment_likes")
+}
+
+model CommentReport {
+  id        String   @id @default(cuid())
+  reason    String
+  details   String?
+  createdAt DateTime @default(now())
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  commentId String
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  status    ReportStatus @default(PENDING)
+
+  @@unique([userId, commentId])
+  @@map("comment_reports")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  type      NotificationType
+  title     String
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Related entities
+  postId    String?
+  commentId String?
+  fromUserId String?
+  fromUser   User? @relation("SentNotifications", fields: [fromUserId], references: [id])
+
+  @@map("notifications")
+}
+
+enum CommentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SPAM
+}
+
+enum LikeType {
+  LIKE
+  DISLIKE
+}
+
+enum ReportStatus {
+  PENDING
+  REVIEWED
+  DISMISSED
+}
+
+enum NotificationType {
+  COMMENT_REPLY
+  COMMENT_LIKE
+  COMMENT_MENTION
+  POST_COMMENT
+  MODERATION_ACTION
+}
+
+// Update User model to include comment relations
+model User {
+  // ... existing fields ...
+
+  comments          Comment[]
+  commentLikes      CommentLike[]
+  commentReports    CommentReport[]
+  notifications     Notification[]
+  sentNotifications Notification[] @relation("SentNotifications")
+  moderatedComments Comment[] @relation("ModeratedComments")
+}
+
+// Update Post model to include comments
+model Post {
+  // ... existing fields ...
+
+  comments Comment[]
+}
+```
+
+Run the migration:
+
+```bash
+npx prisma db push
+npx prisma generate
+```
+
+### 3. Create Comment Validation Schemas
+
+Create `src/lib/validations/comment.ts`:
+
+```typescript
+import { z } from "zod";
+
+export const commentSchema = z.object({
+  content: z
+    .string()
+    .min(1, "Comment cannot be empty")
+    .max(2000, "Comment must be less than 2000 characters")
+    .refine(
+      (content) => content.trim().length > 0,
+      "Comment cannot be only whitespace"
+    ),
+
+  postId: z.string().min(1, "Post ID is required"),
+  parentId: z.string().optional(),
+});
+
+export const commentUpdateSchema = z.object({
+  content: z
+    .string()
+    .min(1, "Comment cannot be empty")
+    .max(2000, "Comment must be less than 2000 characters"),
+});
+
+export const commentModerationSchema = z.object({
+  status: z.enum(["APPROVED", "REJECTED", "SPAM"]),
+  reason: z.string().optional(),
+});
+
+export const commentReportSchema = z.object({
+  reason: z.string().min(1, "Reason is required"),
+  details: z.string().max(500).optional(),
+  commentId: z.string().min(1),
+});
+
+export const commentLikeSchema = z.object({
+  commentId: z.string().min(1),
+  type: z.enum(["LIKE", "DISLIKE"]).default("LIKE"),
+});
+
+export type CommentFormData = z.infer<typeof commentSchema>;
+export type CommentUpdateData = z.infer<typeof commentUpdateSchema>;
+export type CommentModerationData = z.infer<typeof commentModerationSchema>;
+export type CommentReportData = z.infer<typeof commentReportSchema>;
+export type CommentLikeData = z.infer<typeof commentLikeSchema>;
+```
+
+### 4. Create Content Filtering Utilities
+
+Create `src/lib/content-filter.ts`:
+
+```typescript
+import Filter from "bad-words";
+import validator from "validator";
+
+const filter = new Filter();
+
+// Add custom words to filter
+filter.addWords("spam", "scam", "promotional");
+
+export interface ContentAnalysis {
+  isClean: boolean;
+  hasSpam: boolean;
+  hasProfanity: boolean;
+  hasLinks: boolean;
+  score: number;
+  suggestions: string[];
+}
+
+export function analyzeContent(content: string): ContentAnalysis {
+  const analysis: ContentAnalysis = {
+    isClean: true,
+    hasSpam: false,
+    hasProfanity: false,
+    hasLinks: false,
+    score: 100,
+    suggestions: [],
+  };
+
+  // Check for profanity
+  if (filter.isProfane(content)) {
+    analysis.hasProfanity = true;
+    analysis.isClean = false;
+    analysis.score -= 30;
+    analysis.suggestions.push("Remove inappropriate language");
+  }
+
+  // Check for links (potential spam)
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const links = content.match(urlRegex);
+  if (links && links.length > 0) {
+    analysis.hasLinks = true;
+    analysis.score -= 10 * links.length;
+
+    if (links.length > 2) {
+      analysis.hasSpam = true;
+      analysis.isClean = false;
+      analysis.suggestions.push("Too many links detected");
+    }
+  }
+
+  // Check for spam patterns
+  const spamPatterns = [
+    /buy now/gi,
+    /click here/gi,
+    /limited time/gi,
+    /act now/gi,
+    /guarantee/gi,
+    /free money/gi,
+    /work from home/gi,
+  ];
+
+  for (const pattern of spamPatterns) {
+    if (pattern.test(content)) {
+      analysis.hasSpam = true;
+      analysis.isClean = false;
+      analysis.score -= 20;
+      analysis.suggestions.push("Potential spam content detected");
+      break;
+    }
+  }
+
+  // Check for excessive caps
+  const capsRatio = (content.match(/[A-Z]/g) || []).length / content.length;
+  if (capsRatio > 0.3 && content.length > 20) {
+    analysis.score -= 15;
+    analysis.suggestions.push("Reduce excessive capitalization");
+  }
+
+  // Check for repeated characters
+  if (/(.)\1{4,}/.test(content)) {
+    analysis.score -= 10;
+    analysis.suggestions.push("Reduce excessive repeated characters");
+  }
+
+  // Final score assessment
+  if (analysis.score < 50) {
+    analysis.isClean = false;
+  }
+
+  return analysis;
+}
+
+export function cleanContent(content: string): string {
+  // Remove excessive whitespace
+  content = content.replace(/\s+/g, " ").trim();
+
+  // Clean profanity
+  content = filter.clean(content);
+
+  // Remove excessive repeated characters
+  content = content.replace(/(.)\1{3,}/g, "$1$1$1");
+
+  return content;
+}
+
+export function isValidEmail(email: string): boolean {
+  return validator.isEmail(email);
+}
+
+export function isValidURL(url: string): boolean {
+  return validator.isURL(url);
+}
+
+export function autoModerationRequired(analysis: ContentAnalysis): boolean {
+  return !analysis.isClean || analysis.score < 70;
+}
+```
+
+### 5. Create Real-time Comment Service
+
+Create `src/lib/pusher.ts`:
+
+```typescript
+import Pusher from "pusher";
+import PusherClient from "pusher-js";
+
+// Server-side Pusher instance
+export const pusherServer = new Pusher({
+  appId: process.env.PUSHER_APP_ID!,
+  key: process.env.PUSHER_KEY!,
+  secret: process.env.PUSHER_SECRET!,
+  cluster: process.env.PUSHER_CLUSTER!,
+  useTLS: true,
+});
+
+// Client-side Pusher instance
+export const pusherClient = new PusherClient(
+  process.env.NEXT_PUBLIC_PUSHER_KEY!,
+  {
+    cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
+  }
+);
+
+// Real-time event types
+export const COMMENT_EVENTS = {
+  NEW_COMMENT: "new-comment",
+  COMMENT_UPDATED: "comment-updated",
+  COMMENT_DELETED: "comment-deleted",
+  COMMENT_LIKED: "comment-liked",
+  TYPING: "typing",
+  STOP_TYPING: "stop-typing",
+} as const;
+
+export function getPostChannel(postId: string) {
+  return `post-${postId}`;
+}
+
+export function getUserChannel(userId: string) {
+  return `user-${userId}`;
+}
+
+// Trigger real-time events
+export async function triggerNewComment(postId: string, comment: any) {
+  await pusherServer.trigger(
+    getPostChannel(postId),
+    COMMENT_EVENTS.NEW_COMMENT,
+    comment
+  );
+}
+
+export async function triggerCommentUpdate(postId: string, comment: any) {
+  await pusherServer.trigger(
+    getPostChannel(postId),
+    COMMENT_EVENTS.COMMENT_UPDATED,
+    comment
+  );
+}
+
+export async function triggerCommentDelete(postId: string, commentId: string) {
+  await pusherServer.trigger(
+    getPostChannel(postId),
+    COMMENT_EVENTS.COMMENT_DELETED,
+    { commentId }
+  );
+}
+
+export async function triggerTyping(postId: string, user: any) {
+  await pusherServer.trigger(getPostChannel(postId), COMMENT_EVENTS.TYPING, {
+    user,
+    timestamp: Date.now(),
+  });
+}
+```
+
+### 6. Create Comment Component
+
+Create `src/components/comments/comment-item.tsx`:
+
+```typescript
+'use client'
+
+import { useState } from 'react'
+import { formatDistanceToNow } from 'date-fns'
+import { Button } from '@/components/ui/button'
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  Heart,
+  HeartHandshake,
+  Reply,
+  MoreHorizontal,
+  Edit3,
+  Trash2,
+  Flag,
+  Check,
+  X
+} from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { useSession } from 'next-auth/react'
+import { toast } from 'sonner'
+
+interface CommentItemProps {
+  comment: {
+    id: string
+    content: string
+    createdAt: Date
+    updatedAt: Date
+    isEdited: boolean
+    status: string
+    author: {
+      id: string
+      name: string | null
+      image: string | null
+    }
+    _count: {
+      likes: number
+      replies: number
+    }
+    userLike?: {
+      type: 'LIKE' | 'DISLIKE'
+    } | null
+    replies?: CommentItemProps['comment'][]
+  }
+  postId: string
+  depth?: number
+  maxDepth?: number
+  onReply?: (parentId: string) => void
+  onEdit?: (commentId: string, content: string) => void
+  onDelete?: (commentId: string) => void
+  onLike?: (commentId: string, type: 'LIKE' | 'DISLIKE') => void
+  onReport?: (commentId: string) => void
+}
+
+export function CommentItem({
+  comment,
+  postId,
+  depth = 0,
+  maxDepth = 3,
+  onReply,
+  onEdit,
+  onDelete,
+  onLike,
+  onReport
+}: CommentItemProps) {
+  const { data: session } = useSession()
+  const [isEditing, setIsEditing] = useState(false)
+  const [editContent, setEditContent] = useState(comment.content)
+  const [isLiking, setIsLiking] = useState(false)
+  const [showReplies, setShowReplies] = useState(depth < 2)
+
+  const isAuthor = session?.user?.id === comment.author.id
+  const canReply = depth < maxDepth && session
+  const isPending = comment.status === 'PENDING'
+  const isRejected = comment.status === 'REJECTED'
+
+  const handleEdit = async () => {
+    if (!editContent.trim()) {
+      toast.error('Comment cannot be empty')
+      return
+    }
+
+    try {
+      await onEdit?.(comment.id, editContent)
+      setIsEditing(false)
+      toast.success('Comment updated')
+    } catch (error) {
+      toast.error('Failed to update comment')
+    }
+  }
+
+  const handleLike = async (type: 'LIKE' | 'DISLIKE') => {
+    if (!session) {
+      toast.error('Please sign in to like comments')
+      return
+    }
+
+    setIsLiking(true)
+    try {
+      await onLike?.(comment.id, type)
+    } catch (error) {
+      toast.error('Failed to like comment')
+    } finally {
+      setIsLiking(false)
+    }
+  }
+
+  const handleReport = async () => {
+    if (!session) {
+      toast.error('Please sign in to report comments')
+      return
+    }
+
+    try {
+      await onReport?.(comment.id)
+      toast.success('Comment reported')
+    } catch (error) {
+      toast.error('Failed to report comment')
+    }
+  }
+
+  if (isRejected && !isAuthor) {
+    return null
+  }
+
+  return (
+    <div className={cn('flex space-x-3', depth > 0 && 'ml-8 mt-4')}>
+      <Avatar className="h-8 w-8 flex-shrink-0">
+        <AvatarImage src={comment.author.image || undefined} />
+        <AvatarFallback>
+          {comment.author.name?.[0]?.toUpperCase() || 'U'}
+        </AvatarFallback>
+      </Avatar>
+
+      <div className="flex-1 space-y-2">
+        {/* Comment Header */}
+        <div className="flex items-center space-x-2">
+          <span className="font-medium text-sm">
+            {comment.author.name || 'Anonymous'}
+          </span>
+          <span className="text-xs text-muted-foreground">
+            {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
+          </span>
+          {comment.isEdited && (
+            <Badge variant="secondary" className="text-xs">
+              Edited
+            </Badge>
+          )}
+          {isPending && (
+            <Badge variant="outline" className="text-xs">
+              Pending Review
+            </Badge>
+          )}
+          {isRejected && (
+            <Badge variant="destructive" className="text-xs">
+              Rejected
+            </Badge>
+          )}
+        </div>
+
+        {/* Comment Content */}
+        {isEditing ? (
+          <div className="space-y-2">
+            <Textarea
+              value={editContent}
+              onChange={(e) => setEditContent(e.target.value)}
+              className="min-h-[60px]"
+              placeholder="Edit your comment..."
+            />
+            <div className="flex space-x-2">
+              <Button size="sm" onClick={handleEdit}>
+                <Check className="h-3 w-3 mr-1" />
+                Save
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setIsEditing(false)
+                  setEditContent(comment.content)
+                }}
+              >
+                <X className="h-3 w-3 mr-1" />
+                Cancel
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="prose prose-sm max-w-none">
+            <p className="text-sm leading-relaxed whitespace-pre-wrap">
+              {comment.content}
+            </p>
+          </div>
+        )}
+
+        {/* Comment Actions */}
+        <div className="flex items-center space-x-4">
+          {/* Like/Dislike */}
+          <div className="flex items-center space-x-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className={cn(
+                'h-7 px-2',
+                comment.userLike?.type === 'LIKE' && 'text-red-600'
+              )}
+              onClick={() => handleLike('LIKE')}
+              disabled={isLiking || !session}
+            >
+              <Heart className="h-3 w-3 mr-1" />
+              {comment._count.likes}
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              className={cn(
+                'h-7 px-2',
+                comment.userLike?.type === 'DISLIKE' && 'text-blue-600'
+              )}
+              onClick={() => handleLike('DISLIKE')}
+              disabled={isLiking || !session}
+            >
+              <HeartHandshake className="h-3 w-3" />
+            </Button>
+          </div>
+
+          {/* Reply */}
+          {canReply && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2"
+              onClick={() => onReply?.(comment.id)}
+            >
+              <Reply className="h-3 w-3 mr-1" />
+              Reply
+            </Button>
+          )}
+
+          {/* Show/Hide Replies */}
+          {comment.replies && comment.replies.length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2"
+              onClick={() => setShowReplies(!showReplies)}
+            >
+              {showReplies ? 'Hide' : 'Show'} {comment._count.replies} replies
+            </Button>
+          )}
+
+          {/* Actions Menu */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                <MoreHorizontal className="h-3 w-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {isAuthor && (
+                <>
+                  <DropdownMenuItem onClick={() => setIsEditing(true)}>
+                    <Edit3 className="h-4 w-4 mr-2" />
+                    Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => onDelete?.(comment.id)}
+                    className="text-red-600"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete
+                  </DropdownMenuItem>
+                </>
+              )}
+              {!isAuthor && session && (
+                <DropdownMenuItem onClick={handleReport}>
+                  <Flag className="h-4 w-4 mr-2" />
+                  Report
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        {/* Nested Replies */}
+        {showReplies && comment.replies && comment.replies.length > 0 && (
+          <div className="mt-4 space-y-4">
+            {comment.replies.map((reply) => (
+              <CommentItem
+                key={reply.id}
+                comment={reply}
+                postId={postId}
+                depth={depth + 1}
+                maxDepth={maxDepth}
+                onReply={onReply}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                onLike={onLike}
+                onReport={onReport}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+```
+
+### 7. Create Comment Form Component
+
+Create `src/components/comments/comment-form.tsx`:
+
+```typescript
+'use client'
+
+import { useState } from 'react'
+import { useSession } from 'next-auth/react'
+import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
+import { Card, CardContent } from '@/components/ui/card'
+import { Send, X } from 'lucide-react'
+import { toast } from 'sonner'
+import { cn } from '@/lib/utils'
+
+interface CommentFormProps {
+  postId: string
+  parentId?: string
+  placeholder?: string
+  onSubmit: (content: string, parentId?: string) => Promise<void>
+  onCancel?: () => void
+  autoFocus?: boolean
+  className?: string
+}
+
+export function CommentForm({
+  postId,
+  parentId,
+  placeholder = "Share your thoughts...",
+  onSubmit,
+  onCancel,
+  autoFocus = false,
+  className
+}: CommentFormProps) {
+  const { data: session } = useSession()
+  const [content, setContent] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  if (!session) {
+    return (
+      <Card className={className}>
+        <CardContent className="p-4">
+          <p className="text-muted-foreground text-center">
+            Please sign in to leave a comment.
+          </p>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!content.trim()) {
+      toast.error('Comment cannot be empty')
+      return
+    }
+
+    if (content.length > 2000) {
+      toast.error('Comment is too long (max 2000 characters)')
+      return
+    }
+
+    setIsSubmitting(true)
+    try {
+      await onSubmit(content.trim(), parentId)
+      setContent('')
+      toast.success('Comment posted successfully!')
+    } catch (error) {
+      console.error('Error posting comment:', error)
+      toast.error('Failed to post comment')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault()
+      handleSubmit(e as any)
+    }
+  }
+
+  return (
+    <Card className={className}>
+      <CardContent className="p-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="flex space-x-3">
+            <Avatar className="h-8 w-8 flex-shrink-0">
+              <AvatarImage src={session.user?.image || undefined} />
+              <AvatarFallback>
+                {session.user?.name?.[0]?.toUpperCase() || 'U'}
+              </AvatarFallback>
+            </Avatar>
+
+            <div className="flex-1">
+              <Textarea
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder={placeholder}
+                className="min-h-[80px] resize-none"
+                autoFocus={autoFocus}
+                disabled={isSubmitting}
+              />
+
+              <div className="flex items-center justify-between mt-2">
+                <div className="text-xs text-muted-foreground">
+                  {content.length}/2000 characters
+                  {content.length > 1900 && (
+                    <span className="text-orange-500 ml-2">
+                      ({2000 - content.length} remaining)
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex space-x-2">
+                  {onCancel && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={onCancel}
+                      disabled={isSubmitting}
+                    >
+                      <X className="h-4 w-4 mr-1" />
+                      Cancel
+                    </Button>
+                  )}
+
+                  <Button
+                    type="submit"
+                    size="sm"
+                    disabled={!content.trim() || isSubmitting || content.length > 2000}
+                  >
+                    <Send className="h-4 w-4 mr-1" />
+                    {isSubmitting ? 'Posting...' : 'Post Comment'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </form>
+
+        <div className="mt-2 text-xs text-muted-foreground">
+          Pro tip: Use Cmd/Ctrl + Enter to submit quickly
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+```
+
+### 8. Create Comments List Component
+
+Create `src/components/comments/comments-list.tsx`:
+
+```typescript
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
+import { CommentItem } from './comment-item'
+import { CommentForm } from './comment-form'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { MessageSquare, ArrowUpDown, Users } from 'lucide-react'
+import { toast } from 'sonner'
+import { pusherClient, getPostChannel, COMMENT_EVENTS } from '@/lib/pusher'
+
+interface Comment {
+  id: string
+  content: string
+  createdAt: Date
+  updatedAt: Date
+  isEdited: boolean
+  status: string
+  author: {
+    id: string
+    name: string | null
+    image: string | null
+  }
+  _count: {
+    likes: number
+    replies: number
+  }
+  userLike?: {
+    type: 'LIKE' | 'DISLIKE'
+  } | null
+  replies?: Comment[]
+}
+
+interface CommentsListProps {
+  postId: string
+  initialComments: Comment[]
+  totalCount: number
+}
+
+type SortOption = 'newest' | 'oldest' | 'mostLiked' | 'mostReplies'
+
+export function CommentsList({
+  postId,
+  initialComments,
+  totalCount: initialTotalCount
+}: CommentsListProps) {
+  const { data: session } = useSession()
+  const [comments, setComments] = useState<Comment[]>(initialComments)
+  const [totalCount, setTotalCount] = useState(initialTotalCount)
+  const [sortBy, setSortBy] = useState<SortOption>('newest')
+  const [replyingTo, setReplyingTo] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  // Real-time updates
+  useEffect(() => {
+    const channel = pusherClient.subscribe(getPostChannel(postId))
+
+    channel.bind(COMMENT_EVENTS.NEW_COMMENT, (data: Comment) => {
+      setComments(prev => [data, ...prev])
+      setTotalCount(prev => prev + 1)
+      toast.success('New comment added!')
+    })
+
+    channel.bind(COMMENT_EVENTS.COMMENT_UPDATED, (data: Comment) => {
+      setComments(prev =>
+        prev.map(comment =>
+          comment.id === data.id ? { ...comment, ...data } : comment
+        )
+      )
+    })
+
+    channel.bind(COMMENT_EVENTS.COMMENT_DELETED, (data: { commentId: string }) => {
+      setComments(prev => prev.filter(comment => comment.id !== data.commentId))
+      setTotalCount(prev => prev - 1)
+    })
+
+    return () => {
+      pusherClient.unsubscribe(getPostChannel(postId))
+    }
+  }, [postId])
+
+  const sortComments = (commentsToSort: Comment[], sortOption: SortOption): Comment[] => {
+    const sorted = [...commentsToSort]
+
+    switch (sortOption) {
+      case 'newest':
+        return sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      case 'oldest':
+        return sorted.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+      case 'mostLiked':
+        return sorted.sort((a, b) => b._count.likes - a._count.likes)
+      case 'mostReplies':
+        return sorted.sort((a, b) => b._count.replies - a._count.replies)
+      default:
+        return sorted
+    }
+  }
+
+  const handleNewComment = async (content: string, parentId?: string) => {
+    try {
+      const response = await fetch('/api/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content,
+          postId,
+          parentId,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to post comment')
+      }
+
+      const newComment = await response.json()
+
+      if (parentId) {
+        // Handle reply - refresh comments to get updated nested structure
+        await refreshComments()
+        setReplyingTo(null)
+      } else {
+        // Handle top-level comment
+        setComments(prev => [newComment, ...prev])
+        setTotalCount(prev => prev + 1)
+      }
+    } catch (error) {
+      console.error('Error posting comment:', error)
+      throw error
+    }
+  }
+
+  const handleEditComment = async (commentId: string, content: string) => {
+    try {
+      const response = await fetch(`/api/comments/${commentId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to update comment')
+      }
+
+      const updatedComment = await response.json()
+
+      setComments(prev =>
+        prev.map(comment =>
+          comment.id === commentId ? { ...comment, ...updatedComment } : comment
+        )
+      )
+    } catch (error) {
+      console.error('Error updating comment:', error)
+      throw error
+    }
+  }
+
+  const handleDeleteComment = async (commentId: string) => {
+    if (!confirm('Are you sure you want to delete this comment?')) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/comments/${commentId}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to delete comment')
+      }
+
+      setComments(prev => prev.filter(comment => comment.id !== commentId))
+      setTotalCount(prev => prev - 1)
+      toast.success('Comment deleted')
+    } catch (error) {
+      console.error('Error deleting comment:', error)
+      toast.error('Failed to delete comment')
+    }
+  }
+
+  const handleLikeComment = async (commentId: string, type: 'LIKE' | 'DISLIKE') => {
+    try {
+      const response = await fetch('/api/comments/like', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ commentId, type }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to like comment')
+      }
+
+      const result = await response.json()
+
+      // Update the comment with new like data
+      setComments(prev =>
+        prev.map(comment =>
+          comment.id === commentId
+            ? {
+                ...comment,
+                _count: { ...comment._count, likes: result.likesCount },
+                userLike: result.userLike
+              }
+            : comment
+        )
+      )
+    } catch (error) {
+      console.error('Error liking comment:', error)
+      throw error
+    }
+  }
+
+  const handleReportComment = async (commentId: string) => {
+    const reason = prompt('Please provide a reason for reporting this comment:')
+    if (!reason) return
+
+    try {
+      const response = await fetch('/api/comments/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ commentId, reason }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to report comment')
+      }
+
+      toast.success('Comment reported. Thank you for helping keep our community safe.')
+    } catch (error) {
+      console.error('Error reporting comment:', error)
+      throw error
+    }
+  }
+
+  const refreshComments = async () => {
+    setLoading(true)
+    try {
+      const response = await fetch(`/api/posts/${postId}/comments?sort=${sortBy}`)
+      if (response.ok) {
+        const data = await response.json()
+        setComments(data.comments)
+        setTotalCount(data.total)
+      }
+    } catch (error) {
+      console.error('Error refreshing comments:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const sortedComments = sortComments(comments, sortBy)
+
+  return (
+    <div className="space-y-6">
+      {/* Comments Header */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5" />
+              Comments ({totalCount})
+            </CardTitle>
+
+            <div className="flex items-center gap-2">
+              <Select value={sortBy} onValueChange={(value: SortOption) => setSortBy(value)}>
+                <SelectTrigger className="w-40">
+                  <ArrowUpDown className="h-4 w-4 mr-2" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="newest">Newest</SelectItem>
+                  <SelectItem value="oldest">Oldest</SelectItem>
+                  <SelectItem value="mostLiked">Most Liked</SelectItem>
+                  <SelectItem value="mostReplies">Most Replies</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent>
+          {/* Comment Form */}
+          <CommentForm
+            postId={postId}
+            onSubmit={handleNewComment}
+            placeholder="Join the conversation..."
+          />
+        </CardContent>
+      </Card>
+
+      {/* Comments List */}
+      {loading ? (
+        <div className="text-center py-8">
+          <div className="animate-spin h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-2 text-muted-foreground">Loading comments...</p>
+        </div>
+      ) : sortedComments.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No comments yet</h3>
+            <p className="text-muted-foreground">
+              Be the first to share your thoughts on this post!
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-6">
+          {sortedComments.map((comment) => (
+            <div key={comment.id}>
+              <CommentItem
+                comment={comment}
+                postId={postId}
+                onReply={setReplyingTo}
+                onEdit={handleEditComment}
+                onDelete={handleDeleteComment}
+                onLike={handleLikeComment}
+                onReport={handleReportComment}
+              />
+
+              {/* Reply Form */}
+              {replyingTo === comment.id && (
+                <div className="ml-11 mt-4">
+                  <CommentForm
+                    postId={postId}
+                    parentId={comment.id}
+                    placeholder={`Reply to ${comment.author.name}...`}
+                    onSubmit={handleNewComment}
+                    onCancel={() => setReplyingTo(null)}
+                    autoFocus
+                  />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+```
+
+### 9. Create Comment API Routes
+
+Create `src/app/api/comments/route.ts`:
+
+```typescript
+import { NextRequest, NextResponse } from "next/server";
+import { requireServerAuth } from "@/lib/server-auth";
+import { prisma } from "@/lib/db";
+import { commentSchema } from "@/lib/validations/comment";
+import {
+  analyzeContent,
+  cleanContent,
+  autoModerationRequired,
+} from "@/lib/content-filter";
+import { triggerNewComment } from "@/lib/pusher";
+
+export async function POST(request: NextRequest) {
+  try {
+    const session = await requireServerAuth();
+    const body = await request.json();
+
+    const validatedData = commentSchema.parse(body);
+
+    // Analyze and clean content
+    const analysis = analyzeContent(validatedData.content);
+    const cleanedContent = cleanContent(validatedData.content);
+
+    // Determine comment status based on content analysis
+    let status: "PENDING" | "APPROVED" | "REJECTED" = "APPROVED";
+
+    if (autoModerationRequired(analysis)) {
+      status = "PENDING";
+    }
+
+    // Get client IP and user agent for spam tracking
+    const ip =
+      request.headers.get("x-forwarded-for") ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
+    const userAgent = request.headers.get("user-agent") || "unknown";
+
+    // Create comment
+    const comment = await prisma.comment.create({
+      data: {
+        content: cleanedContent,
+        postId: validatedData.postId,
+        parentId: validatedData.parentId || null,
+        authorId: session.user.id,
+        status,
+        ipAddress: ip,
+        userAgent,
+      },
+      include: {
+        author: {
+          select: { id: true, name: true, image: true },
+        },
+        _count: {
+          select: { likes: true, replies: true },
+        },
+      },
+    });
+
+    // Create notification for post author (if not self-comment)
+    const post = await prisma.post.findUnique({
+      where: { id: validatedData.postId },
+      select: { authorId: true },
+    });
+
+    if (post && post.authorId !== session.user.id) {
+      await prisma.notification.create({
+        data: {
+          type: "POST_COMMENT",
+          title: "New comment on your post",
+          message: `${session.user.name} commented on your post`,
+          userId: post.authorId,
+          postId: validatedData.postId,
+          commentId: comment.id,
+          fromUserId: session.user.id,
+        },
+      });
+    }
+
+    // Create notification for parent comment author (if reply)
+    if (validatedData.parentId) {
+      const parentComment = await prisma.comment.findUnique({
+        where: { id: validatedData.parentId },
+        select: { authorId: true },
+      });
+
+      if (parentComment && parentComment.authorId !== session.user.id) {
+        await prisma.notification.create({
+          data: {
+            type: "COMMENT_REPLY",
+            title: "Someone replied to your comment",
+            message: `${session.user.name} replied to your comment`,
+            userId: parentComment.authorId,
+            postId: validatedData.postId,
+            commentId: comment.id,
+            fromUserId: session.user.id,
+          },
+        });
+      }
+    }
+
+    // Trigger real-time update if approved
+    if (status === "APPROVED") {
+      await triggerNewComment(validatedData.postId, comment);
+    }
+
+    return NextResponse.json(comment);
+  } catch (error) {
+    console.error("Error creating comment:", error);
+    return NextResponse.json(
+      { error: "Failed to create comment" },
+      { status: 500 }
+    );
+  }
+}
+```
+
+### 10. Create Comment Moderation Dashboard
+
+Create `src/app/dashboard/comments/page.tsx`:
+
+```typescript
+import { requireServerRole } from '@/lib/server-auth'
+import { prisma } from '@/lib/db'
+import { CommentModerationTable } from '@/components/dashboard/comment-moderation-table'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { MessageSquare, Clock, CheckCircle, XCircle, Flag } from 'lucide-react'
+
+export default async function CommentModerationPage() {
+  await requireServerRole(['ADMIN', 'MODERATOR'])
+
+  const [comments, stats] = await Promise.all([
+    prisma.comment.findMany({
+      include: {
+        author: {
+          select: { id: true, name: true, email: true, image: true },
+        },
+        post: {
+          select: { id: true, title: true, slug: true },
+        },
+        _count: {
+          select: { likes: true, reports: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    }),
+    prisma.comment.groupBy({
+      by: ['status'],
+      _count: true,
+    }),
+  ])
+
+  const statsMap = stats.reduce((acc, stat) => {
+    acc[stat.status] = stat._count
+    return acc
+  }, {} as Record<string, number>)
+
+  return (
+    <div className="p-6 space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold">Comment Moderation</h1>
+        <p className="text-muted-foreground">
+          Review and moderate user comments
+        </p>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Comments</CardTitle>
+            <MessageSquare className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{comments.length}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pending Review</CardTitle>
+            <Clock className="h-4 w-4 text-orange-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-500">
+              {statsMap.PENDING || 0}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Approved</CardTitle>
+            <CheckCircle className="h-4 w-4 text-green-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-500">
+              {statsMap.APPROVED || 0}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Rejected/Spam</CardTitle>
+            <XCircle className="h-4 w-4 text-red-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-500">
+              {(statsMap.REJECTED || 0) + (statsMap.SPAM || 0)}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Comments Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Comments</CardTitle>
+          <CardDescription>
+            Review and moderate user comments
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <CommentModerationTable comments={comments} />
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+```
+
+## Real-time Features Implementation
+
+The commenting system includes several real-time features:
+
+1. **Live Comment Updates**: New comments appear instantly for all viewers
+2. **Typing Indicators**: Show when users are typing (optional feature)
+3. **Instant Notifications**: Users get notified of replies and interactions
+4. **Auto-refresh**: Comments automatically sync across all open tabs
+
+## Spam Protection & Content Moderation
+
+The system includes comprehensive spam protection:
+
+1. **Automatic Content Analysis**: Comments are analyzed for spam patterns
+2. **Profanity Filtering**: Bad words are automatically filtered
+3. **Manual Moderation**: Suspicious content is held for review
+4. **User Reporting**: Users can report inappropriate comments
+5. **Rate Limiting**: Prevents comment spam (implement in production)
+
+## Next Steps
+
+Your comment system is now fully functional! You should have:
+
+1. ✅ Threaded comment discussions
+2. ✅ Real-time comment updates
+3. ✅ Comment voting and reactions
+4. ✅ Moderation tools and spam protection
+5. ✅ User notifications for interactions
+6. ✅ Mobile-responsive comment interface
+7. ✅ Content filtering and safety features
+
+**Continue to**: [Step 9: Search & Filtering →](../09-search-filtering)
+
+---
+
+**Estimated Time**: 240-300 minutes
+
+**Difficulty**: Advanced
+
+**Next**: [Search & Filtering →](../09-search-filtering)

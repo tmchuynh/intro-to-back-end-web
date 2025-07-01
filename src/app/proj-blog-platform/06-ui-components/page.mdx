@@ -1,0 +1,1362 @@
+# Step 6: UI Components & Styling
+
+## Objective
+
+Build a comprehensive component library using shadcn/ui and Tailwind CSS, creating reusable UI components specifically designed for blog functionality including layouts, navigation, content display, and interactive elements.
+
+## What You'll Learn
+
+- How to build complex layouts with shadcn/ui components
+- How to create blog-specific UI components
+- How to implement responsive design patterns
+- How to customize Tailwind CSS for blog styling
+- How to create dark/light theme support
+- How to optimize component performance
+
+## Prerequisites
+
+- Completed [Step 5: MDX Configuration](../05-mdx-setup)
+- Basic understanding of Tailwind CSS
+- Familiarity with React component patterns
+
+## Component Architecture
+
+```
+UI Component System:
+├── Layout Components
+│   ├── Header/Navigation
+│   ├── Footer
+│   ├── Sidebar
+│   └── Main Content Area
+├── Blog Components
+│   ├── Post Cards
+│   ├── Post Content
+│   ├── Author Bio
+│   └── Related Posts
+├── Interactive Components
+│   ├── Search
+│   ├── Comments
+│   ├── Like Button
+│   └── Share Buttons
+└── Utility Components
+    ├── Loading States
+    ├── Error Boundaries
+    └── SEO Components
+```
+
+## Step-by-Step Instructions
+
+### 1. Install Additional UI Dependencies
+
+```bash
+# Additional shadcn/ui components
+npx shadcn-ui@latest add breadcrumb
+npx shadcn-ui@latest add command
+npx shadcn-ui@latest add tabs
+npx shadcn-ui@latest add toggle
+npx shadcn-ui@latest add toggle-group
+npx shadcn-ui@latest add tooltip
+npx shadcn-ui@latest add skeleton
+npx shadcn-ui@latest add progress
+
+# Additional utilities
+npm install framer-motion
+npm install react-share
+npm install react-intersection-observer
+npm install embla-carousel-react
+npm install date-fns
+npm install clsx tailwind-merge
+```
+
+### 2. Create Theme Provider
+
+Create `src/components/providers/theme-provider.tsx`:
+
+```typescript
+'use client'
+
+import * as React from 'react'
+import { ThemeProvider as NextThemesProvider } from 'next-themes'
+import { type ThemeProviderProps } from 'next-themes/dist/types'
+
+export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
+  return <NextThemesProvider {...props}>{children}</NextThemesProvider>
+}
+```
+
+### 3. Create Site Header Component
+
+Create `src/components/layout/site-header.tsx`:
+
+```typescript
+'use client'
+
+import { useState, useEffect } from 'react'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { Button } from '@/components/ui/button'
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+} from '@/components/ui/navigation-menu'
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
+import { UserNav } from '@/components/auth/user-nav'
+import { ThemeToggle } from '@/components/ui/theme-toggle'
+import { Search } from '@/components/blog/search'
+import { Menu, BookOpen, PenTool, Users, Info } from 'lucide-react'
+import { cn } from '@/lib/utils'
+
+const navigation = [
+  {
+    title: 'Blog',
+    href: '/blog',
+    description: 'Read our latest blog posts',
+    icon: BookOpen,
+    items: [
+      { title: 'All Posts', href: '/blog' },
+      { title: 'Featured', href: '/blog/featured' },
+      { title: 'Categories', href: '/blog/categories' },
+      { title: 'Tags', href: '/blog/tags' },
+    ],
+  },
+  {
+    title: 'Write',
+    href: '/write',
+    description: 'Create and manage your posts',
+    icon: PenTool,
+    items: [
+      { title: 'New Post', href: '/write/new' },
+      { title: 'Drafts', href: '/write/drafts' },
+      { title: 'Published', href: '/write/published' },
+      { title: 'Analytics', href: '/write/analytics' },
+    ],
+  },
+  {
+    title: 'Authors',
+    href: '/authors',
+    description: 'Meet our content creators',
+    icon: Users,
+  },
+  {
+    title: 'About',
+    href: '/about',
+    description: 'Learn more about us',
+    icon: Info,
+  },
+]
+
+export function SiteHeader() {
+  const pathname = usePathname()
+  const [isScrolled, setIsScrolled] = useState(false)
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 10)
+    }
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  return (
+    <header
+      className={cn(
+        'sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-all duration-200',
+        isScrolled && 'shadow-sm'
+      )}
+    >
+      <div className="container flex h-16 items-center justify-between">
+        {/* Logo */}
+        <Link href="/" className="flex items-center space-x-2">
+          <BookOpen className="h-6 w-6" />
+          <span className="font-bold text-xl">Blog Platform</span>
+        </Link>
+
+        {/* Desktop Navigation */}
+        <NavigationMenu className="hidden md:flex">
+          <NavigationMenuList>
+            {navigation.map((item) => (
+              <NavigationMenuItem key={item.href}>
+                {item.items ? (
+                  <>
+                    <NavigationMenuTrigger className="h-9">
+                      <item.icon className="mr-2 h-4 w-4" />
+                      {item.title}
+                    </NavigationMenuTrigger>
+                    <NavigationMenuContent>
+                      <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px]">
+                        <li className="row-span-3">
+                          <NavigationMenuLink asChild>
+                            <Link
+                              href={item.href}
+                              className="flex h-full w-full select-none flex-col justify-end rounded-md bg-gradient-to-b from-muted/50 to-muted p-6 no-underline outline-none focus:shadow-md"
+                            >
+                              <item.icon className="h-6 w-6" />
+                              <div className="mb-2 mt-4 text-lg font-medium">
+                                {item.title}
+                              </div>
+                              <p className="text-sm leading-tight text-muted-foreground">
+                                {item.description}
+                              </p>
+                            </Link>
+                          </NavigationMenuLink>
+                        </li>
+                        {item.items.map((subItem) => (
+                          <li key={subItem.href}>
+                            <NavigationMenuLink asChild>
+                              <Link
+                                href={subItem.href}
+                                className={cn(
+                                  'block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground',
+                                  pathname === subItem.href && 'bg-accent text-accent-foreground'
+                                )}
+                              >
+                                <div className="text-sm font-medium leading-none">
+                                  {subItem.title}
+                                </div>
+                              </Link>
+                            </NavigationMenuLink>
+                          </li>
+                        ))}
+                      </ul>
+                    </NavigationMenuContent>
+                  </>
+                ) : (
+                  <Link
+                    href={item.href}
+                    className={cn(
+                      'group inline-flex h-9 w-max items-center justify-center rounded-md bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50',
+                      pathname === item.href && 'bg-accent text-accent-foreground'
+                    )}
+                  >
+                    <item.icon className="mr-2 h-4 w-4" />
+                    {item.title}
+                  </Link>
+                )}
+              </NavigationMenuItem>
+            ))}
+          </NavigationMenuList>
+        </NavigationMenu>
+
+        {/* Right side actions */}
+        <div className="flex items-center space-x-2">
+          <Search />
+          <ThemeToggle />
+          <UserNav />
+
+          {/* Mobile menu */}
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="md:hidden">
+                <Menu className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-80">
+              <div className="flex flex-col space-y-4 mt-4">
+                {navigation.map((item) => (
+                  <div key={item.href} className="space-y-2">
+                    <Link
+                      href={item.href}
+                      className="flex items-center space-x-2 text-lg font-medium"
+                    >
+                      <item.icon className="h-5 w-5" />
+                      <span>{item.title}</span>
+                    </Link>
+                    {item.items && (
+                      <div className="ml-7 space-y-1">
+                        {item.items.map((subItem) => (
+                          <Link
+                            key={subItem.href}
+                            href={subItem.href}
+                            className="block text-sm text-muted-foreground hover:text-foreground"
+                          >
+                            {subItem.title}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
+      </div>
+    </header>
+  )
+}
+```
+
+### 4. Create Theme Toggle Component
+
+Create `src/components/ui/theme-toggle.tsx`:
+
+```typescript
+'use client'
+
+import { Moon, Sun } from 'lucide-react'
+import { useTheme } from 'next-themes'
+import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+
+export function ThemeToggle() {
+  const { setTheme } = useTheme()
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon">
+          <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+          <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+          <span className="sr-only">Toggle theme</span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={() => setTheme('light')}>
+          Light
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setTheme('dark')}>
+          Dark
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setTheme('system')}>
+          System
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+```
+
+### 5. Create Search Component
+
+Create `src/components/blog/search.tsx`:
+
+```typescript
+'use client'
+
+import { useState, useCallback, useRef, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { Button } from '@/components/ui/button'
+import {
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command'
+import { Search as SearchIcon, FileText, Hash, User } from 'lucide-react'
+
+interface SearchResult {
+  id: string
+  title: string
+  type: 'post' | 'category' | 'tag' | 'author'
+  href: string
+  description?: string
+}
+
+export function Search() {
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState<SearchResult[]>([])
+  const [loading, setLoading] = useState(false)
+  const router = useRouter()
+
+  const searchTimeout = useRef<NodeJS.Timeout>()
+
+  const performSearch = useCallback(async (searchQuery: string) => {
+    if (!searchQuery.trim()) {
+      setResults([])
+      return
+    }
+
+    setLoading(true)
+    try {
+      const response = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}`)
+      const data = await response.json()
+      setResults(data.results || [])
+    } catch (error) {
+      console.error('Search error:', error)
+      setResults([])
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (searchTimeout.current) {
+      clearTimeout(searchTimeout.current)
+    }
+
+    searchTimeout.current = setTimeout(() => {
+      performSearch(query)
+    }, 300)
+
+    return () => {
+      if (searchTimeout.current) {
+        clearTimeout(searchTimeout.current)
+      }
+    }
+  }, [query, performSearch])
+
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault()
+        setOpen((open) => !open)
+      }
+    }
+
+    document.addEventListener('keydown', down)
+    return () => document.removeEventListener('keydown', down)
+  }, [])
+
+  const handleSelect = (href: string) => {
+    setOpen(false)
+    setQuery('')
+    router.push(href)
+  }
+
+  const getIcon = (type: string) => {
+    switch (type) {
+      case 'post':
+        return <FileText className="h-4 w-4" />
+      case 'category':
+      case 'tag':
+        return <Hash className="h-4 w-4" />
+      case 'author':
+        return <User className="h-4 w-4" />
+      default:
+        return <FileText className="h-4 w-4" />
+    }
+  }
+
+  return (
+    <>
+      <Button
+        variant="outline"
+        className="relative h-9 w-9 p-0 xl:h-10 xl:w-60 xl:justify-start xl:px-3 xl:py-2"
+        onClick={() => setOpen(true)}
+      >
+        <SearchIcon className="h-4 w-4 xl:mr-2" />
+        <span className="hidden xl:inline-flex">Search...</span>
+        <kbd className="pointer-events-none absolute right-1.5 top-2 hidden h-6 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 xl:flex">
+          <span className="text-xs">⌘</span>K
+        </kbd>
+      </Button>
+
+      <CommandDialog open={open} onOpenChange={setOpen}>
+        <CommandInput
+          placeholder="Search posts, categories, tags..."
+          value={query}
+          onValueChange={setQuery}
+        />
+        <CommandList>
+          <CommandEmpty>
+            {loading ? 'Searching...' : 'No results found.'}
+          </CommandEmpty>
+
+          {results.length > 0 && (
+            <CommandGroup heading="Results">
+              {results.map((result) => (
+                <CommandItem
+                  key={result.id}
+                  value={result.title}
+                  onSelect={() => handleSelect(result.href)}
+                  className="flex items-center gap-2"
+                >
+                  {getIcon(result.type)}
+                  <div className="flex flex-col">
+                    <span>{result.title}</span>
+                    {result.description && (
+                      <span className="text-xs text-muted-foreground">
+                        {result.description}
+                      </span>
+                    )}
+                  </div>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          )}
+        </CommandList>
+      </CommandDialog>
+    </>
+  )
+}
+```
+
+### 6. Create Site Footer Component
+
+Create `src/components/layout/site-footer.tsx`:
+
+```typescript
+import Link from 'next/link'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Separator } from '@/components/ui/separator'
+import { BookOpen, Github, Twitter, Linkedin, Mail } from 'lucide-react'
+
+const footerLinks = {
+  product: [
+    { name: 'Blog', href: '/blog' },
+    { name: 'Authors', href: '/authors' },
+    { name: 'Categories', href: '/blog/categories' },
+    { name: 'Tags', href: '/blog/tags' },
+  ],
+  company: [
+    { name: 'About', href: '/about' },
+    { name: 'Contact', href: '/contact' },
+    { name: 'Privacy', href: '/privacy' },
+    { name: 'Terms', href: '/terms' },
+  ],
+  resources: [
+    { name: 'Help Center', href: '/help' },
+    { name: 'API Docs', href: '/docs' },
+    { name: 'Community', href: '/community' },
+    { name: 'Sitemap', href: '/sitemap.xml' },
+  ],
+}
+
+const socialLinks = [
+  { name: 'Twitter', href: '#', icon: Twitter },
+  { name: 'GitHub', href: '#', icon: Github },
+  { name: 'LinkedIn', href: '#', icon: Linkedin },
+  { name: 'Email', href: 'mailto:hello@example.com', icon: Mail },
+]
+
+export function SiteFooter() {
+  return (
+    <footer className="border-t bg-background">
+      <div className="container py-12">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-4">
+          {/* Brand section */}
+          <div className="space-y-4">
+            <Link href="/" className="flex items-center space-x-2">
+              <BookOpen className="h-6 w-6" />
+              <span className="font-bold text-xl">Blog Platform</span>
+            </Link>
+            <p className="text-sm text-muted-foreground max-w-xs">
+              A modern blog platform built with Next.js, TypeScript, and Tailwind CSS.
+              Share your thoughts and connect with readers.
+            </p>
+            <div className="flex space-x-2">
+              {socialLinks.map((link) => (
+                <Button key={link.name} variant="ghost" size="icon" asChild>
+                  <Link href={link.href} target="_blank" rel="noopener noreferrer">
+                    <link.icon className="h-4 w-4" />
+                    <span className="sr-only">{link.name}</span>
+                  </Link>
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          {/* Product links */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-semibold">Product</h3>
+            <ul className="space-y-3">
+              {footerLinks.product.map((link) => (
+                <li key={link.name}>
+                  <Link
+                    href={link.href}
+                    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {link.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Company links */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-semibold">Company</h3>
+            <ul className="space-y-3">
+              {footerLinks.company.map((link) => (
+                <li key={link.name}>
+                  <Link
+                    href={link.href}
+                    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {link.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Newsletter signup */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-semibold">Stay Updated</h3>
+            <p className="text-sm text-muted-foreground">
+              Subscribe to our newsletter for the latest posts and updates.
+            </p>
+            <form className="space-y-2">
+              <Input
+                type="email"
+                placeholder="Enter your email"
+                className="max-w-sm"
+              />
+              <Button type="submit" size="sm" className="w-full">
+                Subscribe
+              </Button>
+            </form>
+          </div>
+        </div>
+
+        <Separator className="my-8" />
+
+        <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:space-y-0">
+          <div className="text-sm text-muted-foreground">
+            © {new Date().getFullYear()} Blog Platform. All rights reserved.
+          </div>
+          <div className="flex space-x-4 text-sm text-muted-foreground">
+            <Link href="/privacy" className="hover:text-foreground transition-colors">
+              Privacy Policy
+            </Link>
+            <Link href="/terms" className="hover:text-foreground transition-colors">
+              Terms of Service
+            </Link>
+            <Link href="/cookies" className="hover:text-foreground transition-colors">
+              Cookie Policy
+            </Link>
+          </div>
+        </div>
+      </div>
+    </footer>
+  )
+}
+```
+
+### 7. Create Blog Post Card Component
+
+Create `src/components/blog/post-card.tsx`:
+
+```typescript
+'use client'
+
+import { useState } from 'react'
+import Link from 'next/link'
+import Image from 'next/image'
+import { motion } from 'framer-motion'
+import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import {
+  CalendarDays,
+  Clock,
+  Heart,
+  MessageCircle,
+  Share2,
+  Bookmark,
+  BookmarkCheck
+} from 'lucide-react'
+import { format } from 'date-fns'
+import { cn } from '@/lib/utils'
+
+interface PostCardProps {
+  post: {
+    id: string
+    title: string
+    excerpt: string
+    slug: string
+    coverImage?: string
+    publishedAt: string
+    readTime?: number
+    author: {
+      name: string
+      image?: string
+    }
+    category: {
+      name: string
+      slug: string
+      color?: string
+    }
+    tags?: Array<{
+      name: string
+      slug: string
+    }>
+    _count: {
+      likes: number
+      comments: number
+    }
+  }
+  featured?: boolean
+  compact?: boolean
+  showAuthor?: boolean
+  className?: string
+}
+
+export function PostCard({
+  post,
+  featured = false,
+  compact = false,
+  showAuthor = true,
+  className
+}: PostCardProps) {
+  const [isBookmarked, setIsBookmarked] = useState(false)
+  const [isLiked, setIsLiked] = useState(false)
+  const [likesCount, setLikesCount] = useState(post._count.likes)
+
+  const handleLike = async () => {
+    setIsLiked(!isLiked)
+    setLikesCount(prev => isLiked ? prev - 1 : prev + 1)
+
+    // TODO: Implement actual like functionality
+    try {
+      await fetch(`/api/posts/${post.id}/like`, {
+        method: isLiked ? 'DELETE' : 'POST',
+      })
+    } catch (error) {
+      console.error('Error toggling like:', error)
+      // Revert on error
+      setIsLiked(!isLiked)
+      setLikesCount(prev => isLiked ? prev + 1 : prev - 1)
+    }
+  }
+
+  const handleBookmark = () => {
+    setIsBookmarked(!isBookmarked)
+    // TODO: Implement bookmark functionality
+  }
+
+  const handleShare = () => {
+    if (navigator.share) {
+      navigator.share({
+        title: post.title,
+        text: post.excerpt,
+        url: `/blog/${post.slug}`,
+      })
+    } else {
+      navigator.clipboard.writeText(`${window.location.origin}/blog/${post.slug}`)
+    }
+  }
+
+  return (
+    <motion.div
+      whileHover={{ y: -2 }}
+      transition={{ duration: 0.2 }}
+      className={className}
+    >
+      <Card className={cn(
+        'overflow-hidden hover:shadow-lg transition-all duration-300 group',
+        featured && 'border-primary/20 shadow-md',
+        compact && 'h-full'
+      )}>
+        {/* Cover Image */}
+        {post.coverImage && (
+          <div className={cn(
+            'relative overflow-hidden',
+            featured ? 'h-64' : compact ? 'h-40' : 'h-48'
+          )}>
+            <Link href={`/blog/${post.slug}`}>
+              <Image
+                src={post.coverImage}
+                alt={post.title}
+                fill
+                className="object-cover transition-transform duration-300 group-hover:scale-105"
+              />
+            </Link>
+
+            {/* Overlay badges */}
+            <div className="absolute top-4 left-4 flex gap-2">
+              {featured && (
+                <Badge variant="default" className="bg-primary/90 text-primary-foreground">
+                  Featured
+                </Badge>
+              )}
+              <Badge
+                variant="secondary"
+                className="bg-background/90 text-foreground"
+                style={{ backgroundColor: post.category.color + '20' }}
+              >
+                {post.category.name}
+              </Badge>
+            </div>
+
+            {/* Quick actions */}
+            <div className="absolute top-4 right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <Button
+                size="sm"
+                variant="secondary"
+                className="h-8 w-8 p-0 bg-background/90 hover:bg-background"
+                onClick={handleBookmark}
+              >
+                {isBookmarked ? (
+                  <BookmarkCheck className="h-4 w-4" />
+                ) : (
+                  <Bookmark className="h-4 w-4" />
+                )}
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                className="h-8 w-8 p-0 bg-background/90 hover:bg-background"
+                onClick={handleShare}
+              >
+                <Share2 className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        <CardHeader className={cn('pb-3', compact && 'pb-2')}>
+          {/* Tags */}
+          {post.tags && post.tags.length > 0 && !compact && (
+            <div className="flex flex-wrap gap-1 mb-2">
+              {post.tags.slice(0, 3).map((tag) => (
+                <Badge key={tag.slug} variant="outline" className="text-xs">
+                  {tag.name}
+                </Badge>
+              ))}
+              {post.tags.length > 3 && (
+                <Badge variant="outline" className="text-xs">
+                  +{post.tags.length - 3}
+                </Badge>
+              )}
+            </div>
+          )}
+
+          {/* Title */}
+          <Link href={`/blog/${post.slug}`}>
+            <h3 className={cn(
+              'font-bold hover:text-primary transition-colors line-clamp-2',
+              featured ? 'text-2xl' : compact ? 'text-lg' : 'text-xl'
+            )}>
+              {post.title}
+            </h3>
+          </Link>
+        </CardHeader>
+
+        <CardContent className={cn('pb-3', compact && 'pb-2')}>
+          <p className={cn(
+            'text-muted-foreground line-clamp-3',
+            compact ? 'text-sm line-clamp-2' : 'text-base'
+          )}>
+            {post.excerpt}
+          </p>
+        </CardContent>
+
+        <CardFooter className="pt-0">
+          <div className="flex items-center justify-between w-full">
+            {/* Author info */}
+            {showAuthor && (
+              <div className="flex items-center gap-2">
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={post.author.image} />
+                  <AvatarFallback className="text-xs">
+                    {post.author.name.split(' ').map(n => n[0]).join('')}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="text-sm">
+                  <p className="font-medium">{post.author.name}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Meta info */}
+            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+              <div className="flex items-center gap-1">
+                <CalendarDays className="h-3 w-3" />
+                <time dateTime={post.publishedAt}>
+                  {format(new Date(post.publishedAt), 'MMM d')}
+                </time>
+              </div>
+
+              {post.readTime && (
+                <div className="flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  <span>{post.readTime} min</span>
+                </div>
+              )}
+
+              {/* Engagement */}
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleLike}
+                  className={cn(
+                    'flex items-center gap-1 hover:text-red-500 transition-colors',
+                    isLiked && 'text-red-500'
+                  )}
+                >
+                  <Heart className={cn('h-3 w-3', isLiked && 'fill-current')} />
+                  <span>{likesCount}</span>
+                </button>
+
+                <div className="flex items-center gap-1">
+                  <MessageCircle className="h-3 w-3" />
+                  <span>{post._count.comments}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardFooter>
+      </Card>
+    </motion.div>
+  )
+}
+```
+
+### 8. Create Loading Components
+
+Create `src/components/ui/loading.tsx`:
+
+```typescript
+import { Skeleton } from '@/components/ui/skeleton'
+import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
+
+export function PostCardSkeleton() {
+  return (
+    <Card className="overflow-hidden">
+      <Skeleton className="h-48 w-full" />
+      <CardHeader>
+        <div className="flex gap-2 mb-2">
+          <Skeleton className="h-4 w-16" />
+          <Skeleton className="h-4 w-12" />
+        </div>
+        <Skeleton className="h-6 w-full" />
+        <Skeleton className="h-6 w-3/4" />
+      </CardHeader>
+      <CardContent>
+        <Skeleton className="h-4 w-full mb-2" />
+        <Skeleton className="h-4 w-full mb-2" />
+        <Skeleton className="h-4 w-2/3" />
+      </CardContent>
+      <CardFooter>
+        <div className="flex items-center justify-between w-full">
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-8 w-8 rounded-full" />
+            <Skeleton className="h-4 w-20" />
+          </div>
+          <div className="flex gap-4">
+            <Skeleton className="h-4 w-12" />
+            <Skeleton className="h-4 w-16" />
+          </div>
+        </div>
+      </CardFooter>
+    </Card>
+  )
+}
+
+export function PostGridSkeleton({ count = 6 }: { count?: number }) {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {Array.from({ length: count }).map((_, i) => (
+        <PostCardSkeleton key={i} />
+      ))}
+    </div>
+  )
+}
+
+export function PostContentSkeleton() {
+  return (
+    <div className="container mx-auto py-8 max-w-4xl">
+      <Skeleton className="h-96 w-full mb-8 rounded-lg" />
+
+      <div className="mb-8">
+        <div className="flex gap-2 mb-4">
+          <Skeleton className="h-6 w-20" />
+          <Skeleton className="h-6 w-16" />
+          <Skeleton className="h-6 w-24" />
+        </div>
+        <Skeleton className="h-12 w-full mb-4" />
+        <Skeleton className="h-6 w-3/4 mb-6" />
+
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Skeleton className="h-12 w-12 rounded-full" />
+            <div>
+              <Skeleton className="h-4 w-24 mb-1" />
+              <Skeleton className="h-3 w-32" />
+            </div>
+          </div>
+          <div className="flex gap-4">
+            <Skeleton className="h-4 w-16" />
+            <Skeleton className="h-4 w-20" />
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <Skeleton key={i} className="h-4 w-full" />
+        ))}
+      </div>
+    </div>
+  )
+}
+```
+
+### 9. Create Main Layout Component
+
+Create `src/components/layout/main-layout.tsx`:
+
+```typescript
+import { SiteHeader } from './site-header'
+import { SiteFooter } from './site-footer'
+
+interface MainLayoutProps {
+  children: React.ReactNode
+}
+
+export function MainLayout({ children }: MainLayoutProps) {
+  return (
+    <div className="min-h-screen flex flex-col">
+      <SiteHeader />
+      <main className="flex-1">
+        {children}
+      </main>
+      <SiteFooter />
+    </div>
+  )
+}
+```
+
+### 10. Update Root Layout
+
+Update `src/app/layout.tsx`:
+
+```typescript
+import type { Metadata } from 'next'
+import { Inter } from 'next/font/google'
+import './globals.css'
+import { AuthProvider } from '@/components/providers/session-provider'
+import { ThemeProvider } from '@/components/providers/theme-provider'
+import { MainLayout } from '@/components/layout/main-layout'
+import { Toaster } from '@/components/ui/sonner'
+
+const inter = Inter({ subsets: ['latin'] })
+
+export const metadata: Metadata = {
+  title: {
+    default: 'Blog Platform',
+    template: '%s | Blog Platform',
+  },
+  description: 'A modern blog platform built with Next.js, TypeScript, and Tailwind CSS',
+  keywords: ['blog', 'Next.js', 'TypeScript', 'Tailwind CSS', 'React'],
+  authors: [{ name: 'Your Name' }],
+  creator: 'Your Name',
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    url: '/',
+    title: 'Blog Platform',
+    description: 'A modern blog platform built with Next.js, TypeScript, and Tailwind CSS',
+    siteName: 'Blog Platform',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Blog Platform',
+    description: 'A modern blog platform built with Next.js, TypeScript, and Tailwind CSS',
+    creator: '@yourusername',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  verification: {
+    google: 'your-google-verification-code',
+  },
+}
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <html lang="en" suppressHydrationWarning>
+      <body className={inter.className}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <AuthProvider>
+            <MainLayout>
+              {children}
+            </MainLayout>
+            <Toaster />
+          </AuthProvider>
+        </ThemeProvider>
+      </body>
+    </html>
+  )
+}
+```
+
+### 11. Create Homepage
+
+Update `src/app/page.tsx`:
+
+```typescript
+import Link from 'next/link'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { PostCard } from '@/components/blog/post-card'
+import { ArrowRight, BookOpen, Users, TrendingUp, Search } from 'lucide-react'
+
+// Mock data - replace with real data from your CMS/database
+const featuredPosts = [
+  {
+    id: '1',
+    title: 'Getting Started with Next.js 14 and TypeScript',
+    excerpt: 'Learn how to build modern web applications with the latest features of Next.js 14, including the App Router and Server Components.',
+    slug: 'getting-started-nextjs-14-typescript',
+    coverImage: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=800&h=400&fit=crop',
+    publishedAt: '2024-01-15T10:00:00Z',
+    readTime: 8,
+    author: {
+      name: 'John Doe',
+      image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face',
+    },
+    category: {
+      name: 'Web Development',
+      slug: 'web-development',
+      color: '#3B82F6',
+    },
+    tags: [
+      { name: 'Next.js', slug: 'nextjs' },
+      { name: 'TypeScript', slug: 'typescript' },
+    ],
+    _count: {
+      likes: 24,
+      comments: 8,
+    },
+  },
+  // Add more mock posts...
+]
+
+const stats = [
+  { label: 'Blog Posts', value: '150+', icon: BookOpen },
+  { label: 'Authors', value: '12', icon: Users },
+  { label: 'Monthly Readers', value: '10K+', icon: TrendingUp },
+  { label: 'Categories', value: '8', icon: Search },
+]
+
+export default function HomePage() {
+  return (
+    <div className="container mx-auto py-8">
+      {/* Hero Section */}
+      <section className="text-center py-20">
+        <h1 className="text-4xl md:text-6xl font-bold mb-6">
+          Welcome to{' '}
+          <span className="bg-gradient-to-r from-primary to-primary/50 bg-clip-text text-transparent">
+            Blog Platform
+          </span>
+        </h1>
+        <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
+          Discover insightful articles, tutorials, and stories from our community of writers.
+          Stay updated with the latest trends in technology, development, and design.
+        </p>
+        <div className="flex gap-4 justify-center">
+          <Button size="lg" asChild>
+            <Link href="/blog">
+              Explore Posts
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
+          <Button size="lg" variant="outline" asChild>
+            <Link href="/auth/signup">Start Writing</Link>
+          </Button>
+        </div>
+      </section>
+
+      {/* Stats Section */}
+      <section className="py-16">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          {stats.map((stat) => (
+            <Card key={stat.label} className="text-center">
+              <CardContent className="pt-6">
+                <stat.icon className="h-8 w-8 mx-auto mb-2 text-primary" />
+                <div className="text-2xl font-bold mb-1">{stat.value}</div>
+                <div className="text-sm text-muted-foreground">{stat.label}</div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      {/* Featured Posts */}
+      <section className="py-16">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h2 className="text-3xl font-bold mb-2">Featured Posts</h2>
+            <p className="text-muted-foreground">
+              Our most popular and trending content
+            </p>
+          </div>
+          <Button variant="outline" asChild>
+            <Link href="/blog">
+              View All Posts
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {featuredPosts.map((post, index) => (
+            <PostCard
+              key={post.id}
+              post={post}
+              featured={index === 0}
+              className={index === 0 ? 'md:col-span-2 lg:col-span-1' : ''}
+            />
+          ))}
+        </div>
+      </section>
+
+      {/* Categories */}
+      <section className="py-16">
+        <h2 className="text-3xl font-bold mb-8 text-center">Explore Categories</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[
+            { name: 'Web Development', count: 45, color: '#3B82F6' },
+            { name: 'JavaScript', count: 32, color: '#F59E0B' },
+            { name: 'React', count: 28, color: '#06B6D4' },
+            { name: 'TypeScript', count: 24, color: '#8B5CF6' },
+            { name: 'Node.js', count: 18, color: '#10B981' },
+            { name: 'Database', count: 15, color: '#F97316' },
+            { name: 'DevOps', count: 12, color: '#EF4444' },
+            { name: 'Design', count: 8, color: '#EC4899' },
+          ].map((category) => (
+            <Card key={category.name} className="hover:shadow-md transition-shadow cursor-pointer">
+              <CardContent className="p-4 text-center">
+                <div
+                  className="w-12 h-12 rounded-full mx-auto mb-3"
+                  style={{ backgroundColor: category.color + '20' }}
+                >
+                  <div
+                    className="w-full h-full rounded-full flex items-center justify-center text-xl font-bold"
+                    style={{ color: category.color }}
+                  >
+                    {category.name[0]}
+                  </div>
+                </div>
+                <h3 className="font-semibold mb-1">{category.name}</h3>
+                <p className="text-sm text-muted-foreground">{category.count} posts</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      {/* Newsletter */}
+      <section className="py-16">
+        <Card className="bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20">
+          <CardContent className="p-8 text-center">
+            <h2 className="text-2xl font-bold mb-4">Stay in the Loop</h2>
+            <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
+              Subscribe to our newsletter and never miss out on the latest articles,
+              tutorials, and updates from our community.
+            </p>
+            <div className="flex gap-2 max-w-md mx-auto">
+              <input
+                type="email"
+                placeholder="Enter your email"
+                className="flex-1 px-4 py-2 rounded-md border border-input bg-background"
+              />
+              <Button>Subscribe</Button>
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+    </div>
+  )
+}
+```
+
+## Responsive Design & Performance
+
+### Mobile Optimization
+
+The components are built with mobile-first responsive design:
+
+- Collapsible navigation for mobile devices
+- Touch-friendly button sizes
+- Optimized image loading with Next.js Image
+- Responsive grid layouts
+
+### Performance Features
+
+- Lazy loading with Intersection Observer
+- Optimized images with automatic WebP conversion
+- Component-level code splitting
+- Skeleton loading states
+
+## Customization
+
+### Theme Customization
+
+You can customize the theme by updating `tailwind.config.ts`:
+
+```typescript
+export default {
+  theme: {
+    extend: {
+      colors: {
+        // Custom brand colors
+        brand: {
+          50: "#f0f9ff",
+          500: "#3b82f6",
+          900: "#1e3a8a",
+        },
+      },
+      fontFamily: {
+        // Custom fonts
+        heading: ["Inter", "sans-serif"],
+        body: ["Inter", "sans-serif"],
+      },
+    },
+  },
+};
+```
+
+## Testing Components
+
+Create component tests to ensure reliability:
+
+```bash
+npm install --save-dev @testing-library/react @testing-library/jest-dom jest jest-environment-jsdom
+```
+
+## Next Steps
+
+Your UI component system is now complete! You should have:
+
+1. ✅ Complete layout system with header and footer
+2. ✅ Responsive navigation with search functionality
+3. ✅ Blog-specific components (post cards, etc.)
+4. ✅ Theme support (dark/light mode)
+5. ✅ Loading states and error handling
+6. ✅ Mobile-optimized responsive design
+7. ✅ Performance optimizations
+
+**Continue to**: [Step 7: Blog Posts & Content Management →](../07-blog-posts)
+
+---
+
+**Estimated Time**: 120-150 minutes
+
+**Difficulty**: Intermediate to Advanced
+
+**Next**: [Blog Posts & Content Management →](../07-blog-posts)

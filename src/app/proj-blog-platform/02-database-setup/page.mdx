@@ -1,0 +1,1051 @@
+# Step 2: Database Design & Setup
+
+## Objective
+
+Design and implement a PostgreSQL database schema for our blog platform using Prisma ORM, including tables for users, posts, categories, comments, and tags.
+
+## What You'll Learn
+
+- How to design a relational database schema for a blog
+- How to set up and configure Prisma ORM
+- How to create database migrations
+- How to establish relationships between database entities
+- How to seed your database with initial data
+
+## Prerequisites
+
+- Completed [Step 1: Project Setup](../01-project-setup)
+- PostgreSQL installed locally or access to a hosted database
+- Basic understanding of relational databases
+
+## Database Schema Overview
+
+Our blog platform will have the following main entities:
+
+```
+Users (authors and readers)
+├── Posts (blog articles)
+│   ├── Categories (post categorization)
+│   ├── Tags (post labeling)
+│   └── Comments (user interactions)
+└── Sessions (authentication)
+```
+
+## Step-by-Step Instructions
+
+### 1. Install PostgreSQL
+
+#### Option A: Local Installation (Ubuntu/Debian)
+
+```bash
+sudo apt update
+sudo apt install postgresql postgresql-contrib
+sudo systemctl start postgresql
+sudo systemctl enable postgresql
+```
+
+#### Option B: Using Docker
+
+```bash
+docker run --name blog-postgres -e POSTGRES_PASSWORD=password -p 5432:5432 -d postgres:15
+```
+
+#### Option C: Hosted Solution
+
+Use services like:
+
+- [Neon](https://neon.tech/) (Free tier available)
+- [Supabase](https://supabase.com/) (Free tier available)
+- [PlanetScale](https://planetscale.com/) (MySQL alternative)
+
+### 2. Create Database
+
+```bash
+# If using local PostgreSQL
+sudo -u postgres createdb blog_platform
+
+# If using Docker
+docker exec -it blog-postgres createdb -U postgres blog_platform
+```
+
+### 3. Initialize Prisma
+
+```bash
+npx prisma init
+```
+
+This creates:
+
+- `prisma/schema.prisma` - Database schema definition
+- `.env` file (if it doesn't exist)
+
+### 4. Configure Database Connection
+
+Update your `.env.local` file:
+
+```env
+# Database
+DATABASE_URL="postgresql://postgres:password@localhost:5432/blog_platform"
+
+# For hosted databases, use the connection string provided by your service
+# DATABASE_URL="postgresql://username:password@host:port/database?sslmode=require"
+```
+
+### 5. Define Database Schema
+
+Update `prisma/schema.prisma`:
+
+```prisma
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  bio           String?
+  website       String?
+  twitter       String?
+  github        String?
+  role          Role      @default(USER)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  accounts Account[]
+  sessions Session[]
+  posts    Post[]
+  comments Comment[]
+  likes    Like[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verificationtokens")
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  color       String?  @default("#3B82F6")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  posts Post[]
+
+  @@map("categories")
+}
+
+model Tag {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  posts Post[]
+
+  @@map("tags")
+}
+
+model Post {
+  id          String      @id @default(cuid())
+  title       String
+  slug        String      @unique
+  excerpt     String?
+  content     String      @db.Text
+  coverImage  String?
+  status      PostStatus  @default(DRAFT)
+  featured    Boolean     @default(false)
+  publishedAt DateTime?
+  readTime    Int?        // Reading time in minutes
+  views       Int         @default(0)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // Foreign Keys
+  authorId   String
+  categoryId String?
+
+  // Relations
+  author   User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  tags     Tag[]
+  comments Comment[]
+  likes    Like[]
+
+  // SEO and Meta
+  metaTitle       String?
+  metaDescription String?
+  metaKeywords    String?
+
+  @@map("posts")
+}
+
+model Comment {
+  id        String        @id @default(cuid())
+  content   String        @db.Text
+  status    CommentStatus @default(PENDING)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  // Foreign Keys
+  postId   String
+  authorId String
+  parentId String? // For nested comments
+
+  // Relations
+  post     Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author   User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parent   Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  replies  Comment[] @relation("CommentReplies")
+
+  @@map("comments")
+}
+
+model Like {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  // Foreign Keys
+  postId String
+  userId String
+
+  // Relations
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Ensure one like per user per post
+  @@unique([postId, userId])
+  @@map("likes")
+}
+
+// Newsletter subscription
+model Newsletter {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  name        String?
+  isActive    Boolean  @default(true)
+  subscribedAt DateTime @default(now())
+  unsubscribedAt DateTime?
+
+  @@map("newsletter")
+}
+
+// Contact form submissions
+model Contact {
+  id        String      @id @default(cuid())
+  name      String
+  email     String
+  subject   String
+  message   String      @db.Text
+  status    ContactStatus @default(UNREAD)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@map("contacts")
+}
+
+// Enums
+enum Role {
+  USER
+  AUTHOR
+  ADMIN
+}
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum CommentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SPAM
+}
+
+enum ContactStatus {
+  UNREAD
+  READ
+  REPLIED
+  ARCHIVED
+}
+```
+
+### 6. Generate Prisma Client
+
+```bash
+npx prisma generate
+```
+
+### 7. Create and Run Migration
+
+```bash
+npx prisma migrate dev --name init
+```
+
+This will:
+
+- Create a new migration file
+- Apply the migration to your database
+- Generate the Prisma client
+
+### 8. Set Up Database Client
+
+Create `src/lib/db.ts`:
+
+```typescript
+import { PrismaClient } from "@prisma/client";
+
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient | undefined;
+};
+
+export const prisma =
+  globalForPrisma.prisma ??
+  new PrismaClient({
+    log: ["query"],
+  });
+
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+```
+
+### 9. Create Database Utilities
+
+Create `src/lib/db-utils.ts`:
+
+```typescript
+import { prisma } from "./db";
+import { Prisma } from "@prisma/client";
+
+// User utilities
+export async function getUserByEmail(email: string) {
+  return await prisma.user.findUnique({
+    where: { email },
+    include: {
+      posts: {
+        where: { status: "PUBLISHED" },
+        orderBy: { publishedAt: "desc" },
+        take: 5,
+      },
+    },
+  });
+}
+
+export async function getUserById(id: string) {
+  return await prisma.user.findUnique({
+    where: { id },
+    include: {
+      posts: true,
+      _count: {
+        select: {
+          posts: true,
+          comments: true,
+        },
+      },
+    },
+  });
+}
+
+// Post utilities
+export async function getPublishedPosts(options?: {
+  take?: number;
+  skip?: number;
+  categorySlug?: string;
+  tagSlug?: string;
+  searchQuery?: string;
+}) {
+  const {
+    take = 10,
+    skip = 0,
+    categorySlug,
+    tagSlug,
+    searchQuery,
+  } = options || {};
+
+  const where: Prisma.PostWhereInput = {
+    status: "PUBLISHED",
+    publishedAt: { not: null },
+  };
+
+  if (categorySlug) {
+    where.category = { slug: categorySlug };
+  }
+
+  if (tagSlug) {
+    where.tags = { some: { slug: tagSlug } };
+  }
+
+  if (searchQuery) {
+    where.OR = [
+      { title: { contains: searchQuery, mode: "insensitive" } },
+      { excerpt: { contains: searchQuery, mode: "insensitive" } },
+      { content: { contains: searchQuery, mode: "insensitive" } },
+    ];
+  }
+
+  return await prisma.post.findMany({
+    where,
+    include: {
+      author: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          image: true,
+        },
+      },
+      category: true,
+      tags: true,
+      _count: {
+        select: {
+          comments: {
+            where: { status: "APPROVED" },
+          },
+          likes: true,
+        },
+      },
+    },
+    orderBy: { publishedAt: "desc" },
+    take,
+    skip,
+  });
+}
+
+export async function getPostBySlug(slug: string) {
+  return await prisma.post.findUnique({
+    where: { slug },
+    include: {
+      author: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          image: true,
+          bio: true,
+          website: true,
+          twitter: true,
+          github: true,
+        },
+      },
+      category: true,
+      tags: true,
+      comments: {
+        where: { status: "APPROVED", parentId: null },
+        include: {
+          author: {
+            select: {
+              id: true,
+              name: true,
+              image: true,
+            },
+          },
+          replies: {
+            include: {
+              author: {
+                select: {
+                  id: true,
+                  name: true,
+                  image: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      },
+      _count: {
+        select: {
+          likes: true,
+        },
+      },
+    },
+  });
+}
+
+// Category utilities
+export async function getCategories() {
+  return await prisma.category.findMany({
+    include: {
+      _count: {
+        select: {
+          posts: {
+            where: { status: "PUBLISHED" },
+          },
+        },
+      },
+    },
+    orderBy: { name: "asc" },
+  });
+}
+
+// Tag utilities
+export async function getTags() {
+  return await prisma.tag.findMany({
+    include: {
+      _count: {
+        select: {
+          posts: {
+            where: { status: "PUBLISHED" },
+          },
+        },
+      },
+    },
+    orderBy: { name: "asc" },
+  });
+}
+
+// Stats utilities
+export async function getBlogStats() {
+  const [postsCount, usersCount, commentsCount, categoriesCount] =
+    await Promise.all([
+      prisma.post.count({ where: { status: "PUBLISHED" } }),
+      prisma.user.count(),
+      prisma.comment.count({ where: { status: "APPROVED" } }),
+      prisma.category.count(),
+    ]);
+
+  return {
+    posts: postsCount,
+    users: usersCount,
+    comments: commentsCount,
+    categories: categoriesCount,
+  };
+}
+```
+
+### 10. Create Database Seed Script
+
+Create `prisma/seed.ts`:
+
+```typescript
+import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
+
+const prisma = new PrismaClient();
+
+async function main() {
+  console.log("🌱 Starting database seed...");
+
+  // Create categories
+  const categories = await Promise.all([
+    prisma.category.upsert({
+      where: { slug: "web-development" },
+      update: {},
+      create: {
+        name: "Web Development",
+        slug: "web-development",
+        description:
+          "Articles about web development, frameworks, and best practices",
+        color: "#3B82F6",
+      },
+    }),
+    prisma.category.upsert({
+      where: { slug: "database" },
+      update: {},
+      create: {
+        name: "Database",
+        slug: "database",
+        description: "Database design, optimization, and management",
+        color: "#10B981",
+      },
+    }),
+    prisma.category.upsert({
+      where: { slug: "javascript" },
+      update: {},
+      create: {
+        name: "JavaScript",
+        slug: "javascript",
+        description: "JavaScript tutorials, tips, and modern features",
+        color: "#F59E0B",
+      },
+    }),
+    prisma.category.upsert({
+      where: { slug: "react" },
+      update: {},
+      create: {
+        name: "React",
+        slug: "react",
+        description: "React development, hooks, and ecosystem",
+        color: "#06B6D4",
+      },
+    }),
+  ]);
+
+  // Create tags
+  const tags = await Promise.all([
+    prisma.tag.upsert({
+      where: { slug: "nextjs" },
+      update: {},
+      create: { name: "Next.js", slug: "nextjs" },
+    }),
+    prisma.tag.upsert({
+      where: { slug: "typescript" },
+      update: {},
+      create: { name: "TypeScript", slug: "typescript" },
+    }),
+    prisma.tag.upsert({
+      where: { slug: "postgresql" },
+      update: {},
+      create: { name: "PostgreSQL", slug: "postgresql" },
+    }),
+    prisma.tag.upsert({
+      where: { slug: "prisma" },
+      update: {},
+      create: { name: "Prisma", slug: "prisma" },
+    }),
+    prisma.tag.upsert({
+      where: { slug: "tailwindcss" },
+      update: {},
+      create: { name: "Tailwind CSS", slug: "tailwindcss" },
+    }),
+  ]);
+
+  // Create admin user
+  const adminUser = await prisma.user.upsert({
+    where: { email: "admin@blog.com" },
+    update: {},
+    create: {
+      email: "admin@blog.com",
+      name: "Blog Admin",
+      role: "ADMIN",
+      bio: "Full-stack developer and technical writer passionate about modern web technologies.",
+      website: "https://example.com",
+      twitter: "@blogadmin",
+    },
+  });
+
+  // Create sample author
+  const author = await prisma.user.upsert({
+    where: { email: "author@blog.com" },
+    update: {},
+    create: {
+      email: "author@blog.com",
+      name: "John Smith",
+      role: "AUTHOR",
+      bio: "Frontend developer with 5+ years of experience in React and Next.js.",
+    },
+  });
+
+  // Create sample posts
+  const posts = await Promise.all([
+    prisma.post.upsert({
+      where: { slug: "getting-started-with-nextjs-14" },
+      update: {},
+      create: {
+        title: "Getting Started with Next.js 14",
+        slug: "getting-started-with-nextjs-14",
+        excerpt:
+          "Learn how to build modern web applications with Next.js 14 and the App Router.",
+        content: `# Getting Started with Next.js 14
+
+Next.js 14 introduces many exciting features that make building React applications even better. In this post, we'll explore the key features and how to get started.
+
+## What's New in Next.js 14
+
+- Improved App Router
+- Server Components by default
+- Better performance optimizations
+- Enhanced developer experience
+
+## Installation
+
+\`\`\`bash
+npx create-next-app@latest my-app
+cd my-app
+npm run dev
+\`\`\`
+
+## Key Features
+
+### Server Components
+Server Components allow you to render components on the server, reducing the amount of JavaScript sent to the client.
+
+### App Router
+The new App Router provides a more intuitive way to structure your application with nested layouts and improved performance.
+
+## Conclusion
+
+Next.js 14 continues to push the boundaries of what's possible with React applications. Try it out in your next project!`,
+        status: "PUBLISHED",
+        publishedAt: new Date(),
+        readTime: 5,
+        authorId: author.id,
+        categoryId: categories[0].id,
+        tags: {
+          connect: [
+            { id: tags[0].id }, // nextjs
+            { id: tags[1].id }, // typescript
+          ],
+        },
+      },
+    }),
+    prisma.post.upsert({
+      where: { slug: "database-design-best-practices" },
+      update: {},
+      create: {
+        title: "Database Design Best Practices",
+        slug: "database-design-best-practices",
+        excerpt:
+          "Essential principles for designing efficient and scalable database schemas.",
+        content: `# Database Design Best Practices
+
+Good database design is crucial for application performance and maintainability. Here are the key principles to follow.
+
+## Normalization
+
+Normalize your database to reduce redundancy and improve data integrity.
+
+### First Normal Form (1NF)
+- Each column should contain atomic values
+- No repeating groups
+
+### Second Normal Form (2NF)
+- Must be in 1NF
+- All non-key columns must depend on the entire primary key
+
+### Third Normal Form (3NF)
+- Must be in 2NF
+- No transitive dependencies
+
+## Indexing Strategy
+
+Proper indexing can dramatically improve query performance:
+
+\`\`\`sql
+-- Primary key index (automatic)
+CREATE INDEX idx_posts_published_at ON posts(published_at);
+
+-- Composite index for common queries
+CREATE INDEX idx_posts_author_status ON posts(author_id, status);
+\`\`\`
+
+## Relationships
+
+- Use foreign keys to maintain referential integrity
+- Choose appropriate relationship types (1:1, 1:N, N:N)
+- Consider cascade options carefully
+
+## Performance Considerations
+
+- Use appropriate data types
+- Avoid over-indexing
+- Consider partitioning for large tables
+- Monitor and optimize slow queries
+
+## Conclusion
+
+Following these best practices will help you create robust, scalable databases that perform well under load.`,
+        status: "PUBLISHED",
+        publishedAt: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
+        readTime: 8,
+        authorId: adminUser.id,
+        categoryId: categories[1].id,
+        tags: {
+          connect: [
+            { id: tags[2].id }, // postgresql
+            { id: tags[3].id }, // prisma
+          ],
+        },
+      },
+    }),
+  ]);
+
+  console.log("✅ Database seeded successfully!");
+  console.log(`Created ${categories.length} categories`);
+  console.log(`Created ${tags.length} tags`);
+  console.log(`Created 2 users`);
+  console.log(`Created ${posts.length} posts`);
+}
+
+main()
+  .catch((e) => {
+    console.error("❌ Error seeding database:", e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });
+```
+
+### 11. Update package.json with Seed Script
+
+Add to your `package.json`:
+
+```json
+{
+  "scripts": {
+    "db:seed": "tsx prisma/seed.ts"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  }
+}
+```
+
+### 12. Install tsx for Running TypeScript Files
+
+```bash
+npm install --save-dev tsx
+```
+
+### 13. Run the Seed Script
+
+```bash
+npm run db:seed
+```
+
+### 14. Explore Your Database
+
+You can explore your database using Prisma Studio:
+
+```bash
+npx prisma studio
+```
+
+This opens a web interface at `http://localhost:5555` where you can view and edit your data.
+
+## Testing Database Connection
+
+Create a simple test file `src/app/api/test-db/route.ts`:
+
+```typescript
+import { prisma } from "@/lib/db";
+import { NextResponse } from "next/server";
+
+export async function GET() {
+  try {
+    // Test database connection
+    const userCount = await prisma.user.count();
+    const postCount = await prisma.post.count();
+
+    return NextResponse.json({
+      success: true,
+      message: "Database connection successful",
+      data: {
+        users: userCount,
+        posts: postCount,
+      },
+    });
+  } catch (error) {
+    console.error("Database connection error:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Database connection failed",
+        error: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 }
+    );
+  }
+}
+```
+
+Test by visiting `http://localhost:3000/api/test-db`
+
+## Schema Relationships Explained
+
+### User → Posts (One-to-Many)
+
+- A user can have multiple posts
+- Each post belongs to one author
+
+### Post → Category (Many-to-One)
+
+- Multiple posts can belong to one category
+- Each post can have one category (optional)
+
+### Post → Tags (Many-to-Many)
+
+- A post can have multiple tags
+- A tag can be used by multiple posts
+
+### Post → Comments (One-to-Many)
+
+- A post can have multiple comments
+- Each comment belongs to one post
+
+### Comment → Comment (Self-Referencing)
+
+- Comments can have replies (nested comments)
+- Each reply references its parent comment
+
+## Common Database Operations
+
+### Creating a Post
+
+```typescript
+const newPost = await prisma.post.create({
+  data: {
+    title: "My New Post",
+    slug: "my-new-post",
+    content: "Post content here...",
+    status: "PUBLISHED",
+    publishedAt: new Date(),
+    authorId: userId,
+    categoryId: categoryId,
+    tags: {
+      connect: [{ id: tagId1 }, { id: tagId2 }],
+    },
+  },
+  include: {
+    author: true,
+    category: true,
+    tags: true,
+  },
+});
+```
+
+### Querying Posts with Relations
+
+```typescript
+const posts = await prisma.post.findMany({
+  where: { status: "PUBLISHED" },
+  include: {
+    author: {
+      select: { name: true, image: true },
+    },
+    category: true,
+    tags: true,
+    _count: {
+      select: { comments: true, likes: true },
+    },
+  },
+  orderBy: { publishedAt: "desc" },
+});
+```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Database connection fails**
+   - Check your DATABASE_URL in `.env.local`
+   - Ensure PostgreSQL is running
+   - Verify database exists
+
+2. **Migration fails**
+   - Check for syntax errors in schema.prisma
+   - Ensure no data conflicts with new constraints
+   - Try resetting: `npx prisma migrate reset`
+
+3. **Prisma Client issues**
+   - Regenerate client: `npx prisma generate`
+   - Restart your development server
+
+### Useful Commands
+
+```bash
+# Reset database and run all migrations
+npx prisma migrate reset
+
+# Apply pending migrations
+npx prisma migrate deploy
+
+# View current database schema
+npx prisma db pull
+
+# Format schema file
+npx prisma format
+```
+
+## Performance Tips
+
+1. **Use indexes for frequently queried fields**
+   - Add `@@index([fieldName])` to your schema
+   - Consider composite indexes for multi-field queries
+
+2. **Use select and include strategically**
+   - Only fetch data you need
+   - Use `select` for specific fields
+   - Use `include` for relations
+
+3. **Implement pagination**
+   - Use `take` and `skip` for large datasets
+   - Consider cursor-based pagination for better performance
+
+4. **Monitor query performance**
+   - Use Prisma's logging: `log: ['query']`
+   - Analyze slow queries in production
+
+## Next Steps
+
+Your database is now set up and ready! You should have:
+
+1. ✅ PostgreSQL database running
+2. ✅ Prisma schema defined with all necessary models
+3. ✅ Database migrations applied
+4. ✅ Seed data created
+5. ✅ Database utilities for common operations
+
+Next, we'll implement authentication with NextAuth.js:
+
+**Continue to**: [Step 3: Authentication Implementation →](../03-authentication)
+
+## Additional Resources
+
+- [Prisma Documentation](https://www.prisma.io/docs)
+- [PostgreSQL Documentation](https://www.postgresql.org/docs/)
+- [Database Design Best Practices](https://www.postgresql.org/docs/current/ddl.html)
+- [Prisma Schema Reference](https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference)
+
+---
+
+**Estimated Time**: 60-90 minutes
+
+**Difficulty**: Intermediate
+
+**Next**: [Authentication Implementation →](../03-authentication)

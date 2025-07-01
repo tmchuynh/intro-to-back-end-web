@@ -1,0 +1,1363 @@
+# Step 11: Deployment & Production
+
+## Objective
+
+Deploy your blog platform to production with proper CI/CD pipelines, environment configuration, monitoring, security, and scaling strategies. Learn how to manage a production application effectively.
+
+## What You'll Learn
+
+- How to deploy Next.js applications to various platforms
+- How to set up CI/CD pipelines for automated deployment
+- How to configure production environments and secrets
+- How to implement monitoring, logging, and error tracking
+- How to optimize for production performance and security
+- How to implement backup and disaster recovery strategies
+- How to scale your application as it grows
+
+## Prerequisites
+
+- Completed [Step 10: SEO & Performance Optimization](../10-seo-performance)
+- Understanding of production deployment concepts
+- Basic knowledge of DevOps practices
+
+## Deployment Architecture
+
+```
+Production Infrastructure:
+├── Frontend Deployment
+│   ├── Vercel (recommended)
+│   ├── Netlify (alternative)
+│   ├── AWS Amplify (alternative)
+│   └── Custom VPS/Docker
+├── Database Hosting
+│   ├── PlanetScale (recommended)
+│   ├── Supabase (alternative)
+│   ├── Neon (alternative)
+│   └── AWS RDS (enterprise)
+├── File Storage
+│   ├── Vercel Blob Storage
+│   ├── AWS S3
+│   ├── Cloudinary
+│   └── UploadThing
+├── Monitoring & Analytics
+│   ├── Vercel Analytics
+│   ├── Sentry (error tracking)
+│   ├── LogRocket (user sessions)
+│   └── Uptime Robot (monitoring)
+└── Security & Performance
+    ├── Cloudflare (CDN + Security)
+    ├── Environment variables
+    ├── Rate limiting
+    └── HTTPS/SSL certificates
+```
+
+## Step-by-Step Instructions
+
+### 1. Production Environment Setup
+
+Create `.env.production`:
+
+```bash
+# Database
+DATABASE_URL="postgresql://user:password@host:port/database?sslmode=require"
+
+# Authentication
+NEXTAUTH_URL="https://yourdomain.com"
+NEXTAUTH_SECRET="your-super-secret-key-here"
+
+# OAuth Providers
+GOOGLE_CLIENT_ID="your-google-client-id"
+GOOGLE_CLIENT_SECRET="your-google-client-secret"
+GITHUB_CLIENT_ID="your-github-client-id"
+GITHUB_CLIENT_SECRET="your-github-client-secret"
+
+# Contentful
+CONTENTFUL_SPACE_ID="your-space-id"
+CONTENTFUL_ACCESS_TOKEN="your-access-token"
+CONTENTFUL_PREVIEW_ACCESS_TOKEN="your-preview-token"
+CONTENTFUL_MANAGEMENT_TOKEN="your-management-token"
+
+# Email (Resend)
+RESEND_API_KEY="your-resend-api-key"
+
+# File Upload
+UPLOADTHING_SECRET="your-uploadthing-secret"
+UPLOADTHING_APP_ID="your-uploadthing-app-id"
+
+# Analytics
+NEXT_PUBLIC_GA_MEASUREMENT_ID="G-XXXXXXXXXX"
+
+# Site Configuration
+NEXT_PUBLIC_SITE_URL="https://yourdomain.com"
+NEXT_PUBLIC_SITE_NAME="Your Blog Platform"
+
+# Error Tracking
+SENTRY_DSN="your-sentry-dsn"
+SENTRY_ORG="your-sentry-org"
+SENTRY_PROJECT="your-sentry-project"
+SENTRY_AUTH_TOKEN="your-sentry-auth-token"
+
+# Real-time Features
+PUSHER_APP_ID="your-pusher-app-id"
+PUSHER_KEY="your-pusher-key"
+PUSHER_SECRET="your-pusher-secret"
+PUSHER_CLUSTER="your-pusher-cluster"
+NEXT_PUBLIC_PUSHER_KEY="your-pusher-key"
+NEXT_PUBLIC_PUSHER_CLUSTER="your-pusher-cluster"
+
+# Security
+RATE_LIMIT_REDIS_URL="redis://your-redis-url"
+```
+
+### 2. Database Migration and Seeding
+
+Create `scripts/migrate-production.js`:
+
+```javascript
+const { PrismaClient } = require("@prisma/client");
+
+const prisma = new PrismaClient({
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL,
+    },
+  },
+});
+
+async function migrateProduction() {
+  try {
+    console.log("🚀 Starting production migration...");
+
+    // Run migrations
+    const { execSync } = require("child_process");
+    execSync("npx prisma migrate deploy", { stdio: "inherit" });
+
+    // Seed essential data
+    await seedEssentialData();
+
+    console.log("✅ Production migration completed successfully!");
+  } catch (error) {
+    console.error("❌ Migration failed:", error);
+    process.exit(1);
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+async function seedEssentialData() {
+  console.log("📦 Seeding essential data...");
+
+  // Create default categories
+  const defaultCategories = [
+    {
+      name: "Technology",
+      slug: "technology",
+      description: "Tech articles and tutorials",
+    },
+    {
+      name: "Programming",
+      slug: "programming",
+      description: "Programming guides and tips",
+    },
+    {
+      name: "Web Development",
+      slug: "web-development",
+      description: "Web development content",
+    },
+    {
+      name: "Tutorial",
+      slug: "tutorial",
+      description: "Step-by-step tutorials",
+    },
+  ];
+
+  for (const category of defaultCategories) {
+    await prisma.category.upsert({
+      where: { slug: category.slug },
+      update: {},
+      create: category,
+    });
+  }
+
+  // Create default tags
+  const defaultTags = [
+    { name: "Next.js", slug: "nextjs" },
+    { name: "React", slug: "react" },
+    { name: "TypeScript", slug: "typescript" },
+    { name: "JavaScript", slug: "javascript" },
+    { name: "CSS", slug: "css" },
+    { name: "HTML", slug: "html" },
+    { name: "Node.js", slug: "nodejs" },
+    { name: "Database", slug: "database" },
+  ];
+
+  for (const tag of defaultTags) {
+    await prisma.tag.upsert({
+      where: { slug: tag.slug },
+      update: {},
+      create: tag,
+    });
+  }
+
+  console.log("✅ Essential data seeded successfully!");
+}
+
+migrateProduction();
+```
+
+Create `scripts/backup-database.js`:
+
+```javascript
+const { execSync } = require("child_process");
+const path = require("path");
+const fs = require("fs");
+
+async function backupDatabase() {
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const backupDir = path.join(process.cwd(), "backups");
+  const backupFile = path.join(backupDir, `backup-${timestamp}.sql`);
+
+  // Ensure backup directory exists
+  if (!fs.existsSync(backupDir)) {
+    fs.mkdirSync(backupDir, { recursive: true });
+  }
+
+  try {
+    console.log("🗄️ Creating database backup...");
+
+    // Extract database connection info
+    const dbUrl = new URL(process.env.DATABASE_URL);
+    const host = dbUrl.hostname;
+    const port = dbUrl.port || 5432;
+    const database = dbUrl.pathname.slice(1);
+    const username = dbUrl.username;
+    const password = dbUrl.password;
+
+    // Create pg_dump command
+    const command = `PGPASSWORD="${password}" pg_dump -h ${host} -p ${port} -U ${username} -d ${database} -f ${backupFile}`;
+
+    execSync(command, { stdio: "inherit" });
+
+    console.log(`✅ Database backup created: ${backupFile}`);
+
+    // Clean up old backups (keep last 10)
+    const backups = fs
+      .readdirSync(backupDir)
+      .filter((file) => file.startsWith("backup-") && file.endsWith(".sql"))
+      .sort()
+      .reverse();
+
+    if (backups.length > 10) {
+      const toDelete = backups.slice(10);
+      toDelete.forEach((file) => {
+        fs.unlinkSync(path.join(backupDir, file));
+        console.log(`🗑️ Deleted old backup: ${file}`);
+      });
+    }
+  } catch (error) {
+    console.error("❌ Backup failed:", error);
+    process.exit(1);
+  }
+}
+
+backupDatabase();
+```
+
+### 3. Vercel Deployment Configuration
+
+Create `vercel.json`:
+
+```json
+{
+  "buildCommand": "npm run build",
+  "framework": "nextjs",
+  "regions": ["iad1"],
+  "functions": {
+    "app/api/**.ts": {
+      "maxDuration": 30
+    }
+  },
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=()"
+        }
+      ]
+    },
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "https://yourdomain.com"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, POST, PUT, DELETE, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type, Authorization"
+        }
+      ]
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/admin",
+      "destination": "/dashboard",
+      "permanent": true
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/sitemap.xml",
+      "destination": "/api/sitemap"
+    },
+    {
+      "source": "/robots.txt",
+      "destination": "/api/robots"
+    }
+  ]
+}
+```
+
+### 4. GitHub Actions CI/CD Pipeline
+
+Create `.github/workflows/deploy.yml`:
+
+```yaml
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run type checking
+        run: npm run type-check
+
+      - name: Run linting
+        run: npm run lint
+
+      - name: Run tests
+        run: npm run test
+
+      - name: Build application
+        run: npm run build
+        env:
+          SKIP_ENV_VALIDATION: true
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: "--prod"
+
+      - name: Run database migrations
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Seed production data
+        run: node scripts/migrate-production.js
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Create database backup
+        run: node scripts/backup-database.js
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Upload backup to S3
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Upload backup file
+        run: |
+          aws s3 cp backups/ s3://your-backup-bucket/database-backups/ --recursive --exclude "*" --include "backup-*.sql"
+
+      - name: Notify deployment success
+        uses: 8398a7/action-slack@v3
+        with:
+          status: success
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+        if: success()
+
+      - name: Notify deployment failure
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+        if: failure()
+```
+
+### 5. Error Tracking and Monitoring
+
+Create `src/lib/monitoring.ts`:
+
+```typescript
+import * as Sentry from "@sentry/nextjs";
+
+// Initialize Sentry
+export function initializeMonitoring() {
+  if (process.env.NODE_ENV === "production") {
+    Sentry.init({
+      dsn: process.env.SENTRY_DSN,
+      environment: process.env.NODE_ENV,
+      tracesSampleRate: 0.1,
+      profilesSampleRate: 0.1,
+      beforeSend(event, hint) {
+        // Filter out known non-critical errors
+        if (event.exception) {
+          const error = event.exception.values?.[0];
+          if (error?.type === "ChunkLoadError") {
+            return null; // Don't report chunk load errors
+          }
+        }
+        return event;
+      },
+    });
+  }
+}
+
+// Database monitoring
+export class DatabaseMonitor {
+  private static instance: DatabaseMonitor;
+  private queryTimes: number[] = [];
+
+  static getInstance(): DatabaseMonitor {
+    if (!DatabaseMonitor.instance) {
+      DatabaseMonitor.instance = new DatabaseMonitor();
+    }
+    return DatabaseMonitor.instance;
+  }
+
+  logQuery(duration: number, query: string) {
+    this.queryTimes.push(duration);
+
+    // Alert on slow queries (> 5 seconds)
+    if (duration > 5000) {
+      Sentry.addBreadcrumb({
+        message: "Slow database query detected",
+        level: "warning",
+        data: {
+          duration,
+          query: query.substring(0, 100), // First 100 chars
+        },
+      });
+    }
+
+    // Keep only last 100 query times
+    if (this.queryTimes.length > 100) {
+      this.queryTimes = this.queryTimes.slice(-100);
+    }
+  }
+
+  getAverageQueryTime(): number {
+    if (this.queryTimes.length === 0) return 0;
+    return (
+      this.queryTimes.reduce((sum, time) => sum + time, 0) /
+      this.queryTimes.length
+    );
+  }
+
+  getSlowQueryCount(): number {
+    return this.queryTimes.filter((time) => time > 1000).length;
+  }
+}
+
+// Performance monitoring
+export function trackPerformanceMetric(
+  name: string,
+  value: number,
+  unit: string = "ms"
+) {
+  if (process.env.NODE_ENV === "production") {
+    Sentry.addBreadcrumb({
+      message: `Performance metric: ${name}`,
+      level: "info",
+      data: { value, unit },
+    });
+
+    // Send to analytics
+    if (typeof window !== "undefined" && window.gtag) {
+      window.gtag("event", "performance_metric", {
+        metric_name: name,
+        metric_value: value,
+        metric_unit: unit,
+      });
+    }
+  }
+}
+
+// Health check endpoint data
+export async function getHealthStatus() {
+  const dbMonitor = DatabaseMonitor.getInstance();
+
+  return {
+    status: "healthy",
+    timestamp: new Date().toISOString(),
+    database: {
+      averageQueryTime: dbMonitor.getAverageQueryTime(),
+      slowQueryCount: dbMonitor.getSlowQueryCount(),
+    },
+    memory: process.memoryUsage(),
+    uptime: process.uptime(),
+  };
+}
+```
+
+### 6. Rate Limiting and Security
+
+Create `src/lib/rate-limit.ts`:
+
+```typescript
+import { NextRequest } from "next/server";
+import { Redis } from "ioredis";
+
+const redis = new Redis(
+  process.env.RATE_LIMIT_REDIS_URL || "redis://localhost:6379"
+);
+
+interface RateLimitConfig {
+  windowMs: number;
+  maxRequests: number;
+  keyGenerator?: (req: NextRequest) => string;
+}
+
+export class RateLimiter {
+  private config: RateLimitConfig;
+
+  constructor(config: RateLimitConfig) {
+    this.config = config;
+  }
+
+  async isAllowed(
+    req: NextRequest
+  ): Promise<{ allowed: boolean; remaining: number; resetTime: number }> {
+    const key = this.config.keyGenerator
+      ? this.config.keyGenerator(req)
+      : this.getDefaultKey(req);
+    const window = Math.floor(Date.now() / this.config.windowMs);
+    const redisKey = `rate_limit:${key}:${window}`;
+
+    try {
+      const current = await redis.incr(redisKey);
+
+      if (current === 1) {
+        await redis.expire(redisKey, Math.ceil(this.config.windowMs / 1000));
+      }
+
+      const remaining = Math.max(0, this.config.maxRequests - current);
+      const resetTime = (window + 1) * this.config.windowMs;
+
+      return {
+        allowed: current <= this.config.maxRequests,
+        remaining,
+        resetTime,
+      };
+    } catch (error) {
+      console.error("Rate limiting error:", error);
+      // Fail open - allow request if Redis is down
+      return {
+        allowed: true,
+        remaining: this.config.maxRequests,
+        resetTime: Date.now() + this.config.windowMs,
+      };
+    }
+  }
+
+  private getDefaultKey(req: NextRequest): string {
+    // Use IP address as default key
+    const forwarded = req.headers.get("x-forwarded-for");
+    const ip = forwarded
+      ? forwarded.split(",")[0]
+      : req.headers.get("x-real-ip") || "unknown";
+    return ip;
+  }
+}
+
+// Pre-configured rate limiters
+export const apiRateLimit = new RateLimiter({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  maxRequests: 100,
+});
+
+export const authRateLimit = new RateLimiter({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  maxRequests: 5,
+  keyGenerator: (req) => {
+    const email = req.headers.get("x-user-email") || "anonymous";
+    return `auth:${email}`;
+  },
+});
+
+export const searchRateLimit = new RateLimiter({
+  windowMs: 60 * 1000, // 1 minute
+  maxRequests: 30,
+});
+
+export const commentRateLimit = new RateLimiter({
+  windowMs: 10 * 60 * 1000, // 10 minutes
+  maxRequests: 10,
+});
+```
+
+### 7. Health Check and Status Page
+
+Create `src/app/api/health/route.ts`:
+
+```typescript
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+import { getHealthStatus } from "@/lib/monitoring";
+
+export async function GET() {
+  try {
+    const start = Date.now();
+
+    // Test database connection
+    await prisma.$queryRaw`SELECT 1`;
+    const dbResponseTime = Date.now() - start;
+
+    // Get system health status
+    const healthStatus = await getHealthStatus();
+
+    // Check external services
+    const externalServices = await Promise.allSettled([
+      // Test Contentful
+      fetch(
+        `https://api.contentful.com/spaces/${process.env.CONTENTFUL_SPACE_ID}`,
+        {
+          headers: {
+            Authorization: `Bearer ${process.env.CONTENTFUL_ACCESS_TOKEN}`,
+          },
+        }
+      ),
+      // Test email service
+      fetch("https://api.resend.com/domains", {
+        headers: {
+          Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+        },
+      }),
+    ]);
+
+    const response = {
+      status: "healthy",
+      timestamp: new Date().toISOString(),
+      services: {
+        database: {
+          status: "healthy",
+          responseTime: dbResponseTime,
+        },
+        contentful: {
+          status:
+            externalServices[0].status === "fulfilled"
+              ? "healthy"
+              : "unhealthy",
+        },
+        email: {
+          status:
+            externalServices[1].status === "fulfilled"
+              ? "healthy"
+              : "unhealthy",
+        },
+      },
+      system: healthStatus,
+    };
+
+    return NextResponse.json(response);
+  } catch (error) {
+    console.error("Health check failed:", error);
+
+    return NextResponse.json(
+      {
+        status: "unhealthy",
+        timestamp: new Date().toISOString(),
+        error: "Health check failed",
+      },
+      { status: 503 }
+    );
+  }
+}
+```
+
+Create `src/app/status/page.tsx`:
+
+```typescript
+'use client'
+
+import { useState, useEffect } from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { RefreshCw, CheckCircle, XCircle, Clock } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+
+interface HealthStatus {
+  status: string
+  timestamp: string
+  services: {
+    database: { status: string; responseTime: number }
+    contentful: { status: string }
+    email: { status: string }
+  }
+  system: {
+    uptime: number
+    memory: NodeJS.MemoryUsage
+    database: {
+      averageQueryTime: number
+      slowQueryCount: number
+    }
+  }
+}
+
+export default function StatusPage() {
+  const [health, setHealth] = useState<HealthStatus | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
+
+  const fetchHealth = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch('/api/health')
+      const data = await response.json()
+      setHealth(data)
+      setLastUpdated(new Date())
+    } catch (error) {
+      console.error('Failed to fetch health status:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchHealth()
+    const interval = setInterval(fetchHealth, 30000) // Update every 30 seconds
+    return () => clearInterval(interval)
+  }, [])
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'healthy':
+        return <CheckCircle className="h-4 w-4 text-green-500" />
+      case 'unhealthy':
+        return <XCircle className="h-4 w-4 text-red-500" />
+      default:
+        return <Clock className="h-4 w-4 text-yellow-500" />
+    }
+  }
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'healthy':
+        return <Badge className="bg-green-500">Operational</Badge>
+      case 'unhealthy':
+        return <Badge variant="destructive">Down</Badge>
+      default:
+        return <Badge variant="secondary">Unknown</Badge>
+    }
+  }
+
+  const formatUptime = (uptime: number) => {
+    const days = Math.floor(uptime / (24 * 60 * 60))
+    const hours = Math.floor((uptime % (24 * 60 * 60)) / (60 * 60))
+    const minutes = Math.floor((uptime % (60 * 60)) / 60)
+    return `${days}d ${hours}h ${minutes}m`
+  }
+
+  const formatMemory = (bytes: number) => {
+    return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+  }
+
+  if (!health && loading) {
+    return (
+      <div className="container mx-auto py-8 px-4">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center">
+            <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <p>Loading system status...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="container mx-auto py-8 px-4">
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">System Status</h1>
+            <p className="text-muted-foreground">
+              Real-time status of all blog platform services
+            </p>
+          </div>
+          <div className="text-right">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={fetchHealth}
+              disabled={loading}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+            <p className="text-xs text-muted-foreground mt-1">
+              Last updated: {lastUpdated.toLocaleTimeString()}
+            </p>
+          </div>
+        </div>
+
+        {/* Overall Status */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              {health && getStatusIcon(health.status)}
+              Overall Status
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <span className="text-lg font-medium">
+                All systems {health?.status === 'healthy' ? 'operational' : 'experiencing issues'}
+              </span>
+              {health && getStatusBadge(health.status)}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Services Status */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Services</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {health?.services && Object.entries(health.services).map(([service, data]) => (
+                <div key={service} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    {getStatusIcon(data.status)}
+                    <div>
+                      <h4 className="font-medium capitalize">{service}</h4>
+                      {data.responseTime && (
+                        <p className="text-sm text-muted-foreground">
+                          Response time: {data.responseTime}ms
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  {getStatusBadge(data.status)}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* System Metrics */}
+        {health?.system && (
+          <Card>
+            <CardHeader>
+              <CardTitle>System Metrics</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="text-center">
+                  <div className="text-2xl font-bold">{formatUptime(health.system.uptime)}</div>
+                  <div className="text-sm text-muted-foreground">Uptime</div>
+                </div>
+
+                <div className="text-center">
+                  <div className="text-2xl font-bold">
+                    {formatMemory(health.system.memory.heapUsed)}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Memory Used</div>
+                </div>
+
+                <div className="text-center">
+                  <div className="text-2xl font-bold">
+                    {health.system.database.averageQueryTime.toFixed(1)}ms
+                  </div>
+                  <div className="text-sm text-muted-foreground">Avg Query Time</div>
+                </div>
+
+                <div className="text-center">
+                  <div className="text-2xl font-bold">
+                    {health.system.database.slowQueryCount}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Slow Queries</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Incident History */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Incidents</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-8 text-muted-foreground">
+              <CheckCircle className="h-12 w-12 mx-auto mb-4 text-green-500" />
+              <p>No incidents reported in the last 30 days</p>
+              <p className="text-sm mt-2">
+                All systems have been running smoothly
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  )
+}
+```
+
+### 8. Performance Optimization for Production
+
+Update `package.json` with production scripts:
+
+```json
+{
+  "scripts": {
+    "build": "next build",
+    "start": "next start",
+    "analyze": "ANALYZE=true npm run build",
+    "type-check": "tsc --noEmit",
+    "lint": "next lint",
+    "lint:fix": "next lint --fix",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "db:migrate": "prisma migrate dev",
+    "db:migrate:prod": "prisma migrate deploy",
+    "db:seed": "prisma db seed",
+    "db:studio": "prisma studio",
+    "db:backup": "node scripts/backup-database.js",
+    "sitemap": "next-sitemap",
+    "prepare": "husky install"
+  }
+}
+```
+
+### 9. Environment-Specific Configurations
+
+Create production middleware in `src/middleware.ts`:
+
+```typescript
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { withAuth } from "next-auth/middleware";
+import {
+  apiRateLimit,
+  authRateLimit,
+  searchRateLimit,
+  commentRateLimit,
+} from "@/lib/rate-limit";
+
+export default withAuth(
+  async function middleware(req: NextRequest) {
+    const { pathname } = req.nextUrl;
+
+    // Security headers
+    const response = NextResponse.next();
+
+    // Rate limiting for API routes
+    if (pathname.startsWith("/api/")) {
+      let rateLimiter = apiRateLimit;
+
+      if (pathname.startsWith("/api/auth/")) {
+        rateLimiter = authRateLimit;
+      } else if (pathname.startsWith("/api/search")) {
+        rateLimiter = searchRateLimit;
+      } else if (pathname.startsWith("/api/comments")) {
+        rateLimiter = commentRateLimit;
+      }
+
+      const { allowed, remaining, resetTime } =
+        await rateLimiter.isAllowed(req);
+
+      if (!allowed) {
+        return new NextResponse(
+          JSON.stringify({
+            error: "Too many requests",
+            retryAfter: Math.ceil((resetTime - Date.now()) / 1000),
+          }),
+          {
+            status: 429,
+            headers: {
+              "Content-Type": "application/json",
+              "Retry-After": Math.ceil(
+                (resetTime - Date.now()) / 1000
+              ).toString(),
+              "X-RateLimit-Limit": rateLimiter.config.maxRequests.toString(),
+              "X-RateLimit-Remaining": remaining.toString(),
+              "X-RateLimit-Reset": new Date(resetTime).toISOString(),
+            },
+          }
+        );
+      }
+
+      // Add rate limit headers to successful responses
+      response.headers.set(
+        "X-RateLimit-Limit",
+        rateLimiter.config.maxRequests.toString()
+      );
+      response.headers.set("X-RateLimit-Remaining", remaining.toString());
+      response.headers.set(
+        "X-RateLimit-Reset",
+        new Date(resetTime).toISOString()
+      );
+    }
+
+    // Security headers
+    response.headers.set("X-Frame-Options", "DENY");
+    response.headers.set("X-Content-Type-Options", "nosniff");
+    response.headers.set("Referrer-Policy", "origin-when-cross-origin");
+    response.headers.set("X-XSS-Protection", "1; mode=block");
+
+    return response;
+  },
+  {
+    callbacks: {
+      authorized: ({ token, req }) => {
+        const { pathname } = req.nextUrl;
+
+        // Protect dashboard routes
+        if (pathname.startsWith("/dashboard")) {
+          return !!token;
+        }
+
+        // Protect admin routes
+        if (pathname.startsWith("/admin")) {
+          return token?.role === "ADMIN";
+        }
+
+        return true;
+      },
+    },
+  }
+);
+
+export const config = {
+  matcher: ["/dashboard/:path*", "/admin/:path*", "/api/:path*"],
+};
+```
+
+### 10. Production Checklist
+
+Create `PRODUCTION_CHECKLIST.md`:
+
+```markdown
+# Production Deployment Checklist
+
+## Pre-Deployment
+
+- [ ] All environment variables configured
+- [ ] Database migrations tested
+- [ ] SSL certificates configured
+- [ ] Domain DNS configured
+- [ ] CDN setup (Cloudflare/AWS CloudFront)
+- [ ] Backup strategy implemented
+- [ ] Monitoring and alerts configured
+- [ ] Error tracking setup (Sentry)
+
+## Security
+
+- [ ] Rate limiting configured
+- [ ] Security headers implemented
+- [ ] Authentication flow tested
+- [ ] CORS policies configured
+- [ ] API endpoints secured
+- [ ] Input validation in place
+- [ ] SQL injection protection verified
+- [ ] XSS protection enabled
+
+## Performance
+
+- [ ] Image optimization enabled
+- [ ] Code splitting implemented
+- [ ] Bundle size optimized
+- [ ] Caching strategies configured
+- [ ] CDN serving static assets
+- [ ] Database indexes optimized
+- [ ] Core Web Vitals measured
+
+## SEO
+
+- [ ] Sitemap.xml generated
+- [ ] Robots.txt configured
+- [ ] Meta tags implemented
+- [ ] Open Graph tags added
+- [ ] Structured data markup
+- [ ] Canonical URLs set
+- [ ] 404 page customized
+
+## Monitoring
+
+- [ ] Health check endpoint working
+- [ ] Uptime monitoring configured
+- [ ] Performance monitoring active
+- [ ] Error alerts configured
+- [ ] Database monitoring enabled
+- [ ] Log aggregation setup
+
+## Testing
+
+- [ ] E2E tests passing
+- [ ] Load testing completed
+- [ ] Security scan performed
+- [ ] Cross-browser testing done
+- [ ] Mobile responsiveness verified
+- [ ] Accessibility audit passed
+
+## Post-Deployment
+
+- [ ] Smoke tests executed
+- [ ] DNS propagation verified
+- [ ] SSL certificate valid
+- [ ] All features functional
+- [ ] Analytics tracking active
+- [ ] Search console configured
+- [ ] Backup process verified
+```
+
+## Alternative Deployment Options
+
+### Docker Deployment
+
+Create `Dockerfile`:
+
+```dockerfile
+FROM node:18-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production && npm cache clean --force
+
+FROM node:18-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S nextjs -u 1001
+
+COPY --from=builder /app/node_modules ./node_modules
+COPY . .
+
+RUN npm run build
+
+USER nextjs
+
+EXPOSE 3000
+ENV PORT 3000
+
+CMD ["npm", "start"]
+```
+
+### AWS Deployment with CDK
+
+Create `infrastructure/blog-stack.ts`:
+
+```typescript
+import * as cdk from "aws-cdk-lib";
+import * as ec2 from "aws-cdk-lib/aws-ec2";
+import * as ecs from "aws-cdk-lib/aws-ecs";
+import * as rds from "aws-cdk-lib/aws-rds";
+import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
+
+export class BlogPlatformStack extends cdk.Stack {
+  constructor(scope: cdk.App, id: string, props?: cdk.StackProps) {
+    super(scope, id, props);
+
+    // VPC
+    const vpc = new ec2.Vpc(this, "BlogVPC", {
+      maxAzs: 2,
+    });
+
+    // Database
+    const database = new rds.DatabaseInstance(this, "BlogDatabase", {
+      engine: rds.DatabaseInstanceEngine.postgres({
+        version: rds.PostgresEngineVersion.VER_14,
+      }),
+      instanceType: ec2.InstanceType.of(
+        ec2.InstanceClass.T3,
+        ec2.InstanceSize.MICRO
+      ),
+      vpc,
+      credentials: rds.Credentials.fromGeneratedSecret("blogadmin"),
+      multiAz: false,
+      allocatedStorage: 20,
+      storageEncrypted: true,
+      backupRetention: cdk.Duration.days(7),
+      deletionProtection: true,
+    });
+
+    // ECS Cluster
+    const cluster = new ecs.Cluster(this, "BlogCluster", {
+      vpc,
+    });
+
+    // Task Definition
+    const taskDefinition = new ecs.FargateTaskDefinition(this, "BlogTask", {
+      memoryLimitMiB: 512,
+      cpu: 256,
+    });
+
+    // Container
+    const container = taskDefinition.addContainer("blog-app", {
+      image: ecs.ContainerImage.fromRegistry(
+        "your-registry/blog-platform:latest"
+      ),
+      environment: {
+        NODE_ENV: "production",
+      },
+      secrets: {
+        DATABASE_URL: ecs.Secret.fromSecretsManager(database.secret!),
+      },
+      logging: ecs.LogDrivers.awsLogs({
+        streamPrefix: "blog-platform",
+      }),
+    });
+
+    container.addPortMappings({
+      containerPort: 3000,
+      protocol: ecs.Protocol.TCP,
+    });
+
+    // Service
+    const service = new ecs.FargateService(this, "BlogService", {
+      cluster,
+      taskDefinition,
+      desiredCount: 2,
+    });
+
+    // CloudFront Distribution
+    const distribution = new cloudfront.CloudFrontWebDistribution(
+      this,
+      "BlogDistribution",
+      {
+        originConfigs: [
+          {
+            customOriginSource: {
+              domainName: service.loadBalancer.loadBalancerDnsName,
+              httpPort: 80,
+            },
+            behaviors: [{ isDefaultBehavior: true }],
+          },
+        ],
+      }
+    );
+  }
+}
+```
+
+## Production Best Practices
+
+### 1. Security Best Practices
+
+- Always use HTTPS in production
+- Implement proper CORS policies
+- Use environment variables for secrets
+- Enable rate limiting on all public endpoints
+- Regularly update dependencies
+- Implement proper input validation
+- Use Content Security Policy (CSP) headers
+
+### 2. Performance Best Practices
+
+- Enable compression (gzip/brotli)
+- Implement proper caching strategies
+- Use a CDN for static assets
+- Optimize images with next/image
+- Implement code splitting
+- Monitor Core Web Vitals
+- Use database connection pooling
+
+### 3. Monitoring Best Practices
+
+- Set up comprehensive logging
+- Implement error tracking
+- Monitor application performance
+- Set up uptime monitoring
+- Track user analytics
+- Monitor database performance
+- Set up automated alerts
+
+### 4. Backup and Recovery
+
+- Implement automated database backups
+- Test backup restoration procedures
+- Store backups in multiple locations
+- Document recovery procedures
+- Implement point-in-time recovery
+- Monitor backup success/failure
+
+## Conclusion
+
+Your blog platform is now production-ready with:
+
+1. ✅ Comprehensive deployment configuration
+2. ✅ CI/CD pipeline with automated testing
+3. ✅ Production monitoring and error tracking
+4. ✅ Rate limiting and security measures
+5. ✅ Database backup and recovery strategies
+6. ✅ Health checks and status monitoring
+7. ✅ Performance optimization
+8. ✅ Scalable infrastructure options
+
+Congratulations! You've built a complete, production-ready blog platform with modern best practices. Your application is now ready to handle real users and can scale as your audience grows.
+
+---
+
+**Estimated Time**: 240-300 minutes
+
+**Difficulty**: Advanced
+
+**Status**: Project Complete! 🎉

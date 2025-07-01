@@ -1,0 +1,1811 @@
+# Step 9: Search & Filtering
+
+## Objective
+
+Implement advanced search functionality with filtering, faceted search, full-text search capabilities, search analytics, and intelligent content discovery for your blog platform.
+
+## What You'll Learn
+
+- How to implement full-text search with PostgreSQL
+- How to create advanced filtering and faceted search
+- How to build search suggestions and autocomplete
+- How to implement search analytics and trending topics
+- How to create intelligent content recommendations
+- How to optimize search performance with indexing
+- How to build a modern search interface with real-time results
+
+## Prerequisites
+
+- Completed [Step 8: Comments System](../08-comments-system)
+- Understanding of database indexing and search concepts
+- Basic knowledge of search algorithms and relevance scoring
+
+## Search Architecture
+
+```
+Search System Components:
+├── Full-Text Search
+│   ├── PostgreSQL text search
+│   ├── Custom search ranking
+│   ├── Fuzzy matching
+│   └── Search highlighting
+├── Filtering & Faceting
+│   ├── Category filtering
+│   ├── Tag filtering
+│   ├── Date range filtering
+│   └── Author filtering
+├── Advanced Features
+│   ├── Search suggestions
+│   ├── Autocomplete
+│   ├── Related content
+│   └── Trending searches
+├── Analytics
+│   ├── Search tracking
+│   ├── Popular queries
+│   ├── Click-through rates
+│   └── Performance metrics
+└── User Experience
+    ├── Instant search
+    ├── Search history
+    ├── Saved searches
+    └── Mobile optimization
+```
+
+## Step-by-Step Instructions
+
+### 1. Install Additional Dependencies
+
+```bash
+# Search and analytics
+npm install fuse.js
+npm install use-debounce
+
+# Advanced text processing
+npm install natural
+npm install compromise
+
+# Search highlighting
+npm install react-highlight-words
+
+# Analytics
+npm install @vercel/analytics
+
+# Performance optimization
+npm install @tanstack/react-query
+```
+
+### 2. Update Database Schema for Search
+
+Update your `prisma/schema.prisma` to include search-related models:
+
+```prisma
+model SearchQuery {
+  id        String   @id @default(cuid())
+  query     String
+  results   Int      @default(0)
+  clicks    Int      @default(0)
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+
+  // Session tracking
+  sessionId String
+  ipAddress String?
+  userAgent String?
+
+  // Search context
+  filters   Json?
+  sortBy    String?
+  page      Int      @default(1)
+
+  @@map("search_queries")
+}
+
+model SearchClick {
+  id        String   @id @default(cuid())
+  queryId   String
+  query     SearchQuery @relation(fields: [queryId], references: [id], onDelete: Cascade)
+
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  position  Int      // Position in search results
+  createdAt DateTime @default(now())
+
+  @@map("search_clicks")
+}
+
+model TrendingTopic {
+  id        String   @id @default(cuid())
+  term      String   @unique
+  score     Float    @default(0)
+  searches  Int      @default(0)
+  clicks    Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("trending_topics")
+}
+
+model UserSearchHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  query     String
+  filters   Json?
+  createdAt DateTime @default(now())
+
+  @@map("user_search_history")
+}
+
+model SavedSearch {
+  id        String   @id @default(cuid())
+  name      String
+  query     String
+  filters   Json?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("saved_searches")
+}
+
+// Update existing models
+model User {
+  // ... existing fields ...
+
+  searchQueries     SearchQuery[]
+  searchHistory     UserSearchHistory[]
+  savedSearches     SavedSearch[]
+}
+
+model Post {
+  // ... existing fields ...
+
+  searchClicks SearchClick[]
+
+  // Add full-text search vector
+  searchVector Unsupported("tsvector")?
+
+  @@index([searchVector], type: Gin)
+}
+```
+
+Run the migration:
+
+```bash
+npx prisma db push
+npx prisma generate
+```
+
+### 3. Create Search Utilities
+
+Create `src/lib/search-utils.ts`:
+
+```typescript
+import { prisma } from "@/lib/db";
+import Fuse from "fuse.js";
+import natural from "natural";
+import compromise from "compromise";
+
+export interface SearchOptions {
+  query: string;
+  filters?: {
+    categories?: string[];
+    tags?: string[];
+    authors?: string[];
+    dateRange?: {
+      from: Date;
+      to: Date;
+    };
+    status?: string[];
+  };
+  sortBy?: "relevance" | "date" | "popularity" | "title";
+  page?: number;
+  limit?: number;
+  includeContent?: boolean;
+}
+
+export interface SearchResult {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt: string;
+  content?: string;
+  coverImage?: string;
+  publishedAt: Date;
+  readTime: number;
+  views: number;
+  author: {
+    id: string;
+    name: string;
+    image?: string;
+  };
+  category: {
+    id: string;
+    name: string;
+    slug: string;
+  };
+  tags: Array<{
+    id: string;
+    name: string;
+    slug: string;
+  }>;
+  _count: {
+    comments: number;
+    likes: number;
+  };
+  relevanceScore?: number;
+  highlightedTitle?: string;
+  highlightedExcerpt?: string;
+}
+
+export interface SearchResponse {
+  results: SearchResult[];
+  totalResults: number;
+  page: number;
+  totalPages: number;
+  suggestions: string[];
+  relatedTopics: string[];
+  facets: {
+    categories: Array<{ name: string; count: number }>;
+    tags: Array<{ name: string; count: number }>;
+    authors: Array<{ name: string; count: number }>;
+    years: Array<{ year: number; count: number }>;
+  };
+}
+
+// Text processing utilities
+export function preprocessQuery(query: string): string {
+  // Remove special characters but keep spaces and hyphens
+  return query
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, "")
+    .trim();
+}
+
+export function extractKeywords(text: string): string[] {
+  const doc = compromise(text);
+  const nouns = doc.nouns().out("array");
+  const adjectives = doc.adjectives().out("array");
+  const verbs = doc.verbs().out("array");
+
+  return [...nouns, ...adjectives, ...verbs]
+    .filter((word) => word.length > 2)
+    .slice(0, 10);
+}
+
+export function calculateRelevanceScore(
+  post: any,
+  query: string,
+  searchTerms: string[]
+): number {
+  let score = 0;
+  const lowerQuery = query.toLowerCase();
+  const lowerTitle = post.title.toLowerCase();
+  const lowerExcerpt = post.excerpt.toLowerCase();
+  const lowerContent = post.content?.toLowerCase() || "";
+
+  // Exact title match
+  if (lowerTitle.includes(lowerQuery)) {
+    score += 100;
+  }
+
+  // Title word matches
+  searchTerms.forEach((term) => {
+    if (lowerTitle.includes(term)) {
+      score += 50;
+    }
+  });
+
+  // Excerpt matches
+  searchTerms.forEach((term) => {
+    if (lowerExcerpt.includes(term)) {
+      score += 30;
+    }
+  });
+
+  // Content matches
+  searchTerms.forEach((term) => {
+    const matches = (lowerContent.match(new RegExp(term, "g")) || []).length;
+    score += matches * 10;
+  });
+
+  // Category/tag matches
+  searchTerms.forEach((term) => {
+    if (post.category.name.toLowerCase().includes(term)) {
+      score += 25;
+    }
+    post.tags.forEach((tag: any) => {
+      if (tag.name.toLowerCase().includes(term)) {
+        score += 15;
+      }
+    });
+  });
+
+  // Boost popular posts
+  score += Math.log(post.views + 1) * 2;
+  score += Math.log(post._count.likes + 1) * 3;
+  score += Math.log(post._count.comments + 1) * 2;
+
+  // Boost recent posts
+  const daysSincePublished =
+    (Date.now() - new Date(post.publishedAt).getTime()) / (1000 * 60 * 60 * 24);
+  if (daysSincePublished < 30) {
+    score += (30 - daysSincePublished) * 0.5;
+  }
+
+  return score;
+}
+
+export function highlightSearchTerms(
+  text: string,
+  searchTerms: string[]
+): string {
+  let highlighted = text;
+
+  searchTerms.forEach((term) => {
+    const regex = new RegExp(`(${term})`, "gi");
+    highlighted = highlighted.replace(regex, "<mark>$1</mark>");
+  });
+
+  return highlighted;
+}
+
+export function generateSearchSuggestions(
+  query: string,
+  existingQueries: string[]
+): string[] {
+  const fuse = new Fuse(existingQueries, {
+    threshold: 0.4,
+    includeScore: true,
+  });
+
+  const results = fuse.search(query);
+  return results.slice(0, 5).map((result) => result.item);
+}
+
+export async function trackSearchQuery(
+  query: string,
+  results: number,
+  filters?: any,
+  userId?: string,
+  sessionId?: string,
+  ipAddress?: string,
+  userAgent?: string
+): Promise<string> {
+  const searchQuery = await prisma.searchQuery.create({
+    data: {
+      query,
+      results,
+      filters,
+      userId,
+      sessionId: sessionId || "anonymous",
+      ipAddress,
+      userAgent,
+    },
+  });
+
+  // Update trending topics
+  await updateTrendingTopics(query);
+
+  return searchQuery.id;
+}
+
+export async function trackSearchClick(
+  queryId: string,
+  postId: string,
+  position: number
+): Promise<void> {
+  await prisma.searchClick.create({
+    data: {
+      queryId,
+      postId,
+      position,
+    },
+  });
+
+  // Update click count for the search query
+  await prisma.searchQuery.update({
+    where: { id: queryId },
+    data: { clicks: { increment: 1 } },
+  });
+}
+
+async function updateTrendingTopics(query: string): Promise<void> {
+  const keywords = extractKeywords(query);
+
+  for (const keyword of keywords) {
+    await prisma.trendingTopic.upsert({
+      where: { term: keyword },
+      update: {
+        searches: { increment: 1 },
+        score: { increment: 1 },
+        updatedAt: new Date(),
+      },
+      create: {
+        term: keyword,
+        searches: 1,
+        score: 1,
+      },
+    });
+  }
+}
+
+export async function getTrendingTopics(limit: number = 10): Promise<string[]> {
+  const topics = await prisma.trendingTopic.findMany({
+    orderBy: { score: "desc" },
+    take: limit,
+    select: { term: true },
+  });
+
+  return topics.map((topic) => topic.term);
+}
+
+export async function getPopularSearches(limit: number = 10): Promise<
+  Array<{
+    query: string;
+    count: number;
+  }>
+> {
+  const searches = await prisma.searchQuery.groupBy({
+    by: ["query"],
+    _count: { query: true },
+    orderBy: { _count: { query: "desc" } },
+    take: limit,
+    where: {
+      createdAt: {
+        gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // Last 30 days
+      },
+    },
+  });
+
+  return searches.map((search) => ({
+    query: search.query,
+    count: search._count.query,
+  }));
+}
+```
+
+### 4. Create Advanced Search Service
+
+Create `src/lib/search-service.ts`:
+
+```typescript
+import { prisma } from "@/lib/db";
+import {
+  SearchOptions,
+  SearchResponse,
+  SearchResult,
+  preprocessQuery,
+  extractKeywords,
+  calculateRelevanceScore,
+  highlightSearchTerms,
+  generateSearchSuggestions,
+  trackSearchQuery,
+} from "./search-utils";
+
+export class SearchService {
+  async search(
+    options: SearchOptions,
+    sessionId?: string,
+    ipAddress?: string
+  ): Promise<SearchResponse> {
+    const {
+      query,
+      filters = {},
+      sortBy = "relevance",
+      page = 1,
+      limit = 20,
+      includeContent = false,
+    } = options;
+
+    const processedQuery = preprocessQuery(query);
+    const searchTerms = processedQuery
+      .split(" ")
+      .filter((term) => term.length > 2);
+    const offset = (page - 1) * limit;
+
+    // Build where clause
+    const where: any = {
+      status: "PUBLISHED",
+    };
+
+    // Text search conditions
+    if (processedQuery) {
+      where.OR = [
+        { title: { contains: processedQuery, mode: "insensitive" } },
+        { excerpt: { contains: processedQuery, mode: "insensitive" } },
+        { content: { contains: processedQuery, mode: "insensitive" } },
+        {
+          tags: {
+            some: {
+              name: { contains: processedQuery, mode: "insensitive" },
+            },
+          },
+        },
+        {
+          category: {
+            name: { contains: processedQuery, mode: "insensitive" },
+          },
+        },
+      ];
+    }
+
+    // Apply filters
+    if (filters.categories?.length) {
+      where.category = {
+        slug: { in: filters.categories },
+      };
+    }
+
+    if (filters.tags?.length) {
+      where.tags = {
+        some: {
+          slug: { in: filters.tags },
+        },
+      };
+    }
+
+    if (filters.authors?.length) {
+      where.author = {
+        id: { in: filters.authors },
+      };
+    }
+
+    if (filters.dateRange) {
+      where.publishedAt = {
+        gte: filters.dateRange.from,
+        lte: filters.dateRange.to,
+      };
+    }
+
+    // Get posts
+    const [posts, totalResults] = await Promise.all([
+      prisma.post.findMany({
+        where,
+        include: {
+          author: {
+            select: { id: true, name: true, image: true },
+          },
+          category: {
+            select: { id: true, name: true, slug: true },
+          },
+          tags: {
+            select: { id: true, name: true, slug: true },
+          },
+          _count: {
+            select: { comments: true, likes: true },
+          },
+        },
+        skip: offset,
+        take: limit,
+      }),
+      prisma.post.count({ where }),
+    ]);
+
+    // Calculate relevance scores and sort
+    let results: SearchResult[] = posts.map((post) => {
+      const relevanceScore = processedQuery
+        ? calculateRelevanceScore(post, processedQuery, searchTerms)
+        : 0;
+
+      return {
+        ...post,
+        content: includeContent ? post.content : undefined,
+        relevanceScore,
+        highlightedTitle: processedQuery
+          ? highlightSearchTerms(post.title, searchTerms)
+          : post.title,
+        highlightedExcerpt: processedQuery
+          ? highlightSearchTerms(post.excerpt, searchTerms)
+          : post.excerpt,
+      };
+    });
+
+    // Sort results
+    switch (sortBy) {
+      case "relevance":
+        results.sort(
+          (a, b) => (b.relevanceScore || 0) - (a.relevanceScore || 0)
+        );
+        break;
+      case "date":
+        results.sort(
+          (a, b) =>
+            new Date(b.publishedAt).getTime() -
+            new Date(a.publishedAt).getTime()
+        );
+        break;
+      case "popularity":
+        results.sort(
+          (a, b) => b.views + b._count.likes - (a.views + a._count.likes)
+        );
+        break;
+      case "title":
+        results.sort((a, b) => a.title.localeCompare(b.title));
+        break;
+    }
+
+    // Get facets and suggestions in parallel
+    const [facets, suggestions, relatedTopics] = await Promise.all([
+      this.getFacets(where),
+      this.getSuggestions(query),
+      this.getRelatedTopics(searchTerms),
+    ]);
+
+    // Track search query
+    if (query.trim()) {
+      await trackSearchQuery(
+        query,
+        totalResults,
+        filters,
+        undefined, // userId - you can pass this if available
+        sessionId,
+        ipAddress
+      );
+    }
+
+    return {
+      results,
+      totalResults,
+      page,
+      totalPages: Math.ceil(totalResults / limit),
+      suggestions,
+      relatedTopics,
+      facets,
+    };
+  }
+
+  private async getFacets(baseWhere: any) {
+    const [categories, tags, authors, yearCounts] = await Promise.all([
+      // Categories facet
+      prisma.post
+        .groupBy({
+          by: ["categoryId"],
+          where: baseWhere,
+          _count: { categoryId: true },
+          orderBy: { _count: { categoryId: "desc" } },
+          take: 10,
+        })
+        .then(async (results) => {
+          const categoryIds = results.map((r) => r.categoryId);
+          const categories = await prisma.category.findMany({
+            where: { id: { in: categoryIds } },
+            select: { id: true, name: true },
+          });
+
+          return results.map((result) => {
+            const category = categories.find((c) => c.id === result.categoryId);
+            return {
+              name: category?.name || "Unknown",
+              count: result._count.categoryId,
+            };
+          });
+        }),
+
+      // Tags facet
+      prisma.post
+        .findMany({
+          where: baseWhere,
+          select: { tags: { select: { name: true } } },
+        })
+        .then((posts) => {
+          const tagCounts: Record<string, number> = {};
+          posts.forEach((post) => {
+            post.tags.forEach((tag) => {
+              tagCounts[tag.name] = (tagCounts[tag.name] || 0) + 1;
+            });
+          });
+
+          return Object.entries(tagCounts)
+            .map(([name, count]) => ({ name, count }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 10);
+        }),
+
+      // Authors facet
+      prisma.post
+        .groupBy({
+          by: ["authorId"],
+          where: baseWhere,
+          _count: { authorId: true },
+          orderBy: { _count: { authorId: "desc" } },
+          take: 10,
+        })
+        .then(async (results) => {
+          const authorIds = results.map((r) => r.authorId);
+          const authors = await prisma.user.findMany({
+            where: { id: { in: authorIds } },
+            select: { id: true, name: true },
+          });
+
+          return results.map((result) => {
+            const author = authors.find((a) => a.id === result.authorId);
+            return {
+              name: author?.name || "Unknown",
+              count: result._count.authorId,
+            };
+          });
+        }),
+
+      // Years facet
+      prisma.$queryRaw`
+        SELECT EXTRACT(year FROM "publishedAt") as year, COUNT(*) as count
+        FROM posts 
+        WHERE status = 'PUBLISHED'
+        GROUP BY EXTRACT(year FROM "publishedAt")
+        ORDER BY year DESC
+        LIMIT 10
+      ` as Promise<Array<{ year: number; count: bigint }>>,
+    ]);
+
+    return {
+      categories,
+      tags,
+      authors,
+      years: yearCounts.map((y) => ({ year: y.year, count: Number(y.count) })),
+    };
+  }
+
+  private async getSuggestions(query: string): Promise<string[]> {
+    if (!query || query.length < 2) return [];
+
+    // Get recent popular searches
+    const recentSearches = await prisma.searchQuery.findMany({
+      select: { query: true },
+      where: {
+        query: {
+          contains: query,
+          mode: "insensitive",
+        },
+        createdAt: {
+          gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // Last 30 days
+        },
+      },
+      distinct: ["query"],
+      orderBy: { createdAt: "desc" },
+      take: 20,
+    });
+
+    const queries = recentSearches.map((s) => s.query);
+    return generateSearchSuggestions(query, queries);
+  }
+
+  private async getRelatedTopics(searchTerms: string[]): Promise<string[]> {
+    if (!searchTerms.length) return [];
+
+    const relatedPosts = await prisma.post.findMany({
+      where: {
+        status: "PUBLISHED",
+        OR: searchTerms.map((term) => ({
+          OR: [
+            { title: { contains: term, mode: "insensitive" } },
+            {
+              tags: { some: { name: { contains: term, mode: "insensitive" } } },
+            },
+          ],
+        })),
+      },
+      select: {
+        tags: { select: { name: true } },
+        category: { select: { name: true } },
+      },
+      take: 50,
+    });
+
+    const topics = new Set<string>();
+    relatedPosts.forEach((post) => {
+      post.tags.forEach((tag) => topics.add(tag.name));
+      topics.add(post.category.name);
+    });
+
+    return Array.from(topics)
+      .filter(
+        (topic) =>
+          !searchTerms.some((term) =>
+            topic.toLowerCase().includes(term.toLowerCase())
+          )
+      )
+      .slice(0, 8);
+  }
+
+  async getAutocomplete(query: string, limit: number = 8): Promise<string[]> {
+    if (query.length < 2) return [];
+
+    const [posts, tags, categories] = await Promise.all([
+      // Post titles
+      prisma.post.findMany({
+        where: {
+          status: "PUBLISHED",
+          title: { contains: query, mode: "insensitive" },
+        },
+        select: { title: true },
+        take: 3,
+      }),
+
+      // Tags
+      prisma.tag.findMany({
+        where: {
+          name: { contains: query, mode: "insensitive" },
+        },
+        select: { name: true },
+        take: 3,
+      }),
+
+      // Categories
+      prisma.category.findMany({
+        where: {
+          name: { contains: query, mode: "insensitive" },
+        },
+        select: { name: true },
+        take: 2,
+      }),
+    ]);
+
+    const suggestions = [
+      ...posts.map((p) => p.title),
+      ...tags.map((t) => `#${t.name}`),
+      ...categories.map((c) => `category:${c.name}`),
+    ];
+
+    return suggestions.slice(0, limit);
+  }
+}
+
+export const searchService = new SearchService();
+```
+
+### 5. Create Search API Routes
+
+Create `src/app/api/search/route.ts`:
+
+```typescript
+import { NextRequest, NextResponse } from "next/server";
+import { searchService } from "@/lib/search-service";
+import { trackSearchClick } from "@/lib/search-utils";
+
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+
+    const query = searchParams.get("q") || "";
+    const categories =
+      searchParams.get("categories")?.split(",").filter(Boolean) || [];
+    const tags = searchParams.get("tags")?.split(",").filter(Boolean) || [];
+    const authors =
+      searchParams.get("authors")?.split(",").filter(Boolean) || [];
+    const sortBy =
+      (searchParams.get("sort") as
+        | "relevance"
+        | "date"
+        | "popularity"
+        | "title") || "relevance";
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "20");
+    const includeContent = searchParams.get("includeContent") === "true";
+
+    // Date range filter
+    let dateRange;
+    const from = searchParams.get("from");
+    const to = searchParams.get("to");
+    if (from && to) {
+      dateRange = {
+        from: new Date(from),
+        to: new Date(to),
+      };
+    }
+
+    // Get session info for tracking
+    const sessionId = request.headers.get("x-session-id") || "anonymous";
+    const ipAddress =
+      request.headers.get("x-forwarded-for") ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
+
+    const searchOptions = {
+      query,
+      filters: {
+        categories: categories.length ? categories : undefined,
+        tags: tags.length ? tags : undefined,
+        authors: authors.length ? authors : undefined,
+        dateRange,
+      },
+      sortBy,
+      page,
+      limit,
+      includeContent,
+    };
+
+    const results = await searchService.search(
+      searchOptions,
+      sessionId,
+      ipAddress
+    );
+
+    return NextResponse.json(results);
+  } catch (error) {
+    console.error("Search error:", error);
+    return NextResponse.json({ error: "Search failed" }, { status: 500 });
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { queryId, postId, position } = body;
+
+    if (!queryId || !postId || position === undefined) {
+      return NextResponse.json(
+        { error: "Missing required fields" },
+        { status: 400 }
+      );
+    }
+
+    await trackSearchClick(queryId, postId, position);
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Error tracking search click:", error);
+    return NextResponse.json(
+      { error: "Failed to track click" },
+      { status: 500 }
+    );
+  }
+}
+```
+
+Create `src/app/api/search/autocomplete/route.ts`:
+
+```typescript
+import { NextRequest, NextResponse } from "next/server";
+import { searchService } from "@/lib/search-service";
+
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const query = searchParams.get("q") || "";
+    const limit = parseInt(searchParams.get("limit") || "8");
+
+    if (query.length < 2) {
+      return NextResponse.json({ suggestions: [] });
+    }
+
+    const suggestions = await searchService.getAutocomplete(query, limit);
+
+    return NextResponse.json({ suggestions });
+  } catch (error) {
+    console.error("Autocomplete error:", error);
+    return NextResponse.json({ error: "Autocomplete failed" }, { status: 500 });
+  }
+}
+```
+
+### 6. Create Search Components
+
+Create `src/components/search/search-box.tsx`:
+
+```typescript
+'use client'
+
+import { useState, useEffect, useRef } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useDebounce } from 'use-debounce'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Search, X, Clock, TrendingUp } from 'lucide-react'
+import { cn } from '@/lib/utils'
+
+interface SearchBoxProps {
+  placeholder?: string
+  className?: string
+  showSuggestions?: boolean
+  onSearch?: (query: string) => void
+}
+
+export function SearchBox({
+  placeholder = "Search posts...",
+  className,
+  showSuggestions = true,
+  onSearch
+}: SearchBoxProps) {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const [query, setQuery] = useState(searchParams.get('q') || '')
+  const [debouncedQuery] = useDebounce(query, 300)
+  const [suggestions, setSuggestions] = useState<string[]>([])
+  const [showSuggestionsList, setShowSuggestionsList] = useState(false)
+  const [recentSearches, setRecentSearches] = useState<string[]>([])
+  const [trendingTopics, setTrendingTopics] = useState<string[]>([])
+  const [loading, setLoading] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const suggestionsRef = useRef<HTMLDivElement>(null)
+
+  // Load recent searches and trending topics
+  useEffect(() => {
+    const stored = localStorage.getItem('recentSearches')
+    if (stored) {
+      setRecentSearches(JSON.parse(stored))
+    }
+
+    // Fetch trending topics
+    fetch('/api/search/trending')
+      .then(res => res.json())
+      .then(data => setTrendingTopics(data.topics || []))
+      .catch(console.error)
+  }, [])
+
+  // Fetch autocomplete suggestions
+  useEffect(() => {
+    if (debouncedQuery.length >= 2 && showSuggestions) {
+      setLoading(true)
+      fetch(`/api/search/autocomplete?q=${encodeURIComponent(debouncedQuery)}`)
+        .then(res => res.json())
+        .then(data => {
+          setSuggestions(data.suggestions || [])
+          setLoading(false)
+        })
+        .catch(err => {
+          console.error('Autocomplete error:', err)
+          setLoading(false)
+        })
+    } else {
+      setSuggestions([])
+      setLoading(false)
+    }
+  }, [debouncedQuery, showSuggestions])
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        suggestionsRef.current &&
+        !suggestionsRef.current.contains(event.target as Node) &&
+        !inputRef.current?.contains(event.target as Node)
+      ) {
+        setShowSuggestionsList(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    performSearch(query.trim())
+  }
+
+  const performSearch = (searchQuery: string) => {
+    if (!searchQuery) return
+
+    // Save to recent searches
+    const newRecentSearches = [
+      searchQuery,
+      ...recentSearches.filter(s => s !== searchQuery)
+    ].slice(0, 10)
+
+    setRecentSearches(newRecentSearches)
+    localStorage.setItem('recentSearches', JSON.stringify(newRecentSearches))
+
+    setShowSuggestionsList(false)
+
+    if (onSearch) {
+      onSearch(searchQuery)
+    } else {
+      router.push(`/search?q=${encodeURIComponent(searchQuery)}`)
+    }
+  }
+
+  const handleSuggestionClick = (suggestion: string) => {
+    const cleanSuggestion = suggestion.replace(/^(#|category:)/, '')
+    setQuery(cleanSuggestion)
+    performSearch(cleanSuggestion)
+  }
+
+  const clearSearch = () => {
+    setQuery('')
+    inputRef.current?.focus()
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      setShowSuggestionsList(false)
+      inputRef.current?.blur()
+    }
+  }
+
+  const showSuggestionsPanel = showSuggestionsList && (
+    suggestions.length > 0 ||
+    recentSearches.length > 0 ||
+    trendingTopics.length > 0
+  )
+
+  return (
+    <div className={cn('relative', className)}>
+      <form onSubmit={handleSubmit} className="relative">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            ref={inputRef}
+            type="text"
+            placeholder={placeholder}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onFocus={() => setShowSuggestionsList(true)}
+            onKeyDown={handleKeyDown}
+            className="pl-10 pr-10"
+          />
+          {query && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0"
+              onClick={clearSearch}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+      </form>
+
+      {/* Suggestions Panel */}
+      {showSuggestionsPanel && (
+        <Card
+          ref={suggestionsRef}
+          className="absolute top-full left-0 right-0 z-50 mt-1 max-h-96 overflow-y-auto"
+        >
+          <CardContent className="p-0">
+            {/* Autocomplete Suggestions */}
+            {suggestions.length > 0 && (
+              <div className="p-3">
+                <h4 className="text-sm font-medium text-muted-foreground mb-2">
+                  Suggestions
+                </h4>
+                <div className="space-y-1">
+                  {suggestions.map((suggestion, index) => (
+                    <button
+                      key={index}
+                      className="w-full text-left px-2 py-1 rounded hover:bg-muted text-sm"
+                      onClick={() => handleSuggestionClick(suggestion)}
+                    >
+                      {suggestion.startsWith('#') ? (
+                        <span className="text-blue-600">{suggestion}</span>
+                      ) : suggestion.startsWith('category:') ? (
+                        <span className="text-green-600">{suggestion}</span>
+                      ) : (
+                        suggestion
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Recent Searches */}
+            {recentSearches.length > 0 && !query && (
+              <div className="p-3 border-t">
+                <h4 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
+                  <Clock className="h-3 w-3" />
+                  Recent Searches
+                </h4>
+                <div className="space-y-1">
+                  {recentSearches.slice(0, 5).map((search, index) => (
+                    <button
+                      key={index}
+                      className="w-full text-left px-2 py-1 rounded hover:bg-muted text-sm"
+                      onClick={() => handleSuggestionClick(search)}
+                    >
+                      {search}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Trending Topics */}
+            {trendingTopics.length > 0 && !query && (
+              <div className="p-3 border-t">
+                <h4 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
+                  <TrendingUp className="h-3 w-3" />
+                  Trending Topics
+                </h4>
+                <div className="flex flex-wrap gap-1">
+                  {trendingTopics.slice(0, 8).map((topic, index) => (
+                    <Badge
+                      key={index}
+                      variant="secondary"
+                      className="cursor-pointer hover:bg-secondary/80"
+                      onClick={() => handleSuggestionClick(topic)}
+                    >
+                      {topic}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {loading && (
+              <div className="p-3 text-center">
+                <div className="animate-spin h-4 w-4 border-b-2 border-primary mx-auto"></div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  )
+}
+```
+
+### 7. Create Search Results Page
+
+Create `src/app/search/page.tsx`:
+
+```typescript
+import { Suspense } from 'react'
+import { SearchResults } from '@/components/search/search-results'
+import { SearchFilters } from '@/components/search/search-filters'
+import { SearchBox } from '@/components/search/search-box'
+import { Card, CardContent } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
+
+interface SearchPageProps {
+  searchParams: {
+    q?: string
+    categories?: string
+    tags?: string
+    authors?: string
+    sort?: string
+    page?: string
+    from?: string
+    to?: string
+  }
+}
+
+export default function SearchPage({ searchParams }: SearchPageProps) {
+  return (
+    <div className="container mx-auto py-8 px-4">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold mb-4">Search</h1>
+        <SearchBox
+          className="max-w-2xl"
+          placeholder="Search for posts, topics, or authors..."
+        />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Filters Sidebar */}
+        <div className="lg:col-span-1">
+          <Suspense fallback={<FiltersSkeleton />}>
+            <SearchFilters searchParams={searchParams} />
+          </Suspense>
+        </div>
+
+        {/* Results */}
+        <div className="lg:col-span-3">
+          <Suspense fallback={<ResultsSkeleton />}>
+            <SearchResults searchParams={searchParams} />
+          </Suspense>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function FiltersSkeleton() {
+  return (
+    <Card>
+      <CardContent className="p-4 space-y-4">
+        <Skeleton className="h-4 w-20" />
+        <div className="space-y-2">
+          {[...Array(5)].map((_, i) => (
+            <Skeleton key={i} className="h-6 w-full" />
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function ResultsSkeleton() {
+  return (
+    <div className="space-y-6">
+      <Skeleton className="h-8 w-48" />
+      {[...Array(5)].map((_, i) => (
+        <Card key={i}>
+          <CardContent className="p-6">
+            <Skeleton className="h-6 w-3/4 mb-2" />
+            <Skeleton className="h-4 w-full mb-2" />
+            <Skeleton className="h-4 w-2/3" />
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  )
+}
+```
+
+### 8. Create Search Results Component
+
+Create `src/components/search/search-results.tsx`:
+
+```typescript
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { SearchResult } from '@/lib/search-utils'
+import { PostCard } from '@/components/blog/post-card'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Search,
+  ArrowUpDown,
+  Calendar,
+  TrendingUp,
+  User,
+  Filter,
+  FileText,
+  Clock
+} from 'lucide-react'
+import Highlighter from 'react-highlight-words'
+import { formatDistanceToNow } from 'date-fns'
+
+interface SearchResultsProps {
+  searchParams: {
+    q?: string
+    categories?: string
+    tags?: string
+    authors?: string
+    sort?: string
+    page?: string
+    from?: string
+    to?: string
+  }
+}
+
+export function SearchResults({ searchParams }: SearchResultsProps) {
+  const router = useRouter()
+  const [results, setResults] = useState<SearchResult[]>([])
+  const [totalResults, setTotalResults] = useState(0)
+  const [totalPages, setTotalPages] = useState(0)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [suggestions, setSuggestions] = useState<string[]>([])
+  const [relatedTopics, setRelatedTopics] = useState<string[]>([])
+  const [loading, setLoading] = useState(false)
+  const [facets, setFacets] = useState<any>({})
+
+  const query = searchParams.q || ''
+  const sortBy = (searchParams.sort as any) || 'relevance'
+  const currentPageFromParams = parseInt(searchParams.page || '1')
+
+  useEffect(() => {
+    if (query) {
+      performSearch()
+    }
+  }, [query, searchParams])
+
+  const performSearch = async () => {
+    setLoading(true)
+    try {
+      const params = new URLSearchParams()
+
+      if (query) params.set('q', query)
+      if (searchParams.categories) params.set('categories', searchParams.categories)
+      if (searchParams.tags) params.set('tags', searchParams.tags)
+      if (searchParams.authors) params.set('authors', searchParams.authors)
+      if (searchParams.sort) params.set('sort', searchParams.sort)
+      if (searchParams.page) params.set('page', searchParams.page)
+      if (searchParams.from) params.set('from', searchParams.from)
+      if (searchParams.to) params.set('to', searchParams.to)
+
+      const response = await fetch(`/api/search?${params.toString()}`)
+      const data = await response.json()
+
+      if (response.ok) {
+        setResults(data.results || [])
+        setTotalResults(data.totalResults || 0)
+        setTotalPages(data.totalPages || 0)
+        setCurrentPage(data.page || 1)
+        setSuggestions(data.suggestions || [])
+        setRelatedTopics(data.relatedTopics || [])
+        setFacets(data.facets || {})
+      } else {
+        console.error('Search error:', data.error)
+      }
+    } catch (error) {
+      console.error('Search request failed:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSortChange = (newSort: string) => {
+    const params = new URLSearchParams(window.location.search)
+    params.set('sort', newSort)
+    params.delete('page') // Reset to first page
+    router.push(`/search?${params.toString()}`)
+  }
+
+  const handlePageChange = (page: number) => {
+    const params = new URLSearchParams(window.location.search)
+    params.set('page', page.toString())
+    router.push(`/search?${params.toString()}`)
+  }
+
+  const handleSuggestionClick = (suggestion: string) => {
+    const params = new URLSearchParams()
+    params.set('q', suggestion)
+    router.push(`/search?${params.toString()}`)
+  }
+
+  const handleTopicClick = (topic: string) => {
+    const params = new URLSearchParams(window.location.search)
+    const currentQuery = params.get('q') || ''
+    params.set('q', currentQuery ? `${currentQuery} ${topic}` : topic)
+    params.delete('page')
+    router.push(`/search?${params.toString()}`)
+  }
+
+  const searchTerms = query.toLowerCase().split(' ').filter(Boolean)
+
+  if (!query) {
+    return (
+      <Card>
+        <CardContent className="py-12 text-center">
+          <Search className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <h3 className="text-lg font-semibold mb-2">Start searching</h3>
+          <p className="text-muted-foreground">
+            Enter a search term to find relevant blog posts
+          </p>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Search Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">
+            {loading ? 'Searching...' : `${totalResults} results`}
+            {query && (
+              <span className="text-muted-foreground font-normal">
+                {' '}for "{query}"
+              </span>
+            )}
+          </h2>
+          {!loading && totalResults > 0 && (
+            <p className="text-sm text-muted-foreground mt-1">
+              Page {currentPage} of {totalPages}
+            </p>
+          )}
+        </div>
+
+        {totalResults > 0 && (
+          <Select value={sortBy} onValueChange={handleSortChange}>
+            <SelectTrigger className="w-40">
+              <ArrowUpDown className="h-4 w-4 mr-2" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="relevance">Relevance</SelectItem>
+              <SelectItem value="date">Newest</SelectItem>
+              <SelectItem value="popularity">Popular</SelectItem>
+              <SelectItem value="title">Title A-Z</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
+      </div>
+
+      {/* Search Suggestions */}
+      {suggestions.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium">Did you mean?</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="flex flex-wrap gap-2">
+              {suggestions.map((suggestion, index) => (
+                <Button
+                  key={index}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleSuggestionClick(suggestion)}
+                >
+                  {suggestion}
+                </Button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* No Results */}
+      {!loading && totalResults === 0 && (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <Search className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No results found</h3>
+            <p className="text-muted-foreground mb-4">
+              Try adjusting your search terms or filters
+            </p>
+
+            {/* Related Topics */}
+            {relatedTopics.length > 0 && (
+              <div className="mt-6">
+                <h4 className="text-sm font-medium mb-3">Try these topics:</h4>
+                <div className="flex flex-wrap gap-2 justify-center">
+                  {relatedTopics.map((topic, index) => (
+                    <Badge
+                      key={index}
+                      variant="secondary"
+                      className="cursor-pointer hover:bg-secondary/80"
+                      onClick={() => handleTopicClick(topic)}
+                    >
+                      {topic}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Loading State */}
+      {loading && (
+        <div className="space-y-4">
+          {[...Array(5)].map((_, i) => (
+            <Card key={i}>
+              <CardContent className="p-6">
+                <div className="animate-pulse space-y-3">
+                  <div className="h-4 bg-muted rounded w-3/4"></div>
+                  <div className="h-3 bg-muted rounded w-full"></div>
+                  <div className="h-3 bg-muted rounded w-2/3"></div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Search Results */}
+      {!loading && results.length > 0 && (
+        <div className="space-y-4">
+          {results.map((result, index) => (
+            <Card key={result.id} className="hover:shadow-md transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold mb-2">
+                      <a
+                        href={`/blog/${result.slug}`}
+                        className="hover:text-primary transition-colors"
+                        dangerouslySetInnerHTML={{
+                          __html: result.highlightedTitle || result.title
+                        }}
+                      />
+                    </h3>
+
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
+                      <span className="flex items-center gap-1">
+                        <User className="h-3 w-3" />
+                        {result.author.name}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        {formatDistanceToNow(new Date(result.publishedAt), { addSuffix: true })}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {result.readTime} min read
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <TrendingUp className="h-3 w-3" />
+                        {result.views} views
+                      </span>
+                    </div>
+                  </div>
+
+                  {result.relevanceScore && sortBy === 'relevance' && (
+                    <Badge variant="outline" className="ml-4">
+                      {Math.round(result.relevanceScore)}% match
+                    </Badge>
+                  )}
+                </div>
+
+                <p
+                  className="text-muted-foreground mb-4 leading-relaxed"
+                  dangerouslySetInnerHTML={{
+                    __html: result.highlightedExcerpt || result.excerpt
+                  }}
+                />
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Badge variant="secondary">
+                      {result.category.name}
+                    </Badge>
+                    <div className="flex flex-wrap gap-1">
+                      {result.tags.slice(0, 3).map((tag) => (
+                        <Badge key={tag.id} variant="outline" className="text-xs">
+                          #{tag.name}
+                        </Badge>
+                      ))}
+                      {result.tags.length > 3 && (
+                        <Badge variant="outline" className="text-xs">
+                          +{result.tags.length - 3}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    <span>{result._count.comments} comments</span>
+                    <span>{result._count.likes} likes</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {!loading && totalPages > 1 && (
+        <div className="flex justify-center gap-2">
+          <Button
+            variant="outline"
+            disabled={currentPage <= 1}
+            onClick={() => handlePageChange(currentPage - 1)}
+          >
+            Previous
+          </Button>
+
+          {[...Array(Math.min(5, totalPages))].map((_, i) => {
+            const pageNum = Math.max(1, currentPage - 2) + i
+            if (pageNum > totalPages) return null
+
+            return (
+              <Button
+                key={pageNum}
+                variant={pageNum === currentPage ? "default" : "outline"}
+                onClick={() => handlePageChange(pageNum)}
+              >
+                {pageNum}
+              </Button>
+            )
+          })}
+
+          <Button
+            variant="outline"
+            disabled={currentPage >= totalPages}
+            onClick={() => handlePageChange(currentPage + 1)}
+          >
+            Next
+          </Button>
+        </div>
+      )}
+
+      {/* Related Topics */}
+      {!loading && relatedTopics.length > 0 && results.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium">Related Topics</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="flex flex-wrap gap-2">
+              {relatedTopics.map((topic, index) => (
+                <Badge
+                  key={index}
+                  variant="secondary"
+                  className="cursor-pointer hover:bg-secondary/80"
+                  onClick={() => handleTopicClick(topic)}
+                >
+                  {topic}
+                </Badge>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  )
+}
+```
+
+## Performance Optimization
+
+### Database Indexing
+
+Add these indexes to your PostgreSQL database for better search performance:
+
+```sql
+-- Full-text search indexes
+CREATE INDEX idx_posts_title_search ON posts USING gin(to_tsvector('english', title));
+CREATE INDEX idx_posts_content_search ON posts USING gin(to_tsvector('english', content));
+CREATE INDEX idx_posts_excerpt_search ON posts USING gin(to_tsvector('english', excerpt));
+
+-- Composite indexes for filtering
+CREATE INDEX idx_posts_status_published ON posts (status, published_at DESC) WHERE status = 'PUBLISHED';
+CREATE INDEX idx_posts_category_published ON posts (category_id, published_at DESC) WHERE status = 'PUBLISHED';
+CREATE INDEX idx_posts_author_published ON posts (author_id, published_at DESC) WHERE status = 'PUBLISHED';
+
+-- Search analytics indexes
+CREATE INDEX idx_search_queries_created_at ON search_queries (created_at DESC);
+CREATE INDEX idx_search_queries_query ON search_queries (query);
+CREATE INDEX idx_trending_topics_score ON trending_topics (score DESC, updated_at DESC);
+```
+
+### Caching Strategy
+
+Implement Redis caching for search results:
+
+```typescript
+// Add to your search service
+import { Redis } from "ioredis";
+
+const redis = new Redis(process.env.REDIS_URL!);
+
+export async function getCachedSearchResults(
+  cacheKey: string,
+  searchFunction: () => Promise<any>
+): Promise<any> {
+  const cached = await redis.get(cacheKey);
+
+  if (cached) {
+    return JSON.parse(cached);
+  }
+
+  const results = await searchFunction();
+
+  // Cache for 5 minutes
+  await redis.setex(cacheKey, 300, JSON.stringify(results));
+
+  return results;
+}
+```
+
+## Analytics & Insights
+
+The search system provides comprehensive analytics:
+
+1. **Search Query Tracking**: All searches are logged with metadata
+2. **Click-through Tracking**: Monitor which results users click
+3. **Trending Topics**: Automatic discovery of popular search terms
+4. **Performance Metrics**: Search speed and relevance scoring
+5. **User Behavior**: Search patterns and preferences
+
+## Next Steps
+
+Your advanced search and filtering system is now complete! You should have:
+
+1. ✅ Full-text search with PostgreSQL
+2. ✅ Advanced filtering and faceted search
+3. ✅ Real-time search suggestions and autocomplete
+4. ✅ Search analytics and trending topics
+5. ✅ Intelligent content recommendations
+6. ✅ Performance optimized with proper indexing
+7. ✅ Modern, responsive search interface
+8. ✅ Search history and saved searches
+
+**Continue to**: [Step 10: SEO & Performance Optimization →](../10-seo-performance)
+
+---
+
+**Estimated Time**: 240-300 minutes
+
+**Difficulty**: Advanced
+
+**Next**: [SEO & Performance Optimization →](../10-seo-performance)

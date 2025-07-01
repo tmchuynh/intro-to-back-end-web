@@ -1,0 +1,378 @@
+# Step 1: Project Setup & Installation
+
+## Objective
+
+Set up a new Next.js 14 project with TypeScript, Tailwind CSS, and all necessary dependencies for our blog platform.
+
+## What You'll Learn
+
+- How to create a Next.js project with App Router
+- How to configure TypeScript for better development experience
+- How to set up Tailwind CSS for styling
+- How to install and configure shadcn/ui
+- How to organize your project structure
+
+## Prerequisites
+
+- Node.js 18+ installed
+- npm or yarn package manager
+- Basic knowledge of React and TypeScript
+
+## Step-by-Step Instructions
+
+### 1. Create Next.js Project
+
+```bash
+npx create-next-app@latest blog-platform --typescript --tailwind --eslint --app --src-dir --import-alias "@/*"
+cd blog-platform
+```
+
+### 2. Install Core Dependencies
+
+```bash
+npm install @next/mdx @mdx-js/loader @mdx-js/react
+npm install next-auth
+npm install @types/node @types/react @types/react-dom
+npm install prisma @prisma/client
+npm install contentful
+```
+
+### 3. Install MDX and Content Processing Dependencies
+
+```bash
+npm install remark remark-gfm remark-toc
+npm install rehype rehype-slug rehype-autolink-headings rehype-prism-plus
+npm install gray-matter
+npm install reading-time
+```
+
+### 4. Install UI and Styling Dependencies
+
+```bash
+npm install lucide-react
+npm install class-variance-authority clsx tailwind-merge
+npm install @radix-ui/react-slot
+npm install next-themes
+```
+
+### 5. Initialize shadcn/ui
+
+```bash
+npx shadcn-ui@latest init
+```
+
+When prompted, choose:
+
+- Would you like to use TypeScript? → Yes
+- Which style would you like to use? → Default
+- Which color would you like to use as base color? → Slate
+- Where is your global CSS file? → src/app/globals.css
+- Would you like to use CSS variables for colors? → Yes
+- Where is your tailwind.config.js located? → tailwind.config.ts
+- Configure the import alias for components? → src/components
+- Configure the import alias for utils? → src/lib/utils
+
+### 6. Install Essential shadcn/ui Components
+
+```bash
+npx shadcn-ui@latest add button card input label textarea
+npx shadcn-ui@latest add navigation-menu dropdown-menu
+npx shadcn-ui@latest add avatar badge separator
+npx shadcn-ui@latest add dialog sheet
+npx shadcn-ui@latest add toast sonner
+```
+
+### 7. Project Structure Setup
+
+Create the following folder structure:
+
+```
+src/
+├── app/
+│   ├── (auth)/
+│   │   ├── login/
+│   │   └── register/
+│   ├── blog/
+│   │   ├── [slug]/
+│   │   └── category/
+│   ├── dashboard/
+│   ├── api/
+│   │   ├── auth/
+│   │   ├── posts/
+│   │   └── comments/
+│   └── globals.css
+├── components/
+│   ├── ui/           # shadcn/ui components
+│   ├── blog/
+│   ├── auth/
+│   └── layout/
+├── lib/
+│   ├── auth.ts
+│   ├── db.ts
+│   ├── contentful.ts
+│   └── utils.ts
+├── content/
+│   └── posts/
+├── types/
+└── styles/
+```
+
+### 8. Environment Variables Setup
+
+Create `.env.local` file:
+
+```env
+# Database
+DATABASE_URL="postgresql://username:password@localhost:5432/blog_platform"
+
+# NextAuth
+NEXTAUTH_URL="http://localhost:3000"
+NEXTAUTH_SECRET="your-secret-key-here"
+
+# OAuth Providers (Optional)
+GOOGLE_CLIENT_ID=""
+GOOGLE_CLIENT_SECRET=""
+GITHUB_ID=""
+GITHUB_SECRET=""
+
+# Contentful
+CONTENTFUL_SPACE_ID=""
+CONTENTFUL_ACCESS_TOKEN=""
+CONTENTFUL_PREVIEW_ACCESS_TOKEN=""
+
+# Other
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
+```
+
+### 9. Update package.json Scripts
+
+Add these scripts to your `package.json`:
+
+```json
+{
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate dev",
+    "db:studio": "prisma studio"
+  }
+}
+```
+
+### 10. Configure TypeScript
+
+Update `tsconfig.json`:
+
+```json
+{
+  "compilerOptions": {
+    "target": "es5",
+    "lib": ["dom", "dom.iterable", "es6"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@/components/*": ["./src/components/*"],
+      "@/lib/*": ["./src/lib/*"],
+      "@/types/*": ["./src/types/*"]
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}
+```
+
+### 11. Configure Tailwind CSS
+
+Update `tailwind.config.ts`:
+
+```typescript
+import type { Config } from "tailwindcss";
+
+const config: Config = {
+  darkMode: ["class"],
+  content: [
+    "./pages/**/*.{ts,tsx}",
+    "./components/**/*.{ts,tsx}",
+    "./app/**/*.{ts,tsx}",
+    "./src/**/*.{ts,tsx}",
+  ],
+  theme: {
+    container: {
+      center: true,
+      padding: "2rem",
+      screens: {
+        "2xl": "1400px",
+      },
+    },
+    extend: {
+      colors: {
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
+        primary: {
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
+        },
+        secondary: {
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))",
+        },
+        destructive: {
+          DEFAULT: "hsl(var(--destructive))",
+          foreground: "hsl(var(--destructive-foreground))",
+        },
+        muted: {
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))",
+        },
+        accent: {
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--accent-foreground))",
+        },
+        popover: {
+          DEFAULT: "hsl(var(--popover))",
+          foreground: "hsl(var(--popover-foreground))",
+        },
+        card: {
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))",
+        },
+      },
+      borderRadius: {
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
+      },
+      keyframes: {
+        "accordion-down": {
+          from: { height: "0" },
+          to: { height: "var(--radix-accordion-content-height)" },
+        },
+        "accordion-up": {
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: "0" },
+        },
+      },
+      animation: {
+        "accordion-down": "accordion-down 0.2s ease-out",
+        "accordion-up": "accordion-up 0.2s ease-out",
+      },
+      typography: {
+        DEFAULT: {
+          css: {
+            maxWidth: "none",
+            code: {
+              backgroundColor: "hsl(var(--muted))",
+              padding: "0.2em 0.4em",
+              borderRadius: "0.25rem",
+              fontWeight: "400",
+            },
+            "code::before": {
+              content: '""',
+            },
+            "code::after": {
+              content: '""',
+            },
+          },
+        },
+      },
+    },
+  },
+  plugins: [require("tailwindcss-animate"), require("@tailwindcss/typography")],
+};
+
+export default config;
+```
+
+### 12. Test Your Setup
+
+Run the development server:
+
+```bash
+npm run dev
+```
+
+Visit `http://localhost:3000` to see your Next.js application running.
+
+## Key Files Created
+
+- `package.json` - Project dependencies and scripts
+- `tsconfig.json` - TypeScript configuration
+- `tailwind.config.ts` - Tailwind CSS configuration
+- `.env.local` - Environment variables
+- Basic project structure with organized folders
+
+## Common Issues and Solutions
+
+### Issue: TypeScript errors after installation
+
+**Solution**: Make sure all TypeScript types are installed:
+
+```bash
+npm install --save-dev @types/node @types/react @types/react-dom
+```
+
+### Issue: Tailwind styles not loading
+
+**Solution**: Check that `globals.css` includes Tailwind directives:
+
+```css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+```
+
+### Issue: shadcn/ui components not found
+
+**Solution**: Make sure you've run the init command and installed components:
+
+```bash
+npx shadcn-ui@latest init
+npx shadcn-ui@latest add button
+```
+
+## Next Steps
+
+Once your project is set up and running:
+
+1. Verify all dependencies are installed correctly
+2. Test that you can create and run the development server
+3. Explore the basic project structure
+4. Move on to [Step 2: Database Design & Setup](../02-database-setup)
+
+## Additional Resources
+
+- [Next.js Documentation](https://nextjs.org/docs)
+- [Tailwind CSS Documentation](https://tailwindcss.com/docs)
+- [shadcn/ui Documentation](https://ui.shadcn.com/)
+- [TypeScript Documentation](https://www.typescriptlang.org/docs/)
+
+---
+
+**Estimated Time**: 45-60 minutes
+
+**Difficulty**: Beginner
+
+**Next**: [Database Design & Setup →](../02-database-setup)

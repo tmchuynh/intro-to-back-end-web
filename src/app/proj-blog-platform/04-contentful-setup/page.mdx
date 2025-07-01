@@ -1,0 +1,1248 @@
+# Step 4: Contentful CMS Integration
+
+## Objective
+
+Integrate Contentful as a headless CMS for managing blog content, enabling non-technical users to create and edit blog posts through Contentful's intuitive interface while maintaining the flexibility of our Next.js application.
+
+## What You'll Learn
+
+- How to set up and configure Contentful CMS
+- How to create content models for blog posts
+- How to fetch content from Contentful using the JavaScript SDK
+- How to handle draft and published content
+- How to implement content preview functionality
+- How to sync Contentful content with your local database
+
+## Prerequisites
+
+- Completed [Step 3: Authentication Implementation](../03-authentication)
+- Basic understanding of headless CMS concepts
+- Contentful account (free tier available)
+
+## Contentful vs Database Content
+
+Our blog platform will use a hybrid approach:
+
+```
+Content Strategy:
+├── Contentful (Headless CMS)
+│   ├── Blog post content
+│   ├── Media assets (images, videos)
+│   ├── SEO metadata
+│   └── Content drafts/previews
+└── PostgreSQL Database
+    ├── User management
+    ├── Comments and interactions
+    ├── Content references/IDs
+    └── Application data
+```
+
+## Step-by-Step Instructions
+
+### 1. Create Contentful Account and Space
+
+1. Go to [Contentful](https://www.contentful.com/) and create a free account
+2. Create a new space called "Blog Platform"
+3. Note down your Space ID from the Settings → General tab
+
+### 2. Generate API Keys
+
+1. Go to Settings → API keys
+2. Click "Add API key"
+3. Name it "Blog Platform API"
+4. Copy the following values:
+   - Space ID
+   - Content Delivery API - access token
+   - Content Preview API - access token
+
+### 3. Install Contentful Dependencies
+
+```bash
+npm install contentful
+npm install @contentful/rich-text-react-renderer
+npm install @contentful/rich-text-types
+```
+
+### 4. Update Environment Variables
+
+Add to your `.env.local`:
+
+```env
+# Contentful
+CONTENTFUL_SPACE_ID="your-space-id-here"
+CONTENTFUL_ACCESS_TOKEN="your-content-delivery-api-token"
+CONTENTFUL_PREVIEW_ACCESS_TOKEN="your-content-preview-api-token"
+CONTENTFUL_ENVIRONMENT="master"
+
+# Content Preview (for draft content)
+CONTENTFUL_PREVIEW_SECRET="your-preview-secret-here"
+```
+
+### 5. Create Contentful Client
+
+Create `src/lib/contentful.ts`:
+
+```typescript
+import { createClient, Entry, Asset } from "contentful";
+
+export const contentfulClient = createClient({
+  space: process.env.CONTENTFUL_SPACE_ID!,
+  accessToken: process.env.CONTENTFUL_ACCESS_TOKEN!,
+  environment: process.env.CONTENTFUL_ENVIRONMENT || "master",
+});
+
+export const previewClient = createClient({
+  space: process.env.CONTENTFUL_SPACE_ID!,
+  accessToken: process.env.CONTENTFUL_PREVIEW_ACCESS_TOKEN!,
+  environment: process.env.CONTENTFUL_ENVIRONMENT || "master",
+  host: "preview.contentful.com",
+});
+
+// Types for our content models
+export interface BlogPostFields {
+  title: string;
+  slug: string;
+  excerpt: string;
+  content: any; // Rich text content
+  coverImage?: Asset;
+  author: Entry<AuthorFields>;
+  category: Entry<CategoryFields>;
+  tags?: Entry<TagFields>[];
+  publishDate: string;
+  readingTime?: number;
+  featured?: boolean;
+  metaTitle?: string;
+  metaDescription?: string;
+  metaKeywords?: string[];
+}
+
+export interface AuthorFields {
+  name: string;
+  bio?: string;
+  avatar?: Asset;
+  email?: string;
+  website?: string;
+  twitter?: string;
+  github?: string;
+}
+
+export interface CategoryFields {
+  name: string;
+  slug: string;
+  description?: string;
+  color?: string;
+}
+
+export interface TagFields {
+  name: string;
+  slug: string;
+}
+
+export type BlogPost = Entry<BlogPostFields>;
+export type Author = Entry<AuthorFields>;
+export type Category = Entry<CategoryFields>;
+export type Tag = Entry<TagFields>;
+
+// Helper function to get client based on preview mode
+export function getContentfulClient(preview = false) {
+  return preview ? previewClient : contentfulClient;
+}
+
+// Helper function to extract asset URL
+export function getAssetUrl(asset: Asset | undefined): string | undefined {
+  if (!asset?.fields?.file?.url) return undefined;
+  return asset.fields.file.url.startsWith("//")
+    ? `https:${asset.fields.file.url}`
+    : asset.fields.file.url;
+}
+
+// Helper function to extract asset details
+export function getAssetDetails(asset: Asset | undefined) {
+  if (!asset?.fields?.file) return null;
+
+  return {
+    url: getAssetUrl(asset),
+    title: asset.fields.title || "",
+    description: asset.fields.description || "",
+    width: asset.fields.file.details?.image?.width,
+    height: asset.fields.file.details?.image?.height,
+    size: asset.fields.file.details?.size,
+    contentType: asset.fields.file.contentType,
+  };
+}
+```
+
+### 6. Create Content Fetching Utilities
+
+Create `src/lib/contentful-utils.ts`:
+
+```typescript
+import {
+  getContentfulClient,
+  BlogPost,
+  Author,
+  Category,
+  Tag,
+} from "./contentful";
+import { Entry } from "contentful";
+
+export async function getAllBlogPosts(preview = false): Promise<BlogPost[]> {
+  const client = getContentfulClient(preview);
+
+  try {
+    const response = await client.getEntries<any>({
+      content_type: "blogPost",
+      order: "-fields.publishDate",
+      include: 2, // Include linked entries
+    });
+
+    return response.items as BlogPost[];
+  } catch (error) {
+    console.error("Error fetching blog posts:", error);
+    return [];
+  }
+}
+
+export async function getBlogPostBySlug(
+  slug: string,
+  preview = false
+): Promise<BlogPost | null> {
+  const client = getContentfulClient(preview);
+
+  try {
+    const response = await client.getEntries<any>({
+      content_type: "blogPost",
+      "fields.slug": slug,
+      include: 2,
+      limit: 1,
+    });
+
+    return (response.items[0] as BlogPost) || null;
+  } catch (error) {
+    console.error("Error fetching blog post by slug:", error);
+    return null;
+  }
+}
+
+export async function getBlogPostsByCategory(
+  categorySlug: string,
+  preview = false
+): Promise<BlogPost[]> {
+  const client = getContentfulClient(preview);
+
+  try {
+    const response = await client.getEntries<any>({
+      content_type: "blogPost",
+      "fields.category.fields.slug": categorySlug,
+      order: "-fields.publishDate",
+      include: 2,
+    });
+
+    return response.items as BlogPost[];
+  } catch (error) {
+    console.error("Error fetching blog posts by category:", error);
+    return [];
+  }
+}
+
+export async function getBlogPostsByTag(
+  tagSlug: string,
+  preview = false
+): Promise<BlogPost[]> {
+  const client = getContentfulClient(preview);
+
+  try {
+    const response = await client.getEntries<any>({
+      content_type: "blogPost",
+      "fields.tags.fields.slug": tagSlug,
+      order: "-fields.publishDate",
+      include: 2,
+    });
+
+    return response.items as BlogPost[];
+  } catch (error) {
+    console.error("Error fetching blog posts by tag:", error);
+    return [];
+  }
+}
+
+export async function getFeaturedBlogPosts(
+  preview = false
+): Promise<BlogPost[]> {
+  const client = getContentfulClient(preview);
+
+  try {
+    const response = await client.getEntries<any>({
+      content_type: "blogPost",
+      "fields.featured": true,
+      order: "-fields.publishDate",
+      include: 2,
+      limit: 3,
+    });
+
+    return response.items as BlogPost[];
+  } catch (error) {
+    console.error("Error fetching featured blog posts:", error);
+    return [];
+  }
+}
+
+export async function getAllCategories(preview = false): Promise<Category[]> {
+  const client = getContentfulClient(preview);
+
+  try {
+    const response = await client.getEntries<any>({
+      content_type: "category",
+      order: "fields.name",
+    });
+
+    return response.items as Category[];
+  } catch (error) {
+    console.error("Error fetching categories:", error);
+    return [];
+  }
+}
+
+export async function getAllTags(preview = false): Promise<Tag[]> {
+  const client = getContentfulClient(preview);
+
+  try {
+    const response = await client.getEntries<any>({
+      content_type: "tag",
+      order: "fields.name",
+    });
+
+    return response.items as Tag[];
+  } catch (error) {
+    console.error("Error fetching tags:", error);
+    return [];
+  }
+}
+
+export async function getAllAuthors(preview = false): Promise<Author[]> {
+  const client = getContentfulClient(preview);
+
+  try {
+    const response = await client.getEntries<any>({
+      content_type: "author",
+      order: "fields.name",
+    });
+
+    return response.items as Author[];
+  } catch (error) {
+    console.error("Error fetching authors:", error);
+    return [];
+  }
+}
+
+export async function searchBlogPosts(
+  query: string,
+  preview = false
+): Promise<BlogPost[]> {
+  const client = getContentfulClient(preview);
+
+  try {
+    const response = await client.getEntries<any>({
+      content_type: "blogPost",
+      query: query,
+      order: "-fields.publishDate",
+      include: 2,
+    });
+
+    return response.items as BlogPost[];
+  } catch (error) {
+    console.error("Error searching blog posts:", error);
+    return [];
+  }
+}
+
+export async function getBlogPostsByAuthor(
+  authorId: string,
+  preview = false
+): Promise<BlogPost[]> {
+  const client = getContentfulClient(preview);
+
+  try {
+    const response = await client.getEntries<any>({
+      content_type: "blogPost",
+      "fields.author.sys.id": authorId,
+      order: "-fields.publishDate",
+      include: 2,
+    });
+
+    return response.items as BlogPost[];
+  } catch (error) {
+    console.error("Error fetching blog posts by author:", error);
+    return [];
+  }
+}
+```
+
+### 7. Create Rich Text Renderer
+
+Create `src/components/contentful/rich-text-renderer.tsx`:
+
+```typescript
+import { documentToReactComponents } from '@contentful/rich-text-react-renderer'
+import { BLOCKS, INLINES, MARKS } from '@contentful/rich-text-types'
+import { Document } from '@contentful/rich-text-types'
+import Image from 'next/image'
+import Link from 'next/link'
+import { getAssetUrl } from '@/lib/contentful'
+
+const customRenderers = {
+  renderMark: {
+    [MARKS.BOLD]: (text: React.ReactNode) => (
+      <strong className="font-bold">{text}</strong>
+    ),
+    [MARKS.ITALIC]: (text: React.ReactNode) => (
+      <em className="italic">{text}</em>
+    ),
+    [MARKS.CODE]: (text: React.ReactNode) => (
+      <code className="bg-muted px-1 py-0.5 rounded text-sm font-mono">
+        {text}
+      </code>
+    ),
+  },
+  renderNode: {
+    [BLOCKS.PARAGRAPH]: (node: any, children: React.ReactNode) => (
+      <p className="mb-4 leading-7">{children}</p>
+    ),
+    [BLOCKS.HEADING_1]: (node: any, children: React.ReactNode) => (
+      <h1 className="text-4xl font-bold mb-6 mt-8">{children}</h1>
+    ),
+    [BLOCKS.HEADING_2]: (node: any, children: React.ReactNode) => (
+      <h2 className="text-3xl font-semibold mb-4 mt-6">{children}</h2>
+    ),
+    [BLOCKS.HEADING_3]: (node: any, children: React.ReactNode) => (
+      <h3 className="text-2xl font-semibold mb-3 mt-5">{children}</h3>
+    ),
+    [BLOCKS.HEADING_4]: (node: any, children: React.ReactNode) => (
+      <h4 className="text-xl font-semibold mb-2 mt-4">{children}</h4>
+    ),
+    [BLOCKS.HEADING_5]: (node: any, children: React.ReactNode) => (
+      <h5 className="text-lg font-semibold mb-2 mt-3">{children}</h5>
+    ),
+    [BLOCKS.HEADING_6]: (node: any, children: React.ReactNode) => (
+      <h6 className="text-base font-semibold mb-2 mt-2">{children}</h6>
+    ),
+    [BLOCKS.UL_LIST]: (node: any, children: React.ReactNode) => (
+      <ul className="list-disc list-inside mb-4 space-y-1">{children}</ul>
+    ),
+    [BLOCKS.OL_LIST]: (node: any, children: React.ReactNode) => (
+      <ol className="list-decimal list-inside mb-4 space-y-1">{children}</ol>
+    ),
+    [BLOCKS.LIST_ITEM]: (node: any, children: React.ReactNode) => (
+      <li className="ml-4">{children}</li>
+    ),
+    [BLOCKS.QUOTE]: (node: any, children: React.ReactNode) => (
+      <blockquote className="border-l-4 border-primary pl-4 py-2 my-4 italic bg-muted/50">
+        {children}
+      </blockquote>
+    ),
+    [BLOCKS.HR]: () => <hr className="my-8 border-border" />,
+    [BLOCKS.EMBEDDED_ASSET]: (node: any) => {
+      const asset = node.data.target
+      const imageUrl = getAssetUrl(asset)
+
+      if (!imageUrl) return null
+
+      return (
+        <div className="my-6">
+          <Image
+            src={imageUrl}
+            alt={asset.fields.title || ''}
+            width={asset.fields.file?.details?.image?.width || 800}
+            height={asset.fields.file?.details?.image?.height || 600}
+            className="rounded-lg w-full h-auto"
+            priority={false}
+          />
+          {asset.fields.description && (
+            <p className="text-sm text-muted-foreground text-center mt-2 italic">
+              {asset.fields.description}
+            </p>
+          )}
+        </div>
+      )
+    },
+    [INLINES.HYPERLINK]: (node: any, children: React.ReactNode) => {
+      const url = node.data.uri
+      const isExternal = url.startsWith('http')
+
+      if (isExternal) {
+        return (
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary hover:underline"
+          >
+            {children}
+          </a>
+        )
+      }
+
+      return (
+        <Link href={url} className="text-primary hover:underline">
+          {children}
+        </Link>
+      )
+    },
+    [INLINES.ENTRY_HYPERLINK]: (node: any, children: React.ReactNode) => {
+      const entry = node.data.target
+
+      if (entry.sys.contentType.sys.id === 'blogPost') {
+        return (
+          <Link
+            href={`/blog/${entry.fields.slug}`}
+            className="text-primary hover:underline"
+          >
+            {children}
+          </Link>
+        )
+      }
+
+      return <span>{children}</span>
+    },
+  },
+}
+
+interface RichTextRendererProps {
+  content: Document
+  className?: string
+}
+
+export function RichTextRenderer({ content, className = '' }: RichTextRendererProps) {
+  if (!content) {
+    return null
+  }
+
+  return (
+    <div className={`prose prose-lg max-w-none ${className}`}>
+      {documentToReactComponents(content, customRenderers)}
+    </div>
+  )
+}
+```
+
+### 8. Create Blog Post Component
+
+Create `src/components/contentful/blog-post-card.tsx`:
+
+```typescript
+import Link from 'next/link'
+import Image from 'next/image'
+import { BlogPost, getAssetUrl } from '@/lib/contentful'
+import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { CalendarDays, Clock, User } from 'lucide-react'
+import { format } from 'date-fns'
+
+interface BlogPostCardProps {
+  post: BlogPost
+  featured?: boolean
+}
+
+export function BlogPostCard({ post, featured = false }: BlogPostCardProps) {
+  const coverImageUrl = getAssetUrl(post.fields.coverImage)
+  const authorAvatarUrl = getAssetUrl(post.fields.author.fields.avatar)
+  const publishDate = new Date(post.fields.publishDate)
+
+  return (
+    <Card className={`overflow-hidden ${featured ? 'col-span-2 row-span-2' : ''} hover:shadow-lg transition-shadow`}>
+      {coverImageUrl && (
+        <div className={`relative ${featured ? 'h-64' : 'h-48'} overflow-hidden`}>
+          <Image
+            src={coverImageUrl}
+            alt={post.fields.title}
+            fill
+            className="object-cover hover:scale-105 transition-transform duration-300"
+          />
+          {post.fields.featured && (
+            <Badge className="absolute top-4 left-4" variant="secondary">
+              Featured
+            </Badge>
+          )}
+        </div>
+      )}
+
+      <CardHeader className={featured ? 'pb-2' : 'pb-1'}>
+        <div className="flex items-center gap-2 mb-2">
+          <Badge variant="outline">
+            {post.fields.category.fields.name}
+          </Badge>
+          {post.fields.tags?.map((tag) => (
+            <Badge key={tag.sys.id} variant="secondary" className="text-xs">
+              {tag.fields.name}
+            </Badge>
+          ))}
+        </div>
+
+        <Link href={`/blog/${post.fields.slug}`}>
+          <h3 className={`font-bold hover:text-primary transition-colors ${
+            featured ? 'text-2xl' : 'text-xl'
+          }`}>
+            {post.fields.title}
+          </h3>
+        </Link>
+      </CardHeader>
+
+      <CardContent className={featured ? 'pb-2' : 'pb-1'}>
+        <p className={`text-muted-foreground ${featured ? 'text-base' : 'text-sm'} line-clamp-3`}>
+          {post.fields.excerpt}
+        </p>
+      </CardContent>
+
+      <CardFooter className="flex items-center justify-between pt-2">
+        <div className="flex items-center gap-2">
+          <Avatar className="h-8 w-8">
+            <AvatarImage src={authorAvatarUrl} />
+            <AvatarFallback>
+              <User className="h-4 w-4" />
+            </AvatarFallback>
+          </Avatar>
+          <div className="text-sm">
+            <p className="font-medium">{post.fields.author.fields.name}</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+          <div className="flex items-center gap-1">
+            <CalendarDays className="h-3 w-3" />
+            <time dateTime={post.fields.publishDate}>
+              {format(publishDate, 'MMM d, yyyy')}
+            </time>
+          </div>
+          {post.fields.readingTime && (
+            <div className="flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              <span>{post.fields.readingTime} min read</span>
+            </div>
+          )}
+        </div>
+      </CardFooter>
+    </Card>
+  )
+}
+```
+
+### 9. Create Preview Mode API Routes
+
+Create `src/app/api/preview/route.ts`:
+
+```typescript
+import { NextRequest, NextResponse } from "next/server";
+import { redirect } from "next/navigation";
+import { getBlogPostBySlug } from "@/lib/contentful-utils";
+
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const secret = searchParams.get("secret");
+  const slug = searchParams.get("slug");
+
+  // Check the secret and next parameters
+  if (secret !== process.env.CONTENTFUL_PREVIEW_SECRET || !slug) {
+    return NextResponse.json({ message: "Invalid token" }, { status: 401 });
+  }
+
+  // Fetch the headless CMS to check if the provided `slug` exists
+  const post = await getBlogPostBySlug(slug, true);
+
+  // If the slug doesn't exist prevent preview mode from being enabled
+  if (!post) {
+    return NextResponse.json({ message: "Invalid slug" }, { status: 401 });
+  }
+
+  // Enable Preview Mode by setting the cookies
+  const response = NextResponse.redirect(new URL(`/blog/${slug}`, request.url));
+  response.cookies.set("__prerender_bypass", "1", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "none",
+    maxAge: 60 * 60, // 1 hour
+  });
+  response.cookies.set("__next_preview_data", "1", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "none",
+    maxAge: 60 * 60, // 1 hour
+  });
+
+  return response;
+}
+```
+
+Create `src/app/api/exit-preview/route.ts`:
+
+```typescript
+import { NextResponse } from "next/server";
+
+export async function GET() {
+  const response = NextResponse.redirect(
+    new URL("/", process.env.NEXT_PUBLIC_APP_URL!)
+  );
+
+  // Clear the preview mode cookies
+  response.cookies.delete("__prerender_bypass");
+  response.cookies.delete("__next_preview_data");
+
+  return response;
+}
+```
+
+### 10. Create Content Models in Contentful
+
+Now you need to create the content models in your Contentful space. Go to your Contentful space and create these content types:
+
+#### Blog Post Content Model
+
+1. Go to Content model → Add content type
+2. Name: "Blog Post", API Identifier: "blogPost"
+3. Add these fields:
+
+| Field Name       | Field ID        | Field Type        | Settings                         |
+| ---------------- | --------------- | ----------------- | -------------------------------- |
+| Title            | title           | Short text        | Required, Unique                 |
+| Slug             | slug            | Short text        | Required, Unique                 |
+| Excerpt          | excerpt         | Long text         | Required                         |
+| Content          | content         | Rich text         | Required                         |
+| Cover Image      | coverImage      | Media             | Optional                         |
+| Author           | author          | Reference         | Required, Accept only "Author"   |
+| Category         | category        | Reference         | Required, Accept only "Category" |
+| Tags             | tags            | Reference (many)  | Optional, Accept only "Tag"      |
+| Publish Date     | publishDate     | Date & time       | Required                         |
+| Reading Time     | readingTime     | Integer           | Optional                         |
+| Featured         | featured        | Boolean           | Optional, default false          |
+| Meta Title       | metaTitle       | Short text        | Optional                         |
+| Meta Description | metaDescription | Long text         | Optional                         |
+| Meta Keywords    | metaKeywords    | Short text (list) | Optional                         |
+
+#### Author Content Model
+
+1. Create content type: "Author", API Identifier: "author"
+2. Add fields:
+
+| Field Name | Field ID | Field Type | Settings |
+| ---------- | -------- | ---------- | -------- |
+| Name       | name     | Short text | Required |
+| Bio        | bio      | Long text  | Optional |
+| Avatar     | avatar   | Media      | Optional |
+| Email      | email    | Short text | Optional |
+| Website    | website  | Short text | Optional |
+| Twitter    | twitter  | Short text | Optional |
+| GitHub     | github   | Short text | Optional |
+
+#### Category Content Model
+
+1. Create content type: "Category", API Identifier: "category"
+2. Add fields:
+
+| Field Name  | Field ID    | Field Type | Settings                    |
+| ----------- | ----------- | ---------- | --------------------------- |
+| Name        | name        | Short text | Required, Unique            |
+| Slug        | slug        | Short text | Required, Unique            |
+| Description | description | Long text  | Optional                    |
+| Color       | color       | Short text | Optional, default "#3B82F6" |
+
+#### Tag Content Model
+
+1. Create content type: "Tag", API Identifier: "tag"
+2. Add fields:
+
+| Field Name | Field ID | Field Type | Settings         |
+| ---------- | -------- | ---------- | ---------------- |
+| Name       | name     | Short text | Required, Unique |
+| Slug       | slug     | Short text | Required, Unique |
+
+### 11. Create Sample Content
+
+In your Contentful space, create some sample content:
+
+#### Create Authors
+
+1. Go to Content → Add entry → Author
+2. Create at least 2 authors with names, bios, and avatars
+
+#### Create Categories
+
+1. Go to Content → Add entry → Category
+2. Create categories like:
+   - Web Development (slug: web-development, color: #3B82F6)
+   - JavaScript (slug: javascript, color: #F59E0B)
+   - React (slug: react, color: #06B6D4)
+
+#### Create Tags
+
+1. Go to Content → Add entry → Tag
+2. Create tags like:
+   - Next.js (slug: nextjs)
+   - TypeScript (slug: typescript)
+   - Tutorial (slug: tutorial)
+
+#### Create Blog Posts
+
+1. Go to Content → Add entry → Blog Post
+2. Create several blog posts with rich content, images, and proper linking
+
+### 12. Test Contentful Integration
+
+Create a test page `src/app/test-contentful/page.tsx`:
+
+```typescript
+import { getAllBlogPosts, getAllCategories, getAllTags } from '@/lib/contentful-utils'
+import { BlogPostCard } from '@/components/contentful/blog-post-card'
+
+export default async function TestContentfulPage() {
+  const [posts, categories, tags] = await Promise.all([
+    getAllBlogPosts(),
+    getAllCategories(),
+    getAllTags(),
+  ])
+
+  return (
+    <div className="container mx-auto py-8">
+      <h1 className="text-3xl font-bold mb-8">Contentful Integration Test</h1>
+
+      <div className="mb-8">
+        <h2 className="text-2xl font-semibold mb-4">Categories ({categories.length})</h2>
+        <div className="flex gap-2">
+          {categories.map((category) => (
+            <span
+              key={category.sys.id}
+              className="px-3 py-1 rounded-full text-sm"
+              style={{ backgroundColor: category.fields.color }}
+            >
+              {category.fields.name}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <div className="mb-8">
+        <h2 className="text-2xl font-semibold mb-4">Tags ({tags.length})</h2>
+        <div className="flex gap-2 flex-wrap">
+          {tags.map((tag) => (
+            <span
+              key={tag.sys.id}
+              className="px-2 py-1 bg-secondary rounded text-sm"
+            >
+              {tag.fields.name}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <h2 className="text-2xl font-semibold mb-4">Blog Posts ({posts.length})</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {posts.map((post) => (
+            <BlogPostCard key={post.sys.id} post={post} />
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+```
+
+### 13. Create Content Sync Utility
+
+Create `src/lib/content-sync.ts` to sync Contentful content references with your database:
+
+```typescript
+import { prisma } from "./db";
+import {
+  getAllBlogPosts,
+  getAllCategories,
+  getAllTags,
+  getAllAuthors,
+} from "./contentful-utils";
+
+export async function syncContentfulContent() {
+  console.log("🔄 Starting Contentful content sync...");
+
+  try {
+    // Sync categories
+    const categories = await getAllCategories();
+    for (const category of categories) {
+      await prisma.category.upsert({
+        where: { slug: category.fields.slug },
+        update: {
+          name: category.fields.name,
+          description: category.fields.description,
+          color: category.fields.color,
+        },
+        create: {
+          name: category.fields.name,
+          slug: category.fields.slug,
+          description: category.fields.description,
+          color: category.fields.color,
+        },
+      });
+    }
+    console.log(`✅ Synced ${categories.length} categories`);
+
+    // Sync tags
+    const tags = await getAllTags();
+    for (const tag of tags) {
+      await prisma.tag.upsert({
+        where: { slug: tag.fields.slug },
+        update: {
+          name: tag.fields.name,
+        },
+        create: {
+          name: tag.fields.name,
+          slug: tag.fields.slug,
+        },
+      });
+    }
+    console.log(`✅ Synced ${tags.length} tags`);
+
+    // Note: You might want to create a separate content reference table
+    // to store Contentful entry IDs and their relationships
+    const posts = await getAllBlogPosts();
+    console.log(`📝 Found ${posts.length} blog posts in Contentful`);
+
+    console.log("✅ Content sync completed successfully!");
+  } catch (error) {
+    console.error("❌ Error syncing content:", error);
+    throw error;
+  }
+}
+
+// API route to trigger sync
+export async function createSyncAPI() {
+  return async function handler(req: Request) {
+    if (req.method !== "POST") {
+      return new Response("Method not allowed", { status: 405 });
+    }
+
+    try {
+      await syncContentfulContent();
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { "Content-Type": "application/json" },
+      });
+    } catch (error) {
+      return new Response(JSON.stringify({ error: "Sync failed" }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+  };
+}
+```
+
+Create the sync API route `src/app/api/sync-content/route.ts`:
+
+```typescript
+import { syncContentfulContent } from "@/lib/content-sync";
+import { NextResponse } from "next/server";
+
+export async function POST() {
+  try {
+    await syncContentfulContent();
+    return NextResponse.json({
+      success: true,
+      message: "Content synced successfully",
+    });
+  } catch (error) {
+    console.error("Sync error:", error);
+    return NextResponse.json(
+      { success: false, message: "Sync failed" },
+      { status: 500 }
+    );
+  }
+}
+```
+
+### 14. Create Preview Banner Component
+
+Create `src/components/contentful/preview-banner.tsx`:
+
+```typescript
+'use client'
+
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
+import { Eye, X } from 'lucide-react'
+
+export function PreviewBanner() {
+  const exitPreview = async () => {
+    await fetch('/api/exit-preview')
+    window.location.reload()
+  }
+
+  return (
+    <Alert className="mb-4 border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20">
+      <Eye className="h-4 w-4" />
+      <AlertDescription className="flex items-center justify-between">
+        <span>
+          You are viewing this page in <strong>preview mode</strong>. Content may differ from the published version.
+        </span>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={exitPreview}
+          className="ml-4"
+        >
+          <X className="h-3 w-3 mr-1" />
+          Exit Preview
+        </Button>
+      </AlertDescription>
+    </Alert>
+  )
+}
+```
+
+### 15. Update Blog Post Page to Use Contentful
+
+Create/update `src/app/blog/[slug]/page.tsx`:
+
+```typescript
+import { notFound } from 'next/navigation'
+import { getBlogPostBySlug } from '@/lib/contentful-utils'
+import { RichTextRenderer } from '@/components/contentful/rich-text-renderer'
+import { PreviewBanner } from '@/components/contentful/preview-banner'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
+import { getAssetUrl } from '@/lib/contentful'
+import { CalendarDays, Clock, User } from 'lucide-react'
+import { format } from 'date-fns'
+import Image from 'next/image'
+
+interface BlogPostPageProps {
+  params: {
+    slug: string
+  }
+}
+
+export default async function BlogPostPage({ params }: BlogPostPageProps) {
+  const { slug } = params
+
+  // Check if we're in preview mode
+  const isPreview = false // You'll need to implement preview detection
+
+  const post = await getBlogPostBySlug(slug, isPreview)
+
+  if (!post) {
+    notFound()
+  }
+
+  const coverImageUrl = getAssetUrl(post.fields.coverImage)
+  const authorAvatarUrl = getAssetUrl(post.fields.author.fields.avatar)
+  const publishDate = new Date(post.fields.publishDate)
+
+  return (
+    <article className="container mx-auto py-8 max-w-4xl">
+      {isPreview && <PreviewBanner />}
+
+      {/* Cover Image */}
+      {coverImageUrl && (
+        <div className="relative w-full h-96 mb-8 rounded-lg overflow-hidden">
+          <Image
+            src={coverImageUrl}
+            alt={post.fields.title}
+            fill
+            className="object-cover"
+            priority
+          />
+        </div>
+      )}
+
+      {/* Article Header */}
+      <header className="mb-8">
+        <div className="flex items-center gap-2 mb-4">
+          <Badge variant="outline">
+            {post.fields.category.fields.name}
+          </Badge>
+          {post.fields.tags?.map((tag) => (
+            <Badge key={tag.sys.id} variant="secondary">
+              {tag.fields.name}
+            </Badge>
+          ))}
+          {post.fields.featured && (
+            <Badge variant="default">Featured</Badge>
+          )}
+        </div>
+
+        <h1 className="text-4xl font-bold mb-4">{post.fields.title}</h1>
+
+        {post.fields.excerpt && (
+          <p className="text-xl text-muted-foreground mb-6">
+            {post.fields.excerpt}
+          </p>
+        )}
+
+        {/* Author Info */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Avatar className="h-12 w-12">
+              <AvatarImage src={authorAvatarUrl} />
+              <AvatarFallback>
+                <User className="h-6 w-6" />
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <p className="font-semibold">{post.fields.author.fields.name}</p>
+              {post.fields.author.fields.bio && (
+                <p className="text-sm text-muted-foreground">
+                  {post.fields.author.fields.bio}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            <div className="flex items-center gap-1">
+              <CalendarDays className="h-4 w-4" />
+              <time dateTime={post.fields.publishDate}>
+                {format(publishDate, 'MMMM d, yyyy')}
+              </time>
+            </div>
+            {post.fields.readingTime && (
+              <div className="flex items-center gap-1">
+                <Clock className="h-4 w-4" />
+                <span>{post.fields.readingTime} min read</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* Article Content */}
+      <div className="prose prose-lg max-w-none">
+        <RichTextRenderer content={post.fields.content} />
+      </div>
+    </article>
+  )
+}
+
+export async function generateStaticParams() {
+  const posts = await getAllBlogPosts()
+
+  return posts.map((post) => ({
+    slug: post.fields.slug,
+  }))
+}
+
+export async function generateMetadata({ params }: BlogPostPageProps) {
+  const post = await getBlogPostBySlug(params.slug)
+
+  if (!post) {
+    return {}
+  }
+
+  const coverImageUrl = getAssetUrl(post.fields.coverImage)
+
+  return {
+    title: post.fields.metaTitle || post.fields.title,
+    description: post.fields.metaDescription || post.fields.excerpt,
+    keywords: post.fields.metaKeywords,
+    openGraph: {
+      title: post.fields.title,
+      description: post.fields.excerpt,
+      images: coverImageUrl ? [coverImageUrl] : undefined,
+      type: 'article',
+      publishedTime: post.fields.publishDate,
+      authors: [post.fields.author.fields.name],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: post.fields.title,
+      description: post.fields.excerpt,
+      images: coverImageUrl ? [coverImageUrl] : undefined,
+    },
+  }
+}
+```
+
+## Content Workflow
+
+### Editorial Workflow in Contentful
+
+1. **Draft**: Content creators write posts in Contentful
+2. **Review**: Content gets reviewed and edited
+3. **Preview**: Use preview mode to see changes before publishing
+4. **Publish**: Content is published and appears on the site
+
+### Webhook Integration (Optional)
+
+To automatically update your site when content changes:
+
+1. In Contentful, go to Settings → Webhooks
+2. Create a webhook pointing to your deployment trigger (Vercel, Netlify, etc.)
+3. Configure triggers for publish/unpublish events
+
+## SEO and Performance
+
+### Built-in SEO Features
+
+- Meta titles and descriptions from Contentful
+- OpenGraph and Twitter Card metadata
+- Structured data for articles
+- Automatic image optimization with Next.js
+
+### Performance Optimizations
+
+- Static generation with ISR (Incremental Static Regeneration)
+- Image optimization with Next.js Image component
+- Content caching with Contentful CDN
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Content not appearing**
+   - Check if content is published in Contentful
+   - Verify API keys and space ID
+   - Check content model field IDs match your code
+
+2. **Images not loading**
+   - Ensure images are published in Contentful
+   - Check asset URLs are properly constructed
+   - Verify Next.js image domains are configured
+
+3. **Rich text not rendering**
+   - Check rich text content structure
+   - Verify custom renderers are properly configured
+   - Test with simpler content first
+
+### Debugging Commands
+
+```bash
+# Test Contentful connection
+curl "https://cdn.contentful.com/spaces/YOUR_SPACE_ID/entries?access_token=YOUR_ACCESS_TOKEN"
+
+# Check content models
+curl "https://cdn.contentful.com/spaces/YOUR_SPACE_ID/content_types?access_token=YOUR_ACCESS_TOKEN"
+```
+
+## Next Steps
+
+Your Contentful CMS integration is now complete! You should have:
+
+1. ✅ Contentful space configured with content models
+2. ✅ Content fetching utilities implemented
+3. ✅ Rich text rendering with custom components
+4. ✅ Blog post display with metadata
+5. ✅ Preview mode functionality
+6. ✅ Content sync capabilities
+7. ✅ SEO optimization
+
+**Continue to**: [Step 5: MDX Configuration & Content Processing →](../05-mdx-setup)
+
+## Additional Resources
+
+- [Contentful Documentation](https://www.contentful.com/developers/docs/)
+- [Rich Text Rendering Guide](https://www.contentful.com/developers/docs/javascript/tutorials/rendering-rich-text-with-javascript/)
+- [Contentful Webhook Guide](https://www.contentful.com/developers/docs/concepts/webhooks/)
+- [Next.js ISR Documentation](https://nextjs.org/docs/basic-features/data-fetching/incremental-static-regeneration)
+
+---
+
+**Estimated Time**: 90-120 minutes
+
+**Difficulty**: Intermediate to Advanced
+
+**Next**: [MDX Configuration & Content Processing →](../05-mdx-setup)

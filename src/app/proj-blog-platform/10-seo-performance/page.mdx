@@ -1,0 +1,1389 @@
+# Step 10: SEO & Performance Optimization
+
+## Objective
+
+Implement comprehensive SEO optimization, performance enhancements, monitoring, and analytics to ensure your blog platform ranks well in search engines and provides an excellent user experience.
+
+## What You'll Learn
+
+- How to implement technical SEO best practices
+- How to optimize Core Web Vitals and performance metrics
+- How to set up comprehensive monitoring and analytics
+- How to implement image optimization and lazy loading
+- How to create XML sitemaps and robots.txt
+- How to optimize for social media sharing
+- How to implement structured data and schema markup
+
+## Prerequisites
+
+- Completed [Step 9: Search & Filtering](../09-search-filtering)
+- Understanding of SEO principles and web performance
+- Basic knowledge of web analytics and monitoring
+
+## SEO & Performance Architecture
+
+```
+Optimization Strategy:
+├── Technical SEO
+│   ├── Meta tags and titles
+│   ├── Open Graph & Twitter Cards
+│   ├── Structured data (JSON-LD)
+│   ├── XML sitemaps
+│   ├── Robots.txt
+│   └── Canonical URLs
+├── Performance
+│   ├── Image optimization
+│   ├── Code splitting
+│   ├── Lazy loading
+│   ├── Caching strategies
+│   ├── Bundle optimization
+│   └── Core Web Vitals
+├── Monitoring
+│   ├── Google Analytics
+│   ├── Search Console
+│   ├── Performance monitoring
+│   ├── Error tracking
+│   └── User behavior analytics
+└── Content Optimization
+    ├── Reading time optimization
+    ├── Internal linking
+    ├── Content freshness
+    └── Mobile optimization
+```
+
+## Step-by-Step Instructions
+
+### 1. Install SEO and Performance Dependencies
+
+```bash
+# SEO and meta tags
+npm install next-seo
+
+# Performance monitoring
+npm install @vercel/analytics
+npm install @vercel/speed-insights
+
+# Image optimization
+npm install next-optimized-images
+npm install imagemin-mozjpeg imagemin-optipng
+
+# Schema markup
+npm install schema-dts
+
+# Sitemap generation
+npm install next-sitemap
+
+# Performance analysis
+npm install @next/bundle-analyzer
+
+# Error tracking
+npm install @sentry/nextjs
+
+# Analytics
+npm install react-ga4
+```
+
+### 2. Configure Next.js for Performance
+
+Update `next.config.mjs`:
+
+```javascript
+import bundleAnalyzer from "@next/bundle-analyzer";
+
+const withBundleAnalyzer = bundleAnalyzer({
+  enabled: process.env.ANALYZE === "true",
+});
+
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  // Performance optimizations
+  experimental: {
+    optimizeCss: true,
+    scrollRestoration: true,
+  },
+
+  // Image optimization
+  images: {
+    domains: ["images.ctfassets.net", "assets.example.com"],
+    formats: ["image/webp", "image/avif"],
+    dangerouslyAllowSVG: true,
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
+  },
+
+  // Compression
+  compress: true,
+
+  // Security headers
+  async headers() {
+    return [
+      {
+        source: "/(.*)",
+        headers: [
+          {
+            key: "X-Frame-Options",
+            value: "DENY",
+          },
+          {
+            key: "X-Content-Type-Options",
+            value: "nosniff",
+          },
+          {
+            key: "Referrer-Policy",
+            value: "origin-when-cross-origin",
+          },
+          {
+            key: "Permissions-Policy",
+            value: "camera=(), microphone=(), geolocation=()",
+          },
+        ],
+      },
+    ];
+  },
+
+  // Redirects for SEO
+  async redirects() {
+    return [
+      {
+        source: "/blog/:slug*",
+        has: [
+          {
+            type: "query",
+            key: "utm_source",
+          },
+        ],
+        destination: "/blog/:slug*",
+        permanent: false,
+      },
+    ];
+  },
+
+  // PWA configuration
+  async rewrites() {
+    return [
+      {
+        source: "/sw.js",
+        destination: "/_next/static/sw.js",
+      },
+    ];
+  },
+};
+
+export default withBundleAnalyzer(nextConfig);
+```
+
+### 3. Create SEO Component System
+
+Create `src/components/seo/seo.tsx`:
+
+```typescript
+import Head from 'next/head'
+import { useRouter } from 'next/router'
+import { NextSeo, ArticleJsonLd, BreadcrumbJsonLd, BlogJsonLd } from 'next-seo'
+
+interface SEOProps {
+  title: string
+  description: string
+  canonical?: string
+  openGraph?: {
+    type?: 'website' | 'article'
+    title?: string
+    description?: string
+    images?: Array<{
+      url: string
+      width?: number
+      height?: number
+      alt?: string
+    }>
+    article?: {
+      publishedTime?: string
+      modifiedTime?: string
+      authors?: string[]
+      tags?: string[]
+      section?: string
+    }
+  }
+  twitter?: {
+    cardType?: 'summary' | 'summary_large_image'
+    site?: string
+    handle?: string
+  }
+  noindex?: boolean
+  nofollow?: boolean
+}
+
+export function SEO({
+  title,
+  description,
+  canonical,
+  openGraph,
+  twitter,
+  noindex = false,
+  nofollow = false,
+}: SEOProps) {
+  const router = useRouter()
+  const siteName = process.env.NEXT_PUBLIC_SITE_NAME || 'Blog Platform'
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://yourdomain.com'
+
+  const fullTitle = title.includes(siteName) ? title : `${title} | ${siteName}`
+  const url = canonical || `${siteUrl}${router.asPath}`
+
+  return (
+    <NextSeo
+      title={fullTitle}
+      description={description}
+      canonical={url}
+      openGraph={{
+        type: openGraph?.type || 'website',
+        title: openGraph?.title || fullTitle,
+        description: openGraph?.description || description,
+        url,
+        siteName,
+        images: openGraph?.images || [
+          {
+            url: `${siteUrl}/images/og-default.jpg`,
+            width: 1200,
+            height: 630,
+            alt: siteName,
+          },
+        ],
+        ...openGraph,
+      }}
+      twitter={{
+        cardType: twitter?.cardType || 'summary_large_image',
+        site: twitter?.site || '@yourblog',
+        handle: twitter?.handle || '@yourblog',
+        ...twitter,
+      }}
+      noindex={noindex}
+      nofollow={nofollow}
+      additionalMetaTags={[
+        {
+          name: 'viewport',
+          content: 'width=device-width, initial-scale=1.0, viewport-fit=cover',
+        },
+        {
+          name: 'theme-color',
+          content: '#000000',
+        },
+        {
+          name: 'format-detection',
+          content: 'telephone=no',
+        },
+      ]}
+      additionalLinkTags={[
+        {
+          rel: 'icon',
+          href: '/favicon.ico',
+        },
+        {
+          rel: 'apple-touch-icon',
+          href: '/apple-touch-icon.png',
+          sizes: '180x180',
+        },
+        {
+          rel: 'manifest',
+          href: '/manifest.json',
+        },
+      ]}
+    />
+  )
+}
+
+interface ArticleSEOProps {
+  title: string
+  description: string
+  slug: string
+  publishedAt: string
+  modifiedAt?: string
+  author: {
+    name: string
+    image?: string
+  }
+  category: string
+  tags: string[]
+  images?: Array<{
+    url: string
+    width?: number
+    height?: number
+    alt?: string
+  }>
+  readTime?: number
+}
+
+export function ArticleSEO({
+  title,
+  description,
+  slug,
+  publishedAt,
+  modifiedAt,
+  author,
+  category,
+  tags,
+  images,
+  readTime,
+}: ArticleSEOProps) {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://yourdomain.com'
+  const articleUrl = `${siteUrl}/blog/${slug}`
+
+  const defaultImage = `${siteUrl}/images/og-default.jpg`
+  const articleImages = images?.length ? images : [
+    {
+      url: defaultImage,
+      width: 1200,
+      height: 630,
+      alt: title,
+    },
+  ]
+
+  return (
+    <>
+      <SEO
+        title={title}
+        description={description}
+        canonical={articleUrl}
+        openGraph={{
+          type: 'article',
+          title,
+          description,
+          images: articleImages,
+          article: {
+            publishedTime: publishedAt,
+            modifiedTime: modifiedAt,
+            authors: [author.name],
+            tags,
+            section: category,
+          },
+        }}
+      />
+
+      <ArticleJsonLd
+        type="BlogPosting"
+        url={articleUrl}
+        title={title}
+        images={articleImages.map(img => img.url)}
+        datePublished={publishedAt}
+        dateModified={modifiedAt || publishedAt}
+        authorName={author.name}
+        description={description}
+        publisherName={process.env.NEXT_PUBLIC_SITE_NAME || 'Blog Platform'}
+        publisherLogo={`${siteUrl}/images/logo.png`}
+      />
+
+      {/* Reading time structured data */}
+      {readTime && (
+        <Head>
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify({
+                '@context': 'https://schema.org',
+                '@type': 'BlogPosting',
+                headline: title,
+                description,
+                url: articleUrl,
+                datePublished: publishedAt,
+                dateModified: modifiedAt || publishedAt,
+                author: {
+                  '@type': 'Person',
+                  name: author.name,
+                  image: author.image,
+                },
+                publisher: {
+                  '@type': 'Organization',
+                  name: process.env.NEXT_PUBLIC_SITE_NAME || 'Blog Platform',
+                  logo: {
+                    '@type': 'ImageObject',
+                    url: `${siteUrl}/images/logo.png`,
+                  },
+                },
+                mainEntityOfPage: {
+                  '@type': 'WebPage',
+                  '@id': articleUrl,
+                },
+                image: articleImages.map(img => img.url),
+                timeRequired: `PT${readTime}M`,
+                keywords: tags.join(', '),
+                articleSection: category,
+              }),
+            }}
+          />
+        </Head>
+      )}
+    </>
+  )
+}
+
+interface BreadcrumbSEOProps {
+  items: Array<{
+    name: string
+    href: string
+  }>
+}
+
+export function BreadcrumbSEO({ items }: BreadcrumbSEOProps) {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://yourdomain.com'
+
+  const itemListElement = items.map((item, index) => ({
+    '@type': 'ListItem' as const,
+    position: index + 1,
+    name: item.name,
+    item: `${siteUrl}${item.href}`,
+  }))
+
+  return (
+    <BreadcrumbJsonLd
+      itemListElements={itemListElement}
+    />
+  )
+}
+```
+
+### 4. Create Performance Monitoring Component
+
+Create `src/components/analytics/analytics.tsx`:
+
+```typescript
+'use client'
+
+import { useEffect } from 'react'
+import { usePathname, useSearchParams } from 'next/navigation'
+import { Analytics } from '@vercel/analytics/react'
+import { SpeedInsights } from '@vercel/speed-insights/next'
+import Script from 'next/script'
+
+// Google Analytics 4
+export function GoogleAnalytics() {
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.gtag) {
+      window.gtag('config', process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID!, {
+        page_title: document.title,
+        page_location: window.location.href,
+      })
+    }
+  }, [pathname, searchParams])
+
+  if (!process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID) {
+    return null
+  }
+
+  return (
+    <>
+      <Script
+        strategy="afterInteractive"
+        src={`https://www.googletagmanager.com/gtag/js?id=${process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID}`}
+      />
+      <Script
+        id="google-analytics"
+        strategy="afterInteractive"
+        dangerouslySetInnerHTML={{
+          __html: `
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', '${process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID}', {
+              page_title: document.title,
+              page_location: window.location.href,
+            });
+          `,
+        }}
+      />
+    </>
+  )
+}
+
+// Performance tracking
+export function PerformanceAnalytics() {
+  useEffect(() => {
+    // Track Core Web Vitals
+    if (typeof window !== 'undefined' && 'web-vitals' in window) {
+      import('web-vitals').then(({ getCLS, getFID, getFCP, getLCP, getTTFB }) => {
+        getCLS((metric) => {
+          window.gtag?.('event', 'web_vitals', {
+            event_category: 'Web Vitals',
+            event_action: 'CLS',
+            value: Math.round(metric.value * 1000),
+            non_interaction: true,
+          })
+        })
+
+        getFID((metric) => {
+          window.gtag?.('event', 'web_vitals', {
+            event_category: 'Web Vitals',
+            event_action: 'FID',
+            value: Math.round(metric.value),
+            non_interaction: true,
+          })
+        })
+
+        getFCP((metric) => {
+          window.gtag?.('event', 'web_vitals', {
+            event_category: 'Web Vitals',
+            event_action: 'FCP',
+            value: Math.round(metric.value),
+            non_interaction: true,
+          })
+        })
+
+        getLCP((metric) => {
+          window.gtag?.('event', 'web_vitals', {
+            event_category: 'Web Vitals',
+            event_action: 'LCP',
+            value: Math.round(metric.value),
+            non_interaction: true,
+          })
+        })
+
+        getTTFB((metric) => {
+          window.gtag?.('event', 'web_vitals', {
+            event_category: 'Web Vitals',
+            event_action: 'TTFB',
+            value: Math.round(metric.value),
+            non_interaction: true,
+          })
+        })
+      })
+    }
+  }, [])
+
+  return null
+}
+
+// Custom event tracking
+export function trackEvent(eventName: string, parameters?: Record<string, any>) {
+  if (typeof window !== 'undefined' && window.gtag) {
+    window.gtag('event', eventName, {
+      event_category: 'engagement',
+      ...parameters,
+    })
+  }
+}
+
+// Blog-specific analytics
+export function trackBlogEvent(action: string, postSlug?: string, additional?: Record<string, any>) {
+  trackEvent('blog_interaction', {
+    action,
+    post_slug: postSlug,
+    ...additional,
+  })
+}
+
+// Reading progress tracking
+export function useReadingProgress(contentRef: React.RefObject<HTMLElement>) {
+  useEffect(() => {
+    if (!contentRef.current) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const progress = Math.round(
+              ((entry.boundingClientRect.top * -1) /
+               (entry.target.scrollHeight - window.innerHeight)) * 100
+            )
+
+            // Track reading milestones
+            if (progress >= 25 && !sessionStorage.getItem('read_25')) {
+              trackEvent('reading_progress', { progress: 25 })
+              sessionStorage.setItem('read_25', 'true')
+            } else if (progress >= 50 && !sessionStorage.getItem('read_50')) {
+              trackEvent('reading_progress', { progress: 50 })
+              sessionStorage.setItem('read_50', 'true')
+            } else if (progress >= 75 && !sessionStorage.getItem('read_75')) {
+              trackEvent('reading_progress', { progress: 75 })
+              sessionStorage.setItem('read_75', 'true')
+            } else if (progress >= 100 && !sessionStorage.getItem('read_100')) {
+              trackEvent('reading_progress', { progress: 100 })
+              sessionStorage.setItem('read_100', 'true')
+            }
+          }
+        })
+      },
+      { threshold: 0.1 }
+    )
+
+    observer.observe(contentRef.current)
+
+    return () => observer.disconnect()
+  }, [contentRef])
+}
+
+// Combined Analytics Provider
+export function AnalyticsProvider({ children }: { children: React.ReactNode }) {
+  return (
+    <>
+      {children}
+      <GoogleAnalytics />
+      <PerformanceAnalytics />
+      <Analytics />
+      <SpeedInsights />
+    </>
+  )
+}
+```
+
+### 5. Create Image Optimization Component
+
+Create `src/components/ui/optimized-image.tsx`:
+
+```typescript
+'use client'
+
+import { useState, useRef, useEffect } from 'react'
+import Image from 'next/image'
+import { cn } from '@/lib/utils'
+
+interface OptimizedImageProps {
+  src: string
+  alt: string
+  width?: number
+  height?: number
+  className?: string
+  priority?: boolean
+  quality?: number
+  placeholder?: 'blur' | 'empty'
+  blurDataURL?: string
+  sizes?: string
+  fill?: boolean
+  objectFit?: 'contain' | 'cover' | 'fill' | 'none' | 'scale-down'
+  loading?: 'lazy' | 'eager'
+  onLoad?: () => void
+  onError?: () => void
+}
+
+export function OptimizedImage({
+  src,
+  alt,
+  width,
+  height,
+  className,
+  priority = false,
+  quality = 75,
+  placeholder = 'blur',
+  blurDataURL,
+  sizes,
+  fill = false,
+  objectFit = 'cover',
+  loading = 'lazy',
+  onLoad,
+  onError,
+}: OptimizedImageProps) {
+  const [isLoaded, setIsLoaded] = useState(false)
+  const [hasError, setHasError] = useState(false)
+  const [isInView, setIsInView] = useState(false)
+  const imageRef = useRef<HTMLDivElement>(null)
+
+  // Intersection Observer for lazy loading
+  useEffect(() => {
+    if (priority || loading === 'eager') {
+      setIsInView(true)
+      return
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsInView(true)
+          observer.disconnect()
+        }
+      },
+      { rootMargin: '50px' }
+    )
+
+    if (imageRef.current) {
+      observer.observe(imageRef.current)
+    }
+
+    return () => observer.disconnect()
+  }, [priority, loading])
+
+  // Generate blur placeholder if not provided
+  const generateBlurDataURL = (w: number, h: number) => {
+    const canvas = document.createElement('canvas')
+    canvas.width = w
+    canvas.height = h
+    const ctx = canvas.getContext('2d')
+    if (ctx) {
+      ctx.fillStyle = '#f3f4f6'
+      ctx.fillRect(0, 0, w, h)
+    }
+    return canvas.toDataURL()
+  }
+
+  const handleLoad = () => {
+    setIsLoaded(true)
+    onLoad?.()
+  }
+
+  const handleError = () => {
+    setHasError(true)
+    onError?.()
+  }
+
+  // Default blur data URL
+  const defaultBlurDataURL = blurDataURL || (width && height ?
+    generateBlurDataURL(width, height) :
+    'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAiIGhlaWdodD0iMTAiIHZpZXdCb3g9IjAgMCAxMCAxMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjEwIiBoZWlnaHQ9IjEwIiBmaWxsPSIjRjNGNEY2Ii8+Cjwvc3ZnPgo='
+  )
+
+  if (hasError) {
+    return (
+      <div
+        ref={imageRef}
+        className={cn(
+          'flex items-center justify-center bg-muted text-muted-foreground',
+          fill ? 'absolute inset-0' : '',
+          className
+        )}
+        style={!fill ? { width, height } : undefined}
+      >
+        <span className="text-sm">Failed to load image</span>
+      </div>
+    )
+  }
+
+  return (
+    <div
+      ref={imageRef}
+      className={cn('relative overflow-hidden', fill ? 'absolute inset-0' : '', className)}
+      style={!fill ? { width, height } : undefined}
+    >
+      {isInView && (
+        <Image
+          src={src}
+          alt={alt}
+          width={!fill ? width : undefined}
+          height={!fill ? height : undefined}
+          fill={fill}
+          priority={priority}
+          quality={quality}
+          placeholder={placeholder}
+          blurDataURL={defaultBlurDataURL}
+          sizes={sizes}
+          className={cn(
+            'transition-opacity duration-300',
+            isLoaded ? 'opacity-100' : 'opacity-0',
+            fill ? `object-${objectFit}` : ''
+          )}
+          onLoad={handleLoad}
+          onError={handleError}
+        />
+      )}
+
+      {/* Loading placeholder */}
+      {!isLoaded && isInView && (
+        <div className={cn(
+          'absolute inset-0 bg-muted animate-pulse',
+          fill ? '' : 'w-full h-full'
+        )} />
+      )}
+    </div>
+  )
+}
+
+// Responsive image component with multiple breakpoints
+interface ResponsiveImageProps extends Omit<OptimizedImageProps, 'width' | 'height' | 'sizes'> {
+  breakpoints: {
+    mobile: { width: number; height: number }
+    tablet: { width: number; height: number }
+    desktop: { width: number; height: number }
+  }
+}
+
+export function ResponsiveImage({
+  breakpoints,
+  src,
+  alt,
+  className,
+  ...props
+}: ResponsiveImageProps) {
+  const sizes = `
+    (max-width: 768px) ${breakpoints.mobile.width}px,
+    (max-width: 1024px) ${breakpoints.tablet.width}px,
+    ${breakpoints.desktop.width}px
+  `
+
+  return (
+    <OptimizedImage
+      src={src}
+      alt={alt}
+      width={breakpoints.desktop.width}
+      height={breakpoints.desktop.height}
+      sizes={sizes}
+      className={className}
+      {...props}
+    />
+  )
+}
+```
+
+### 6. Create Sitemap Generation
+
+Create `next-sitemap.config.js`:
+
+```javascript
+/** @type {import('next-sitemap').IConfig} */
+module.exports = {
+  siteUrl: process.env.NEXT_PUBLIC_SITE_URL || "https://yourdomain.com",
+  generateRobotsTxt: true,
+  generateIndexSitemap: false,
+  changefreq: "weekly",
+  priority: 0.7,
+  sitemapSize: 5000,
+
+  // Additional paths
+  additionalPaths: async (config) => [
+    await config.transform(config, "/blog"),
+    await config.transform(config, "/categories"),
+    await config.transform(config, "/tags"),
+    await config.transform(config, "/authors"),
+  ],
+
+  // Exclude paths
+  exclude: ["/dashboard/*", "/api/*", "/admin/*", "/auth/*", "/404", "/500"],
+
+  // Custom transform function
+  transform: async (config, path) => {
+    // Custom priority based on page type
+    let priority = config.priority;
+    let changefreq = config.changefreq;
+
+    if (path === "/") {
+      priority = 1.0;
+      changefreq = "daily";
+    } else if (path.startsWith("/blog/")) {
+      priority = 0.9;
+      changefreq = "weekly";
+    } else if (path.startsWith("/categories/") || path.startsWith("/tags/")) {
+      priority = 0.6;
+      changefreq = "monthly";
+    }
+
+    return {
+      loc: path,
+      changefreq,
+      priority,
+      lastmod: new Date().toISOString(),
+    };
+  },
+
+  robotsTxtOptions: {
+    policies: [
+      {
+        userAgent: "*",
+        allow: "/",
+        disallow: ["/dashboard/", "/api/", "/admin/", "/auth/"],
+      },
+      {
+        userAgent: "GPTBot",
+        disallow: "/",
+      },
+    ],
+    additionalSitemaps: [
+      `${process.env.NEXT_PUBLIC_SITE_URL || "https://yourdomain.com"}/sitemap.xml`,
+    ],
+  },
+};
+```
+
+Create `src/lib/sitemap-generator.ts`:
+
+```typescript
+import { prisma } from "@/lib/db";
+import { getAllBlogPosts } from "@/lib/contentful-utils";
+
+export async function generateDynamicSitemap() {
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://yourdomain.com";
+
+  // Get all published posts from database
+  const dbPosts = await prisma.post.findMany({
+    where: { status: "PUBLISHED" },
+    select: {
+      slug: true,
+      updatedAt: true,
+    },
+    orderBy: { updatedAt: "desc" },
+  });
+
+  // Get all posts from Contentful
+  const contentfulPosts = await getAllBlogPosts();
+
+  // Get categories and tags
+  const [categories, tags] = await Promise.all([
+    prisma.category.findMany({
+      select: { slug: true, updatedAt: true },
+    }),
+    prisma.tag.findMany({
+      select: { slug: true, updatedAt: true },
+    }),
+  ]);
+
+  const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+    <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+      <!-- Homepage -->
+      <url>
+        <loc>${baseUrl}</loc>
+        <lastmod>${new Date().toISOString()}</lastmod>
+        <changefreq>daily</changefreq>
+        <priority>1.0</priority>
+      </url>
+      
+      <!-- Blog posts from database -->
+      ${dbPosts
+        .map(
+          (post) => `
+        <url>
+          <loc>${baseUrl}/blog/${post.slug}</loc>
+          <lastmod>${post.updatedAt.toISOString()}</lastmod>
+          <changefreq>weekly</changefreq>
+          <priority>0.9</priority>
+        </url>
+      `
+        )
+        .join("")}
+      
+      <!-- Blog posts from Contentful -->
+      ${contentfulPosts
+        .map(
+          (post: any) => `
+        <url>
+          <loc>${baseUrl}/blog/${post.fields.slug}</loc>
+          <lastmod>${post.sys.updatedAt}</lastmod>
+          <changefreq>weekly</changefreq>
+          <priority>0.9</priority>
+        </url>
+      `
+        )
+        .join("")}
+      
+      <!-- Categories -->
+      ${categories
+        .map(
+          (category) => `
+        <url>
+          <loc>${baseUrl}/blog/category/${category.slug}</loc>
+          <lastmod>${category.updatedAt.toISOString()}</lastmod>
+          <changefreq>monthly</changefreq>
+          <priority>0.6</priority>
+        </url>
+      `
+        )
+        .join("")}
+      
+      <!-- Tags -->
+      ${tags
+        .map(
+          (tag) => `
+        <url>
+          <loc>${baseUrl}/blog/tag/${tag.slug}</loc>
+          <lastmod>${tag.updatedAt.toISOString()}</lastmod>
+          <changefreq>monthly</changefreq>
+          <priority>0.5</priority>
+        </url>
+      `
+        )
+        .join("")}
+    </urlset>`;
+
+  return sitemap;
+}
+```
+
+### 7. Create Performance Dashboard
+
+Create `src/app/dashboard/analytics/page.tsx`:
+
+```typescript
+import { requireServerRole } from '@/lib/server-auth'
+import { prisma } from '@/lib/db'
+import { PerformanceMetrics } from '@/components/dashboard/performance-metrics'
+import { SEOAnalytics } from '@/components/dashboard/seo-analytics'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { TrendingUp, Users, Eye, Clock, Search, Globe } from 'lucide-react'
+
+export default async function AnalyticsPage() {
+  await requireServerRole(['ADMIN'])
+
+  // Get performance data
+  const [
+    totalPosts,
+    totalViews,
+    searchQueries,
+    topPerformingPosts,
+    recentActivity
+  ] = await Promise.all([
+    prisma.post.count({ where: { status: 'PUBLISHED' } }),
+    prisma.post.aggregate({
+      _sum: { views: true },
+      where: { status: 'PUBLISHED' }
+    }),
+    prisma.searchQuery.count({
+      where: {
+        createdAt: {
+          gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+        }
+      }
+    }),
+    prisma.post.findMany({
+      where: { status: 'PUBLISHED' },
+      orderBy: { views: 'desc' },
+      take: 10,
+      include: {
+        author: { select: { name: true } },
+        category: { select: { name: true } },
+        _count: { select: { comments: true, likes: true } }
+      }
+    }),
+    prisma.post.findMany({
+      where: { status: 'PUBLISHED' },
+      orderBy: { updatedAt: 'desc' },
+      take: 5,
+      include: {
+        author: { select: { name: true } }
+      }
+    })
+  ])
+
+  return (
+    <div className="p-6 space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold">Analytics & Performance</h1>
+        <p className="text-muted-foreground">
+          Monitor your blog's performance, SEO metrics, and user engagement
+        </p>
+      </div>
+
+      {/* Key Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Posts</CardTitle>
+            <Globe className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalPosts}</div>
+            <p className="text-xs text-muted-foreground">
+              Published articles
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Views</CardTitle>
+            <Eye className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {totalViews._sum.views?.toLocaleString() || 0}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              All-time page views
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Searches (30d)</CardTitle>
+            <Search className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{searchQueries}</div>
+            <p className="text-xs text-muted-foreground">
+              Search queries this month
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Avg. Read Time</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {Math.round(
+                topPerformingPosts.reduce((sum, post) => sum + post.readTime, 0) /
+                Math.max(topPerformingPosts.length, 1)
+              )} min
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Average reading time
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Performance Metrics */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Performance Metrics</CardTitle>
+            <CardDescription>
+              Core Web Vitals and loading performance
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <PerformanceMetrics />
+          </CardContent>
+        </Card>
+
+        {/* SEO Analytics */}
+        <Card>
+          <CardHeader>
+            <CardTitle>SEO Analytics</CardTitle>
+            <CardDescription>
+              Search engine optimization insights
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SEOAnalytics />
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Top Performing Posts */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Top Performing Posts</CardTitle>
+          <CardDescription>
+            Your most viewed and engaging content
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {topPerformingPosts.map((post, index) => (
+              <div key={post.id} className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline">#{index + 1}</Badge>
+                    <h4 className="font-medium">{post.title}</h4>
+                  </div>
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    <span>By {post.author.name}</span>
+                    <span>in {post.category.name}</span>
+                    <span>{post.readTime} min read</span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="font-bold">{post.views.toLocaleString()} views</div>
+                  <div className="text-sm text-muted-foreground">
+                    {post._count.comments} comments • {post._count.likes} likes
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+```
+
+### 8. Create Core Web Vitals Monitoring
+
+Create `src/components/performance/web-vitals.tsx`:
+
+```typescript
+'use client'
+
+import { useEffect, useState } from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Progress } from '@/components/ui/progress'
+import { Badge } from '@/components/ui/badge'
+import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
+
+interface WebVital {
+  name: string
+  value: number
+  rating: 'good' | 'needs-improvement' | 'poor'
+  description: string
+  target: number
+}
+
+export function WebVitalsMonitor() {
+  const [vitals, setVitals] = useState<WebVital[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    // Import web-vitals dynamically
+    import('web-vitals').then(({ getCLS, getFID, getFCP, getLCP, getTTFB, onCLS, onFID, onFCP, onLCP, onTTFB }) => {
+      const vitalsData: Partial<Record<string, WebVital>> = {}
+
+      const updateVital = (name: string, value: number, target: number, description: string) => {
+        let rating: 'good' | 'needs-improvement' | 'poor'
+
+        if (name === 'CLS') {
+          rating = value <= 0.1 ? 'good' : value <= 0.25 ? 'needs-improvement' : 'poor'
+        } else if (name === 'FID') {
+          rating = value <= 100 ? 'good' : value <= 300 ? 'needs-improvement' : 'poor'
+        } else {
+          rating = value <= target ? 'good' : value <= target * 1.5 ? 'needs-improvement' : 'poor'
+        }
+
+        vitalsData[name] = { name, value, rating, description, target }
+        setVitals(Object.values(vitalsData).filter(Boolean) as WebVital[])
+      }
+
+      // Monitor vitals
+      onCLS((metric) => {
+        updateVital('CLS', metric.value, 0.1, 'Cumulative Layout Shift')
+      })
+
+      onFID((metric) => {
+        updateVital('FID', metric.value, 100, 'First Input Delay')
+      })
+
+      onFCP((metric) => {
+        updateVital('FCP', metric.value, 1800, 'First Contentful Paint')
+      })
+
+      onLCP((metric) => {
+        updateVital('LCP', metric.value, 2500, 'Largest Contentful Paint')
+      })
+
+      onTTFB((metric) => {
+        updateVital('TTFB', metric.value, 800, 'Time to First Byte')
+      })
+
+      setLoading(false)
+    })
+  }, [])
+
+  const getRatingColor = (rating: string) => {
+    switch (rating) {
+      case 'good': return 'text-green-600'
+      case 'needs-improvement': return 'text-yellow-600'
+      case 'poor': return 'text-red-600'
+      default: return 'text-gray-600'
+    }
+  }
+
+  const getRatingIcon = (rating: string) => {
+    switch (rating) {
+      case 'good': return <TrendingUp className="h-4 w-4 text-green-600" />
+      case 'needs-improvement': return <Minus className="h-4 w-4 text-yellow-600" />
+      case 'poor': return <TrendingDown className="h-4 w-4 text-red-600" />
+      default: return null
+    }
+  }
+
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Core Web Vitals</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-4">
+            <div className="animate-spin h-6 w-6 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-2 text-sm text-muted-foreground">Measuring performance...</p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Core Web Vitals</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {vitals.map((vital) => (
+            <div key={vital.name} className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">{vital.name}</span>
+                  {getRatingIcon(vital.rating)}
+                  <Badge variant={vital.rating === 'good' ? 'default' : 'destructive'}>
+                    {vital.rating.replace('-', ' ')}
+                  </Badge>
+                </div>
+                <span className={`font-mono text-sm ${getRatingColor(vital.rating)}`}>
+                  {vital.name === 'CLS' ? vital.value.toFixed(3) : `${Math.round(vital.value)}ms`}
+                </span>
+              </div>
+
+              <div className="text-xs text-muted-foreground mb-1">
+                {vital.description} (Target: {vital.name === 'CLS' ? vital.target : `${vital.target}ms`})
+              </div>
+
+              <Progress
+                value={Math.min((vital.target / Math.max(vital.value, vital.target)) * 100, 100)}
+                className="h-2"
+              />
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+```
+
+## Performance Optimization Checklist
+
+### Technical SEO
+
+- ✅ Meta tags and Open Graph data
+- ✅ Structured data (JSON-LD)
+- ✅ XML sitemaps with dynamic content
+- ✅ Robots.txt configuration
+- ✅ Canonical URLs
+- ✅ Breadcrumb navigation
+
+### Performance
+
+- ✅ Image optimization with WebP/AVIF
+- ✅ Code splitting and lazy loading
+- ✅ Core Web Vitals monitoring
+- ✅ Bundle size optimization
+- ✅ Caching strategies
+- ✅ CDN integration
+
+### Analytics & Monitoring
+
+- ✅ Google Analytics 4
+- ✅ Performance monitoring
+- ✅ Error tracking with Sentry
+- ✅ User behavior analytics
+- ✅ Search analytics
+- ✅ Core Web Vitals tracking
+
+### Content Optimization
+
+- ✅ Reading time calculation
+- ✅ Internal linking strategy
+- ✅ Content freshness indicators
+- ✅ Mobile-first responsive design
+- ✅ Accessibility improvements
+
+## Next Steps
+
+Your SEO and performance optimization is now complete! You should have:
+
+1. ✅ Comprehensive SEO with meta tags, Open Graph, and structured data
+2. ✅ Advanced image optimization with lazy loading
+3. ✅ Core Web Vitals monitoring and optimization
+4. ✅ Google Analytics and performance tracking
+5. ✅ Dynamic sitemap generation
+6. ✅ Bundle optimization and code splitting
+7. ✅ Performance dashboard for monitoring
+8. ✅ Error tracking and user behavior analytics
+
+**Continue to**: [Step 11: Deployment & Production →](../11-deployment-production)
+
+---
+
+**Estimated Time**: 180-240 minutes
+
+**Difficulty**: Advanced
+
+**Next**: [Deployment & Production →](../11-deployment-production)

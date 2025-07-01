@@ -1,0 +1,1351 @@
+# Step 3: Authentication Implementation
+
+## Objective
+
+Implement user authentication and authorization using NextAuth.js with multiple providers, protecting routes, and managing user sessions in our blog platform.
+
+## What You'll Learn
+
+- How to configure NextAuth.js with multiple authentication providers
+- How to implement custom login and registration pages
+- How to protect routes and API endpoints
+- How to manage user sessions and roles
+- How to integrate authentication with Prisma database
+
+## Prerequisites
+
+- Completed [Step 2: Database Setup](../02-database-setup)
+- Understanding of OAuth and authentication concepts
+- Basic knowledge of Next.js API routes
+
+## Authentication Flow Overview
+
+```
+User Registration/Login
+├── OAuth Providers (Google, GitHub)
+├── Email/Password Authentication
+├── Session Management
+└── Role-based Access Control
+    ├── USER (can comment, like posts)
+    ├── AUTHOR (can create/edit own posts)
+    └── ADMIN (full access)
+```
+
+## Step-by-Step Instructions
+
+### 1. Install Additional Authentication Dependencies
+
+```bash
+npm install next-auth @next-auth/prisma-adapter
+npm install bcryptjs @types/bcryptjs
+npm install react-hook-form @hookform/resolvers zod
+npm install lucide-react
+```
+
+### 2. Configure NextAuth.js
+
+Create `src/lib/auth.ts`:
+
+```typescript
+import NextAuth, { type DefaultSession } from "next-auth";
+import { PrismaAdapter } from "@next-auth/prisma-adapter";
+import GoogleProvider from "next-auth/providers/google";
+import GitHubProvider from "next-auth/providers/github";
+import CredentialsProvider from "next-auth/providers/credentials";
+import { prisma } from "@/lib/db";
+import bcrypt from "bcryptjs";
+import { getUserByEmail } from "@/lib/db-utils";
+
+declare module "next-auth" {
+  interface Session extends DefaultSession {
+    user: {
+      id: string;
+      role: "USER" | "AUTHOR" | "ADMIN";
+    } & DefaultSession["user"];
+  }
+
+  interface User {
+    role: "USER" | "AUTHOR" | "ADMIN";
+  }
+}
+
+declare module "next-auth/jwt" {
+  interface JWT {
+    role: "USER" | "AUTHOR" | "ADMIN";
+  }
+}
+
+export const {
+  handlers: { GET, POST },
+  auth,
+  signIn,
+  signOut,
+} = NextAuth({
+  adapter: PrismaAdapter(prisma),
+  session: { strategy: "jwt" },
+  providers: [
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    }),
+    GitHubProvider({
+      clientId: process.env.GITHUB_ID!,
+      clientSecret: process.env.GITHUB_SECRET!,
+    }),
+    CredentialsProvider({
+      name: "credentials",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) {
+          return null;
+        }
+
+        const user = await getUserByEmail(credentials.email);
+
+        if (!user || !user.password) {
+          return null;
+        }
+
+        const isPasswordValid = await bcrypt.compare(
+          credentials.password,
+          user.password
+        );
+
+        if (!isPasswordValid) {
+          return null;
+        }
+
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          image: user.image,
+          role: user.role,
+        };
+      },
+    }),
+  ],
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.role = user.role;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (token) {
+        session.user.id = token.sub!;
+        session.user.role = token.role;
+      }
+      return session;
+    },
+  },
+  pages: {
+    signIn: "/auth/signin",
+    signUp: "/auth/signup",
+  },
+  events: {
+    async createUser({ user }) {
+      // Send welcome email or perform other actions
+      console.log("New user created:", user.email);
+    },
+  },
+});
+```
+
+### 3. Create API Route Handler
+
+Create `src/app/api/auth/[...nextauth]/route.ts`:
+
+```typescript
+import { GET, POST } from "@/lib/auth";
+
+export { GET, POST };
+```
+
+### 4. Add Password Field to User Model
+
+Update your `prisma/schema.prisma` to include password field:
+
+```prisma
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?   // Add this line
+  bio           String?
+  website       String?
+  twitter       String?
+  github        String?
+  role          Role      @default(USER)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations remain the same
+  accounts Account[]
+  sessions Session[]
+  posts    Post[]
+  comments Comment[]
+  likes    Like[]
+
+  @@map("users")
+}
+```
+
+Run migration:
+
+```bash
+npx prisma migrate dev --name add-password-field
+```
+
+### 5. Create Authentication Utilities
+
+Create `src/lib/auth-utils.ts`:
+
+```typescript
+import bcrypt from "bcryptjs";
+import { prisma } from "@/lib/db";
+import { auth } from "@/lib/auth";
+import { redirect } from "next/navigation";
+
+export async function hashPassword(password: string): Promise<string> {
+  return await bcrypt.hash(password, 12);
+}
+
+export async function verifyPassword(
+  password: string,
+  hashedPassword: string
+): Promise<boolean> {
+  return await bcrypt.compare(password, hashedPassword);
+}
+
+export async function createUser(data: {
+  name: string;
+  email: string;
+  password: string;
+}) {
+  const existingUser = await prisma.user.findUnique({
+    where: { email: data.email },
+  });
+
+  if (existingUser) {
+    throw new Error("User already exists");
+  }
+
+  const hashedPassword = await hashPassword(data.password);
+
+  return await prisma.user.create({
+    data: {
+      name: data.name,
+      email: data.email,
+      password: hashedPassword,
+      role: "USER",
+    },
+  });
+}
+
+export async function getServerSession() {
+  return await auth();
+}
+
+export async function requireAuth() {
+  const session = await getServerSession();
+  if (!session?.user) {
+    redirect("/auth/signin");
+  }
+  return session;
+}
+
+export async function requireRole(roles: ("USER" | "AUTHOR" | "ADMIN")[]) {
+  const session = await requireAuth();
+  if (!roles.includes(session.user.role)) {
+    throw new Error("Insufficient permissions");
+  }
+  return session;
+}
+```
+
+### 6. Create Sign In Page
+
+Create `src/app/auth/signin/page.tsx`:
+
+```typescript
+'use client'
+
+import { useState } from 'react'
+import { signIn, getSession } from 'next-auth/react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Github, Mail, Eye, EyeOff } from 'lucide-react'
+
+export default function SignInPage() {
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [error, setError] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const callbackUrl = searchParams.get('callbackUrl') || '/'
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+    setError('')
+
+    try {
+      const result = await signIn('credentials', {
+        email,
+        password,
+        redirect: false,
+      })
+
+      if (result?.error) {
+        setError('Invalid email or password')
+      } else {
+        router.push(callbackUrl)
+        router.refresh()
+      }
+    } catch (error) {
+      setError('An unexpected error occurred')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleOAuthSignIn = async (provider: 'google' | 'github') => {
+    setIsLoading(true)
+    try {
+      await signIn(provider, { callbackUrl })
+    } catch (error) {
+      setError('Failed to sign in with ' + provider)
+      setIsLoading(false)
+    }
+  }
+
+  return (
+    <div className="container flex h-screen w-screen flex-col items-center justify-center">
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl text-center">Sign in</CardTitle>
+          <CardDescription className="text-center">
+            Enter your email and password to access your account
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="john@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                disabled={isLoading}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  disabled={isLoading}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                  onClick={() => setShowPassword(!showPassword)}
+                  disabled={isLoading}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? 'Signing in...' : 'Sign in'}
+            </Button>
+          </form>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">
+                Or continue with
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <Button
+              variant="outline"
+              onClick={() => handleOAuthSignIn('google')}
+              disabled={isLoading}
+            >
+              <Mail className="mr-2 h-4 w-4" />
+              Google
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => handleOAuthSignIn('github')}
+              disabled={isLoading}
+            >
+              <Github className="mr-2 h-4 w-4" />
+              GitHub
+            </Button>
+          </div>
+        </CardContent>
+
+        <CardFooter>
+          <div className="text-center text-sm text-muted-foreground w-full">
+            Don't have an account?{' '}
+            <Link
+              href="/auth/signup"
+              className="underline underline-offset-4 hover:text-primary"
+            >
+              Sign up
+            </Link>
+          </div>
+        </CardFooter>
+      </Card>
+    </div>
+  )
+}
+```
+
+### 7. Create Sign Up Page
+
+Create `src/app/auth/signup/page.tsx`:
+
+```typescript
+'use client'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Eye, EyeOff, Github, Mail } from 'lucide-react'
+import { signIn } from 'next-auth/react'
+
+export default function SignUpPage() {
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+  })
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [error, setError] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+
+  const router = useRouter()
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData(prev => ({
+      ...prev,
+      [e.target.name]: e.target.value,
+    }))
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+    setError('')
+
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match')
+      setIsLoading(false)
+      return
+    }
+
+    if (formData.password.length < 6) {
+      setError('Password must be at least 6 characters long')
+      setIsLoading(false)
+      return
+    }
+
+    try {
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+        }),
+      })
+
+      if (response.ok) {
+        // Auto sign in after successful registration
+        const signInResult = await signIn('credentials', {
+          email: formData.email,
+          password: formData.password,
+          redirect: false,
+        })
+
+        if (signInResult?.ok) {
+          router.push('/')
+          router.refresh()
+        }
+      } else {
+        const data = await response.json()
+        setError(data.message || 'Registration failed')
+      }
+    } catch (error) {
+      setError('An unexpected error occurred')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleOAuthSignIn = async (provider: 'google' | 'github') => {
+    setIsLoading(true)
+    try {
+      await signIn(provider, { callbackUrl: '/' })
+    } catch (error) {
+      setError('Failed to sign in with ' + provider)
+      setIsLoading(false)
+    }
+  }
+
+  return (
+    <div className="container flex h-screen w-screen flex-col items-center justify-center">
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl text-center">Create an account</CardTitle>
+          <CardDescription className="text-center">
+            Enter your information to create your account
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Full Name</Label>
+              <Input
+                id="name"
+                name="name"
+                type="text"
+                placeholder="John Doe"
+                value={formData.name}
+                onChange={handleChange}
+                required
+                disabled={isLoading}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                placeholder="john@example.com"
+                value={formData.email}
+                onChange={handleChange}
+                required
+                disabled={isLoading}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Create a password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  required
+                  disabled={isLoading}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                  onClick={() => setShowPassword(!showPassword)}
+                  disabled={isLoading}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <div className="relative">
+                <Input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  placeholder="Confirm your password"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  required
+                  disabled={isLoading}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  disabled={isLoading}
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? 'Creating account...' : 'Create account'}
+            </Button>
+          </form>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">
+                Or continue with
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <Button
+              variant="outline"
+              onClick={() => handleOAuthSignIn('google')}
+              disabled={isLoading}
+            >
+              <Mail className="mr-2 h-4 w-4" />
+              Google
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => handleOAuthSignIn('github')}
+              disabled={isLoading}
+            >
+              <Github className="mr-2 h-4 w-4" />
+              GitHub
+            </Button>
+          </div>
+        </CardContent>
+
+        <CardFooter>
+          <div className="text-center text-sm text-muted-foreground w-full">
+            Already have an account?{' '}
+            <Link
+              href="/auth/signin"
+              className="underline underline-offset-4 hover:text-primary"
+            >
+              Sign in
+            </Link>
+          </div>
+        </CardFooter>
+      </Card>
+    </div>
+  )
+}
+```
+
+### 8. Create Registration API Route
+
+Create `src/app/api/auth/register/route.ts`:
+
+```typescript
+import { NextRequest, NextResponse } from "next/server";
+import { createUser } from "@/lib/auth-utils";
+import { z } from "zod";
+
+const registerSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+});
+
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+
+    // Validate input
+    const { name, email, password } = registerSchema.parse(body);
+
+    // Create user
+    const user = await createUser({ name, email, password });
+
+    // Return success response (without password)
+    return NextResponse.json({
+      message: "User created successfully",
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    console.error("Registration error:", error);
+
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { message: error.errors[0].message },
+        { status: 400 }
+      );
+    }
+
+    if (error instanceof Error) {
+      if (error.message === "User already exists") {
+        return NextResponse.json(
+          { message: "User with this email already exists" },
+          { status: 409 }
+        );
+      }
+    }
+
+    return NextResponse.json(
+      { message: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+```
+
+### 9. Create Session Provider
+
+Create `src/components/providers/session-provider.tsx`:
+
+```typescript
+'use client'
+
+import { SessionProvider } from 'next-auth/react'
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  return <SessionProvider>{children}</SessionProvider>
+}
+```
+
+Update your root layout `src/app/layout.tsx`:
+
+```typescript
+import type { Metadata } from 'next'
+import { Inter } from 'next/font/google'
+import './globals.css'
+import { AuthProvider } from '@/components/providers/session-provider'
+
+const inter = Inter({ subsets: ['latin'] })
+
+export const metadata: Metadata = {
+  title: 'Blog Platform',
+  description: 'A modern blog platform built with Next.js',
+}
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <html lang="en">
+      <body className={inter.className}>
+        <AuthProvider>
+          {children}
+        </AuthProvider>
+      </body>
+    </html>
+  )
+}
+```
+
+### 10. Create User Navigation Component
+
+Create `src/components/auth/user-nav.tsx`:
+
+```typescript
+'use client'
+
+import { useState } from 'react'
+import { useSession, signOut } from 'next-auth/react'
+import Link from 'next/link'
+import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { LogOut, Settings, User, PenTool, Shield } from 'lucide-react'
+
+export function UserNav() {
+  const { data: session } = useSession()
+  const [isLoading, setIsLoading] = useState(false)
+
+  if (!session?.user) {
+    return (
+      <div className="flex items-center space-x-2">
+        <Button variant="ghost" asChild>
+          <Link href="/auth/signin">Sign in</Link>
+        </Button>
+        <Button asChild>
+          <Link href="/auth/signup">Sign up</Link>
+        </Button>
+      </div>
+    )
+  }
+
+  const handleSignOut = async () => {
+    setIsLoading(true)
+    await signOut({ callbackUrl: '/' })
+  }
+
+  const userInitials = session.user.name
+    ?.split(' ')
+    .map(name => name[0])
+    .join('')
+    .toUpperCase() || '??'
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+          <Avatar className="h-8 w-8">
+            <AvatarImage
+              src={session.user.image ?? undefined}
+              alt={session.user.name ?? 'User avatar'}
+            />
+            <AvatarFallback>{userInitials}</AvatarFallback>
+          </Avatar>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="w-56" align="end" forceMount>
+        <DropdownMenuLabel className="font-normal">
+          <div className="flex flex-col space-y-1">
+            <p className="text-sm font-medium leading-none">
+              {session.user.name}
+            </p>
+            <p className="text-xs leading-none text-muted-foreground">
+              {session.user.email}
+            </p>
+            <p className="text-xs leading-none text-muted-foreground">
+              Role: {session.user.role}
+            </p>
+          </div>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+
+        <DropdownMenuItem asChild>
+          <Link href="/profile" className="cursor-pointer">
+            <User className="mr-2 h-4 w-4" />
+            Profile
+          </Link>
+        </DropdownMenuItem>
+
+        <DropdownMenuItem asChild>
+          <Link href="/settings" className="cursor-pointer">
+            <Settings className="mr-2 h-4 w-4" />
+            Settings
+          </Link>
+        </DropdownMenuItem>
+
+        {(session.user.role === 'AUTHOR' || session.user.role === 'ADMIN') && (
+          <DropdownMenuItem asChild>
+            <Link href="/dashboard" className="cursor-pointer">
+              <PenTool className="mr-2 h-4 w-4" />
+              Dashboard
+            </Link>
+          </DropdownMenuItem>
+        )}
+
+        {session.user.role === 'ADMIN' && (
+          <DropdownMenuItem asChild>
+            <Link href="/admin" className="cursor-pointer">
+              <Shield className="mr-2 h-4 w-4" />
+              Admin Panel
+            </Link>
+          </DropdownMenuItem>
+        )}
+
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          className="cursor-pointer"
+          onClick={handleSignOut}
+          disabled={isLoading}
+        >
+          <LogOut className="mr-2 h-4 w-4" />
+          {isLoading ? 'Signing out...' : 'Sign out'}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+```
+
+### 11. Create Route Protection HOC
+
+Create `src/components/auth/route-guard.tsx`:
+
+```typescript
+'use client'
+
+import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
+import { useEffect } from 'react'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Shield, Loader2 } from 'lucide-react'
+
+interface RouteGuardProps {
+  children: React.ReactNode
+  allowedRoles?: ('USER' | 'AUTHOR' | 'ADMIN')[]
+  requireAuth?: boolean
+  fallback?: React.ReactNode
+}
+
+export function RouteGuard({
+  children,
+  allowedRoles,
+  requireAuth = true,
+  fallback,
+}: RouteGuardProps) {
+  const { data: session, status } = useSession()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (status === 'loading') return // Still loading
+
+    if (requireAuth && !session) {
+      router.push('/auth/signin')
+      return
+    }
+
+    if (allowedRoles && session?.user) {
+      if (!allowedRoles.includes(session.user.role)) {
+        router.push('/unauthorized')
+        return
+      }
+    }
+  }, [session, status, router, requireAuth, allowedRoles])
+
+  if (status === 'loading') {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (requireAuth && !session) {
+    return fallback || (
+      <div className="flex items-center justify-center min-h-screen">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <Shield className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+            <CardTitle>Authentication Required</CardTitle>
+            <CardDescription>
+              You need to be signed in to access this page.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              onClick={() => router.push('/auth/signin')}
+              className="w-full"
+            >
+              Sign In
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  if (allowedRoles && session?.user && !allowedRoles.includes(session.user.role)) {
+    return fallback || (
+      <div className="flex items-center justify-center min-h-screen">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <Shield className="h-12 w-12 mx-auto mb-4 text-destructive" />
+            <CardTitle>Access Denied</CardTitle>
+            <CardDescription>
+              You don't have permission to access this page.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              onClick={() => router.back()}
+              className="w-full"
+              variant="outline"
+            >
+              Go Back
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  return <>{children}</>
+}
+```
+
+### 12. Create Server-Side Auth Utilities
+
+Create `src/lib/server-auth.ts`:
+
+```typescript
+import { auth } from "@/lib/auth";
+import { redirect } from "next/navigation";
+
+export async function getServerSession() {
+  return await auth();
+}
+
+export async function requireServerAuth() {
+  const session = await getServerSession();
+  if (!session?.user) {
+    redirect("/auth/signin");
+  }
+  return session;
+}
+
+export async function requireServerRole(
+  roles: ("USER" | "AUTHOR" | "ADMIN")[]
+) {
+  const session = await requireServerAuth();
+  if (!roles.includes(session.user.role)) {
+    redirect("/unauthorized");
+  }
+  return session;
+}
+
+export async function getServerUser() {
+  const session = await getServerSession();
+  return session?.user || null;
+}
+```
+
+### 13. Create Unauthorized Page
+
+Create `src/app/unauthorized/page.tsx`:
+
+```typescript
+import Link from 'next/link'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Shield, ArrowLeft } from 'lucide-react'
+
+export default function UnauthorizedPage() {
+  return (
+    <div className="container flex h-screen w-screen flex-col items-center justify-center">
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <Shield className="h-16 w-16 mx-auto mb-4 text-destructive" />
+          <CardTitle className="text-2xl">Access Denied</CardTitle>
+          <CardDescription>
+            You don't have the necessary permissions to access this page.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="text-center text-sm text-muted-foreground">
+            <p>If you believe this is an error, please contact the administrator.</p>
+          </div>
+          <div className="flex flex-col space-y-2">
+            <Button asChild>
+              <Link href="/">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Go to Home
+              </Link>
+            </Button>
+            <Button variant="outline" onClick={() => window.history.back()}>
+              Go Back
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+```
+
+### 14. Update Environment Variables
+
+Update your `.env.local` file:
+
+```env
+# Database
+DATABASE_URL="postgresql://username:password@localhost:5432/blog_platform"
+
+# NextAuth
+NEXTAUTH_URL="http://localhost:3000"
+NEXTAUTH_SECRET="your-super-secret-key-here-make-it-long-and-random"
+
+# Google OAuth (Optional - Get from Google Cloud Console)
+GOOGLE_CLIENT_ID="your-google-client-id"
+GOOGLE_CLIENT_SECRET="your-google-client-secret"
+
+# GitHub OAuth (Optional - Get from GitHub Developer Settings)
+GITHUB_ID="your-github-client-id"
+GITHUB_SECRET="your-github-client-secret"
+
+# Contentful
+CONTENTFUL_SPACE_ID="your-space-id"
+CONTENTFUL_ACCESS_TOKEN="your-access-token"
+CONTENTFUL_PREVIEW_ACCESS_TOKEN="your-preview-access-token"
+
+# Other
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
+```
+
+### 15. Test Authentication
+
+1. Start your development server:
+
+```bash
+npm run dev
+```
+
+2. Test the registration flow:
+   - Go to `/auth/signup`
+   - Create a new account
+   - Verify you're automatically signed in
+
+3. Test the sign in flow:
+   - Go to `/auth/signin`
+   - Sign in with your credentials
+
+4. Test OAuth (if configured):
+   - Try signing in with Google or GitHub
+
+## Setting Up OAuth Providers
+
+### Google OAuth Setup
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project or select existing one
+3. Enable Google+ API
+4. Go to Credentials → Create Credentials → OAuth client ID
+5. Set authorized redirect URI: `http://localhost:3000/api/auth/callback/google`
+6. Copy Client ID and Client Secret to your `.env.local`
+
+### GitHub OAuth Setup
+
+1. Go to [GitHub Developer Settings](https://github.com/settings/developers)
+2. Click "New OAuth App"
+3. Set Authorization callback URL: `http://localhost:3000/api/auth/callback/github`
+4. Copy Client ID and Client Secret to your `.env.local`
+
+## Common Authentication Patterns
+
+### Protecting API Routes
+
+```typescript
+// src/app/api/protected/route.ts
+import { requireServerAuth } from "@/lib/server-auth";
+import { NextResponse } from "next/server";
+
+export async function GET() {
+  try {
+    const session = await requireServerAuth();
+
+    return NextResponse.json({
+      message: "This is a protected route",
+      user: session.user,
+    });
+  } catch (error) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+}
+```
+
+### Protecting Pages (Server Component)
+
+```typescript
+// src/app/dashboard/page.tsx
+import { requireServerRole } from '@/lib/server-auth'
+
+export default async function DashboardPage() {
+  // This will redirect if user doesn't have AUTHOR or ADMIN role
+  const session = await requireServerRole(['AUTHOR', 'ADMIN'])
+
+  return (
+    <div>
+      <h1>Dashboard</h1>
+      <p>Welcome, {session.user.name}!</p>
+    </div>
+  )
+}
+```
+
+### Protecting Pages (Client Component)
+
+```typescript
+// src/app/profile/page.tsx
+'use client'
+
+import { RouteGuard } from '@/components/auth/route-guard'
+
+export default function ProfilePage() {
+  return (
+    <RouteGuard requireAuth>
+      <div>
+        <h1>Profile</h1>
+        {/* Protected content here */}
+      </div>
+    </RouteGuard>
+  )
+}
+```
+
+## Security Best Practices
+
+### Password Security
+
+- Minimum 6 characters (consider increasing to 8+)
+- Hash passwords with bcrypt (salt rounds: 12)
+- Never store plain text passwords
+- Consider password complexity requirements
+
+### Session Security
+
+- Use secure, httpOnly cookies
+- Set appropriate session expiration
+- Implement proper logout functionality
+- Consider session rotation
+
+### Database Security
+
+- Use environment variables for sensitive data
+- Implement proper validation and sanitization
+- Use Prisma's built-in protection against SQL injection
+- Regularly update dependencies
+
+## Troubleshooting
+
+### Common Issues
+
+1. **NextAuth configuration errors**
+   - Check environment variables are set correctly
+   - Ensure NEXTAUTH_SECRET is set and secure
+   - Verify callback URLs for OAuth providers
+
+2. **Database connection issues**
+   - Verify DATABASE_URL is correct
+   - Check if database is running
+   - Run `npx prisma migrate dev` if needed
+
+3. **OAuth provider issues**
+   - Check client ID and secret are correct
+   - Verify callback URLs match exactly
+   - Ensure OAuth apps are configured properly
+
+4. **Session issues**
+   - Clear browser cookies and localStorage
+   - Check if session provider is properly configured
+   - Verify JWT secret is set
+
+### Debug Commands
+
+```bash
+# Check database schema
+npx prisma studio
+
+# Reset authentication tables
+npx prisma migrate reset
+
+# Generate new Prisma client
+npx prisma generate
+
+# Check environment variables
+echo $NEXTAUTH_SECRET
+```
+
+## Next Steps
+
+Your authentication system is now fully implemented! You should have:
+
+1. ✅ NextAuth.js configured with multiple providers
+2. ✅ Custom login and registration pages
+3. ✅ Password hashing and validation
+4. ✅ Role-based access control
+5. ✅ Route protection for both client and server components
+6. ✅ Session management
+7. ✅ OAuth integration (Google, GitHub)
+
+**Continue to**: [Step 4: Contentful CMS Integration →](../04-contentful-setup)
+
+## Additional Resources
+
+- [NextAuth.js Documentation](https://next-auth.js.org/)
+- [OAuth 2.0 Security Best Practices](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-security-topics)
+- [OWASP Authentication Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html)
+- [JWT Security Best Practices](https://auth0.com/blog/a-look-at-the-latest-draft-for-jwt-bcp/)
+
+---
+
+**Estimated Time**: 90-120 minutes
+
+**Difficulty**: Intermediate to Advanced
+
+**Next**: [Contentful CMS Integration →](../04-contentful-setup)

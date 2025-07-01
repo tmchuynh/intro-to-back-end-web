@@ -1,0 +1,1397 @@
+# Step 7: Blog Posts & Content Management
+
+## Objective
+
+Implement comprehensive blog post management functionality including creation, editing, publishing workflows, content organization, and integration between your database, Contentful CMS, and MDX files.
+
+## What You'll Learn
+
+- How to create a blog post creation and editing interface
+- How to implement draft and publish workflows
+- How to manage content from multiple sources (database, Contentful, MDX)
+- How to create author dashboards and content management
+- How to implement content search and filtering
+- How to handle file uploads and media management
+
+## Prerequisites
+
+- Completed [Step 6: UI Components & Styling](../06-ui-components)
+- Understanding of form handling in React
+- Basic knowledge of content management concepts
+
+## Content Management Architecture
+
+```
+Content Flow:
+├── Creation & Editing
+│   ├── Rich text editor (Tiptap/TinyMCE)
+│   ├── MDX support
+│   ├── Media upload
+│   └── Metadata management
+├── Storage Options
+│   ├── Database (user posts)
+│   ├── Contentful (editorial content)
+│   └── Local MDX (technical docs)
+└── Publishing Workflow
+    ├── Draft → Review → Publish
+    ├── Scheduled publishing
+    └── Version control
+```
+
+## Step-by-Step Instructions
+
+### 1. Install Additional Dependencies
+
+```bash
+# Rich text editor
+npm install @tiptap/react @tiptap/starter-kit @tiptap/extension-link
+npm install @tiptap/extension-image @tiptap/extension-code-block-lowlight
+npm install lowlight
+
+# Form handling
+npm install react-hook-form @hookform/resolvers zod
+
+# File upload
+npm install uploadthing @uploadthing/react
+
+# Date handling
+npm install date-fns
+
+# Additional utilities
+npm install slugify
+npm install react-dropzone
+npm install react-textarea-autosize
+```
+
+### 2. Set Up File Upload with UploadThing
+
+Create `src/app/api/uploadthing/core.ts`:
+
+```typescript
+import { createUploadthing, type FileRouter } from "uploadthing/next";
+import { requireServerAuth } from "@/lib/server-auth";
+
+const f = createUploadthing();
+
+export const ourFileRouter = {
+  imageUploader: f({ image: { maxFileSize: "4MB", maxFileCount: 1 } })
+    .middleware(async ({ req }) => {
+      const session = await requireServerAuth();
+      return { userId: session.user.id };
+    })
+    .onUploadComplete(async ({ metadata, file }) => {
+      console.log("Upload complete for userId:", metadata.userId);
+      console.log("file url", file.url);
+      return { uploadedBy: metadata.userId };
+    }),
+
+  documentUploader: f({ pdf: { maxFileSize: "16MB", maxFileCount: 1 } })
+    .middleware(async ({ req }) => {
+      const session = await requireServerAuth();
+      return { userId: session.user.id };
+    })
+    .onUploadComplete(async ({ metadata, file }) => {
+      console.log("Document upload complete for userId:", metadata.userId);
+      return { uploadedBy: metadata.userId };
+    }),
+} satisfies FileRouter;
+
+export type OurFileRouter = typeof ourFileRouter;
+```
+
+Create `src/app/api/uploadthing/route.ts`:
+
+```typescript
+import { createNextRouteHandler } from "uploadthing/next";
+import { ourFileRouter } from "./core";
+
+export const { GET, POST } = createNextRouteHandler({
+  router: ourFileRouter,
+});
+```
+
+### 3. Create Rich Text Editor Component
+
+Create `src/components/editor/rich-text-editor.tsx`:
+
+```typescript
+'use client'
+
+import { useEditor, EditorContent } from '@tiptap/react'
+import StarterKit from '@tiptap/starter-kit'
+import Link from '@tiptap/extension-link'
+import Image from '@tiptap/extension-image'
+import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
+import { lowlight } from 'lowlight'
+import { Button } from '@/components/ui/button'
+import { Separator } from '@/components/ui/separator'
+import {
+  Bold,
+  Italic,
+  Strikethrough,
+  Code,
+  List,
+  ListOrdered,
+  Quote,
+  Undo,
+  Redo,
+  Link as LinkIcon,
+  Image as ImageIcon,
+  Heading1,
+  Heading2,
+  Heading3
+} from 'lucide-react'
+import { useCallback } from 'react'
+import { cn } from '@/lib/utils'
+
+interface RichTextEditorProps {
+  content: string
+  onChange: (content: string) => void
+  placeholder?: string
+  className?: string
+}
+
+export function RichTextEditor({
+  content,
+  onChange,
+  placeholder = "Start writing...",
+  className
+}: RichTextEditorProps) {
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      Link.configure({
+        openOnClick: false,
+        HTMLAttributes: {
+          class: 'text-primary underline underline-offset-2',
+        },
+      }),
+      Image.configure({
+        HTMLAttributes: {
+          class: 'rounded-lg max-w-full h-auto',
+        },
+      }),
+      CodeBlockLowlight.configure({
+        lowlight,
+        HTMLAttributes: {
+          class: 'rounded-lg bg-muted p-4 font-mono text-sm',
+        },
+      }),
+    ],
+    content,
+    onUpdate: ({ editor }) => {
+      onChange(editor.getHTML())
+    },
+    editorProps: {
+      attributes: {
+        class: 'prose prose-lg max-w-none focus:outline-none min-h-[200px] p-4',
+      },
+    },
+  })
+
+  const addLink = useCallback(() => {
+    const url = window.prompt('Enter URL:')
+    if (url && editor) {
+      editor.chain().focus().setLink({ href: url }).run()
+    }
+  }, [editor])
+
+  const addImage = useCallback(() => {
+    const url = window.prompt('Enter image URL:')
+    if (url && editor) {
+      editor.chain().focus().setImage({ src: url }).run()
+    }
+  }, [editor])
+
+  if (!editor) {
+    return null
+  }
+
+  return (
+    <div className={cn('border rounded-lg', className)}>
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center gap-1 p-2 border-b">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => editor.chain().focus().toggleBold().run()}
+          className={editor.isActive('bold') ? 'bg-muted' : ''}
+        >
+          <Bold className="h-4 w-4" />
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => editor.chain().focus().toggleItalic().run()}
+          className={editor.isActive('italic') ? 'bg-muted' : ''}
+        >
+          <Italic className="h-4 w-4" />
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => editor.chain().focus().toggleStrike().run()}
+          className={editor.isActive('strike') ? 'bg-muted' : ''}
+        >
+          <Strikethrough className="h-4 w-4" />
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => editor.chain().focus().toggleCode().run()}
+          className={editor.isActive('code') ? 'bg-muted' : ''}
+        >
+          <Code className="h-4 w-4" />
+        </Button>
+
+        <Separator orientation="vertical" className="h-6" />
+
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+          className={editor.isActive('heading', { level: 1 }) ? 'bg-muted' : ''}
+        >
+          <Heading1 className="h-4 w-4" />
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+          className={editor.isActive('heading', { level: 2 }) ? 'bg-muted' : ''}
+        >
+          <Heading2 className="h-4 w-4" />
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+          className={editor.isActive('heading', { level: 3 }) ? 'bg-muted' : ''}
+        >
+          <Heading3 className="h-4 w-4" />
+        </Button>
+
+        <Separator orientation="vertical" className="h-6" />
+
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => editor.chain().focus().toggleBulletList().run()}
+          className={editor.isActive('bulletList') ? 'bg-muted' : ''}
+        >
+          <List className="h-4 w-4" />
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => editor.chain().focus().toggleOrderedList().run()}
+          className={editor.isActive('orderedList') ? 'bg-muted' : ''}
+        >
+          <ListOrdered className="h-4 w-4" />
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => editor.chain().focus().toggleBlockquote().run()}
+          className={editor.isActive('blockquote') ? 'bg-muted' : ''}
+        >
+          <Quote className="h-4 w-4" />
+        </Button>
+
+        <Separator orientation="vertical" className="h-6" />
+
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={addLink}
+        >
+          <LinkIcon className="h-4 w-4" />
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={addImage}
+        >
+          <ImageIcon className="h-4 w-4" />
+        </Button>
+
+        <Separator orientation="vertical" className="h-6" />
+
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => editor.chain().focus().undo().run()}
+          disabled={!editor.can().undo()}
+        >
+          <Undo className="h-4 w-4" />
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => editor.chain().focus().redo().run()}
+          disabled={!editor.can().redo()}
+        >
+          <Redo className="h-4 w-4" />
+        </Button>
+      </div>
+
+      {/* Editor Content */}
+      <EditorContent
+        editor={editor}
+        className="min-h-[200px]"
+        placeholder={placeholder}
+      />
+    </div>
+  )
+}
+```
+
+### 4. Create Post Form Schema
+
+Create `src/lib/validations/post.ts`:
+
+```typescript
+import { z } from "zod";
+
+export const postFormSchema = z.object({
+  title: z
+    .string()
+    .min(1, "Title is required")
+    .max(200, "Title must be less than 200 characters"),
+
+  slug: z
+    .string()
+    .min(1, "Slug is required")
+    .max(200, "Slug must be less than 200 characters")
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Slug must be lowercase with hyphens"),
+
+  excerpt: z
+    .string()
+    .min(1, "Excerpt is required")
+    .max(500, "Excerpt must be less than 500 characters"),
+
+  content: z.string().min(1, "Content is required"),
+
+  coverImage: z.string().url().optional().or(z.literal("")),
+
+  categoryId: z.string().min(1, "Category is required"),
+
+  tags: z.array(z.string()).optional(),
+
+  status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]),
+
+  featured: z.boolean().default(false),
+
+  publishedAt: z.date().optional(),
+
+  metaTitle: z.string().max(60).optional(),
+  metaDescription: z.string().max(160).optional(),
+  metaKeywords: z.string().optional(),
+});
+
+export type PostFormData = z.infer<typeof postFormSchema>;
+
+export const commentFormSchema = z.object({
+  content: z
+    .string()
+    .min(1, "Comment cannot be empty")
+    .max(1000, "Comment must be less than 1000 characters"),
+
+  postId: z.string().min(1),
+
+  parentId: z.string().optional(),
+});
+
+export type CommentFormData = z.infer<typeof commentFormSchema>;
+```
+
+### 5. Create Post Editor Component
+
+Create `src/components/editor/post-editor.tsx`:
+
+```typescript
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Switch } from '@/components/ui/switch'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { RichTextEditor } from './rich-text-editor'
+import { postFormSchema, type PostFormData } from '@/lib/validations/post'
+import { cn } from '@/lib/utils'
+import slugify from 'slugify'
+import { Save, Eye, Send, Calendar, Image, Tag, Settings } from 'lucide-react'
+import { toast } from 'sonner'
+
+interface PostEditorProps {
+  initialData?: Partial<PostFormData>
+  postId?: string
+  categories: Array<{ id: string; name: string }>
+  tags: Array<{ id: string; name: string }>
+}
+
+export function PostEditor({
+  initialData,
+  postId,
+  categories,
+  tags
+}: PostEditorProps) {
+  const router = useRouter()
+  const [isLoading, setIsLoading] = useState(false)
+  const [preview, setPreview] = useState(false)
+  const [selectedTags, setSelectedTags] = useState<string[]>(initialData?.tags || [])
+
+  const form = useForm<PostFormData>({
+    resolver: zodResolver(postFormSchema),
+    defaultValues: {
+      title: '',
+      slug: '',
+      excerpt: '',
+      content: '',
+      coverImage: '',
+      categoryId: '',
+      tags: [],
+      status: 'DRAFT',
+      featured: false,
+      metaTitle: '',
+      metaDescription: '',
+      metaKeywords: '',
+      ...initialData,
+    },
+  })
+
+  const { watch, setValue, handleSubmit, formState: { errors, isDirty } } = form
+
+  const watchTitle = watch('title')
+
+  // Auto-generate slug from title
+  useEffect(() => {
+    if (watchTitle && !postId) {
+      const slug = slugify(watchTitle, { lower: true, strict: true })
+      setValue('slug', slug)
+    }
+  }, [watchTitle, setValue, postId])
+
+  const onSubmit = async (data: PostFormData) => {
+    setIsLoading(true)
+    try {
+      const payload = {
+        ...data,
+        tags: selectedTags,
+        publishedAt: data.status === 'PUBLISHED' ? new Date() : undefined,
+      }
+
+      const url = postId ? `/api/posts/${postId}` : '/api/posts'
+      const method = postId ? 'PUT' : 'POST'
+
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to save post')
+      }
+
+      const result = await response.json()
+
+      toast.success(postId ? 'Post updated!' : 'Post created!')
+      router.push(`/dashboard/posts/${result.post.id}`)
+    } catch (error) {
+      console.error('Error saving post:', error)
+      toast.error('Failed to save post')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const saveDraft = () => {
+    setValue('status', 'DRAFT')
+    handleSubmit(onSubmit)()
+  }
+
+  const publishPost = () => {
+    setValue('status', 'PUBLISHED')
+    handleSubmit(onSubmit)()
+  }
+
+  return (
+    <div className="container mx-auto py-6 max-w-6xl">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Main Editor */}
+        <div className="lg:col-span-3 space-y-6">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>
+                  {postId ? 'Edit Post' : 'Create New Post'}
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPreview(!preview)}
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    {preview ? 'Edit' : 'Preview'}
+                  </Button>
+                  {isDirty && (
+                    <Badge variant="secondary">Unsaved changes</Badge>
+                  )}
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {!preview ? (
+                <>
+                  {/* Title */}
+                  <div className="space-y-2">
+                    <Label htmlFor="title">Title *</Label>
+                    <Input
+                      id="title"
+                      placeholder="Enter post title..."
+                      {...form.register('title')}
+                      className={cn(errors.title && 'border-destructive')}
+                    />
+                    {errors.title && (
+                      <p className="text-sm text-destructive">{errors.title.message}</p>
+                    )}
+                  </div>
+
+                  {/* Slug */}
+                  <div className="space-y-2">
+                    <Label htmlFor="slug">URL Slug *</Label>
+                    <Input
+                      id="slug"
+                      placeholder="url-friendly-slug"
+                      {...form.register('slug')}
+                      className={cn(errors.slug && 'border-destructive')}
+                    />
+                    {errors.slug && (
+                      <p className="text-sm text-destructive">{errors.slug.message}</p>
+                    )}
+                  </div>
+
+                  {/* Excerpt */}
+                  <div className="space-y-2">
+                    <Label htmlFor="excerpt">Excerpt *</Label>
+                    <Textarea
+                      id="excerpt"
+                      placeholder="Brief description of your post..."
+                      rows={3}
+                      {...form.register('excerpt')}
+                      className={cn(errors.excerpt && 'border-destructive')}
+                    />
+                    {errors.excerpt && (
+                      <p className="text-sm text-destructive">{errors.excerpt.message}</p>
+                    )}
+                  </div>
+
+                  {/* Cover Image */}
+                  <div className="space-y-2">
+                    <Label htmlFor="coverImage">Cover Image URL</Label>
+                    <Input
+                      id="coverImage"
+                      placeholder="https://example.com/image.jpg"
+                      {...form.register('coverImage')}
+                    />
+                  </div>
+
+                  {/* Content Editor */}
+                  <div className="space-y-2">
+                    <Label>Content *</Label>
+                    <RichTextEditor
+                      content={watch('content')}
+                      onChange={(content) => setValue('content', content)}
+                      placeholder="Start writing your post..."
+                    />
+                    {errors.content && (
+                      <p className="text-sm text-destructive">{errors.content.message}</p>
+                    )}
+                  </div>
+                </>
+              ) : (
+                // Preview Mode
+                <div className="prose prose-lg max-w-none">
+                  <h1>{watch('title')}</h1>
+                  <p className="lead">{watch('excerpt')}</p>
+                  <div dangerouslySetInnerHTML={{ __html: watch('content') }} />
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Sidebar */}
+        <div className="space-y-6">
+          {/* Publish Actions */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Send className="h-4 w-4" />
+                Publish
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="featured"
+                  checked={watch('featured')}
+                  onCheckedChange={(checked) => setValue('featured', checked)}
+                />
+                <Label htmlFor="featured">Featured post</Label>
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={saveDraft}
+                  disabled={isLoading}
+                  className="flex-1"
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  Save Draft
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={publishPost}
+                  disabled={isLoading}
+                  className="flex-1"
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  Publish
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Category & Tags */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Tag className="h-4 w-4" />
+                Categories & Tags
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Category */}
+              <div className="space-y-2">
+                <Label>Category *</Label>
+                <Select
+                  value={watch('categoryId')}
+                  onValueChange={(value) => setValue('categoryId', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((category) => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.categoryId && (
+                  <p className="text-sm text-destructive">{errors.categoryId.message}</p>
+                )}
+              </div>
+
+              {/* Tags */}
+              <div className="space-y-2">
+                <Label>Tags</Label>
+                <div className="space-y-2">
+                  {tags.map((tag) => (
+                    <label
+                      key={tag.id}
+                      className="flex items-center space-x-2 cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedTags.includes(tag.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedTags([...selectedTags, tag.id])
+                          } else {
+                            setSelectedTags(selectedTags.filter(id => id !== tag.id))
+                          }
+                        }}
+                        className="rounded border-gray-300"
+                      />
+                      <span className="text-sm">{tag.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* SEO Settings */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="h-4 w-4" />
+                SEO Settings
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="metaTitle">Meta Title</Label>
+                <Input
+                  id="metaTitle"
+                  placeholder="SEO title (max 60 chars)"
+                  {...form.register('metaTitle')}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="metaDescription">Meta Description</Label>
+                <Textarea
+                  id="metaDescription"
+                  placeholder="SEO description (max 160 chars)"
+                  rows={3}
+                  {...form.register('metaDescription')}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="metaKeywords">Keywords</Label>
+                <Input
+                  id="metaKeywords"
+                  placeholder="keyword1, keyword2, keyword3"
+                  {...form.register('metaKeywords')}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  )
+}
+```
+
+### 6. Create Post API Routes
+
+Create `src/app/api/posts/route.ts`:
+
+```typescript
+import { NextRequest, NextResponse } from "next/server";
+import { requireServerAuth } from "@/lib/server-auth";
+import { prisma } from "@/lib/db";
+import { postFormSchema } from "@/lib/validations/post";
+import readingTime from "reading-time";
+
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "10");
+    const category = searchParams.get("category");
+    const tag = searchParams.get("tag");
+    const status = searchParams.get("status");
+    const author = searchParams.get("author");
+    const search = searchParams.get("search");
+
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+
+    if (category) {
+      where.category = { slug: category };
+    }
+
+    if (tag) {
+      where.tags = { some: { slug: tag } };
+    }
+
+    if (status) {
+      where.status = status;
+    }
+
+    if (author) {
+      where.author = { id: author };
+    }
+
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: "insensitive" } },
+        { excerpt: { contains: search, mode: "insensitive" } },
+        { content: { contains: search, mode: "insensitive" } },
+      ];
+    }
+
+    const [posts, total] = await Promise.all([
+      prisma.post.findMany({
+        where,
+        include: {
+          author: {
+            select: { id: true, name: true, email: true, image: true },
+          },
+          category: true,
+          tags: true,
+          _count: {
+            select: { comments: true, likes: true },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+      }),
+      prisma.post.count({ where }),
+    ]);
+
+    return NextResponse.json({
+      posts,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching posts:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch posts" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const session = await requireServerAuth();
+    const body = await request.json();
+
+    const validatedData = postFormSchema.parse(body);
+
+    // Calculate reading time
+    const { text: readingTimeText, minutes } = readingTime(
+      validatedData.content
+    );
+
+    // Create post
+    const post = await prisma.post.create({
+      data: {
+        title: validatedData.title,
+        slug: validatedData.slug,
+        excerpt: validatedData.excerpt,
+        content: validatedData.content,
+        coverImage: validatedData.coverImage || null,
+        status: validatedData.status,
+        featured: validatedData.featured,
+        readTime: Math.ceil(minutes),
+        metaTitle: validatedData.metaTitle,
+        metaDescription: validatedData.metaDescription,
+        metaKeywords: validatedData.metaKeywords,
+        publishedAt: validatedData.status === "PUBLISHED" ? new Date() : null,
+        authorId: session.user.id,
+        categoryId: validatedData.categoryId,
+        tags: {
+          connect: validatedData.tags?.map((tagId) => ({ id: tagId })) || [],
+        },
+      },
+      include: {
+        author: {
+          select: { id: true, name: true, email: true, image: true },
+        },
+        category: true,
+        tags: true,
+      },
+    });
+
+    return NextResponse.json({ post });
+  } catch (error) {
+    console.error("Error creating post:", error);
+    return NextResponse.json(
+      { error: "Failed to create post" },
+      { status: 500 }
+    );
+  }
+}
+```
+
+### 7. Create Dashboard Layout
+
+Create `src/app/dashboard/layout.tsx`:
+
+```typescript
+import { requireServerRole } from '@/lib/server-auth'
+import { DashboardSidebar } from '@/components/dashboard/sidebar'
+import { DashboardHeader } from '@/components/dashboard/header'
+
+export default async function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  // Require AUTHOR or ADMIN role
+  await requireServerRole(['AUTHOR', 'ADMIN'])
+
+  return (
+    <div className="flex h-screen bg-background">
+      <DashboardSidebar />
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <DashboardHeader />
+        <main className="flex-1 overflow-y-auto">
+          {children}
+        </main>
+      </div>
+    </div>
+  )
+}
+```
+
+### 8. Create Dashboard Sidebar
+
+Create `src/components/dashboard/sidebar.tsx`:
+
+```typescript
+'use client'
+
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
+import { Separator } from '@/components/ui/separator'
+import {
+  LayoutDashboard,
+  FileText,
+  PlusCircle,
+  BarChart3,
+  MessageSquare,
+  Users,
+  Settings,
+  Tag,
+  FolderOpen
+} from 'lucide-react'
+
+const sidebarItems = [
+  {
+    title: 'Overview',
+    href: '/dashboard',
+    icon: LayoutDashboard,
+  },
+  {
+    title: 'Posts',
+    href: '/dashboard/posts',
+    icon: FileText,
+  },
+  {
+    title: 'New Post',
+    href: '/dashboard/posts/new',
+    icon: PlusCircle,
+  },
+  {
+    title: 'Comments',
+    href: '/dashboard/comments',
+    icon: MessageSquare,
+  },
+  {
+    title: 'Analytics',
+    href: '/dashboard/analytics',
+    icon: BarChart3,
+  },
+]
+
+const managementItems = [
+  {
+    title: 'Categories',
+    href: '/dashboard/categories',
+    icon: FolderOpen,
+  },
+  {
+    title: 'Tags',
+    href: '/dashboard/tags',
+    icon: Tag,
+  },
+  {
+    title: 'Users',
+    href: '/dashboard/users',
+    icon: Users,
+  },
+  {
+    title: 'Settings',
+    href: '/dashboard/settings',
+    icon: Settings,
+  },
+]
+
+export function DashboardSidebar() {
+  const pathname = usePathname()
+
+  return (
+    <div className="w-64 bg-card border-r">
+      <div className="p-6">
+        <Link href="/dashboard" className="flex items-center space-x-2">
+          <FileText className="h-6 w-6" />
+          <span className="font-bold text-lg">Dashboard</span>
+        </Link>
+      </div>
+
+      <nav className="px-4 pb-4">
+        <div className="space-y-1">
+          {sidebarItems.map((item) => (
+            <Button
+              key={item.href}
+              variant={pathname === item.href ? 'secondary' : 'ghost'}
+              className={cn(
+                'w-full justify-start',
+                pathname === item.href && 'bg-secondary'
+              )}
+              asChild
+            >
+              <Link href={item.href}>
+                <item.icon className="mr-2 h-4 w-4" />
+                {item.title}
+              </Link>
+            </Button>
+          ))}
+        </div>
+
+        <Separator className="my-4" />
+
+        <div className="space-y-1">
+          <h4 className="px-2 text-sm font-semibold text-muted-foreground">
+            Management
+          </h4>
+          {managementItems.map((item) => (
+            <Button
+              key={item.href}
+              variant={pathname === item.href ? 'secondary' : 'ghost'}
+              className={cn(
+                'w-full justify-start',
+                pathname === item.href && 'bg-secondary'
+              )}
+              asChild
+            >
+              <Link href={item.href}>
+                <item.icon className="mr-2 h-4 w-4" />
+                {item.title}
+              </Link>
+            </Button>
+          ))}
+        </div>
+      </nav>
+    </div>
+  )
+}
+```
+
+### 9. Create Posts Management Page
+
+Create `src/app/dashboard/posts/page.tsx`:
+
+```typescript
+import { requireServerAuth } from '@/lib/server-auth'
+import { prisma } from '@/lib/db'
+import { PostsTable } from '@/components/dashboard/posts-table'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { PlusCircle, FileText, Eye, Clock } from 'lucide-react'
+import Link from 'next/link'
+
+export default async function PostsPage() {
+  const session = await requireServerAuth()
+
+  const [posts, stats] = await Promise.all([
+    prisma.post.findMany({
+      where: {
+        authorId: session.user.id,
+      },
+      include: {
+        category: true,
+        tags: true,
+        _count: {
+          select: { comments: true, likes: true },
+        },
+      },
+      orderBy: { updatedAt: 'desc' },
+    }),
+    prisma.post.groupBy({
+      by: ['status'],
+      where: {
+        authorId: session.user.id,
+      },
+      _count: true,
+    }),
+  ])
+
+  const statsMap = stats.reduce((acc, stat) => {
+    acc[stat.status] = stat._count
+    return acc
+  }, {} as Record<string, number>)
+
+  return (
+    <div className="p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Posts</h1>
+          <p className="text-muted-foreground">
+            Manage your blog posts and content
+          </p>
+        </div>
+        <Button asChild>
+          <Link href="/dashboard/posts/new">
+            <PlusCircle className="mr-2 h-4 w-4" />
+            New Post
+          </Link>
+        </Button>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Posts</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{posts.length}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Published</CardTitle>
+            <Eye className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{statsMap.PUBLISHED || 0}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Drafts</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{statsMap.DRAFT || 0}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Views</CardTitle>
+            <Eye className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {posts.reduce((sum, post) => sum + post.views, 0)}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Posts Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Your Posts</CardTitle>
+          <CardDescription>
+            View and manage all your blog posts
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <PostsTable posts={posts} />
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+```
+
+### 10. Create New Post Page
+
+Create `src/app/dashboard/posts/new/page.tsx`:
+
+```typescript
+import { requireServerAuth } from '@/lib/server-auth'
+import { prisma } from '@/lib/db'
+import { PostEditor } from '@/components/editor/post-editor'
+
+export default async function NewPostPage() {
+  await requireServerAuth()
+
+  const [categories, tags] = await Promise.all([
+    prisma.category.findMany({
+      orderBy: { name: 'asc' },
+    }),
+    prisma.tag.findMany({
+      orderBy: { name: 'asc' },
+    }),
+  ])
+
+  return (
+    <PostEditor
+      categories={categories}
+      tags={tags}
+    />
+  )
+}
+```
+
+## Content Search Implementation
+
+Create `src/app/api/search/route.ts`:
+
+```typescript
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+import { getAllBlogPosts, searchBlogPosts } from "@/lib/contentful-utils";
+
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const query = searchParams.get("q");
+
+    if (!query || query.trim().length === 0) {
+      return NextResponse.json({ results: [] });
+    }
+
+    // Search database posts
+    const dbPosts = await prisma.post.findMany({
+      where: {
+        status: "PUBLISHED",
+        OR: [
+          { title: { contains: query, mode: "insensitive" } },
+          { excerpt: { contains: query, mode: "insensitive" } },
+          { content: { contains: query, mode: "insensitive" } },
+        ],
+      },
+      include: {
+        author: { select: { name: true } },
+        category: { select: { name: true } },
+      },
+      take: 5,
+    });
+
+    // Search Contentful posts
+    const contentfulPosts = await searchBlogPosts(query);
+
+    // Search categories
+    const categories = await prisma.category.findMany({
+      where: {
+        name: { contains: query, mode: "insensitive" },
+      },
+      take: 3,
+    });
+
+    // Search tags
+    const tags = await prisma.tag.findMany({
+      where: {
+        name: { contains: query, mode: "insensitive" },
+      },
+      take: 3,
+    });
+
+    const results = [
+      ...dbPosts.map((post) => ({
+        id: post.id,
+        title: post.title,
+        type: "post" as const,
+        href: `/blog/${post.slug}`,
+        description: post.excerpt,
+      })),
+      ...contentfulPosts.slice(0, 5).map((post) => ({
+        id: post.sys.id,
+        title: post.fields.title,
+        type: "post" as const,
+        href: `/blog/${post.fields.slug}`,
+        description: post.fields.excerpt,
+      })),
+      ...categories.map((category) => ({
+        id: category.id,
+        title: category.name,
+        type: "category" as const,
+        href: `/blog/category/${category.slug}`,
+        description: category.description,
+      })),
+      ...tags.map((tag) => ({
+        id: tag.id,
+        title: tag.name,
+        type: "tag" as const,
+        href: `/blog/tag/${tag.slug}`,
+      })),
+    ];
+
+    return NextResponse.json({ results: results.slice(0, 10) });
+  } catch (error) {
+    console.error("Search error:", error);
+    return NextResponse.json({ error: "Search failed" }, { status: 500 });
+  }
+}
+```
+
+## Performance & SEO Optimization
+
+### Implement Reading Time Calculation
+
+The reading time is automatically calculated when creating/updating posts using the `reading-time` package.
+
+### SEO Metadata Generation
+
+Each blog post automatically generates proper SEO metadata including Open Graph and Twitter Card data.
+
+### Content Caching
+
+Implement caching for better performance:
+
+```typescript
+// Add to your API routes
+import { unstable_cache } from "next/cache";
+
+const getCachedPosts = unstable_cache(
+  async () => {
+    return await prisma.post.findMany({
+      where: { status: "PUBLISHED" },
+      include: { author: true, category: true, tags: true },
+    });
+  },
+  ["posts"],
+  { revalidate: 3600 } // Cache for 1 hour
+);
+```
+
+## Next Steps
+
+Your blog post management system is now complete! You should have:
+
+1. ✅ Rich text editor with formatting options
+2. ✅ Complete post creation and editing workflow
+3. ✅ Draft and publish functionality
+4. ✅ Content organization with categories and tags
+5. ✅ Author dashboard for content management
+6. ✅ Search functionality across all content
+7. ✅ SEO optimization features
+8. ✅ File upload capabilities
+
+**Continue to**: [Step 8: Comments System →](../08-comments-system)
+
+---
+
+**Estimated Time**: 180-240 minutes
+
+**Difficulty**: Advanced
+
+**Next**: [Comments System →](../08-comments-system)
