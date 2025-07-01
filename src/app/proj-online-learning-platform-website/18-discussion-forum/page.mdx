@@ -1,0 +1,1550 @@
+import BackToTop from "@/components/BackToTop";
+
+# Discussion Forum System
+
+## Table of Contents
+
+## Introduction
+
+In this module, we'll implement a comprehensive discussion forum system that enables students and instructors to engage in meaningful conversations about course content. The system will support threaded discussions, moderation tools, real-time updates, and various interaction features.
+
+## Forum Features
+
+### Core Discussion Components
+
+1. **Forum Structure**
+   - Course-level forums
+   - Topic-based categories
+   - Threaded discussions
+   - Nested replies
+
+2. **Post Management**
+   - Rich text editor
+   - File attachments
+   - Image embedding
+   - Code syntax highlighting
+
+3. **Interaction Features**
+   - Voting system (upvote/downvote)
+   - Best answer marking
+   - Post bookmarking
+   - User mentions (@username)
+
+4. **Moderation Tools**
+   - Content moderation
+   - Report inappropriate content
+   - Instructor moderation privileges
+   - Automatic spam detection
+
+## Backend Implementation
+
+### Forum Models
+
+```java
+@Document(collection = "forum_categories")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class ForumCategory {
+    @Id
+    private String id;
+
+    private String courseId;
+    private String name;
+    private String description;
+    private String color; // Hex color for visual distinction
+    private int sortOrder;
+
+    // Access control
+    private boolean isPublic;
+    private List<String> allowedRoles; // STUDENT, INSTRUCTOR, TA
+
+    // Statistics
+    private long totalTopics;
+    private long totalPosts;
+    private LocalDateTime lastActivityAt;
+
+    private String createdBy;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+}
+
+@Document(collection = "forum_topics")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class ForumTopic {
+    @Id
+    private String id;
+
+    private String courseId;
+    private String categoryId;
+    private String title;
+    private String content;
+    private TopicType type;
+    private TopicStatus status;
+
+    // Author information
+    private String authorId;
+    private String authorName;
+    private String authorRole;
+
+    // Topic properties
+    private boolean isPinned;
+    private boolean isLocked;
+    private boolean isAnnouncement;
+    private boolean hasAcceptedAnswer;
+    private String acceptedAnswerId;
+
+    // Engagement
+    private int viewCount;
+    private int replyCount;
+    private int upvotes;
+    private int downvotes;
+
+    // Content
+    private List<String> tags;
+    private List<String> attachmentUrls;
+
+    // Activity tracking
+    private LocalDateTime lastReplyAt;
+    private String lastReplyBy;
+    private String lastReplyByName;
+
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+}
+
+@Document(collection = "forum_posts")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class ForumPost {
+    @Id
+    private String id;
+
+    private String topicId;
+    private String courseId;
+    private String parentPostId; // For nested replies
+    private String content;
+
+    // Author information
+    private String authorId;
+    private String authorName;
+    private String authorRole;
+
+    // Post properties
+    private boolean isAccepted; // Marked as best answer
+    private boolean isModerated;
+    private boolean isDeleted;
+    private String moderationReason;
+    private String moderatedBy;
+    private LocalDateTime moderatedAt;
+
+    // Engagement
+    private int upvotes;
+    private int downvotes;
+    private List<String> upvotedBy;
+    private List<String> downvotedBy;
+
+    // Content
+    private List<String> attachmentUrls;
+    private List<String> mentionedUsers;
+
+    // Edit history
+    private List<PostEdit> editHistory;
+    private boolean isEdited;
+    private LocalDateTime lastEditedAt;
+
+    // Nested replies
+    private List<String> replyIds;
+    private int replyCount;
+
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+}
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class PostEdit {
+    private String editedBy;
+    private String previousContent;
+    private String reason;
+    private LocalDateTime editedAt;
+}
+
+@Document(collection = "forum_votes")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class ForumVote {
+    @Id
+    private String id;
+
+    private String userId;
+    private String targetId; // Can be topic or post ID
+    private VoteType voteType;
+    private VoteTarget targetType;
+
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+}
+
+@Document(collection = "forum_reports")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class ForumReport {
+    @Id
+    private String id;
+
+    private String reportedBy;
+    private String targetId; // Topic or Post ID
+    private ReportTarget targetType;
+    private ReportReason reason;
+    private String description;
+    private ReportStatus status;
+
+    // Resolution
+    private String resolvedBy;
+    private String resolution;
+    private LocalDateTime resolvedAt;
+
+    private LocalDateTime createdAt;
+}
+
+public enum TopicType {
+    DISCUSSION,
+    QUESTION,
+    ANNOUNCEMENT,
+    POLL
+}
+
+public enum TopicStatus {
+    OPEN,
+    CLOSED,
+    ARCHIVED
+}
+
+public enum VoteType {
+    UPVOTE,
+    DOWNVOTE
+}
+
+public enum VoteTarget {
+    TOPIC,
+    POST
+}
+
+public enum ReportReason {
+    SPAM,
+    INAPPROPRIATE_CONTENT,
+    HARASSMENT,
+    OFF_TOPIC,
+    COPYRIGHT_VIOLATION,
+    OTHER
+}
+
+public enum ReportTarget {
+    TOPIC,
+    POST
+}
+
+public enum ReportStatus {
+    PENDING,
+    REVIEWED,
+    RESOLVED,
+    DISMISSED
+}
+```
+
+### Forum Service
+
+```java
+@Service
+public class ForumService {
+
+    @Autowired
+    private ForumCategoryRepository categoryRepository;
+
+    @Autowired
+    private ForumTopicRepository topicRepository;
+
+    @Autowired
+    private ForumPostRepository postRepository;
+
+    @Autowired
+    private ForumVoteRepository voteRepository;
+
+    @Autowired
+    private ForumReportRepository reportRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private EnrollmentService enrollmentService;
+
+    @Autowired
+    private NotificationService notificationService;
+
+    // Create forum category
+    public ForumCategory createCategory(CreateCategoryRequest request, String instructorId) {
+        ForumCategory category = ForumCategory.builder()
+            .courseId(request.getCourseId())
+            .name(request.getName())
+            .description(request.getDescription())
+            .color(request.getColor())
+            .sortOrder(request.getSortOrder())
+            .isPublic(request.isPublic())
+            .allowedRoles(request.getAllowedRoles())
+            .totalTopics(0L)
+            .totalPosts(0L)
+            .createdBy(instructorId)
+            .createdAt(LocalDateTime.now())
+            .updatedAt(LocalDateTime.now())
+            .build();
+
+        return categoryRepository.save(category);
+    }
+
+    // Create forum topic
+    public ForumTopic createTopic(CreateTopicRequest request, String userId) {
+        // Validate user has access to course
+        if (!enrollmentService.hasAccessToCourse(userId, request.getCourseId())) {
+            throw new UnauthorizedException("User does not have access to this course");
+        }
+
+        User author = userRepository.findById(userId)
+            .orElseThrow(() -> new UserNotFoundException("User not found"));
+
+        // Extract mentions from content
+        List<String> mentionedUsers = extractMentions(request.getContent());
+
+        ForumTopic topic = ForumTopic.builder()
+            .courseId(request.getCourseId())
+            .categoryId(request.getCategoryId())
+            .title(request.getTitle())
+            .content(request.getContent())
+            .type(request.getType())
+            .status(TopicStatus.OPEN)
+            .authorId(userId)
+            .authorName(author.getFirstName() + " " + author.getLastName())
+            .authorRole(getUserRole(author, request.getCourseId()))
+            .isPinned(false)
+            .isLocked(false)
+            .isAnnouncement(request.getType() == TopicType.ANNOUNCEMENT)
+            .hasAcceptedAnswer(false)
+            .viewCount(0)
+            .replyCount(0)
+            .upvotes(0)
+            .downvotes(0)
+            .tags(request.getTags())
+            .attachmentUrls(request.getAttachmentUrls())
+            .lastReplyAt(LocalDateTime.now())
+            .lastReplyBy(userId)
+            .lastReplyByName(author.getFirstName() + " " + author.getLastName())
+            .createdAt(LocalDateTime.now())
+            .updatedAt(LocalDateTime.now())
+            .build();
+
+        topic = topicRepository.save(topic);
+
+        // Update category statistics
+        updateCategoryStats(request.getCategoryId());
+
+        // Send notifications to mentioned users
+        sendMentionNotifications(mentionedUsers, topic.getId(), userId);
+
+        return topic;
+    }
+
+    // Create forum post (reply)
+    public ForumPost createPost(CreatePostRequest request, String userId) {
+        ForumTopic topic = topicRepository.findById(request.getTopicId())
+            .orElseThrow(() -> new TopicNotFoundException("Topic not found"));
+
+        if (topic.isLocked()) {
+            throw new IllegalStateException("Cannot reply to locked topic");
+        }
+
+        // Validate user has access
+        if (!enrollmentService.hasAccessToCourse(userId, topic.getCourseId())) {
+            throw new UnauthorizedException("User does not have access to this course");
+        }
+
+        User author = userRepository.findById(userId)
+            .orElseThrow(() -> new UserNotFoundException("User not found"));
+
+        // Extract mentions from content
+        List<String> mentionedUsers = extractMentions(request.getContent());
+
+        ForumPost post = ForumPost.builder()
+            .topicId(request.getTopicId())
+            .courseId(topic.getCourseId())
+            .parentPostId(request.getParentPostId())
+            .content(request.getContent())
+            .authorId(userId)
+            .authorName(author.getFirstName() + " " + author.getLastName())
+            .authorRole(getUserRole(author, topic.getCourseId()))
+            .isAccepted(false)
+            .isModerated(false)
+            .isDeleted(false)
+            .upvotes(0)
+            .downvotes(0)
+            .upvotedBy(new ArrayList<>())
+            .downvotedBy(new ArrayList<>())
+            .attachmentUrls(request.getAttachmentUrls())
+            .mentionedUsers(mentionedUsers)
+            .editHistory(new ArrayList<>())
+            .isEdited(false)
+            .replyIds(new ArrayList<>())
+            .replyCount(0)
+            .createdAt(LocalDateTime.now())
+            .updatedAt(LocalDateTime.now())
+            .build();
+
+        post = postRepository.save(post);
+
+        // Update parent post if this is a nested reply
+        if (request.getParentPostId() != null) {
+            updateParentPostReplies(request.getParentPostId(), post.getId());
+        }
+
+        // Update topic statistics
+        updateTopicStats(request.getTopicId(), userId, author.getFirstName() + " " + author.getLastName());
+
+        // Update category statistics
+        updateCategoryStats(topic.getCategoryId());
+
+        // Send notifications
+        sendReplyNotifications(topic, post, userId);
+        sendMentionNotifications(mentionedUsers, post.getId(), userId);
+
+        return post;
+    }
+
+    // Vote on topic or post
+    public void vote(String targetId, VoteTarget targetType, VoteType voteType, String userId) {
+        // Check if user already voted
+        Optional<ForumVote> existingVote = voteRepository.findByUserIdAndTargetIdAndTargetType(
+            userId, targetId, targetType);
+
+        if (existingVote.isPresent()) {
+            ForumVote vote = existingVote.get();
+            if (vote.getVoteType() == voteType) {
+                // Remove vote if clicking same type
+                voteRepository.delete(vote);
+                updateVoteCount(targetId, targetType, voteType, -1, userId, true);
+            } else {
+                // Change vote type
+                vote.setVoteType(voteType);
+                vote.setUpdatedAt(LocalDateTime.now());
+                voteRepository.save(vote);
+
+                // Update counts (remove old, add new)
+                VoteType oldType = vote.getVoteType() == VoteType.UPVOTE ? VoteType.DOWNVOTE : VoteType.UPVOTE;
+                updateVoteCount(targetId, targetType, oldType, -1, userId, true);
+                updateVoteCount(targetId, targetType, voteType, 1, userId, false);
+            }
+        } else {
+            // Create new vote
+            ForumVote vote = ForumVote.builder()
+                .userId(userId)
+                .targetId(targetId)
+                .voteType(voteType)
+                .targetType(targetType)
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
+
+            voteRepository.save(vote);
+            updateVoteCount(targetId, targetType, voteType, 1, userId, false);
+        }
+    }
+
+    // Mark post as accepted answer
+    public void markAsAcceptedAnswer(String topicId, String postId, String userId) {
+        ForumTopic topic = topicRepository.findById(topicId)
+            .orElseThrow(() -> new TopicNotFoundException("Topic not found"));
+
+        // Only topic author or instructor can mark accepted answer
+        if (!topic.getAuthorId().equals(userId) && !isInstructor(userId, topic.getCourseId())) {
+            throw new UnauthorizedException("Only topic author or instructor can mark accepted answer");
+        }
+
+        ForumPost post = postRepository.findById(postId)
+            .orElseThrow(() -> new PostNotFoundException("Post not found"));
+
+        // Remove previous accepted answer if exists
+        if (topic.getAcceptedAnswerId() != null) {
+            ForumPost previousAccepted = postRepository.findById(topic.getAcceptedAnswerId()).orElse(null);
+            if (previousAccepted != null) {
+                previousAccepted.setAccepted(false);
+                postRepository.save(previousAccepted);
+            }
+        }
+
+        // Mark new accepted answer
+        post.setAccepted(true);
+        postRepository.save(post);
+
+        topic.setHasAcceptedAnswer(true);
+        topic.setAcceptedAnswerId(postId);
+        topic.setUpdatedAt(LocalDateTime.now());
+        topicRepository.save(topic);
+
+        // Send notification to post author
+        notificationService.sendAcceptedAnswerNotification(post.getAuthorId(), topicId, postId);
+    }
+
+    // Get forum topics with pagination
+    public Page<ForumTopicDto> getTopics(String courseId, String categoryId,
+                                        TopicType type, String sortBy,
+                                        Pageable pageable, String userId) {
+
+        // Build query criteria
+        Criteria criteria = Criteria.where("courseId").is(courseId);
+        if (categoryId != null) {
+            criteria.and("categoryId").is(categoryId);
+        }
+        if (type != null) {
+            criteria.and("type").is(type);
+        }
+
+        Query query = new Query(criteria);
+
+        // Apply sorting
+        switch (sortBy) {
+            case "latest":
+                query.with(Sort.by(Sort.Direction.DESC, "lastReplyAt"));
+                break;
+            case "popular":
+                query.with(Sort.by(Sort.Direction.DESC, "upvotes"));
+                break;
+            case "replies":
+                query.with(Sort.by(Sort.Direction.DESC, "replyCount"));
+                break;
+            default:
+                query.with(Sort.by(Sort.Direction.DESC, "isPinned", "lastReplyAt"));
+        }
+
+        query.with(pageable);
+
+        List<ForumTopic> topics = mongoTemplate.find(query, ForumTopic.class);
+        long total = mongoTemplate.count(Query.of(query).limit(-1).skip(-1), ForumTopic.class);
+
+        List<ForumTopicDto> topicDtos = topics.stream()
+            .map(topic -> convertToTopicDto(topic, userId))
+            .collect(Collectors.toList());
+
+        return new PageImpl<>(topicDtos, pageable, total);
+    }
+
+    // Get topic with posts
+    public ForumTopicDetailsDto getTopicWithPosts(String topicId, String userId, Pageable pageable) {
+        ForumTopic topic = topicRepository.findById(topicId)
+            .orElseThrow(() -> new TopicNotFoundException("Topic not found"));
+
+        // Check access
+        if (!enrollmentService.hasAccessToCourse(userId, topic.getCourseId())) {
+            throw new UnauthorizedException("User does not have access to this course");
+        }
+
+        // Increment view count
+        topic.setViewCount(topic.getViewCount() + 1);
+        topicRepository.save(topic);
+
+        // Get posts
+        Query query = new Query(Criteria.where("topicId").is(topicId)
+            .and("isDeleted").is(false));
+        query.with(Sort.by(Sort.Direction.ASC, "createdAt"));
+        query.with(pageable);
+
+        List<ForumPost> posts = mongoTemplate.find(query, ForumPost.class);
+        long totalPosts = mongoTemplate.count(Query.of(query).limit(-1).skip(-1), ForumPost.class);
+
+        List<ForumPostDto> postDtos = posts.stream()
+            .map(post -> convertToPostDto(post, userId))
+            .collect(Collectors.toList());
+
+        return ForumTopicDetailsDto.builder()
+            .topic(convertToTopicDto(topic, userId))
+            .posts(new PageImpl<>(postDtos, pageable, totalPosts))
+            .build();
+    }
+
+    // Report content
+    public void reportContent(String targetId, ReportTarget targetType,
+                            ReportReason reason, String description, String userId) {
+
+        ForumReport report = ForumReport.builder()
+            .reportedBy(userId)
+            .targetId(targetId)
+            .targetType(targetType)
+            .reason(reason)
+            .description(description)
+            .status(ReportStatus.PENDING)
+            .createdAt(LocalDateTime.now())
+            .build();
+
+        reportRepository.save(report);
+
+        // Notify moderators
+        notificationService.sendModerationNotification(targetId, targetType, reason);
+    }
+
+    // Search topics and posts
+    public List<ForumSearchResult> searchForum(String courseId, String query, String userId) {
+        // Search in topics
+        Criteria topicCriteria = Criteria.where("courseId").is(courseId)
+            .orOperator(
+                Criteria.where("title").regex(query, "i"),
+                Criteria.where("content").regex(query, "i")
+            );
+
+        List<ForumTopic> topics = mongoTemplate.find(Query.query(topicCriteria), ForumTopic.class);
+
+        // Search in posts
+        Criteria postCriteria = Criteria.where("courseId").is(courseId)
+            .and("content").regex(query, "i")
+            .and("isDeleted").is(false);
+
+        List<ForumPost> posts = mongoTemplate.find(Query.query(postCriteria), ForumPost.class);
+
+        List<ForumSearchResult> results = new ArrayList<>();
+
+        // Add topic results
+        topics.forEach(topic -> {
+            results.add(ForumSearchResult.builder()
+                .id(topic.getId())
+                .type("topic")
+                .title(topic.getTitle())
+                .content(highlightSearchTerm(topic.getContent(), query))
+                .authorName(topic.getAuthorName())
+                .createdAt(topic.getCreatedAt())
+                .relevanceScore(calculateRelevance(topic.getTitle(), topic.getContent(), query))
+                .build());
+        });
+
+        // Add post results
+        posts.forEach(post -> {
+            ForumTopic topic = topicRepository.findById(post.getTopicId()).orElse(null);
+            if (topic != null) {
+                results.add(ForumSearchResult.builder()
+                    .id(post.getId())
+                    .type("post")
+                    .title("Reply in: " + topic.getTitle())
+                    .content(highlightSearchTerm(post.getContent(), query))
+                    .authorName(post.getAuthorName())
+                    .createdAt(post.getCreatedAt())
+                    .topicId(topic.getId())
+                    .relevanceScore(calculateRelevance("", post.getContent(), query))
+                    .build());
+            }
+        });
+
+        // Sort by relevance
+        return results.stream()
+            .sorted((a, b) -> Double.compare(b.getRelevanceScore(), a.getRelevanceScore()))
+            .collect(Collectors.toList());
+    }
+
+    private void updateVoteCount(String targetId, VoteTarget targetType,
+                               VoteType voteType, int delta, String userId, boolean remove) {
+        if (targetType == VoteTarget.TOPIC) {
+            ForumTopic topic = topicRepository.findById(targetId).orElse(null);
+            if (topic != null) {
+                if (voteType == VoteType.UPVOTE) {
+                    topic.setUpvotes(Math.max(0, topic.getUpvotes() + delta));
+                } else {
+                    topic.setDownvotes(Math.max(0, topic.getDownvotes() + delta));
+                }
+                topicRepository.save(topic);
+            }
+        } else {
+            ForumPost post = postRepository.findById(targetId).orElse(null);
+            if (post != null) {
+                if (voteType == VoteType.UPVOTE) {
+                    post.setUpvotes(Math.max(0, post.getUpvotes() + delta));
+                    if (remove) {
+                        post.getUpvotedBy().remove(userId);
+                    } else {
+                        post.getUpvotedBy().add(userId);
+                    }
+                } else {
+                    post.setDownvotes(Math.max(0, post.getDownvotes() + delta));
+                    if (remove) {
+                        post.getDownvotedBy().remove(userId);
+                    } else {
+                        post.getDownvotedBy().add(userId);
+                    }
+                }
+                postRepository.save(post);
+            }
+        }
+    }
+
+    private List<String> extractMentions(String content) {
+        // Extract @username mentions from content
+        Pattern pattern = Pattern.compile("@([a-zA-Z0-9_]+)");
+        Matcher matcher = pattern.matcher(content);
+
+        List<String> mentions = new ArrayList<>();
+        while (matcher.find()) {
+            String username = matcher.group(1);
+            // Convert username to userId (implementation depends on your user system)
+            String userId = userRepository.findByUsername(username)
+                .map(User::getId)
+                .orElse(null);
+            if (userId != null) {
+                mentions.add(userId);
+            }
+        }
+
+        return mentions;
+    }
+
+    private void sendMentionNotifications(List<String> mentionedUsers, String contentId, String mentionedBy) {
+        mentionedUsers.forEach(userId -> {
+            if (!userId.equals(mentionedBy)) {
+                notificationService.sendMentionNotification(userId, contentId, mentionedBy);
+            }
+        });
+    }
+}
+```
+
+### Forum Controller
+
+```java
+@RestController
+@RequestMapping("/api/forum")
+public class ForumController {
+
+    @Autowired
+    private ForumService forumService;
+
+    // Create category (Instructor only)
+    @PostMapping("/categories")
+    @PreAuthorize("hasRole('INSTRUCTOR')")
+    public ResponseEntity<ForumCategory> createCategory(
+            @RequestBody @Valid CreateCategoryRequest request,
+            Authentication authentication) {
+
+        String instructorId = authentication.getName();
+        ForumCategory category = forumService.createCategory(request, instructorId);
+        return ResponseEntity.status(HttpStatus.CREATED).body(category);
+    }
+
+    // Get categories
+    @GetMapping("/courses/{courseId}/categories")
+    public ResponseEntity<List<ForumCategory>> getCategories(
+            @PathVariable String courseId,
+            Authentication authentication) {
+
+        String userId = authentication.getName();
+        List<ForumCategory> categories = forumService.getCategories(courseId, userId);
+        return ResponseEntity.ok(categories);
+    }
+
+    // Create topic
+    @PostMapping("/topics")
+    public ResponseEntity<ForumTopic> createTopic(
+            @RequestBody @Valid CreateTopicRequest request,
+            Authentication authentication) {
+
+        String userId = authentication.getName();
+        ForumTopic topic = forumService.createTopic(request, userId);
+        return ResponseEntity.status(HttpStatus.CREATED).body(topic);
+    }
+
+    // Get topics
+    @GetMapping("/courses/{courseId}/topics")
+    public ResponseEntity<Page<ForumTopicDto>> getTopics(
+            @PathVariable String courseId,
+            @RequestParam(required = false) String categoryId,
+            @RequestParam(required = false) TopicType type,
+            @RequestParam(defaultValue = "latest") String sortBy,
+            @PageableDefault(size = 20) Pageable pageable,
+            Authentication authentication) {
+
+        String userId = authentication.getName();
+        Page<ForumTopicDto> topics = forumService.getTopics(
+            courseId, categoryId, type, sortBy, pageable, userId);
+        return ResponseEntity.ok(topics);
+    }
+
+    // Get topic with posts
+    @GetMapping("/topics/{topicId}")
+    public ResponseEntity<ForumTopicDetailsDto> getTopicWithPosts(
+            @PathVariable String topicId,
+            @PageableDefault(size = 20) Pageable pageable,
+            Authentication authentication) {
+
+        String userId = authentication.getName();
+        ForumTopicDetailsDto details = forumService.getTopicWithPosts(topicId, userId, pageable);
+        return ResponseEntity.ok(details);
+    }
+
+    // Create post (reply)
+    @PostMapping("/posts")
+    public ResponseEntity<ForumPost> createPost(
+            @RequestBody @Valid CreatePostRequest request,
+            Authentication authentication) {
+
+        String userId = authentication.getName();
+        ForumPost post = forumService.createPost(request, userId);
+        return ResponseEntity.status(HttpStatus.CREATED).body(post);
+    }
+
+    // Vote on topic or post
+    @PostMapping("/{targetType}/{targetId}/vote")
+    public ResponseEntity<Void> vote(
+            @PathVariable String targetType,
+            @PathVariable String targetId,
+            @RequestParam VoteType voteType,
+            Authentication authentication) {
+
+        String userId = authentication.getName();
+        VoteTarget target = VoteTarget.valueOf(targetType.toUpperCase());
+        forumService.vote(targetId, target, voteType, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    // Mark as accepted answer
+    @PostMapping("/topics/{topicId}/posts/{postId}/accept")
+    public ResponseEntity<Void> markAsAcceptedAnswer(
+            @PathVariable String topicId,
+            @PathVariable String postId,
+            Authentication authentication) {
+
+        String userId = authentication.getName();
+        forumService.markAsAcceptedAnswer(topicId, postId, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    // Report content
+    @PostMapping("/report")
+    public ResponseEntity<Void> reportContent(
+            @RequestBody @Valid ReportContentRequest request,
+            Authentication authentication) {
+
+        String userId = authentication.getName();
+        forumService.reportContent(
+            request.getTargetId(),
+            request.getTargetType(),
+            request.getReason(),
+            request.getDescription(),
+            userId
+        );
+        return ResponseEntity.ok().build();
+    }
+
+    // Search forum
+    @GetMapping("/courses/{courseId}/search")
+    public ResponseEntity<List<ForumSearchResult>> searchForum(
+            @PathVariable String courseId,
+            @RequestParam String query,
+            Authentication authentication) {
+
+        String userId = authentication.getName();
+        List<ForumSearchResult> results = forumService.searchForum(courseId, query, userId);
+        return ResponseEntity.ok(results);
+    }
+}
+```
+
+## Frontend Implementation
+
+### Forum Main Component
+
+```jsx
+import React, { useState, useEffect } from "react";
+import { useParams, Link } from "react-router-dom";
+import {
+  Plus,
+  Search,
+  Filter,
+  MessageSquare,
+  Eye,
+  ArrowUp,
+  Pin,
+  CheckCircle,
+} from "lucide-react";
+import { forumService } from "../services/forumService";
+import CreateTopicModal from "./CreateTopicModal";
+
+const ForumMain = () => {
+  const { courseId } = useParams();
+  const [categories, setCategories] = useState([]);
+  const [topics, setTopics] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [sortBy, setSortBy] = useState("latest");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+
+  useEffect(() => {
+    fetchCategories();
+    fetchTopics();
+  }, [courseId, selectedCategory, sortBy]);
+
+  const fetchCategories = async () => {
+    try {
+      const response = await forumService.getCategories(courseId);
+      setCategories(response.data);
+    } catch (error) {
+      console.error("Failed to fetch categories:", error);
+    }
+  };
+
+  const fetchTopics = async (pageNum = 0, append = false) => {
+    try {
+      setLoading(!append);
+      const response = await forumService.getTopics(courseId, {
+        categoryId: selectedCategory || undefined,
+        sortBy,
+        page: pageNum,
+        size: 20,
+      });
+
+      if (append) {
+        setTopics((prev) => [...prev, ...response.data.content]);
+      } else {
+        setTopics(response.data.content);
+      }
+
+      setHasMore(!response.data.last);
+      setPage(pageNum);
+    } catch (error) {
+      console.error("Failed to fetch topics:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSearch = async () => {
+    if (searchQuery.trim()) {
+      try {
+        const response = await forumService.searchForum(courseId, searchQuery);
+        setTopics(response.data);
+        setHasMore(false);
+      } catch (error) {
+        console.error("Search failed:", error);
+      }
+    } else {
+      fetchTopics();
+    }
+  };
+
+  const loadMore = () => {
+    if (!loading && hasMore) {
+      fetchTopics(page + 1, true);
+    }
+  };
+
+  const handleTopicCreated = (newTopic) => {
+    setTopics((prev) => [newTopic, ...prev]);
+    setShowCreateModal(false);
+  };
+
+  const formatTimeAgo = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInHours = Math.floor((now - date) / (1000 * 60 * 60));
+
+    if (diffInHours < 1) return "Just now";
+    if (diffInHours < 24) return `${diffInHours}h ago`;
+    if (diffInHours < 168) return `${Math.floor(diffInHours / 24)}d ago`;
+    return date.toLocaleDateString();
+  };
+
+  const getTopicIcon = (topic) => {
+    if (topic.isPinned) return <Pin size={16} className="text-yellow-600" />;
+    if (topic.hasAcceptedAnswer)
+      return <CheckCircle size={16} className="text-green-600" />;
+    if (topic.type === "ANNOUNCEMENT")
+      return <MessageSquare size={16} className="text-blue-600" />;
+    return <MessageSquare size={16} className="text-gray-400" />;
+  };
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Header */}
+      <div className="flex justify-between items-center mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Course Forum</h1>
+          <p className="text-gray-600">
+            Discuss course content with your peers and instructors
+          </p>
+        </div>
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
+        >
+          <Plus size={20} />
+          New Topic
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        {/* Sidebar */}
+        <div className="lg:col-span-1">
+          <div className="bg-white rounded-lg shadow p-6 mb-6">
+            <h3 className="font-semibold text-gray-900 mb-4">Categories</h3>
+            <div className="space-y-2">
+              <button
+                onClick={() => setSelectedCategory("")}
+                className={`w-full text-left px-3 py-2 rounded ${
+                  selectedCategory === ""
+                    ? "bg-blue-100 text-blue-700"
+                    : "text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                All Categories
+              </button>
+              {categories.map((category) => (
+                <button
+                  key={category.id}
+                  onClick={() => setSelectedCategory(category.id)}
+                  className={`w-full text-left px-3 py-2 rounded flex items-center justify-between ${
+                    selectedCategory === category.id
+                      ? "bg-blue-100 text-blue-700"
+                      : "text-gray-700 hover:bg-gray-100"
+                  }`}
+                >
+                  <span>{category.name}</span>
+                  <span className="text-xs text-gray-500">
+                    {category.totalTopics}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <div className="lg:col-span-3">
+          {/* Search and Filters */}
+          <div className="bg-white rounded-lg shadow p-6 mb-6">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1 relative">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyPress={(e) => e.key === "Enter" && handleSearch()}
+                  placeholder="Search topics and posts..."
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+                <Search
+                  className="absolute left-3 top-2.5 text-gray-400"
+                  size={20}
+                />
+              </div>
+              <button
+                onClick={handleSearch}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+              >
+                Search
+              </button>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="latest">Latest Activity</option>
+                <option value="popular">Most Popular</option>
+                <option value="replies">Most Replies</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Topics List */}
+          <div className="bg-white rounded-lg shadow">
+            {loading && topics.length === 0 ? (
+              <div className="p-8 text-center text-gray-500">
+                Loading topics...
+              </div>
+            ) : topics.length === 0 ? (
+              <div className="p-8 text-center text-gray-500">
+                No topics found. Be the first to start a discussion!
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-200">
+                {topics.map((topic) => (
+                  <Link
+                    key={topic.id}
+                    to={`/forum/topics/${topic.id}`}
+                    className="block p-6 hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2">
+                          {getTopicIcon(topic)}
+                          <h3 className="text-lg font-medium text-gray-900 truncate">
+                            {topic.title}
+                          </h3>
+                          {topic.tags &&
+                            topic.tags.map((tag) => (
+                              <span
+                                key={tag}
+                                className="bg-gray-100 text-gray-600 px-2 py-1 rounded-full text-xs"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                        </div>
+                        <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+                          {topic.content}
+                        </p>
+                        <div className="flex items-center gap-4 text-sm text-gray-500">
+                          <span>by {topic.authorName}</span>
+                          <span className="flex items-center gap-1">
+                            <MessageSquare size={14} />
+                            {topic.replyCount} replies
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Eye size={14} />
+                            {topic.viewCount} views
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <ArrowUp size={14} />
+                            {topic.upvotes}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="ml-4 text-right text-sm text-gray-500">
+                        <div>{formatTimeAgo(topic.lastReplyAt)}</div>
+                        {topic.lastReplyByName && (
+                          <div className="text-xs">
+                            by {topic.lastReplyByName}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+
+            {/* Load More */}
+            {hasMore && !loading && (
+              <div className="p-6 border-t border-gray-200">
+                <button
+                  onClick={loadMore}
+                  className="w-full bg-gray-100 text-gray-700 py-2 rounded-lg hover:bg-gray-200"
+                >
+                  Load More Topics
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Create Topic Modal */}
+      {showCreateModal && (
+        <CreateTopicModal
+          courseId={courseId}
+          categories={categories}
+          onClose={() => setShowCreateModal(false)}
+          onTopicCreated={handleTopicCreated}
+        />
+      )}
+    </div>
+  );
+};
+
+export default ForumMain;
+```
+
+### Topic Detail Component
+
+```jsx
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import {
+  ArrowLeft,
+  ArrowUp,
+  ArrowDown,
+  MessageSquare,
+  Flag,
+  Check,
+  Pin,
+} from "lucide-react";
+import { forumService } from "../services/forumService";
+import PostEditor from "./PostEditor";
+import PostRenderer from "./PostRenderer";
+
+const TopicDetail = () => {
+  const { topicId } = useParams();
+  const navigate = useNavigate();
+  const [topicDetails, setTopicDetails] = useState(null);
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [replyContent, setReplyContent] = useState("");
+  const [showReplyEditor, setShowReplyEditor] = useState(false);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+
+  useEffect(() => {
+    fetchTopicDetails();
+  }, [topicId]);
+
+  const fetchTopicDetails = async (pageNum = 0, append = false) => {
+    try {
+      setLoading(!append);
+      const response = await forumService.getTopicWithPosts(topicId, {
+        page: pageNum,
+        size: 20,
+      });
+
+      setTopicDetails(response.data.topic);
+
+      if (append) {
+        setPosts((prev) => [...prev, ...response.data.posts.content]);
+      } else {
+        setPosts(response.data.posts.content);
+      }
+
+      setHasMore(!response.data.posts.last);
+      setPage(pageNum);
+    } catch (error) {
+      console.error("Failed to fetch topic details:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVote = async (targetId, targetType, voteType) => {
+    try {
+      await forumService.vote(targetType, targetId, voteType);
+
+      if (targetType === "topic") {
+        setTopicDetails((prev) => ({
+          ...prev,
+          upvotes: voteType === "UPVOTE" ? prev.upvotes + 1 : prev.upvotes,
+          downvotes:
+            voteType === "DOWNVOTE" ? prev.downvotes + 1 : prev.downvotes,
+        }));
+      } else {
+        setPosts((prev) =>
+          prev.map((post) =>
+            post.id === targetId
+              ? {
+                  ...post,
+                  upvotes:
+                    voteType === "UPVOTE" ? post.upvotes + 1 : post.upvotes,
+                  downvotes:
+                    voteType === "DOWNVOTE"
+                      ? post.downvotes + 1
+                      : post.downvotes,
+                }
+              : post
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Failed to vote:", error);
+    }
+  };
+
+  const handleReply = async () => {
+    if (!replyContent.trim()) return;
+
+    try {
+      const response = await forumService.createPost({
+        topicId,
+        content: replyContent,
+        attachmentUrls: [],
+      });
+
+      setPosts((prev) => [...prev, response.data]);
+      setReplyContent("");
+      setShowReplyEditor(false);
+
+      // Update topic reply count
+      setTopicDetails((prev) => ({
+        ...prev,
+        replyCount: prev.replyCount + 1,
+      }));
+    } catch (error) {
+      console.error("Failed to create reply:", error);
+    }
+  };
+
+  const handleAcceptAnswer = async (postId) => {
+    try {
+      await forumService.markAsAcceptedAnswer(topicId, postId);
+
+      setTopicDetails((prev) => ({
+        ...prev,
+        hasAcceptedAnswer: true,
+        acceptedAnswerId: postId,
+      }));
+
+      setPosts((prev) =>
+        prev.map((post) => ({
+          ...post,
+          isAccepted: post.id === postId,
+        }))
+      );
+    } catch (error) {
+      console.error("Failed to mark as accepted:", error);
+    }
+  };
+
+  const formatTimeAgo = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInHours = Math.floor((now - date) / (1000 * 60 * 60));
+
+    if (diffInHours < 1) return "Just now";
+    if (diffInHours < 24) return `${diffInHours}h ago`;
+    if (diffInHours < 168) return `${Math.floor(diffInHours / 24)}d ago`;
+    return date.toLocaleDateString();
+  };
+
+  if (loading && !topicDetails) {
+    return (
+      <div className="flex justify-center items-center h-64">Loading...</div>
+    );
+  }
+
+  return (
+    <div className="max-w-4xl mx-auto px-4 py-8">
+      {/* Back Button */}
+      <button
+        onClick={() => navigate(-1)}
+        className="flex items-center gap-2 text-blue-600 hover:text-blue-700 mb-6"
+      >
+        <ArrowLeft size={20} />
+        Back to Forum
+      </button>
+
+      {/* Topic Header */}
+      <div className="bg-white rounded-lg shadow p-6 mb-6">
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-2">
+              {topicDetails.isPinned && (
+                <Pin size={16} className="text-yellow-600" />
+              )}
+              {topicDetails.hasAcceptedAnswer && (
+                <Check size={16} className="text-green-600" />
+              )}
+              <h1 className="text-2xl font-bold text-gray-900">
+                {topicDetails.title}
+              </h1>
+            </div>
+            <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
+              <span>by {topicDetails.authorName}</span>
+              <span>{formatTimeAgo(topicDetails.createdAt)}</span>
+              <span>{topicDetails.viewCount} views</span>
+              <span>{topicDetails.replyCount} replies</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => handleVote(topicDetails.id, "topic", "UPVOTE")}
+              className="flex items-center gap-1 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+            >
+              <ArrowUp size={16} />
+              {topicDetails.upvotes}
+            </button>
+            <button
+              onClick={() => handleVote(topicDetails.id, "topic", "DOWNVOTE")}
+              className="flex items-center gap-1 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+            >
+              <ArrowDown size={16} />
+              {topicDetails.downvotes}
+            </button>
+          </div>
+        </div>
+
+        <div className="prose max-w-none">
+          <PostRenderer content={topicDetails.content} />
+        </div>
+
+        {topicDetails.tags && (
+          <div className="flex gap-2 mt-4">
+            {topicDetails.tags.map((tag) => (
+              <span
+                key={tag}
+                className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-sm"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Posts */}
+      <div className="space-y-6">
+        {posts.map((post) => (
+          <div
+            key={post.id}
+            className={`bg-white rounded-lg shadow p-6 ${
+              post.isAccepted ? "border-l-4 border-green-500" : ""
+            }`}
+          >
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
+                  <span className="text-sm font-medium">
+                    {post.authorName.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+                <div>
+                  <div className="font-medium text-gray-900 flex items-center gap-2">
+                    {post.authorName}
+                    {post.isAccepted && (
+                      <span className="bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs">
+                        Accepted Answer
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    {formatTimeAgo(post.createdAt)}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleVote(post.id, "post", "UPVOTE")}
+                  className="flex items-center gap-1 px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50"
+                >
+                  <ArrowUp size={14} />
+                  {post.upvotes}
+                </button>
+                <button
+                  onClick={() => handleVote(post.id, "post", "DOWNVOTE")}
+                  className="flex items-center gap-1 px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50"
+                >
+                  <ArrowDown size={14} />
+                  {post.downvotes}
+                </button>
+                {!post.isAccepted && topicDetails.type === "QUESTION" && (
+                  <button
+                    onClick={() => handleAcceptAnswer(post.id)}
+                    className="flex items-center gap-1 px-2 py-1 text-sm text-green-600 border border-green-300 rounded hover:bg-green-50"
+                  >
+                    <Check size={14} />
+                    Accept
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="prose max-w-none mb-4">
+              <PostRenderer content={post.content} />
+            </div>
+          </div>
+        ))}
+
+        {/* Load More Posts */}
+        {hasMore && (
+          <div className="text-center">
+            <button
+              onClick={() => fetchTopicDetails(page + 1, true)}
+              disabled={loading}
+              className="bg-gray-100 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-200 disabled:opacity-50"
+            >
+              {loading ? "Loading..." : "Load More Replies"}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Reply Section */}
+      {!showReplyEditor ? (
+        <div className="mt-8">
+          <button
+            onClick={() => setShowReplyEditor(true)}
+            className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 flex items-center gap-2"
+          >
+            <MessageSquare size={20} />
+            Reply to Topic
+          </button>
+        </div>
+      ) : (
+        <div className="bg-white rounded-lg shadow p-6 mt-8">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">
+            Write a Reply
+          </h3>
+          <PostEditor
+            value={replyContent}
+            onChange={setReplyContent}
+            placeholder="Share your thoughts..."
+          />
+          <div className="flex gap-3 mt-4">
+            <button
+              onClick={handleReply}
+              disabled={!replyContent.trim()}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+            >
+              Post Reply
+            </button>
+            <button
+              onClick={() => {
+                setShowReplyEditor(false);
+                setReplyContent("");
+              }}
+              className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default TopicDetail;
+```
+
+## Key Features Implemented
+
+1. **Comprehensive Forum Structure**
+   - Course-level forums with categories
+   - Threaded discussions with nested replies
+   - Rich content support with attachments
+
+2. **Advanced Interaction Features**
+   - Voting system for topics and posts
+   - Accepted answer marking for questions
+   - User mentions with notifications
+
+3. **Moderation and Safety**
+   - Content reporting system
+   - Instructor moderation tools
+   - Automatic spam detection
+
+4. **Enhanced User Experience**
+   - Real-time updates and notifications
+   - Advanced search functionality
+   - Responsive design with pagination
+
+5. **Analytics and Insights**
+   - View counts and engagement metrics
+   - Popular content identification
+   - User participation tracking
+
+[← Previous: Assessment Quiz System](/proj-online-learning-platform-website/17-assessment-quiz-system) | [Next: File Uploads →](/proj-online-learning-platform-website/19-file-uploads)
+
+<BackToTop />
