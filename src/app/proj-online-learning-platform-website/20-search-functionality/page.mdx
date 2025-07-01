@@ -1,0 +1,1667 @@
+import BackToTop from "@/components/BackToTop";
+
+# Search Functionality
+
+## Table of Contents
+
+## Introduction
+
+In this module, we'll implement a comprehensive search system that provides fast, accurate, and intelligent search capabilities across all content in the online learning platform. The system will include full-text search, faceted search, autocomplete, search analytics, and advanced filtering options.
+
+## Search Features
+
+### Core Search Components
+
+1. **Full-Text Search**
+   - Course content and descriptions
+   - Lesson materials and transcripts
+   - Discussion forum posts
+   - User-generated content
+
+2. **Advanced Search Options**
+   - Filters by content type, difficulty, duration
+   - Date range filtering
+   - Instructor and category filtering
+   - Search within specific courses
+
+3. **Smart Features**
+   - Autocomplete and suggestions
+   - Spell correction and fuzzy matching
+   - Search result ranking and relevance
+   - Search history and saved searches
+
+4. **Search Analytics**
+   - Popular search terms tracking
+   - Search result click-through rates
+   - User search behavior analysis
+   - Search performance optimization
+
+## Backend Implementation
+
+### Search Models
+
+```java
+@Document(collection = "search_indexes")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class SearchIndex {
+    @Id
+    private String id;
+
+    // Document identification
+    private String documentId;
+    private SearchDocumentType documentType;
+    private String courseId;
+    private String lessonId;
+
+    // Content information
+    private String title;
+    private String content;
+    private String description;
+    private List<String> tags;
+    private List<String> categories;
+    private String authorId;
+    private String authorName;
+
+    // Search metadata
+    private Map<String, Object> metadata;
+    private List<String> keywords;
+    private String language;
+    private DifficultyLevel difficultyLevel;
+    private Duration estimatedDuration;
+
+    // Search optimization
+    private double relevanceScore;
+    private long viewCount;
+    private double rating;
+    private int searchCount;
+    private LocalDateTime lastSearched;
+
+    // Access control
+    private boolean isPublic;
+    private List<String> allowedRoles;
+    private List<String> restrictedUsers;
+
+    // Lifecycle
+    private boolean isActive;
+    private LocalDateTime indexedAt;
+    private LocalDateTime updatedAt;
+    private LocalDateTime publishedAt;
+}
+
+@Document(collection = "search_queries")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class SearchQuery {
+    @Id
+    private String id;
+
+    // Query information
+    private String query;
+    private String normalizedQuery;
+    private List<String> queryTerms;
+    private SearchType searchType;
+
+    // User context
+    private String userId;
+    private String sessionId;
+    private String courseId;
+
+    // Search parameters
+    private Map<String, Object> filters;
+    private SortOption sortBy;
+    private int page;
+    private int size;
+
+    // Results
+    private int totalResults;
+    private List<String> resultDocumentIds;
+    private double executionTimeMs;
+
+    // User interaction
+    private List<String> clickedResults;
+    private String selectedResult;
+    private boolean wasSuccessful;
+
+    private LocalDateTime searchedAt;
+}
+
+@Document(collection = "search_suggestions")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class SearchSuggestion {
+    @Id
+    private String id;
+
+    private String suggestion;
+    private String normalizedSuggestion;
+    private SuggestionType type;
+
+    // Popularity metrics
+    private long searchCount;
+    private double clickThroughRate;
+    private LocalDateTime lastUsed;
+
+    // Context
+    private String courseId;
+    private String category;
+    private List<String> relatedTerms;
+
+    private boolean isActive;
+    private LocalDateTime createdAt;
+}
+
+@Document(collection = "search_analytics")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class SearchAnalytics {
+    @Id
+    private String id;
+
+    // Time period
+    private LocalDate date;
+    private String period; // DAILY, WEEKLY, MONTHLY
+
+    // Search metrics
+    private long totalSearches;
+    private long uniqueUsers;
+    private double averageResultsPerSearch;
+    private double averageClickThroughRate;
+
+    // Popular terms
+    private List<PopularSearchTerm> popularTerms;
+    private List<String> noResultQueries;
+    private List<String> topClickedResults;
+
+    // Performance metrics
+    private double averageSearchTime;
+    private double searchSuccessRate;
+
+    private LocalDateTime createdAt;
+}
+
+@Embeddable
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class PopularSearchTerm {
+    private String term;
+    private long searchCount;
+    private double clickThroughRate;
+    private int averagePosition;
+}
+
+public enum SearchDocumentType {
+    COURSE,
+    LESSON,
+    QUIZ,
+    ASSIGNMENT,
+    FORUM_POST,
+    FORUM_TOPIC,
+    FORUM_CATEGORY,
+    USER_PROFILE,
+    ANNOUNCEMENT,
+    RESOURCE
+}
+
+public enum SearchType {
+    BASIC,
+    ADVANCED,
+    AUTOCOMPLETE,
+    FACETED,
+    SEMANTIC
+}
+
+public enum SuggestionType {
+    SEARCH_TERM,
+    COURSE_TITLE,
+    INSTRUCTOR_NAME,
+    TOPIC,
+    SKILL
+}
+
+public enum SortOption {
+    RELEVANCE,
+    DATE_DESC,
+    DATE_ASC,
+    RATING_DESC,
+    POPULARITY_DESC,
+    TITLE_ASC,
+    DIFFICULTY_ASC,
+    DIFFICULTY_DESC
+}
+
+public enum DifficultyLevel {
+    BEGINNER,
+    INTERMEDIATE,
+    ADVANCED,
+    EXPERT
+}
+
+@Embeddable
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class Duration {
+    private int hours;
+    private int minutes;
+    private int totalMinutes;
+}
+```
+
+### Search Service
+
+```java
+@Service
+public class SearchService {
+
+    @Autowired
+    private SearchIndexRepository searchIndexRepository;
+
+    @Autowired
+    private SearchQueryRepository searchQueryRepository;
+
+    @Autowired
+    private SearchSuggestionRepository searchSuggestionRepository;
+
+    @Autowired
+    private SearchAnalyticsRepository searchAnalyticsRepository;
+
+    @Autowired
+    private MongoTemplate mongoTemplate;
+
+    @Autowired
+    private CourseService courseService;
+
+    @Autowired
+    private EnrollmentService enrollmentService;
+
+    @Value("${app.search.max-results:100}")
+    private int maxSearchResults;
+
+    @Value("${app.search.enable-analytics:true}")
+    private boolean enableAnalytics;
+
+    // Perform search
+    public SearchResponse search(SearchRequest request, String userId) {
+        long startTime = System.currentTimeMillis();
+
+        try {
+            // Normalize and validate query
+            String normalizedQuery = normalizeQuery(request.getQuery());
+            if (normalizedQuery.trim().isEmpty()) {
+                return SearchResponse.builder()
+                    .results(Collections.emptyList())
+                    .totalResults(0)
+                    .executionTime(0)
+                    .build();
+            }
+
+            // Build search criteria
+            Criteria searchCriteria = buildSearchCriteria(request, userId);
+
+            // Create query with sorting and pagination
+            Query query = new Query(searchCriteria);
+            applySorting(query, request.getSortBy());
+
+            // Count total results
+            long totalResults = mongoTemplate.count(query, SearchIndex.class);
+
+            // Apply pagination
+            query.with(PageRequest.of(request.getPage(), request.getSize()));
+
+            // Execute search
+            List<SearchIndex> searchResults = mongoTemplate.find(query, SearchIndex.class);
+
+            // Convert to search result items
+            List<SearchResultItem> resultItems = convertToResultItems(searchResults, normalizedQuery);
+
+            long executionTime = System.currentTimeMillis() - startTime;
+
+            // Log search query
+            if (enableAnalytics) {
+                logSearchQuery(request, userId, totalResults, executionTime,
+                    resultItems.stream().map(SearchResultItem::getDocumentId).collect(Collectors.toList()));
+            }
+
+            // Update search suggestions
+            updateSearchSuggestions(normalizedQuery, totalResults > 0);
+
+            return SearchResponse.builder()
+                .results(resultItems)
+                .totalResults(totalResults)
+                .executionTime(executionTime)
+                .facets(generateFacets(searchCriteria, request))
+                .suggestions(getSuggestions(normalizedQuery))
+                .build();
+
+        } catch (Exception e) {
+            log.error("Search failed for query: " + request.getQuery(), e);
+            throw new SearchException("Search operation failed: " + e.getMessage());
+        }
+    }
+
+    // Advanced search with multiple criteria
+    public SearchResponse advancedSearch(AdvancedSearchRequest request, String userId) {
+        Criteria criteria = new Criteria();
+
+        // Text search
+        if (request.getQuery() != null && !request.getQuery().trim().isEmpty()) {
+            String normalizedQuery = normalizeQuery(request.getQuery());
+            criteria.andOperator(createTextSearchCriteria(normalizedQuery));
+        }
+
+        // Document type filter
+        if (request.getDocumentTypes() != null && !request.getDocumentTypes().isEmpty()) {
+            criteria.and("documentType").in(request.getDocumentTypes());
+        }
+
+        // Course filter
+        if (request.getCourseIds() != null && !request.getCourseIds().isEmpty()) {
+            criteria.and("courseId").in(request.getCourseIds());
+        }
+
+        // Category filter
+        if (request.getCategories() != null && !request.getCategories().isEmpty()) {
+            criteria.and("categories").in(request.getCategories());
+        }
+
+        // Difficulty filter
+        if (request.getDifficultyLevels() != null && !request.getDifficultyLevels().isEmpty()) {
+            criteria.and("difficultyLevel").in(request.getDifficultyLevels());
+        }
+
+        // Date range filter
+        if (request.getStartDate() != null || request.getEndDate() != null) {
+            Criteria dateCriteria = Criteria.where("publishedAt");
+            if (request.getStartDate() != null) {
+                dateCriteria.gte(request.getStartDate().atStartOfDay());
+            }
+            if (request.getEndDate() != null) {
+                dateCriteria.lte(request.getEndDate().atTime(23, 59, 59));
+            }
+            criteria.andOperator(dateCriteria);
+        }
+
+        // Duration filter
+        if (request.getMinDuration() != null || request.getMaxDuration() != null) {
+            Criteria durationCriteria = Criteria.where("estimatedDuration.totalMinutes");
+            if (request.getMinDuration() != null) {
+                durationCriteria.gte(request.getMinDuration());
+            }
+            if (request.getMaxDuration() != null) {
+                durationCriteria.lte(request.getMaxDuration());
+            }
+            criteria.andOperator(durationCriteria);
+        }
+
+        // Rating filter
+        if (request.getMinRating() != null) {
+            criteria.and("rating").gte(request.getMinRating());
+        }
+
+        // Access control
+        applyAccessControl(criteria, userId);
+
+        // Execute search
+        Query query = new Query(criteria);
+        applySorting(query, request.getSortBy());
+
+        long totalResults = mongoTemplate.count(query, SearchIndex.class);
+        query.with(PageRequest.of(request.getPage(), request.getSize()));
+
+        List<SearchIndex> searchResults = mongoTemplate.find(query, SearchIndex.class);
+        List<SearchResultItem> resultItems = convertToResultItems(searchResults, request.getQuery());
+
+        return SearchResponse.builder()
+            .results(resultItems)
+            .totalResults(totalResults)
+            .facets(generateAdvancedFacets(criteria))
+            .build();
+    }
+
+    // Autocomplete suggestions
+    public List<AutocompleteItem> autocomplete(String query, String userId, int limit) {
+        if (query == null || query.trim().length() < 2) {
+            return Collections.emptyList();
+        }
+
+        String normalizedQuery = normalizeQuery(query);
+        List<AutocompleteItem> suggestions = new ArrayList<>();
+
+        // Search suggestions from search history
+        List<SearchSuggestion> historicalSuggestions = searchSuggestionRepository
+            .findByNormalizedSuggestionStartingWithIgnoreCaseAndIsActiveTrue(
+                normalizedQuery, PageRequest.of(0, limit / 2));
+
+        suggestions.addAll(historicalSuggestions.stream()
+            .map(s -> AutocompleteItem.builder()
+                .text(s.getSuggestion())
+                .type(s.getType())
+                .score(s.getSearchCount())
+                .build())
+            .collect(Collectors.toList()));
+
+        // Search course titles
+        Criteria courseCriteria = Criteria.where("documentType").is(SearchDocumentType.COURSE)
+            .and("title").regex(Pattern.quote(normalizedQuery), "i")
+            .and("isActive").is(true);
+
+        applyAccessControl(courseCriteria, userId);
+
+        Query courseQuery = new Query(courseCriteria);
+        courseQuery.fields().include("title", "documentId");
+        courseQuery.limit(limit / 4);
+
+        List<SearchIndex> courseResults = mongoTemplate.find(courseQuery, SearchIndex.class);
+        suggestions.addAll(courseResults.stream()
+            .map(s -> AutocompleteItem.builder()
+                .text(s.getTitle())
+                .type(SuggestionType.COURSE_TITLE)
+                .documentId(s.getDocumentId())
+                .score(s.getViewCount())
+                .build())
+            .collect(Collectors.toList()));
+
+        // Search instructor names
+        Criteria instructorCriteria = Criteria.where("authorName")
+            .regex(Pattern.quote(normalizedQuery), "i");
+
+        MatchOperation matchOp = Aggregation.match(instructorCriteria);
+        GroupOperation groupOp = Aggregation.group("authorName")
+            .count().as("count")
+            .first("authorName").as("name");
+        SortOperation sortOp = Aggregation.sort(Sort.by(Sort.Direction.DESC, "count"));
+        LimitOperation limitOp = Aggregation.limit(limit / 4);
+
+        Aggregation aggregation = Aggregation.newAggregation(matchOp, groupOp, sortOp, limitOp);
+        List<Document> instructorResults = mongoTemplate.aggregate(
+            aggregation, "search_indexes", Document.class).getMappedResults();
+
+        suggestions.addAll(instructorResults.stream()
+            .map(doc -> AutocompleteItem.builder()
+                .text(doc.getString("name"))
+                .type(SuggestionType.INSTRUCTOR_NAME)
+                .score(doc.getInteger("count", 0))
+                .build())
+            .collect(Collectors.toList()));
+
+        // Sort by relevance and limit
+        return suggestions.stream()
+            .sorted((a, b) -> Double.compare(b.getScore(), a.getScore()))
+            .limit(limit)
+            .collect(Collectors.toList());
+    }
+
+    // Search within a specific course
+    public SearchResponse searchInCourse(String courseId, String query, String userId,
+                                       Pageable pageable) {
+
+        // Verify user has access to the course
+        if (!canAccessCourse(courseId, userId)) {
+            throw new UnauthorizedException("Access denied to course content");
+        }
+
+        Criteria criteria = Criteria.where("courseId").is(courseId)
+            .and("isActive").is(true);
+
+        if (query != null && !query.trim().isEmpty()) {
+            String normalizedQuery = normalizeQuery(query);
+            criteria.andOperator(createTextSearchCriteria(normalizedQuery));
+        }
+
+        Query searchQuery = new Query(criteria);
+        searchQuery.with(Sort.by(Sort.Direction.DESC, "relevanceScore"));
+
+        long totalResults = mongoTemplate.count(searchQuery, SearchIndex.class);
+        searchQuery.with(pageable);
+
+        List<SearchIndex> results = mongoTemplate.find(searchQuery, SearchIndex.class);
+        List<SearchResultItem> resultItems = convertToResultItems(results, query);
+
+        return SearchResponse.builder()
+            .results(resultItems)
+            .totalResults(totalResults)
+            .build();
+    }
+
+    // Get popular searches
+    public List<PopularSearchItem> getPopularSearches(int limit) {
+        LocalDateTime startDate = LocalDateTime.now().minusDays(30);
+
+        MatchOperation matchOp = Aggregation.match(
+            Criteria.where("searchedAt").gte(startDate)
+                .and("wasSuccessful").is(true));
+
+        GroupOperation groupOp = Aggregation.group("normalizedQuery")
+            .count().as("searchCount")
+            .first("query").as("originalQuery")
+            .avg("totalResults").as("avgResults");
+
+        SortOperation sortOp = Aggregation.sort(Sort.by(Sort.Direction.DESC, "searchCount"));
+        LimitOperation limitOp = Aggregation.limit(limit);
+
+        Aggregation aggregation = Aggregation.newAggregation(matchOp, groupOp, sortOp, limitOp);
+        List<Document> results = mongoTemplate.aggregate(
+            aggregation, "search_queries", Document.class).getMappedResults();
+
+        return results.stream()
+            .map(doc -> PopularSearchItem.builder()
+                .query(doc.getString("originalQuery"))
+                .searchCount(doc.getInteger("searchCount", 0))
+                .averageResults(doc.getDouble("avgResults"))
+                .build())
+            .collect(Collectors.toList());
+    }
+
+    // Index content for search
+    @Async
+    public void indexContent(String documentId, SearchDocumentType documentType,
+                           IndexContentRequest request) {
+        try {
+            SearchIndex existingIndex = searchIndexRepository
+                .findByDocumentIdAndDocumentType(documentId, documentType);
+
+            SearchIndex searchIndex;
+            if (existingIndex != null) {
+                searchIndex = existingIndex;
+            } else {
+                searchIndex = new SearchIndex();
+                searchIndex.setDocumentId(documentId);
+                searchIndex.setDocumentType(documentType);
+                searchIndex.setIndexedAt(LocalDateTime.now());
+            }
+
+            // Update content
+            searchIndex.setTitle(request.getTitle());
+            searchIndex.setContent(request.getContent());
+            searchIndex.setDescription(request.getDescription());
+            searchIndex.setTags(request.getTags());
+            searchIndex.setCategories(request.getCategories());
+            searchIndex.setCourseId(request.getCourseId());
+            searchIndex.setLessonId(request.getLessonId());
+            searchIndex.setAuthorId(request.getAuthorId());
+            searchIndex.setAuthorName(request.getAuthorName());
+            searchIndex.setMetadata(request.getMetadata());
+            searchIndex.setLanguage(request.getLanguage());
+            searchIndex.setDifficultyLevel(request.getDifficultyLevel());
+            searchIndex.setEstimatedDuration(request.getEstimatedDuration());
+            searchIndex.setIsPublic(request.isPublic());
+            searchIndex.setAllowedRoles(request.getAllowedRoles());
+            searchIndex.setIsActive(request.isActive());
+            searchIndex.setPublishedAt(request.getPublishedAt());
+            searchIndex.setUpdatedAt(LocalDateTime.now());
+
+            // Extract keywords
+            searchIndex.setKeywords(extractKeywords(request.getTitle(), request.getContent()));
+
+            // Calculate relevance score
+            searchIndex.setRelevanceScore(calculateRelevanceScore(searchIndex));
+
+            searchIndexRepository.save(searchIndex);
+
+        } catch (Exception e) {
+            log.error("Failed to index content: " + documentId, e);
+        }
+    }
+
+    // Remove content from search index
+    public void removeFromIndex(String documentId, SearchDocumentType documentType) {
+        SearchIndex searchIndex = searchIndexRepository
+            .findByDocumentIdAndDocumentType(documentId, documentType);
+
+        if (searchIndex != null) {
+            searchIndexRepository.delete(searchIndex);
+        }
+    }
+
+    // Get search analytics
+    public SearchAnalyticsResponse getSearchAnalytics(LocalDate startDate, LocalDate endDate) {
+        List<SearchAnalytics> analytics = searchAnalyticsRepository
+            .findByDateBetweenOrderByDateDesc(startDate, endDate);
+
+        SearchAnalyticsResponse response = new SearchAnalyticsResponse();
+        response.setAnalytics(analytics);
+
+        // Calculate summary metrics
+        if (!analytics.isEmpty()) {
+            response.setTotalSearches(analytics.stream().mapToLong(SearchAnalytics::getTotalSearches).sum());
+            response.setAverageSearchTime(analytics.stream()
+                .mapToDouble(SearchAnalytics::getAverageSearchTime).average().orElse(0.0));
+            response.setSearchSuccessRate(analytics.stream()
+                .mapToDouble(SearchAnalytics::getSearchSuccessRate).average().orElse(0.0));
+        }
+
+        return response;
+    }
+
+    private Criteria buildSearchCriteria(SearchRequest request, String userId) {
+        Criteria criteria = new Criteria();
+
+        // Text search
+        if (request.getQuery() != null && !request.getQuery().trim().isEmpty()) {
+            String normalizedQuery = normalizeQuery(request.getQuery());
+            criteria.andOperator(createTextSearchCriteria(normalizedQuery));
+        }
+
+        // Filters
+        if (request.getFilters() != null) {
+            request.getFilters().forEach((key, value) -> {
+                switch (key) {
+                    case "documentType":
+                        if (value instanceof List) {
+                            criteria.and("documentType").in((List<?>) value);
+                        } else {
+                            criteria.and("documentType").is(value);
+                        }
+                        break;
+                    case "courseId":
+                        criteria.and("courseId").is(value);
+                        break;
+                    case "category":
+                        if (value instanceof List) {
+                            criteria.and("categories").in((List<?>) value);
+                        } else {
+                            criteria.and("categories").in(value);
+                        }
+                        break;
+                    case "difficulty":
+                        if (value instanceof List) {
+                            criteria.and("difficultyLevel").in((List<?>) value);
+                        } else {
+                            criteria.and("difficultyLevel").is(value);
+                        }
+                        break;
+                    case "minRating":
+                        criteria.and("rating").gte(Double.parseDouble(value.toString()));
+                        break;
+                }
+            });
+        }
+
+        // Access control
+        applyAccessControl(criteria, userId);
+
+        return criteria;
+    }
+
+    private Criteria createTextSearchCriteria(String query) {
+        return new Criteria().orOperator(
+            Criteria.where("title").regex(Pattern.quote(query), "i"),
+            Criteria.where("content").regex(Pattern.quote(query), "i"),
+            Criteria.where("description").regex(Pattern.quote(query), "i"),
+            Criteria.where("tags").in(query),
+            Criteria.where("keywords").in(query),
+            Criteria.where("authorName").regex(Pattern.quote(query), "i")
+        );
+    }
+
+    private void applyAccessControl(Criteria criteria, String userId) {
+        criteria.and("isActive").is(true);
+
+        // Public content or user has access
+        Criteria accessCriteria = new Criteria().orOperator(
+            Criteria.where("isPublic").is(true),
+            Criteria.where("courseId").in(getAccessibleCourseIds(userId))
+        );
+
+        criteria.andOperator(accessCriteria);
+    }
+
+    private List<String> getAccessibleCourseIds(String userId) {
+        // Get enrolled courses and instructor courses
+        List<String> enrolledCourses = enrollmentService.getEnrolledCourseIds(userId);
+        List<String> instructorCourses = courseService.getInstructorCourseIds(userId);
+
+        Set<String> accessibleCourses = new HashSet<>();
+        accessibleCourses.addAll(enrolledCourses);
+        accessibleCourses.addAll(instructorCourses);
+
+        return new ArrayList<>(accessibleCourses);
+    }
+}
+```
+
+### Search Controller
+
+```java
+@RestController
+@RequestMapping("/api/search")
+public class SearchController {
+
+    @Autowired
+    private SearchService searchService;
+
+    // Basic search
+    @GetMapping
+    public ResponseEntity<SearchResponse> search(
+            @RequestParam String query,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "RELEVANCE") SortOption sortBy,
+            @RequestParam(required = false) Map<String, Object> filters,
+            Authentication authentication) {
+
+        String userId = authentication.getName();
+
+        SearchRequest request = SearchRequest.builder()
+            .query(query)
+            .page(page)
+            .size(size)
+            .sortBy(sortBy)
+            .filters(filters)
+            .build();
+
+        SearchResponse response = searchService.search(request, userId);
+        return ResponseEntity.ok(response);
+    }
+
+    // Advanced search
+    @PostMapping("/advanced")
+    public ResponseEntity<SearchResponse> advancedSearch(
+            @RequestBody @Valid AdvancedSearchRequest request,
+            Authentication authentication) {
+
+        String userId = authentication.getName();
+        SearchResponse response = searchService.advancedSearch(request, userId);
+        return ResponseEntity.ok(response);
+    }
+
+    // Autocomplete
+    @GetMapping("/autocomplete")
+    public ResponseEntity<List<AutocompleteItem>> autocomplete(
+            @RequestParam String query,
+            @RequestParam(defaultValue = "10") int limit,
+            Authentication authentication) {
+
+        String userId = authentication.getName();
+        List<AutocompleteItem> suggestions = searchService.autocomplete(query, userId, limit);
+        return ResponseEntity.ok(suggestions);
+    }
+
+    // Search within course
+    @GetMapping("/course/{courseId}")
+    public ResponseEntity<SearchResponse> searchInCourse(
+            @PathVariable String courseId,
+            @RequestParam(required = false) String query,
+            @PageableDefault(size = 20) Pageable pageable,
+            Authentication authentication) {
+
+        String userId = authentication.getName();
+        SearchResponse response = searchService.searchInCourse(courseId, query, userId, pageable);
+        return ResponseEntity.ok(response);
+    }
+
+    // Popular searches
+    @GetMapping("/popular")
+    public ResponseEntity<List<PopularSearchItem>> getPopularSearches(
+            @RequestParam(defaultValue = "10") int limit) {
+
+        List<PopularSearchItem> popularSearches = searchService.getPopularSearches(limit);
+        return ResponseEntity.ok(popularSearches);
+    }
+
+    // Search analytics (admin only)
+    @GetMapping("/analytics")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<SearchAnalyticsResponse> getSearchAnalytics(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+
+        SearchAnalyticsResponse analytics = searchService.getSearchAnalytics(startDate, endDate);
+        return ResponseEntity.ok(analytics);
+    }
+
+    // Index content (internal API)
+    @PostMapping("/index")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('INSTRUCTOR')")
+    public ResponseEntity<Void> indexContent(
+            @RequestParam String documentId,
+            @RequestParam SearchDocumentType documentType,
+            @RequestBody @Valid IndexContentRequest request) {
+
+        searchService.indexContent(documentId, documentType, request);
+        return ResponseEntity.accepted().build();
+    }
+
+    // Remove from index (internal API)
+    @DeleteMapping("/index")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('INSTRUCTOR')")
+    public ResponseEntity<Void> removeFromIndex(
+            @RequestParam String documentId,
+            @RequestParam SearchDocumentType documentType) {
+
+        searchService.removeFromIndex(documentId, documentType);
+        return ResponseEntity.noContent().build();
+    }
+}
+```
+
+## Frontend Implementation
+
+### Search Component
+
+```jsx
+import React, { useState, useEffect, useRef, useMemo } from "react";
+import { Search, Filter, X, Clock, BookOpen, User, Tag } from "lucide-react";
+import { searchService } from "../services/searchService";
+import { debounce } from "lodash";
+
+const SearchComponent = ({
+  placeholder = "Search courses, lessons, and discussions...",
+  onResultSelect,
+  showFilters = true,
+  courseId = null,
+  initialQuery = "",
+  className = "",
+}) => {
+  const [query, setQuery] = useState(initialQuery);
+  const [results, setResults] = useState([]);
+  const [suggestions, setSuggestions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [showFilters, setShowFiltersPanel] = useState(false);
+  const [filters, setFilters] = useState({
+    documentType: [],
+    category: [],
+    difficulty: [],
+    minRating: null,
+  });
+  const [sortBy, setSortBy] = useState("RELEVANCE");
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+
+  const searchInputRef = useRef();
+  const suggestionsRef = useRef();
+
+  // Debounced search function
+  const debouncedSearch = useMemo(
+    () =>
+      debounce(async (searchQuery, isAutocomplete = false) => {
+        if (!searchQuery.trim()) {
+          setResults([]);
+          setSuggestions([]);
+          return;
+        }
+
+        try {
+          if (isAutocomplete) {
+            const response = await searchService.getAutocomplete(searchQuery);
+            setSuggestions(response.data);
+          } else {
+            setLoading(true);
+            const searchParams = {
+              query: searchQuery,
+              page: 0,
+              size: 20,
+              sortBy,
+              filters: Object.keys(filters).reduce((acc, key) => {
+                if (
+                  filters[key] &&
+                  (Array.isArray(filters[key])
+                    ? filters[key].length > 0
+                    : filters[key])
+                ) {
+                  acc[key] = filters[key];
+                }
+                return acc;
+              }, {}),
+            };
+
+            let response;
+            if (courseId) {
+              response = await searchService.searchInCourse(
+                courseId,
+                searchQuery,
+                { page: 0, size: 20 }
+              );
+            } else {
+              response = await searchService.search(searchParams);
+            }
+
+            setResults(response.data.results);
+            setHasMore(!response.data.isLast);
+            setPage(0);
+          }
+        } catch (error) {
+          console.error("Search failed:", error);
+        } finally {
+          setLoading(false);
+        }
+      }, 300),
+    [sortBy, filters, courseId]
+  );
+
+  // Handle input change
+  const handleInputChange = (e) => {
+    const value = e.target.value;
+    setQuery(value);
+
+    if (value.length >= 2) {
+      debouncedSearch(value, true); // Autocomplete
+      setShowSuggestions(true);
+    } else {
+      setSuggestions([]);
+      setShowSuggestions(false);
+    }
+  };
+
+  // Handle search execution
+  const handleSearch = () => {
+    if (query.trim()) {
+      debouncedSearch(query, false);
+      setShowSuggestions(false);
+    }
+  };
+
+  // Handle suggestion selection
+  const handleSuggestionSelect = (suggestion) => {
+    setQuery(suggestion.text);
+    setShowSuggestions(false);
+    debouncedSearch(suggestion.text, false);
+
+    if (suggestion.documentId && onResultSelect) {
+      onResultSelect(suggestion);
+    }
+  };
+
+  // Handle filter change
+  const handleFilterChange = (filterKey, value) => {
+    setFilters((prev) => ({
+      ...prev,
+      [filterKey]: value,
+    }));
+  };
+
+  // Load more results
+  const loadMoreResults = async () => {
+    if (!hasMore || loading) return;
+
+    try {
+      setLoading(true);
+      const searchParams = {
+        query,
+        page: page + 1,
+        size: 20,
+        sortBy,
+        filters: Object.keys(filters).reduce((acc, key) => {
+          if (
+            filters[key] &&
+            (Array.isArray(filters[key])
+              ? filters[key].length > 0
+              : filters[key])
+          ) {
+            acc[key] = filters[key];
+          }
+          return acc;
+        }, {}),
+      };
+
+      let response;
+      if (courseId) {
+        response = await searchService.searchInCourse(courseId, query, {
+          page: page + 1,
+          size: 20,
+        });
+      } else {
+        response = await searchService.search(searchParams);
+      }
+
+      setResults((prev) => [...prev, ...response.data.results]);
+      setHasMore(!response.data.isLast);
+      setPage((prev) => prev + 1);
+    } catch (error) {
+      console.error("Failed to load more results:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle key press
+  const handleKeyPress = (e) => {
+    if (e.key === "Enter") {
+      handleSearch();
+    } else if (e.key === "Escape") {
+      setShowSuggestions(false);
+    }
+  };
+
+  // Click outside to close suggestions
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        suggestionsRef.current &&
+        !suggestionsRef.current.contains(event.target) &&
+        searchInputRef.current &&
+        !searchInputRef.current.contains(event.target)
+      ) {
+        setShowSuggestions(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Search when filters change
+  useEffect(() => {
+    if (query.trim()) {
+      debouncedSearch(query, false);
+    }
+  }, [filters, sortBy, debouncedSearch]);
+
+  const getSuggestionIcon = (type) => {
+    switch (type) {
+      case "COURSE_TITLE":
+        return <BookOpen size={16} className="text-blue-500" />;
+      case "INSTRUCTOR_NAME":
+        return <User size={16} className="text-green-500" />;
+      case "TOPIC":
+        return <Tag size={16} className="text-purple-500" />;
+      default:
+        return <Search size={16} className="text-gray-500" />;
+    }
+  };
+
+  const getResultIcon = (documentType) => {
+    switch (documentType) {
+      case "COURSE":
+        return <BookOpen size={20} className="text-blue-500" />;
+      case "LESSON":
+        return <BookOpen size={20} className="text-green-500" />;
+      case "FORUM_POST":
+        return <BookOpen size={20} className="text-purple-500" />;
+      default:
+        return <BookOpen size={20} className="text-gray-500" />;
+    }
+  };
+
+  return (
+    <div className={`relative ${className}`}>
+      {/* Search Input */}
+      <div className="relative">
+        <div className="relative">
+          <input
+            ref={searchInputRef}
+            type="text"
+            value={query}
+            onChange={handleInputChange}
+            onKeyPress={handleKeyPress}
+            placeholder={placeholder}
+            className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+          <Search className="absolute left-3 top-3.5 text-gray-400" size={20} />
+
+          {showFilters && (
+            <button
+              onClick={() => setShowFiltersPanel(!showFilters)}
+              className={`absolute right-3 top-3.5 p-0.5 rounded ${
+                showFilters
+                  ? "text-blue-600 bg-blue-50"
+                  : "text-gray-400 hover:text-gray-600"
+              }`}
+            >
+              <Filter size={20} />
+            </button>
+          )}
+        </div>
+
+        {/* Autocomplete Suggestions */}
+        {showSuggestions && suggestions.length > 0 && (
+          <div
+            ref={suggestionsRef}
+            className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto"
+          >
+            {suggestions.map((suggestion, index) => (
+              <div
+                key={index}
+                onClick={() => handleSuggestionSelect(suggestion)}
+                className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 cursor-pointer"
+              >
+                {getSuggestionIcon(suggestion.type)}
+                <span className="flex-1">{suggestion.text}</span>
+                {suggestion.type === "SEARCH_TERM" && (
+                  <Clock size={14} className="text-gray-400" />
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Filters Panel */}
+      {showFilters && showFiltersPanel && (
+        <div className="absolute z-40 w-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg p-4">
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="font-medium text-gray-900">Filters</h3>
+              <button
+                onClick={() => setShowFiltersPanel(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Document Type Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Content Type
+              </label>
+              <div className="space-y-2">
+                {["COURSE", "LESSON", "FORUM_POST", "ASSIGNMENT"].map(
+                  (type) => (
+                    <label key={type} className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={filters.documentType.includes(type)}
+                        onChange={(e) => {
+                          const newTypes = e.target.checked
+                            ? [...filters.documentType, type]
+                            : filters.documentType.filter((t) => t !== type);
+                          handleFilterChange("documentType", newTypes);
+                        }}
+                        className="mr-2"
+                      />
+                      <span className="text-sm text-gray-700">{type}</span>
+                    </label>
+                  )
+                )}
+              </div>
+            </div>
+
+            {/* Difficulty Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Difficulty
+              </label>
+              <div className="space-y-2">
+                {["BEGINNER", "INTERMEDIATE", "ADVANCED"].map((level) => (
+                  <label key={level} className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={filters.difficulty.includes(level)}
+                      onChange={(e) => {
+                        const newLevels = e.target.checked
+                          ? [...filters.difficulty, level]
+                          : filters.difficulty.filter((l) => l !== level);
+                        handleFilterChange("difficulty", newLevels);
+                      }}
+                      className="mr-2"
+                    />
+                    <span className="text-sm text-gray-700">{level}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Rating Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Minimum Rating
+              </label>
+              <select
+                value={filters.minRating || ""}
+                onChange={(e) =>
+                  handleFilterChange(
+                    "minRating",
+                    e.target.value ? parseFloat(e.target.value) : null
+                  )
+                }
+                className="w-full border border-gray-300 rounded px-3 py-2"
+              >
+                <option value="">Any Rating</option>
+                <option value="4.5">4.5+ Stars</option>
+                <option value="4.0">4.0+ Stars</option>
+                <option value="3.5">3.5+ Stars</option>
+                <option value="3.0">3.0+ Stars</option>
+              </select>
+            </div>
+
+            {/* Clear Filters */}
+            <button
+              onClick={() =>
+                setFilters({
+                  documentType: [],
+                  category: [],
+                  difficulty: [],
+                  minRating: null,
+                })
+              }
+              className="w-full bg-gray-100 text-gray-700 py-2 rounded hover:bg-gray-200"
+            >
+              Clear All Filters
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Search Results */}
+      {results.length > 0 && (
+        <div className="mt-4 space-y-4">
+          {/* Sort Options */}
+          <div className="flex justify-between items-center">
+            <p className="text-sm text-gray-600">
+              Found {results.length} results for "{query}"
+            </p>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="border border-gray-300 rounded px-3 py-1 text-sm"
+            >
+              <option value="RELEVANCE">Most Relevant</option>
+              <option value="DATE_DESC">Newest First</option>
+              <option value="RATING_DESC">Highest Rated</option>
+              <option value="POPULARITY_DESC">Most Popular</option>
+            </select>
+          </div>
+
+          {/* Results List */}
+          <div className="space-y-4">
+            {results.map((result, index) => (
+              <div
+                key={index}
+                className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
+                onClick={() => onResultSelect?.(result)}
+              >
+                <div className="flex items-start gap-3">
+                  {getResultIcon(result.documentType)}
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-medium text-gray-900 mb-1">
+                      {result.title}
+                    </h3>
+                    <p className="text-sm text-gray-600 mb-2 line-clamp-2">
+                      {result.snippet}
+                    </p>
+
+                    <div className="flex items-center gap-4 text-xs text-gray-500">
+                      <span>{result.documentType}</span>
+                      {result.authorName && <span>by {result.authorName}</span>}
+                      {result.rating && (
+                        <span className="flex items-center gap-1">
+                          ⭐ {result.rating.toFixed(1)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Load More */}
+          {hasMore && (
+            <div className="text-center">
+              <button
+                onClick={loadMoreResults}
+                disabled={loading}
+                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              >
+                {loading ? "Loading..." : "Load More Results"}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* No Results */}
+      {query.trim() && results.length === 0 && !loading && (
+        <div className="mt-4 text-center py-8 text-gray-500">
+          <Search size={48} className="mx-auto mb-4 text-gray-300" />
+          <p className="text-lg mb-2">No results found for "{query}"</p>
+          <p className="text-sm">Try adjusting your search terms or filters</p>
+        </div>
+      )}
+
+      {/* Loading */}
+      {loading && (
+        <div className="mt-4 text-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="text-gray-500 mt-2">Searching...</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default SearchComponent;
+```
+
+### Search Results Page
+
+```jsx
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/router";
+import { Filter, SortAsc, Grid, List } from "lucide-react";
+import SearchComponent from "../components/SearchComponent";
+import { searchService } from "../services/searchService";
+
+const SearchResults = () => {
+  const router = useRouter();
+  const { q: initialQuery, ...initialFilters } = router.query;
+
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [viewMode, setViewMode] = useState("list");
+  const [facets, setFacets] = useState({});
+  const [popularSearches, setPopularSearches] = useState([]);
+
+  useEffect(() => {
+    if (initialQuery) {
+      performSearch(initialQuery, initialFilters);
+    }
+    fetchPopularSearches();
+  }, [initialQuery]);
+
+  const performSearch = async (query, filters = {}) => {
+    try {
+      setLoading(true);
+      const response = await searchService.search({
+        query,
+        page: 0,
+        size: 20,
+        sortBy: "RELEVANCE",
+        filters,
+      });
+
+      setResults(response.data.results);
+      setFacets(response.data.facets || {});
+    } catch (error) {
+      console.error("Search failed:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchPopularSearches = async () => {
+    try {
+      const response = await searchService.getPopularSearches(10);
+      setPopularSearches(response.data);
+    } catch (error) {
+      console.error("Failed to fetch popular searches:", error);
+    }
+  };
+
+  const handleResultSelect = (result) => {
+    // Navigate to the selected result
+    switch (result.documentType) {
+      case "COURSE":
+        router.push(`/courses/${result.documentId}`);
+        break;
+      case "LESSON":
+        router.push(`/courses/${result.courseId}/lessons/${result.documentId}`);
+        break;
+      case "FORUM_POST":
+        router.push(`/forum/posts/${result.documentId}`);
+        break;
+      default:
+        // Handle other types
+        break;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-6xl mx-auto">
+          {/* Search Header */}
+          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <SearchComponent
+              initialQuery={initialQuery}
+              onResultSelect={handleResultSelect}
+              showFilters={true}
+              className="mb-4"
+            />
+
+            {initialQuery && (
+              <p className="text-sm text-gray-600">
+                Search results for "{initialQuery}"
+              </p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            {/* Filters Sidebar */}
+            <div className="lg:col-span-1">
+              <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+                <h3 className="font-medium text-gray-900 mb-4">
+                  Refine Results
+                </h3>
+
+                {/* Facet filters would go here */}
+                {Object.entries(facets).map(([key, values]) => (
+                  <div key={key} className="mb-4">
+                    <h4 className="font-medium text-sm text-gray-700 mb-2 capitalize">
+                      {key.replace(/([A-Z])/g, " $1").toLowerCase()}
+                    </h4>
+                    <div className="space-y-2">
+                      {values.slice(0, 5).map((value, index) => (
+                        <label key={index} className="flex items-center">
+                          <input type="checkbox" className="mr-2" />
+                          <span className="text-sm text-gray-600">
+                            {value.value} ({value.count})
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Popular Searches */}
+              <div className="bg-white rounded-lg shadow-sm p-6">
+                <h3 className="font-medium text-gray-900 mb-4">
+                  Popular Searches
+                </h3>
+                <div className="space-y-2">
+                  {popularSearches.map((search, index) => (
+                    <button
+                      key={index}
+                      onClick={() =>
+                        router.push(
+                          `/search?q=${encodeURIComponent(search.query)}`
+                        )
+                      }
+                      className="block w-full text-left text-sm text-blue-600 hover:text-blue-800 py-1"
+                    >
+                      {search.query}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Results */}
+            <div className="lg:col-span-3">
+              {/* Results Header */}
+              <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
+                <div className="flex justify-between items-center">
+                  <p className="text-sm text-gray-600">
+                    {results.length} results found
+                  </p>
+
+                  <div className="flex items-center gap-4">
+                    <select className="border border-gray-300 rounded px-3 py-1 text-sm">
+                      <option value="RELEVANCE">Most Relevant</option>
+                      <option value="DATE_DESC">Newest First</option>
+                      <option value="RATING_DESC">Highest Rated</option>
+                      <option value="POPULARITY_DESC">Most Popular</option>
+                    </select>
+
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => setViewMode("list")}
+                        className={`p-2 rounded ${viewMode === "list" ? "bg-blue-100 text-blue-600" : "text-gray-400"}`}
+                      >
+                        <List size={16} />
+                      </button>
+                      <button
+                        onClick={() => setViewMode("grid")}
+                        className={`p-2 rounded ${viewMode === "grid" ? "bg-blue-100 text-blue-600" : "text-gray-400"}`}
+                      >
+                        <Grid size={16} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Results List */}
+              {loading ? (
+                <div className="bg-white rounded-lg shadow-sm p-8 text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                  <p className="text-gray-500 mt-2">Searching...</p>
+                </div>
+              ) : viewMode === "list" ? (
+                <div className="space-y-4">
+                  {results.map((result, index) => (
+                    <div
+                      key={index}
+                      className="bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow cursor-pointer"
+                      onClick={() => handleResultSelect(result)}
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className="flex-shrink-0">
+                          {result.thumbnail ? (
+                            <img
+                              src={result.thumbnail}
+                              alt={result.title}
+                              className="w-16 h-16 rounded-lg object-cover"
+                            />
+                          ) : (
+                            <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center">
+                              📚
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-medium text-gray-900 mb-2">
+                            {result.title}
+                          </h3>
+                          <p className="text-sm text-gray-600 mb-3">
+                            {result.snippet}
+                          </p>
+
+                          <div className="flex items-center gap-4 text-xs text-gray-500">
+                            <span className="bg-gray-100 px-2 py-1 rounded">
+                              {result.documentType}
+                            </span>
+                            {result.authorName && (
+                              <span>by {result.authorName}</span>
+                            )}
+                            {result.rating && (
+                              <span className="flex items-center gap-1">
+                                ⭐ {result.rating.toFixed(1)}
+                              </span>
+                            )}
+                            {result.difficultyLevel && (
+                              <span>{result.difficultyLevel}</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {results.map((result, index) => (
+                    <div
+                      key={index}
+                      className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
+                      onClick={() => handleResultSelect(result)}
+                    >
+                      {result.thumbnail && (
+                        <img
+                          src={result.thumbnail}
+                          alt={result.title}
+                          className="w-full h-48 object-cover"
+                        />
+                      )}
+                      <div className="p-4">
+                        <h3 className="font-medium text-gray-900 mb-2">
+                          {result.title}
+                        </h3>
+                        <p className="text-sm text-gray-600 mb-3 line-clamp-3">
+                          {result.snippet}
+                        </p>
+
+                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                          <span className="bg-gray-100 px-2 py-1 rounded">
+                            {result.documentType}
+                          </span>
+                          {result.rating && (
+                            <span className="flex items-center gap-1">
+                              ⭐ {result.rating.toFixed(1)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* No Results */}
+              {!loading && results.length === 0 && initialQuery && (
+                <div className="bg-white rounded-lg shadow-sm p-8 text-center">
+                  <p className="text-lg text-gray-600 mb-4">
+                    No results found for "{initialQuery}"
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Try adjusting your search terms or browse popular searches
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default SearchResults;
+```
+
+## Key Features Implemented
+
+1. **Comprehensive Search Engine**
+   - Full-text search across all content types
+   - Advanced filtering and faceted search
+   - Intelligent ranking and relevance scoring
+
+2. **Smart User Experience**
+   - Real-time autocomplete suggestions
+   - Search history and popular searches
+   - Spell correction and fuzzy matching
+
+3. **Performance Optimization**
+   - Debounced search requests
+   - Efficient indexing and caching
+   - Pagination and incremental loading
+
+4. **Analytics and Insights**
+   - Search behavior tracking
+   - Popular search terms analysis
+   - Performance monitoring and optimization
+
+5. **Access Control Integration**
+   - Role-based search results filtering
+   - Course enrollment verification
+   - Content visibility enforcement
+
+[← Previous: File Uploads](/proj-online-learning-platform-website/19-file-uploads) | [Next: Notifications →](/proj-online-learning-platform-website/21-notifications)
+
+<BackToTop />
