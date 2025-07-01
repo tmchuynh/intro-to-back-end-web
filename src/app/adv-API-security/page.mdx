@@ -4,24 +4,6 @@ import BackToTop from "@/components/BackToTop";
 
 ## Table of Contents
 
-- [Introduction](#introduction)
-- [API Security Concepts](#api-security-concepts)
-  - [Authentication and Authorization](#authentication-and-authorization)
-  - [Rate Limiting and Throttling](#rate-limiting-and-throttling)
-  - [Input Validation and Sanitization](#input-validation-and-sanitization)
-  - [Secure Communication](#secure-communication)
-  - [Error Handling and Logging](#error-handling-and-logging)
-  - [CORS (Cross-Origin Resource Sharing)](#cors-cross-origin-resource-sharing)
-  - [Security Testing and Vulnerability Scanning](#security-testing-and-vulnerability-scanning)
-  - [API Security Standards and Best Practices](#api-security-standards-and-best-practices)
-- [Common API Security Vulnerabilities](#common-api-security-vulnerabilities)
-- [Implementation Examples](#implementation-examples)
-- [Security Testing Strategies](#security-testing-strategies)
-- [Monitoring and Incident Response](#monitoring-and-incident-response)
-- [Compliance and Regulations](#compliance-and-regulations)
-- [Tools and Resources](#tools-and-resources)
-- [Conclusion](#conclusion)
-
 ## Introduction
 
 API security is a critical aspect of modern software development, ensuring that APIs are protected against unauthorized access, data breaches, and other vulnerabilities. This guide provides an overview of essential API security concepts, best practices, and tools to help you secure your APIs effectively.
@@ -72,6 +54,7 @@ API security is a critical aspect of modern software development, ensuring that 
 - **OWASP API Security Top 10**: A list of the top 10 most critical API security risks, including issues like broken authentication, excessive data exposure, and security misconfiguration.
 - **API Security Best Practices**: Following best practices such as using strong authentication methods, implementing rate limiting, validating and sanitizing input, using HTTPS, and regularly testing for vulnerabilities.
 
+<BackToTop />
 ## Common API Security Vulnerabilities
 
 ### OWASP API Security Top 10 (2023)
@@ -79,189 +62,212 @@ API security is a critical aspect of modern software development, ensuring that 
 Understanding the most common API vulnerabilities is crucial for building secure systems:
 
 #### 1. Broken Object Level Authorization (BOLA)
+
 - **Description**: APIs fail to validate that a user should have access to a specific object.
 - **Example**: User A can access User B's data by simply changing the ID in the API call.
 - **Mitigation**: Implement proper authorization checks for every object access.
 
 #### 2. Broken Authentication
+
 - **Description**: Authentication mechanisms are implemented incorrectly, allowing attackers to compromise authentication tokens.
 - **Example**: Weak password policies, exposed authentication endpoints, or poor session management.
 - **Mitigation**: Use strong authentication mechanisms, implement proper session management, and secure token storage.
 
 #### 3. Broken Object Property Level Authorization
+
 - **Description**: APIs expose more object properties than necessary or allow modification of sensitive properties.
 - **Example**: User profile API returns sensitive data like SSN or allows modification of admin flags.
 - **Mitigation**: Implement field-level authorization and data filtering.
 
 #### 4. Unrestricted Resource Consumption
+
 - **Description**: APIs don't properly limit resource consumption, leading to DoS attacks.
 - **Example**: APIs without rate limiting, pagination, or request size limits.
 - **Mitigation**: Implement rate limiting, request size limits, and proper pagination.
 
 #### 5. Broken Function Level Authorization
+
 - **Description**: APIs expose functions that users shouldn't have access to.
 - **Example**: Regular users accessing admin functions by guessing endpoints.
 - **Mitigation**: Implement proper function-level authorization checks.
 
 #### 6. Unrestricted Access to Sensitive Business Flows
+
 - **Description**: APIs expose business flows without proper access controls.
 - **Example**: Purchase flows that don't verify user permissions or payment validation.
 - **Mitigation**: Implement business logic validation and access controls.
 
 #### 7. Server Side Request Forgery (SSRF)
+
 - **Description**: APIs fetch remote resources based on user input without validation.
 - **Example**: APIs that fetch URLs provided by users without proper validation.
 - **Mitigation**: Validate and sanitize all user inputs, implement URL allowlists.
 
 #### 8. Security Misconfiguration
+
 - **Description**: APIs are deployed with insecure default configurations.
 - **Example**: Unnecessary HTTP methods enabled, verbose error messages, or missing security headers.
 - **Mitigation**: Follow security hardening guidelines and regular security audits.
 
 #### 9. Improper Inventory Management
+
 - **Description**: Organizations lose track of their APIs and their security status.
 - **Example**: Shadow APIs, deprecated APIs still running, or undocumented endpoints.
 - **Mitigation**: Maintain an API inventory and lifecycle management process.
 
 #### 10. Unsafe Consumption of APIs
+
 - **Description**: Applications trust data from third-party APIs without proper validation.
 - **Example**: Consuming external APIs without validating response data.
 - **Mitigation**: Validate all external data and implement proper error handling.
+
+<BackToTop />
 
 ## Implementation Examples
 
 ### Implementing JWT Authentication
 
 ```javascript
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcrypt');
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcrypt");
 
 // Generate JWT token
 function generateToken(user) {
-    const payload = {
-        userId: user.id,
-        email: user.email,
-        role: user.role
-    };
-    
-    return jwt.sign(payload, process.env.JWT_SECRET, {
-        expiresIn: '1h',
-        issuer: 'your-api',
-        audience: 'your-app'
-    });
+  const payload = {
+    userId: user.id,
+    email: user.email,
+    role: user.role,
+  };
+
+  return jwt.sign(payload, process.env.JWT_SECRET, {
+    expiresIn: "1h",
+    issuer: "your-api",
+    audience: "your-app",
+  });
 }
 
 // Middleware to verify JWT
 function authenticateToken(req, res, next) {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-    
-    if (!token) {
-        return res.status(401).json({ error: 'Access token required' });
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+
+  if (!token) {
+    return res.status(401).json({ error: "Access token required" });
+  }
+
+  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+    if (err) {
+      return res.status(403).json({ error: "Invalid or expired token" });
     }
-    
-    jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-        if (err) {
-            return res.status(403).json({ error: 'Invalid or expired token' });
-        }
-        req.user = user;
-        next();
-    });
+    req.user = user;
+    next();
+  });
 }
 ```
+
+<BackToTop />
 
 ### Rate Limiting Implementation
 
 ```javascript
-const rateLimit = require('express-rate-limit');
-const RedisStore = require('rate-limit-redis');
-const Redis = require('ioredis');
+const rateLimit = require("express-rate-limit");
+const RedisStore = require("rate-limit-redis");
+const Redis = require("ioredis");
 
 const redisClient = new Redis(process.env.REDIS_URL);
 
 const limiter = rateLimit({
-    store: new RedisStore({
-        sendCommand: (...args) => redisClient.call(...args),
-    }),
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // Limit each IP to 100 requests per windowMs
-    message: {
-        error: 'Too many requests from this IP, please try again later.'
-    },
-    standardHeaders: true,
-    legacyHeaders: false,
+  store: new RedisStore({
+    sendCommand: (...args) => redisClient.call(...args),
+  }),
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: {
+    error: "Too many requests from this IP, please try again later.",
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 
 // Apply rate limiting to API routes
-app.use('/api/', limiter);
+app.use("/api/", limiter);
 ```
 
 ### Input Validation with Joi
 
 ```javascript
-const Joi = require('joi');
+const Joi = require("joi");
 
 const userSchema = Joi.object({
-    email: Joi.string().email().required(),
-    password: Joi.string().min(8).pattern(new RegExp('^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#\$%\^&\*])')).required(),
-    name: Joi.string().min(2).max(50).required(),
-    age: Joi.number().integer().min(18).max(120)
+  email: Joi.string().email().required(),
+  password: Joi.string()
+    .min(8)
+    .pattern(
+      new RegExp("^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#\$%\^&\*])")
+    )
+    .required(),
+  name: Joi.string().min(2).max(50).required(),
+  age: Joi.number().integer().min(18).max(120),
 });
 
 function validateUser(req, res, next) {
-    const { error } = userSchema.validate(req.body);
-    if (error) {
-        return res.status(400).json({
-            error: 'Validation failed',
-            details: error.details.map(detail => detail.message)
-        });
-    }
-    next();
+  const { error } = userSchema.validate(req.body);
+  if (error) {
+    return res.status(400).json({
+      error: "Validation failed",
+      details: error.details.map((detail) => detail.message),
+    });
+  }
+  next();
 }
 ```
 
 ### CORS Configuration
 
 ```javascript
-const cors = require('cors');
+const cors = require("cors");
 
 const corsOptions = {
-    origin: function (origin, callback) {
-        const allowedOrigins = [
-            'https://yourdomain.com',
-            'https://app.yourdomain.com'
-        ];
-        
-        if (!origin || allowedOrigins.includes(origin)) {
-            callback(null, true);
-        } else {
-            callback(new Error('Not allowed by CORS'));
-        }
-    },
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true,
-    maxAge: 86400 // 24 hours
+  origin: function (origin, callback) {
+    const allowedOrigins = [
+      "https://yourdomain.com",
+      "https://app.yourdomain.com",
+    ];
+
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true,
+  maxAge: 86400, // 24 hours
 };
 
 app.use(cors(corsOptions));
 ```
 
+<BackToTop />
 ## Security Testing Strategies
 
 ### Automated Security Testing
 
 #### Static Application Security Testing (SAST)
+
 - **Purpose**: Analyze source code for security vulnerabilities without executing the program.
 - **Tools**: SonarQube, Checkmarx, Veracode
 - **Benefits**: Early detection of vulnerabilities in development cycle.
 
 #### Dynamic Application Security Testing (DAST)
+
 - **Purpose**: Test running applications for security vulnerabilities.
 - **Tools**: OWASP ZAP, Burp Suite, Nessus
 - **Benefits**: Identifies runtime vulnerabilities and configuration issues.
 
 #### Interactive Application Security Testing (IAST)
+
 - **Purpose**: Combines SAST and DAST approaches for comprehensive testing.
 - **Tools**: Contrast Security, Synopsys
 - **Benefits**: Real-time vulnerability detection with low false positives.
@@ -269,11 +275,13 @@ app.use(cors(corsOptions));
 ### Manual Security Testing
 
 #### Penetration Testing
+
 - **Approach**: Simulate real-world attacks to identify vulnerabilities.
 - **Focus Areas**: Authentication, authorization, input validation, business logic.
 - **Frequency**: Quarterly or after major releases.
 
 #### Code Review
+
 - **Process**: Manual review of critical security-related code.
 - **Focus**: Authentication logic, authorization checks, input validation.
 - **Tools**: GitHub Security, GitLab Security, Crucible.
@@ -305,48 +313,51 @@ app.use(cors(corsOptions));
   - [ ] Check for race conditions
   - [ ] Test payment and transaction flows
 
+<BackToTop />
 ## Monitoring and Incident Response
 
 ### Security Monitoring
 
 #### API Gateway Monitoring
+
 ```javascript
 // Example monitoring middleware
 function securityMonitoring(req, res, next) {
-    const startTime = Date.now();
-    
-    // Log request details
-    console.log({
-        timestamp: new Date().toISOString(),
-        method: req.method,
-        url: req.url,
-        userAgent: req.get('User-Agent'),
+  const startTime = Date.now();
+
+  // Log request details
+  console.log({
+    timestamp: new Date().toISOString(),
+    method: req.method,
+    url: req.url,
+    userAgent: req.get("User-Agent"),
+    ip: req.ip,
+    userId: req.user?.id,
+  });
+
+  // Monitor response
+  res.on("finish", () => {
+    const duration = Date.now() - startTime;
+
+    // Alert on suspicious patterns
+    if (res.statusCode >= 400) {
+      logSecurityEvent({
+        type: "failed_request",
+        statusCode: res.statusCode,
+        duration,
+        endpoint: req.url,
+        userId: req.user?.id,
         ip: req.ip,
-        userId: req.user?.id
-    });
-    
-    // Monitor response
-    res.on('finish', () => {
-        const duration = Date.now() - startTime;
-        
-        // Alert on suspicious patterns
-        if (res.statusCode >= 400) {
-            logSecurityEvent({
-                type: 'failed_request',
-                statusCode: res.statusCode,
-                duration,
-                endpoint: req.url,
-                userId: req.user?.id,
-                ip: req.ip
-            });
-        }
-    });
-    
-    next();
+      });
+    }
+  });
+
+  next();
 }
 ```
 
 #### Key Metrics to Monitor
+
 - **Authentication Failures**: Track failed login attempts and patterns.
 - **Rate Limit Violations**: Monitor requests exceeding rate limits.
 - **Suspicious Patterns**: Detect unusual access patterns or data requests.
@@ -356,30 +367,36 @@ function securityMonitoring(req, res, next) {
 ### Incident Response Plan
 
 #### Phase 1: Detection and Analysis
+
 1. **Automated Detection**: Configure alerts for security events.
 2. **Manual Detection**: Regular security monitoring and log analysis.
 3. **Initial Assessment**: Determine scope and severity of the incident.
 
 #### Phase 2: Containment
+
 1. **Short-term Containment**: Isolate affected systems and limit damage.
 2. **Evidence Collection**: Preserve logs and system state for investigation.
 3. **Long-term Containment**: Implement temporary fixes and workarounds.
 
 #### Phase 3: Eradication and Recovery
+
 1. **Root Cause Analysis**: Identify and eliminate the source of the incident.
 2. **System Restoration**: Restore systems to normal operation.
 3. **Validation**: Verify that systems are functioning securely.
 
 #### Phase 4: Post-Incident Activities
+
 1. **Documentation**: Create detailed incident reports.
 2. **Lessons Learned**: Identify improvements for future prevention.
 3. **Plan Updates**: Update incident response procedures based on lessons learned.
 
+<BackToTop />
 ## Compliance and Regulations
 
 ### Common Compliance Requirements
 
 #### GDPR (General Data Protection Regulation)
+
 - **Scope**: EU citizens' personal data processing.
 - **API Requirements**:
   - Data minimization in API responses
@@ -388,6 +405,7 @@ function securityMonitoring(req, res, next) {
   - Data portability features
 
 #### PCI DSS (Payment Card Industry Data Security Standard)
+
 - **Scope**: Organizations handling payment card data.
 - **API Requirements**:
   - Secure transmission of cardholder data
@@ -396,6 +414,7 @@ function securityMonitoring(req, res, next) {
   - Network segmentation
 
 #### HIPAA (Health Insurance Portability and Accountability Act)
+
 - **Scope**: Healthcare organizations in the US.
 - **API Requirements**:
   - Encryption of PHI in transit and at rest
@@ -404,6 +423,7 @@ function securityMonitoring(req, res, next) {
   - Risk assessments for API implementations
 
 #### SOX (Sarbanes-Oxley Act)
+
 - **Scope**: Public companies in the US.
 - **API Requirements**:
   - Data integrity controls
@@ -414,63 +434,65 @@ function securityMonitoring(req, res, next) {
 ### Compliance Implementation Strategies
 
 #### Data Classification
+
 ```javascript
 // Example data classification middleware
 function classifyData(req, res, next) {
-    const originalSend = res.send;
-    
-    res.send = function(data) {
-        // Check for sensitive data patterns
-        const sensitivePatterns = [
-            /\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b/, // Credit card
-            /\b\d{3}-\d{2}-\d{4}\b/, // SSN
-            /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/ // Email
-        ];
-        
-        let hasSenitiveData = false;
-        for (const pattern of sensitivePatterns) {
-            if (pattern.test(JSON.stringify(data))) {
-                hasSenitiveData = true;
-                break;
-            }
-        }
-        
-        if (hasSenitiveData) {
-            // Add security headers
-            res.set('X-Content-Type-Options', 'nosniff');
-            res.set('X-Frame-Options', 'DENY');
-            res.set('Cache-Control', 'no-store');
-        }
-        
-        originalSend.call(this, data);
-    };
-    
-    next();
+  const originalSend = res.send;
+
+  res.send = function (data) {
+    // Check for sensitive data patterns
+    const sensitivePatterns = [
+      /\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b/, // Credit card
+      /\b\d{3}-\d{2}-\d{4}\b/, // SSN
+      /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/, // Email
+    ];
+
+    let hasSenitiveData = false;
+    for (const pattern of sensitivePatterns) {
+      if (pattern.test(JSON.stringify(data))) {
+        hasSenitiveData = true;
+        break;
+      }
+    }
+
+    if (hasSenitiveData) {
+      // Add security headers
+      res.set("X-Content-Type-Options", "nosniff");
+      res.set("X-Frame-Options", "DENY");
+      res.set("Cache-Control", "no-store");
+    }
+
+    originalSend.call(this, data);
+  };
+
+  next();
 }
 ```
 
 #### Audit Logging
+
 ```javascript
 function auditLog(req, res, next) {
-    const auditEntry = {
-        timestamp: new Date().toISOString(),
-        userId: req.user?.id,
-        action: `${req.method} ${req.url}`,
-        ip: req.ip,
-        userAgent: req.get('User-Agent'),
-        sessionId: req.sessionID
-    };
-    
-    // Log to secure audit system
-    auditLogger.info(auditEntry);
-    
-    res.on('finish', () => {
-        auditEntry.statusCode = res.statusCode;
-        auditEntry.responseTime = Date.now() - req.startTime;
-        auditLogger.info({ ...auditEntry, event: 'response' });
-    });
-    
-    next();
+  const auditEntry = {
+    timestamp: new Date().toISOString(),
+    userId: req.user?.id,
+    action: `${req.method} ${req.url}`,
+    ip: req.ip,
+    userAgent: req.get("User-Agent"),
+    sessionId: req.sessionID,
+  };
+
+  // Log to secure audit system
+  auditLogger.info(auditEntry);
+
+  res.on("finish", () => {
+    auditEntry.statusCode = res.statusCode;
+    auditEntry.responseTime = Date.now() - req.startTime;
+    auditLogger.info({ ...auditEntry, event: "response" });
+  });
+
+  next();
 }
 ```
 
@@ -488,38 +510,41 @@ function auditLog(req, res, next) {
 ### Security Headers and Configuration
 
 #### Essential Security Headers
+
 ```javascript
 // Express.js security headers middleware
-const helmet = require('helmet');
+const helmet = require("helmet");
 
-app.use(helmet({
+app.use(
+  helmet({
     contentSecurityPolicy: {
-        directives: {
-            defaultSrc: ["'self'"],
-            styleSrc: ["'self'", "'unsafe-inline'"],
-            scriptSrc: ["'self'"],
-            imgSrc: ["'self'", "data:", "https:"],
-        },
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'"],
+        imgSrc: ["'self'", "data:", "https:"],
+      },
     },
     hsts: {
-        maxAge: 31536000,
-        includeSubDomains: true,
-        preload: true
+      maxAge: 31536000,
+      includeSubDomains: true,
+      preload: true,
     },
     noSniff: true,
-    frameguard: { action: 'deny' },
-    xssFilter: true
-}));
+    frameguard: { action: "deny" },
+    xssFilter: true,
+  })
+);
 
 // Custom security headers
 app.use((req, res, next) => {
-    res.set({
-        'X-API-Version': '1.0',
-        'X-Rate-Limit': '100',
-        'X-Content-Type-Options': 'nosniff',
-        'Referrer-Policy': 'strict-origin-when-cross-origin'
-    });
-    next();
+  res.set({
+    "X-API-Version": "1.0",
+    "X-Rate-Limit": "100",
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+  });
+  next();
 });
 ```
 
@@ -533,18 +558,21 @@ app.use((req, res, next) => {
 ### Cloud-Specific Security Considerations
 
 #### AWS API Gateway Security
+
 - **Resource Policies**: Control access to APIs based on IP addresses, VPCs, or AWS accounts.
 - **AWS WAF Integration**: Protect APIs against common web exploits and bots.
 - **CloudTrail Logging**: Monitor API calls and maintain audit trails.
 - **API Keys and Usage Plans**: Implement throttling and quota management.
 
 #### Azure API Management Security
+
 - **Subscription Keys**: Implement API access control through subscription-based authentication.
 - **OAuth 2.0 and OpenID Connect**: Integrate with Azure Active Directory for authentication.
 - **IP Filtering**: Restrict API access based on client IP addresses.
 - **Certificate Authentication**: Use client certificates for mutual authentication.
 
 #### Google Cloud Endpoints Security
+
 - **Service Account Authentication**: Use Google service accounts for API authentication.
 - **API Keys**: Implement API key-based authentication and quota management.
 - **Cloud Armor**: Protect APIs against DDoS attacks and application layer attacks.
@@ -574,3 +602,5 @@ API security is a multi-layered approach that requires careful consideration of 
 - Create and test an incident response plan for API security breaches.
 
 Remember that API security is an ongoing process, not a one-time implementation. Regular reviews, updates, and improvements are essential to maintain a strong security posture as threats evolve and your API ecosystem grows.
+
+<BackToTop />

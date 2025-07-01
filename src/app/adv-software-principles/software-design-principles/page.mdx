@@ -4,23 +4,6 @@ import BackToTop from "@/components/BackToTop";
 
 ## Table of Contents
 
-- [Introduction to Software Design Principles](#introduction-to-software-design-principles)
-- [Core Design Principles](#core-design-principles)
-  - [Modularity](#modularity)
-  - [Abstraction](#abstraction)
-  - [Encapsulation](#encapsulation)
-  - [Separation of Concerns](#separation-of-concerns)
-  - [Don't Repeat Yourself (DRY)](#dont-repeat-yourself-dry)
-  - [Keep It Simple, Stupid (KISS)](#keep-it-simple-stupid-kiss)
-  - [You Aren't Gonna Need It (YAGNI)](#you-arent-gonna-need-it-yagni)
-- [Design Patterns](#design-patterns)
-- [Architectural Principles](#architectural-principles)
-- [Code Organization Principles](#code-organization-principles)
-- [Performance and Scalability Principles](#performance-and-scalability-principles)
-- [Real-World Examples](#real-world-examples)
-- [Common Anti-Patterns](#common-anti-patterns)
-- [Best Practices](#best-practices)
-
 ## Introduction to Software Design Principles
 
 Software design principles are fundamental guidelines that help developers create software that is efficient, maintainable, and scalable. These principles provide a framework for making design decisions and ensure that the software architecture is robust and adaptable to future changes. By following these principles, developers can improve code quality, reduce complexity, and enhance collaboration within development teams.
@@ -203,6 +186,8 @@ product.model.ts;
 order.model.ts;
 ```
 
+<BackToTop />
+
 ### Abstraction
 
 Abstraction is the principle of simplifying complex systems by focusing on the essential features while hiding unnecessary details. It allows developers to create models or representations of real-world entities, making it easier to understand and manipulate the software.
@@ -348,6 +333,8 @@ class Application {
   }
 }
 ```
+
+<BackToTop />
 
 ### Encapsulation
 
@@ -505,6 +492,8 @@ const UserModule = (() => {
   };
 })();
 ```
+
+<BackToTop />
 
 ### Separation of Concerns
 
@@ -685,6 +674,8 @@ class PasswordService {
 }
 ```
 
+<BackToTop />
+
 ### Don't Repeat Yourself (DRY)
 
 The DRY principle states that "every piece of knowledge must have a single, unambiguous, authoritative representation within a system." It aims to reduce repetition of software patterns.
@@ -770,6 +761,8 @@ class UserController {
 }
 ```
 
+<BackToTop />
+
 ### Keep It Simple, Stupid (KISS)
 
 The KISS principle states that most systems work best if they are kept simple rather than made complicated. Simplicity should be a key goal in design.
@@ -829,6 +822,8 @@ class SimpleDateFormatter {
 // Even simpler for basic use cases
 const formatDate = (date: Date) => date.toISOString().split("T")[0];
 ```
+
+<BackToTop />
 
 ### You Aren't Gonna Need It (YAGNI)
 
@@ -899,6 +894,8 @@ class SimpleUserService {
 // - Add audit logging when compliance requires it
 // - Add multiple database support when scaling requires it
 ```
+
+<BackToTop />
 
 ## Design Patterns
 
@@ -1008,6 +1005,8 @@ class LoggerFactory {
 const logger = LoggerFactory.createLogger("file", { filename: "errors.log" });
 logger.log("Application started");
 ```
+
+<BackToTop />
 
 ### Behavioral Patterns
 
@@ -1150,6 +1149,8 @@ calculator.setStrategy(new PremiumPricing(1.5));
 console.log(calculator.calculateFinalPrice(100)); // 150
 ```
 
+<BackToTop />
+
 ### Structural Patterns
 
 #### Decorator Pattern
@@ -1227,6 +1228,8 @@ coffee = new WhipDecorator(coffee);
 console.log(`${coffee.getDescription()} costs $${coffee.getCost()}`);
 // Output: "Simple coffee, milk, sugar, whip costs $3.4"
 ```
+
+<BackToTop />
 
 ## Common Anti-Patterns
 
@@ -1431,6 +1434,8 @@ class OrderProcessor {
   }
 }
 ```
+
+<BackToTop />
 
 ## Best Practices
 

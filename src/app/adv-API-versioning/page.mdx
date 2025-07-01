@@ -22,17 +22,20 @@ GET /api/v2/users
 ```
 
 **Real-world Example: Twitter API**
+
 ```http title="Twitter API URI Versioning"
 GET https://api.twitter.com/1.1/statuses/user_timeline.json
 GET https://api.twitter.com/2/tweets
 ```
 
 **Advantages:**
+
 - Clear and visible versioning
 - Easy to cache and route
 - Simple for clients to understand
 
 **Disadvantages:**
+
 - Requires URL changes for new versions
 - Can lead to URL proliferation
 
@@ -48,22 +51,26 @@ GET /api/users?api_version=2023-01-15
 ```
 
 **Real-world Example: Stripe API**
+
 ```http title="Stripe API Query Parameter Versioning"
 GET https://api.stripe.com/v1/charges?version=2020-08-27
 POST https://api.stripe.com/v1/payment_intents?api_version=2022-11-15
 ```
 
 **Use Cases:**
+
 - When you want to keep URLs clean but allow version flexibility
 - For backward compatibility with existing integrations
 - When supporting multiple minor versions simultaneously
 
 **Advantages:**
+
 - Keeps base URLs consistent
 - Optional versioning (can default to latest)
 - Easy to implement
 
 **Disadvantages:**
+
 - Can be forgotten or omitted by clients
 - Caching complexity
 - URL parameters can become cluttered
@@ -87,6 +94,7 @@ Version: 2023-03-15
 ```
 
 **Real-world Example: GitHub API**
+
 ```http title="GitHub API Header Versioning"
 GET https://api.github.com/user/repos
 Accept: application/vnd.github+json
@@ -94,16 +102,19 @@ X-GitHub-Api-Version: 2022-11-28
 ```
 
 **Use Cases:**
+
 - RESTful APIs that want to maintain clean URLs
 - When supporting multiple versioning dimensions (API version + data format)
 - Enterprise APIs with complex versioning requirements
 
 **Advantages:**
+
 - Clean URLs
 - Can combine with content negotiation
 - Flexible header naming
 
 **Disadvantages:**
+
 - Headers can be overlooked
 - Debugging complexity
 - Requires client-side header management
@@ -128,6 +139,7 @@ Accept: application/json;version=1.0
 ```
 
 **Real-world Example: Salesforce API**
+
 ```http title="Salesforce API Content Negotiation"
 GET https://instance.salesforce.com/services/data/v58.0/sobjects/Account
 Accept: application/json
@@ -137,16 +149,19 @@ Accept: application/vnd.api+json
 ```
 
 **Use Cases:**
+
 - APIs that serve multiple data formats (JSON, XML, MessagePack)
 - When version affects response structure significantly
 - RESTful APIs following HTTP standards strictly
 
 **Advantages:**
+
 - Follows HTTP standards
 - Can specify both version and format
 - Flexible and extensible
 
 **Disadvantages:**
+
 - Complex media type management
 - Client library complexity
 - Limited tooling support
@@ -163,11 +178,13 @@ GET /api/v2.0.0/users    # Breaking changes
 ```
 
 **Versioning Rules:**
+
 - **MAJOR** version: Breaking changes that require client updates
 - **MINOR** version: New features that are backward compatible
 - **PATCH** version: Bug fixes that are backward compatible
 
 **Real-world Example: Kubernetes API**
+
 ```http title="Kubernetes API Semantic Versioning"
 GET /api/v1/pods                    # Stable v1
 GET /apis/apps/v1/deployments       # Apps API v1
@@ -175,16 +192,19 @@ GET /apis/extensions/v1beta1/deployments  # Beta version
 ```
 
 **Use Cases:**
+
 - APIs with frequent incremental updates
 - When you need to communicate change impact clearly
 - Open source APIs where community adoption matters
 
 **Advantages:**
+
 - Clear communication of change impact
 - Predictable upgrade paths
 - Industry standard approach
 
 **Disadvantages:**
+
 - Can lead to version proliferation
 - Requires discipline in change classification
 - Complex URL structures
@@ -207,6 +227,7 @@ GET /api/users?features=new-algorithm,enhanced-search
 ```
 
 **Advanced Feature Flag Examples:**
+
 ```http title="Multi-Feature Management"
 GET /api/products
 X-Feature-Flags: search-v2=true,recommendations=false,pricing-v3=true
@@ -221,29 +242,33 @@ Content-Type: application/json
 ```
 
 **Real-world Example: LaunchDarkly API**
+
 ```javascript title="Client-side Feature Flag Usage"
 // JavaScript SDK
-const showNewFeature = ldClient.variation('new-api-endpoint', false);
+const showNewFeature = ldClient.variation("new-api-endpoint", false);
 if (showNewFeature) {
-  fetch('/api/v2/users');
+  fetch("/api/v2/users");
 } else {
-  fetch('/api/v1/users');
+  fetch("/api/v1/users");
 }
 ```
 
 **Use Cases:**
+
 - A/B testing new API features
 - Gradual rollout of breaking changes
 - Emergency feature disable without deployment
 - Customer-specific feature access
 
 **Advantages:**
+
 - Runtime feature control
 - No version proliferation
 - Easy rollback mechanism
 - Granular feature management
 
 **Disadvantages:**
+
 - Added complexity in API logic
 - Potential performance overhead
 - Debugging complexity with multiple flag combinations
@@ -260,6 +285,7 @@ GET https://legacy.api.example.com/users
 ```
 
 **Real-world Example: AWS Services**
+
 ```http title="AWS API Subdomain Versioning"
 GET https://ec2.amazonaws.com/         # EC2 Classic
 GET https://ec2.us-east-1.amazonaws.com/  # Regional endpoints
@@ -268,6 +294,7 @@ GET https://s3-us-west-2.amazonaws.com/bucket/object  # S3 regional
 ```
 
 **Advanced Subdomain Strategies:**
+
 ```http title="Environment + Version Subdomains"
 GET https://v1.api.staging.example.com/users
 GET https://v2.api.production.example.com/users
@@ -276,18 +303,21 @@ GET https://canary.api.example.com/users
 ```
 
 **Use Cases:**
+
 - Complete isolation between API versions
 - Different infrastructure for different versions
 - Legacy system separation
 - Geographic or regional API distribution
 
 **Advantages:**
+
 - Complete version isolation
 - Easy to route traffic
 - Clear separation of concerns
 - Independent scaling per version
 
 **Disadvantages:**
+
 - DNS management complexity
 - SSL certificate management
 - Infrastructure overhead
@@ -312,6 +342,7 @@ Accept: application/vnd.api+json;version=2.1
 ```
 
 **Real-world Example: GitHub API**
+
 ```http title="GitHub API Media Type Versioning"
 GET https://api.github.com/user
 Accept: application/vnd.github.v3+json
@@ -324,6 +355,7 @@ Accept: application/vnd.github.v3.star+json
 ```
 
 **Advanced Media Type Examples:**
+
 ```http title="Complex Media Type Versioning"
 # Version + Format + Features
 GET /api/products
@@ -335,37 +367,41 @@ Accept: application/vnd.company.v2+json, application/vnd.company.v1+json;q=0.8, 
 ```
 
 **Use Cases:**
+
 - APIs that serve multiple data formats
 - When response structure varies significantly between versions
 - Fine-grained control over API features and format
 - APIs following strict REST principles
 
 **Advantages:**
+
 - Follows HTTP content negotiation standards
 - Can specify both version and format preferences
 - Supports quality values for preference ordering
 - Flexible feature negotiation
 
 **Disadvantages:**
+
 - Complex media type management
 - Limited client library support
 - Debugging difficulty
 - MIME type registration considerations
 
+<BackToTop />
 ## Choosing the Right Versioning Strategy
 
 ### Decision Matrix
 
-| Strategy | Complexity | URL Cleanliness | Caching | Client Support | Use Case |
-|----------|------------|-----------------|---------|----------------|----------|
-| URI Versioning | Low | Medium | Easy | Excellent | Most APIs, clear versioning needs |
-| Query Parameter | Low | High | Medium | Good | Backward compatibility focus |
-| Header Versioning | Medium | High | Hard | Good | RESTful APIs, clean URLs |
-| Content Negotiation | High | High | Hard | Medium | Multi-format APIs |
-| Semantic Versioning | Medium | Medium | Easy | Good | Frequent updates, clear communication |
-| Feature Flags | High | High | Hard | Medium | A/B testing, gradual rollouts |
-| Subdomain | Medium | Medium | Easy | Good | Version isolation, microservices |
-| Media Type | High | High | Hard | Poor | Strict REST compliance |
+| Strategy            | Complexity | URL Cleanliness | Caching | Client Support | Use Case                              |
+| ------------------- | ---------- | --------------- | ------- | -------------- | ------------------------------------- |
+| URI Versioning      | Low        | Medium          | Easy    | Excellent      | Most APIs, clear versioning needs     |
+| Query Parameter     | Low        | High            | Medium  | Good           | Backward compatibility focus          |
+| Header Versioning   | Medium     | High            | Hard    | Good           | RESTful APIs, clean URLs              |
+| Content Negotiation | High       | High            | Hard    | Medium         | Multi-format APIs                     |
+| Semantic Versioning | Medium     | Medium          | Easy    | Good           | Frequent updates, clear communication |
+| Feature Flags       | High       | High            | Hard    | Medium         | A/B testing, gradual rollouts         |
+| Subdomain           | Medium     | Medium          | Easy    | Good           | Version isolation, microservices      |
+| Media Type          | High       | High            | Hard    | Poor           | Strict REST compliance                |
 
 ### Decision Tree
 
@@ -374,16 +410,16 @@ graph TD
     A[Start: Choose Versioning Strategy] --> B{Need URL cleanliness?}
     B -->|Yes| C{Multiple data formats?}
     B -->|No| D{Frequent small changes?}
-    
+
     C -->|Yes| E[Content Negotiation]
     C -->|No| F{A/B testing needed?}
-    
+
     F -->|Yes| G[Feature Flags]
     F -->|No| H[Header Versioning]
-    
+
     D -->|Yes| I[Semantic Versioning]
     D -->|No| J{Need version isolation?}
-    
+
     J -->|Yes| K[Subdomain Versioning]
     J -->|No| L[URI Versioning]
 ```
@@ -403,6 +439,7 @@ GET https://v2.api.example.com/users
 Accept: application/vnd.company.v2.1+json
 ```
 
+<BackToTop />
 ## Implementation Patterns
 
 ### 1. The Adapter Pattern
@@ -414,34 +451,34 @@ class UserController {
   async getUsers(req, res) {
     const users = await this.userService.getUsers();
     const version = this.getApiVersion(req);
-    
+
     // Use adapter to transform response based on version
     const adapter = VersionAdapterFactory.create(version);
     const transformedUsers = adapter.transformUsers(users);
-    
+
     res.json(transformedUsers);
   }
 }
 
 class V1UserAdapter {
   transformUsers(users) {
-    return users.map(user => ({
+    return users.map((user) => ({
       id: user.id,
-      name: user.fullName,        // v1 uses 'name'
+      name: user.fullName, // v1 uses 'name'
       email: user.email,
-      created: user.createdAt     // v1 uses 'created'
+      created: user.createdAt, // v1 uses 'created'
     }));
   }
 }
 
 class V2UserAdapter {
   transformUsers(users) {
-    return users.map(user => ({
+    return users.map((user) => ({
       id: user.id,
-      full_name: user.fullName,   // v2 uses 'full_name'
+      full_name: user.fullName, // v2 uses 'full_name'
       email: user.email,
       avatar_url: user.avatarUrl, // v2 adds avatar
-      created_at: user.createdAt  // v2 uses 'created_at'
+      created_at: user.createdAt, // v2 uses 'created_at'
     }));
   }
 }
@@ -455,13 +492,13 @@ Route requests to different service implementations:
 class APIGateway {
   async routeRequest(req, res) {
     const version = this.extractVersion(req);
-    
-    switch(version) {
-      case 'v1':
+
+    switch (version) {
+      case "v1":
         return this.v1Service.handleRequest(req, res);
-      case 'v2':
+      case "v2":
         return this.v2Service.handleRequest(req, res);
-      case 'v3':
+      case "v3":
         return this.v3Service.handleRequest(req, res);
       default:
         return this.latestService.handleRequest(req, res);
@@ -484,16 +521,17 @@ class BaseUserService {
 class V2UserServiceDecorator extends BaseUserService {
   async getUser(id) {
     const user = await super.getUser(id);
-    
+
     // V2 specific enhancements
     user.avatar_url = await this.avatarService.getAvatarUrl(user.id);
     user.preferences = await this.preferencesService.getPreferences(user.id);
-    
+
     return user;
   }
 }
 ```
 
+<BackToTop />
 ## Advanced Topics
 
 ### Version Sunset Automation
@@ -504,36 +542,36 @@ Automate the deprecation process:
 class VersionManager {
   constructor() {
     this.versionConfig = {
-      'v1': {
-        sunsetDate: new Date('2024-12-31'),
+      v1: {
+        sunsetDate: new Date("2024-12-31"),
         warningPhases: [90, 60, 30, 7], // days before sunset
-        status: 'deprecated'
+        status: "deprecated",
       },
-      'v2': {
+      v2: {
         sunsetDate: null,
-        status: 'active'
-      }
+        status: "active",
+      },
     };
   }
-  
+
   checkDeprecationStatus(version) {
     const config = this.versionConfig[version];
     if (!config || !config.sunsetDate) return null;
-    
+
     const daysUntilSunset = this.getDaysUntil(config.sunsetDate);
-    
+
     if (daysUntilSunset <= 0) {
       throw new Error(`API ${version} has been retired`);
     }
-    
+
     if (config.warningPhases.includes(daysUntilSunset)) {
       return {
         warning: true,
         message: `API ${version} will be retired in ${daysUntilSunset} days`,
-        migrationUrl: `https://docs.example.com/migrate-${version}`
+        migrationUrl: `https://docs.example.com/migrate-${version}`,
       };
     }
-    
+
     return null;
   }
 }
@@ -544,28 +582,30 @@ class VersionManager {
 Ensure version compatibility with contract testing:
 
 ```javascript title="Contract Testing Example"
-describe('API Contract Tests', () => {
-  const versions = ['v1', 'v2'];
-  
-  versions.forEach(version => {
+describe("API Contract Tests", () => {
+  const versions = ["v1", "v2"];
+
+  versions.forEach((version) => {
     describe(`API ${version}`, () => {
-      test('should maintain user schema contract', async () => {
+      test("should maintain user schema contract", async () => {
         const response = await request(`/api/${version}/users/1`);
         const schema = await loadSchema(`user-${version}.json`);
-        
+
         expect(response.body).toMatchSchema(schema);
       });
-      
-      test('should maintain error response format', async () => {
+
+      test("should maintain error response format", async () => {
         const response = await request(`/api/${version}/users/999`);
         const errorSchema = await loadSchema(`error-${version}.json`);
-        
+
         expect(response.body).toMatchSchema(errorSchema);
       });
     });
   });
 });
 ```
+
+<BackToTop />
 
 ## Summary and Recommendations
 
@@ -595,12 +635,12 @@ For new APIs, follow this checklist:
 
 ### Industry Standards by API Type
 
-| API Type | Recommended Strategy | Examples |
-|----------|---------------------|----------|
-| REST APIs | URI + Semantic Versioning | `/api/v1.2/users` |
-| GraphQL APIs | Schema Versioning | `@deprecated` directives |
-| gRPC APIs | Package Versioning | `package api.v1` |
-| WebSocket APIs | Protocol Versioning | `Sec-WebSocket-Protocol: v2` |
+| API Type       | Recommended Strategy      | Examples                     |
+| -------------- | ------------------------- | ---------------------------- |
+| REST APIs      | URI + Semantic Versioning | `/api/v1.2/users`            |
+| GraphQL APIs   | Schema Versioning         | `@deprecated` directives     |
+| gRPC APIs      | Package Versioning        | `package api.v1`             |
+| WebSocket APIs | Protocol Versioning       | `Sec-WebSocket-Protocol: v2` |
 
 ### Final Recommendations
 
