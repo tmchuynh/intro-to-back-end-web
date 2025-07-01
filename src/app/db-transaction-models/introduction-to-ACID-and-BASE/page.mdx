@@ -76,6 +76,8 @@ COMMIT; -- Only if all steps succeed
 - **Two-Phase Commit**: Used in distributed systems to ensure atomicity across multiple databases
 - **Performance Impact**: Maintaining atomicity can slow down operations due to logging and locking overhead
 
+<BackToTop />
+
 ### Consistency
 
 Consistency ensures that a transaction brings the database from one valid state to another. It guarantees that any data written to the database must be valid according to all defined rules, including constraints, cascades, and triggers. If a transaction violates any of these rules, it will not be committed, and the database will remain unchanged.
@@ -137,6 +139,8 @@ END ELSE BEGIN
     RAISERROR('Insufficient stock', 16, 1);
 END;
 ```
+<BackToTop />
+
 
 ### Isolation
 
@@ -177,6 +181,8 @@ Isolation is implemented through various locking mechanisms and is controlled by
 - Prevents all read phenomena (dirty reads, non-repeatable reads, phantom reads)
 - Transactions appear to execute serially
 - Lowest performance due to strict locking
+
+<BackToTop />
 
 #### Common Isolation Problems
 
@@ -258,6 +264,8 @@ Durability guarantees that once a transaction has been committed, it will remain
 
 Durability is achieved through various mechanisms that ensure data persists to non-volatile storage before a transaction is considered complete.
 
+<BackToTop />
+
 #### Implementation Mechanisms
 
 ##### Write-Ahead Logging (WAL)
@@ -307,6 +315,8 @@ COMMIT;
 -- Log entry: "Transaction committed" - SYNC TO DISK
 -- Only after this sync completes is the transaction considered durable
 ```
+
+<BackToTop />
 
 #### E-commerce Order Processing
 
@@ -362,6 +372,8 @@ RECOVERY_PROCESS:
 - Backup and replication strategies for disaster recovery
 
 Together, these ACID properties provide a strong foundation for reliable and predictable database behavior, making them essential for applications where data integrity and correctness are critical, such as banking, inventory management, and order processing systems.
+
+<BackToTop />
 
 ## BASE
 
@@ -428,6 +440,8 @@ async function searchProducts(query) {
   };
 }
 ```
+
+<BackToTop />
 
 ### Soft State
 
@@ -530,6 +544,8 @@ class DistributedSession {
   }
 }
 ```
+
+<BackToTop />
 
 ### Eventually Consistent
 
@@ -682,6 +698,8 @@ class DistributedCounter {
 }
 ```
 
+<BackToTop />
+
 ## Key Differences
 
 | Feature             | ACID                                                    | BASE                                       |
@@ -761,6 +779,8 @@ INSERT INTO transaction_log (
 COMMIT; -- All operations must succeed together
 ```
 
+<BackToTop />
+
 ### Choose BASE When:
 
 #### Social Media Platforms
@@ -830,6 +850,8 @@ class PostService {
 }
 ```
 
+<BackToTop />
+
 ## Real-World Database Examples
 
 ### ACID Databases
@@ -882,6 +904,8 @@ SET points = points + (
 
 COMMIT; -- Guaranteed consistent across all affected records
 ```
+
+<BackToTop />
 
 ### BASE Databases
 
@@ -951,6 +975,8 @@ async function getUserFeed(userId) {
     .lean(); // May not include very recent posts
 }
 ```
+
+<BackToTop />
 
 ## Performance Considerations
 

@@ -8,24 +8,715 @@ import BackToTop from "@/components/BackToTop";
 
 These resources and tools are designed to help you understand the fundamentals of version control using Git and GitHub. They cover essential concepts, practical applications, and best practices for managing code changes effectively.
 
-## GitHub
+Version control is the backbone of modern software development, enabling teams to collaborate efficiently, track changes over time, and maintain code quality. Git, as a distributed version control system, provides powerful capabilities for managing source code, while GitHub extends these capabilities with cloud-based collaboration features, project management tools, and automation workflows.
 
-| Feature/Resource                                             | Description                                                                      |
-| ------------------------------------------------------------ | -------------------------------------------------------------------------------- |
-| [GitHub Docs](https://docs.github.com/)                      | Official documentation for GitHub, covering all features and workflows.          |
-| [GitHub Learning Lab](https://lab.github.com/)               | Interactive courses to learn GitHub skills through hands-on experience.          |
-| [GitHub CLI](https://cli.github.com/)                        | Command-line interface for GitHub, enabling GitHub operations from the terminal. |
-| [GitHub Marketplace](https://github.com/marketplace)         | A platform to find and integrate third-party tools and services with GitHub.     |
-| [GitHub Actions](https://docs.github.com/en/actions)         | CI/CD workflows to automate tasks like testing and deployment.                   |
-| [GitHub Issues](https://docs.github.com/en/issues)           | Issue tracking system for managing bugs, feature requests, and tasks.            |
-| [GitHub Discussions](https://docs.github.com/en/discussions) | Community forum for discussions, Q&A, and collaboration on projects.             |
-| [GitHub Pages](https://pages.github.com/)                    | Hosting service for static websites directly from GitHub repositories.           |
-| [GitHub Gists](https://gist.github.com/)                     | Simple way to share code snippets and notes with others.                         |
-| [GitHub Sponsors](https://github.com/sponsors)               | Platform for supporting developers and projects through financial contributions. |
-| [GitHub Guides](https://guides.github.com/)                  | Collection of guides and tutorials for using Git and GitHub effectively.         |
-| [GitHub Copilot](https://github.com/features/copilot)        | AI-powered code completion and suggestions for faster development.               |
-| [GitHub Security](https://docs.github.com/en/code-security)  | Tools and features for securing code, managing vulnerabilities, and compliance.  |
-| [GitHub API](https://docs.github.com/en/rest)                | RESTful API for programmatically interacting with GitHub resources.              |
+This comprehensive guide covers everything from basic Git operations to advanced workflows, GitHub integrations, and specialized tools for database version control. Whether you're a beginner learning your first Git commands or an experienced developer looking to optimize your workflow, these resources will help you master version control for your database and backend development projects.
+
+## Git Fundamentals
+
+### Core Concepts
+
+#### Repository Structure
+
+A Git repository consists of several key components that work together to track changes and manage versions:
+
+```
+.git/
+├── HEAD                    # Points to current branch
+├── config                  # Repository configuration
+├── description            # Repository description
+├── hooks/                 # Git hooks scripts
+├── info/                  # Global excludes
+├── objects/               # Git objects (commits, trees, blobs)
+├── refs/                  # References (branches, tags)
+└── logs/                  # Reflogs for references
+```
+
+#### The Three States
+
+Git has three main states that your files can reside in:
+
+1. **Working Directory**: Your local files where you make changes
+2. **Staging Area (Index)**: Prepared changes ready to be committed
+3. **Repository**: Committed changes stored in Git's database
+
+```bash
+# Working Directory → Staging Area
+git add filename.txt
+
+# Staging Area → Repository
+git commit -m "Add new feature"
+
+# Check status of all three areas
+git status
+```
+
+#### Git Objects
+
+Git stores data as objects in a key-value database:
+
+- **Blob**: File contents
+- **Tree**: Directory structure
+- **Commit**: Snapshot with metadata
+- **Tag**: Named reference to a commit
+
+```bash
+# View object type and content
+git cat-file -t <object-hash>
+git cat-file -p <object-hash>
+
+# View repository structure
+git ls-tree HEAD
+```
+
+### Basic Git Configuration
+
+#### Global Configuration
+
+```bash
+# Set user information
+git config --global user.name "Your Name"
+git config --global user.email "your.email@example.com"
+
+# Set default editor
+git config --global core.editor "code --wait"
+
+# Set default branch name
+git config --global init.defaultBranch main
+
+# Configure line ending handling
+git config --global core.autocrlf input  # Linux/macOS
+git config --global core.autocrlf true   # Windows
+
+# View all configuration
+git config --list
+```
+
+#### Repository-specific Configuration
+
+```bash
+# Set configuration for current repository only
+git config user.name "Work Name"
+git config user.email "work.email@company.com"
+
+# View current configuration
+git config --show-origin --list
+```
+
+#### Useful Aliases
+
+```bash
+# Create helpful aliases
+git config --global alias.st status
+git config --global alias.co checkout
+git config --global alias.br branch
+git config --global alias.cm commit
+git config --global alias.unstage 'reset HEAD --'
+git config --global alias.last 'log -1 HEAD'
+git config --global alias.visual '!gitk'
+
+# Advanced aliases
+git config --global alias.lg "log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit"
+git config --global alias.plog "log --graph --pretty='format:%C(red)%d%C(reset) %C(yellow)%h%C(reset) %ar %C(green)%aN%C(reset) %s'"
+```
+
+
+<BackToTop />
+## Git Commands Reference
+
+### Essential Commands
+
+#### Repository Management
+
+```bash
+# Initialize new repository
+git init
+git init --bare  # For server repositories
+
+# Clone existing repository
+git clone <url>
+git clone <url> <directory-name>
+git clone --depth 1 <url>  # Shallow clone
+
+# Add remote repository
+git remote add origin <url>
+git remote add upstream <url>  # For forks
+
+# View remotes
+git remote -v
+git remote show origin
+```
+
+#### Staging and Committing
+
+```bash
+# Add files to staging area
+git add .                    # Add all files
+git add *.js                 # Add all JavaScript files
+git add src/                 # Add entire directory
+git add -p                   # Interactive staging
+
+# Remove files from staging
+git reset HEAD <file>        # Unstage file
+git reset                    # Unstage all files
+
+# Commit changes
+git commit -m "Commit message"
+git commit -am "Add and commit"  # Stage and commit tracked files
+git commit --amend           # Amend last commit
+git commit --amend --no-edit # Amend without changing message
+```
+
+#### Branching and Merging
+
+```bash
+# Branch operations
+git branch                   # List local branches
+git branch -a                # List all branches
+git branch <branch-name>     # Create new branch
+git branch -d <branch-name>  # Delete branch
+git branch -D <branch-name>  # Force delete branch
+
+# Switch branches
+git checkout <branch-name>
+git checkout -b <branch-name>  # Create and switch
+git switch <branch-name>       # Modern syntax
+git switch -c <branch-name>    # Create and switch
+
+# Merging
+git merge <branch-name>
+git merge --no-ff <branch-name>  # Force merge commit
+git merge --squash <branch-name> # Squash merge
+```
+
+#### Viewing History
+
+```bash
+# Log commands
+git log
+git log --oneline
+git log --graph --oneline --all
+git log -p                   # Show patches
+git log --stat               # Show file statistics
+git log --since="2 weeks ago"
+git log --author="John Doe"
+git log --grep="bug fix"
+
+# Show specific commit
+git show <commit-hash>
+git show HEAD~1              # Previous commit
+git show <branch>:<file>     # File at specific commit
+
+# Compare changes
+git diff                     # Working directory vs staging
+git diff --staged            # Staging vs last commit
+git diff HEAD~1              # Working directory vs previous commit
+git diff <branch1>..<branch2>
+```
+
+### Advanced Commands
+
+#### Stashing
+
+```bash
+# Stash operations
+git stash                    # Stash current changes
+git stash save "message"     # Stash with message
+git stash list               # List all stashes
+git stash show               # Show stash contents
+git stash apply              # Apply latest stash
+git stash apply stash@{2}    # Apply specific stash
+git stash pop                # Apply and remove stash
+git stash drop               # Delete stash
+git stash clear              # Delete all stashes
+
+# Advanced stashing
+git stash -u                 # Include untracked files
+git stash --include-untracked
+git stash -p                 # Interactive stashing
+```
+
+#### Rewriting History
+
+```bash
+# Interactive rebase
+git rebase -i HEAD~3         # Rebase last 3 commits
+git rebase -i <commit-hash>  # Rebase from specific commit
+
+# Reset operations
+git reset --soft HEAD~1      # Keep changes staged
+git reset --mixed HEAD~1     # Keep changes unstaged (default)
+git reset --hard HEAD~1      # Discard all changes
+
+# Cherry-pick
+git cherry-pick <commit-hash>
+git cherry-pick <commit1>..<commit2>
+
+# Revert
+git revert <commit-hash>
+git revert HEAD              # Revert last commit
+git revert --no-commit <commit-hash>  # Revert without committing
+```
+
+
+<BackToTop />
+## Git Workflows and Branching Strategies
+
+### Git Flow
+
+Git Flow is a branching model that defines specific branch types and their purposes:
+
+```bash
+# Install git-flow
+# macOS: brew install git-flow
+# Ubuntu: sudo apt-get install git-flow
+
+# Initialize git-flow
+git flow init
+
+# Feature branches
+git flow feature start feature-name
+git flow feature finish feature-name
+
+# Release branches
+git flow release start 1.0.0
+git flow release finish 1.0.0
+
+# Hotfix branches
+git flow hotfix start hotfix-name
+git flow hotfix finish hotfix-name
+```
+
+#### Git Flow Branch Structure
+
+```
+main (production)
+├── develop (development)
+│   ├── feature/user-authentication
+│   ├── feature/payment-integration
+│   └── feature/admin-dashboard
+├── release/1.2.0
+└── hotfix/critical-bug-fix
+```
+
+### GitHub Flow
+
+A simpler workflow suitable for continuous deployment:
+
+```bash
+# 1. Create feature branch from main
+git checkout main
+git pull origin main
+git checkout -b feature/new-feature
+
+# 2. Make changes and commit
+git add .
+git commit -m "Add new feature"
+
+# 3. Push and create pull request
+git push origin feature/new-feature
+
+# 4. After review and merge, cleanup
+git checkout main
+git pull origin main
+git branch -d feature/new-feature
+```
+
+### GitLab Flow
+
+Combines Git Flow and GitHub Flow with environment branches:
+
+```bash
+# Environment-based workflow
+main (production)
+├── pre-production
+├── staging
+└── feature-branches
+```
+
+### Trunk-based Development
+
+Short-lived branches with frequent integration:
+
+```bash
+# Daily workflow
+git checkout main
+git pull origin main
+git checkout -b task/small-change
+# Make small changes
+git commit -m "Small incremental change"
+git push origin task/small-change
+# Create PR and merge same day
+```
+
+
+<BackToTop />
+## GitHub Platform Features
+
+### Repository Management
+
+#### Repository Settings
+
+```yaml
+# .github/CODEOWNERS
+# Global owners
+* @team-leads
+
+# Frontend code
+/src/frontend/ @frontend-team
+
+# Backend code
+/src/backend/ @backend-team
+
+# Database migrations
+/migrations/ @database-team @senior-developers
+
+# Documentation
+/docs/ @technical-writers
+*.md @technical-writers
+```
+
+#### Issue Templates
+
+```yaml
+# .github/ISSUE_TEMPLATE/bug_report.yml
+name: Bug Report
+description: File a bug report
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report!
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: What version of the software are you running?
+      placeholder: v1.0.0
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Also tell us, what did you expect to happen?
+      placeholder: Tell us what you see!
+    validations:
+      required: true
+
+  - type: dropdown
+    id: browsers
+    attributes:
+      label: What browsers are you seeing the problem on?
+      multiple: true
+      options:
+        - Firefox
+        - Chrome
+        - Safari
+        - Microsoft Edge
+```
+
+#### Pull Request Templates
+
+```markdown
+<!-- .github/pull_request_template.md -->
+
+## Description
+
+Brief description of changes
+
+## Type of Change
+
+- [ ] Bug fix (non-breaking change which fixes an issue)
+- [ ] New feature (non-breaking change which adds functionality)
+- [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
+- [ ] This change requires a documentation update
+
+## Testing
+
+- [ ] Unit tests pass
+- [ ] Integration tests pass
+- [ ] Manual testing completed
+
+## Checklist
+
+- [ ] My code follows the style guidelines of this project
+- [ ] I have performed a self-review of my own code
+- [ ] I have commented my code, particularly in hard-to-understand areas
+- [ ] I have made corresponding changes to the documentation
+- [ ] My changes generate no new warnings
+```
+
+### Branch Protection Rules
+
+```bash
+# Configure branch protection via GitHub CLI
+gh api repos/:owner/:repo/branches/main/protection \
+  --method PUT \
+  --field required_status_checks='{"strict":true,"contexts":["ci/tests"]}' \
+  --field enforce_admins=true \
+  --field required_pull_request_reviews='{"required_approving_review_count":2,"dismiss_stale_reviews":true}' \
+  --field restrictions=null
+```
+
+<BackToTop />
+
+## GitHub Actions and CI/CD
+
+### Basic Workflow Structure
+
+```yaml
+# .github/workflows/ci.yml
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  NODE_VERSION: "18"
+  PYTHON_VERSION: "3.9"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [16, 18, 20]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linting
+        run: npm run lint
+
+      - name: Run tests
+        run: npm test -- --coverage
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage/lcov.info
+```
+
+
+<BackToTop />
+### Database-specific CI/CD
+
+```yaml
+# .github/workflows/database-ci.yml
+name: Database CI
+
+on:
+  push:
+    paths:
+      - "migrations/**"
+      - "schemas/**"
+      - "seeds/**"
+
+jobs:
+  database-tests:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: testdb
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run database migrations
+        run: npm run migrate
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/testdb
+
+      - name: Seed test data
+        run: npm run seed
+
+      - name: Run database tests
+        run: npm run test:db
+
+      - name: Check migration rollbacks
+        run: npm run migrate:rollback && npm run migrate
+```
+
+
+<BackToTop />
+### Advanced Workflow Features
+
+```yaml
+# .github/workflows/advanced.yml
+name: Advanced Workflow
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history for proper versioning
+
+      - name: Generate version
+        id: version
+        run: |
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/}
+          else
+            VERSION=$(git describe --tags --always --dirty)
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Build Docker image
+        run: |
+          docker build -t myapp:${{ steps.version.outputs.version }} .
+          docker build -t myapp:latest .
+
+      - name: Run security scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "myapp:${{ steps.version.outputs.version }}"
+          format: "sarif"
+          output: "trivy-results.sarif"
+
+      - name: Upload security scan results
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: "trivy-results.sarif"
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment: production
+
+    steps:
+      - name: Deploy to production
+        run: |
+          echo "Deploying version ${{ needs.build.outputs.version }}"
+          # Deployment logic here
+```
+
+
+<BackToTop />
+## GitHub Features and Resources
+
+| Feature/Resource                                             | Description                                                                          |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------ |
+| [GitHub Docs](https://docs.github.com/)                      | Official documentation for GitHub, covering all features and workflows.              |
+| [GitHub Learning Lab](https://lab.github.com/)               | Interactive courses to learn GitHub skills through hands-on experience.              |
+| [GitHub CLI](https://cli.github.com/)                        | Command-line interface for GitHub, enabling GitHub operations from the terminal.     |
+| [GitHub Marketplace](https://github.com/marketplace)         | A platform to find and integrate third-party tools and services with GitHub.         |
+| [GitHub Actions](https://docs.github.com/en/actions)         | CI/CD workflows to automate tasks like testing and deployment.                       |
+| [GitHub Issues](https://docs.github.com/en/issues)           | Issue tracking system for managing bugs, feature requests, and tasks.                |
+| [GitHub Discussions](https://docs.github.com/en/discussions) | Community forum for discussions, Q&A, and collaboration on projects.                 |
+| [GitHub Pages](https://pages.github.com/)                    | Hosting service for static websites directly from GitHub repositories.               |
+| [GitHub Gists](https://gist.github.com/)                     | Simple way to share code snippets and notes with others.                             |
+| [GitHub Sponsors](https://github.com/sponsors)               | Platform for supporting developers and projects through financial contributions.     |
+| [GitHub Guides](https://guides.github.com/)                  | Collection of guides and tutorials for using Git and GitHub effectively.             |
+| [GitHub Copilot](https://github.com/features/copilot)        | AI-powered code completion and suggestions for faster development.                   |
+| [GitHub Security](https://docs.github.com/en/code-security)  | Tools and features for securing code, managing vulnerabilities, and compliance.      |
+| [GitHub API](https://docs.github.com/en/rest)                | RESTful API for programmatically interacting with GitHub resources.                  |
+| [GitHub Packages](https://docs.github.com/en/packages)       | Package hosting service for npm, Docker, Maven, and other package types.             |
+| [GitHub Codespaces](https://github.com/features/codespaces)  | Cloud-based development environments accessible from anywhere.                       |
+| [GitHub Mobile](https://github.com/mobile)                   | Mobile app for managing repositories, issues, and pull requests on the go.           |
+| [GitHub Enterprise](https://github.com/enterprise)           | Enterprise-grade version of GitHub with additional security and compliance features. |
+
+
+<BackToTop />
+### Advanced GitHub CLI Usage
+
+#### Repository Management
+
+```bash
+# Create repository with template
+gh repo create my-app --template owner/template-repo --public
+
+# Clone with specific options
+gh repo clone owner/repo -- --depth 1
+
+# Set default repository
+gh repo set-default owner/repo
+
+# Archive repository
+gh repo archive owner/repo
+
+# Transfer repository
+gh repo transfer owner/repo new-owner
+```
+
+#### Advanced Issue Management
+
+```bash
+# Create issue with template
+gh issue create --template bug_report.md
+
+# Bulk operations
+gh issue list --json number,title | jq -r '.[] | select(.title | contains("bug")) | .number' | xargs -I {} gh issue close {}
+
+# Link issues to pull requests
+gh pr create --title "Fix bug" --body "Closes #123"
+
+# Add labels and assignees
+gh issue create --title "Feature request" --label "enhancement,feature" --assignee @me
+```
+
+#### Workflow and Release Management
+
+```bash
+# Trigger workflow with inputs
+gh workflow run release.yml --field version=1.0.0 --field environment=production
+
+# Download workflow artifacts
+gh run download 12345 --name build-artifacts
+
+# Create release with assets
+gh release create v1.0.0 --title "Version 1.0.0" --notes "Release notes" dist/*.zip
+
+# Upload additional assets
+gh release upload v1.0.0 additional-file.tar.gz
+```
 
 ## GitHub GUIs
 
@@ -43,6 +734,8 @@ These resources and tools are designed to help you understand the fundamentals o
 | [GitUp](http://gitup.co/)                          | Fast Git GUI for macOS, designed for speed and simplicity.                                        |
 | [GitX](https://gitx.frim.nl/)                      | Git GUI for macOS, providing a simple and intuitive interface for Git operations.                 |
 
+
+<BackToTop />
 ## Git
 
 | Feature/Resource                                                              | Description                                                         |
@@ -64,6 +757,1042 @@ These resources and tools are designed to help you understand the fundamentals o
 | [Git on macOS](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)   | Instructions for installing Git on macOS.                                               |
 | [Git on Windows](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) | Instructions for installing Git on Windows.                                             |
 | [Git on WSL](https://docs.microsoft.com/en-us/windows/wsl/tutorials/wsl-git)    | Instructions for using Git on Windows Subsystem for Linux (WSL).                        |
+
+
+<BackToTop />
+## Advanced Git Techniques
+
+### Git Hooks
+
+Git hooks are scripts that run automatically when certain Git events occur:
+
+#### Client-side Hooks
+
+```bash
+# .git/hooks/pre-commit
+#!/bin/sh
+# Run tests before commit
+npm test
+if [ $? -ne 0 ]; then
+    echo "Tests failed. Commit aborted."
+    exit 1
+fi
+
+# Run linting
+npm run lint
+if [ $? -ne 0 ]; then
+    echo "Linting failed. Commit aborted."
+    exit 1
+fi
+```
+
+```bash
+# .git/hooks/commit-msg
+#!/bin/sh
+# Validate commit message format
+commit_regex='^(feat|fix|docs|style|refactor|test|chore)(\(.+\))?: .{1,50}'
+
+if ! grep -qE "$commit_regex" "$1"; then
+    echo "Invalid commit message format!"
+    echo "Format: type(scope): description"
+    echo "Types: feat, fix, docs, style, refactor, test, chore"
+    exit 1
+fi
+```
+
+#### Server-side Hooks
+
+```bash
+# hooks/pre-receive
+#!/bin/sh
+# Validate pushed commits
+while read oldrev newrev refname; do
+    # Check if branch is protected
+    if [ "$refname" = "refs/heads/main" ]; then
+        echo "Direct pushes to main branch are not allowed"
+        exit 1
+    fi
+done
+```
+
+### Git Submodules
+
+Managing external dependencies as Git repositories:
+
+```bash
+# Add submodule
+git submodule add https://github.com/user/library.git libs/library
+
+# Initialize submodules after cloning
+git submodule init
+git submodule update
+
+# Or combine both commands
+git submodule update --init --recursive
+
+# Update submodule to latest
+cd libs/library
+git checkout main
+git pull
+cd ../..
+git add libs/library
+git commit -m "Update library submodule"
+
+# Remove submodule
+git submodule deinit libs/library
+git rm libs/library
+rm -rf .git/modules/libs/library
+```
+
+### Git Worktrees
+
+Work on multiple branches simultaneously:
+
+```bash
+# Create new worktree
+git worktree add ../feature-branch feature/new-feature
+
+# List worktrees
+git worktree list
+
+# Remove worktree
+git worktree remove ../feature-branch
+
+# Prune deleted worktrees
+git worktree prune
+```
+
+### Advanced Rebase Techniques
+
+#### Interactive Rebase Operations
+
+```bash
+# Interactive rebase with various operations
+git rebase -i HEAD~5
+
+# Available operations in editor:
+# pick = use commit
+# reword = use commit, but edit message
+# edit = use commit, but stop for amending
+# squash = use commit, but meld into previous commit
+# fixup = like squash, but discard commit message
+# exec = run command
+# drop = remove commit
+```
+
+#### Rebase onto Different Base
+
+```bash
+# Rebase feature branch onto updated main
+git checkout feature/new-feature
+git rebase origin/main
+
+# Rebase with strategy
+git rebase -X theirs origin/main  # Prefer their changes
+git rebase -X ours origin/main    # Prefer our changes
+
+# Preserve merge commits
+git rebase --preserve-merges origin/main
+```
+
+
+<BackToTop />
+## Collaboration and Team Workflows
+
+### Code Review Best Practices
+
+#### Pull Request Guidelines
+
+```markdown
+## Pull Request Checklist
+
+### Before Creating PR
+
+- [ ] Branch is up to date with target branch
+- [ ] All tests pass locally
+- [ ] Code follows project style guidelines
+- [ ] Commit messages are clear and descriptive
+- [ ] No debugging code or console logs
+- [ ] Documentation updated if necessary
+
+### PR Description Template
+
+**What does this PR do?**
+Brief description of changes
+
+**Why is this change needed?**
+Context and motivation
+
+**How was this tested?**
+Testing approach and coverage
+
+**Screenshots (if applicable)**
+Visual changes documentation
+
+**Related Issues**
+Closes #123, Related to #456
+```
+
+#### Review Process Automation
+
+```yaml
+# .github/workflows/pr-checks.yml
+name: PR Checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  automated-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check PR size
+        run: |
+          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | wc -l)
+          CHANGED_LINES=$(git diff --stat origin/${{ github.base_ref }}...HEAD | tail -1 | awk '{print $4}' | sed 's/[^0-9]*//g')
+
+          if [ "$CHANGED_FILES" -gt 20 ]; then
+            echo "::warning::PR contains $CHANGED_FILES files. Consider breaking into smaller PRs."
+          fi
+
+          if [ "$CHANGED_LINES" -gt 500 ]; then
+            echo "::warning::PR contains $CHANGED_LINES changed lines. Consider breaking into smaller PRs."
+          fi
+
+      - name: Check commit messages
+        run: |
+          git log --format="%s" origin/${{ github.base_ref }}...HEAD | while read msg; do
+            if ! echo "$msg" | grep -qE '^(feat|fix|docs|style|refactor|test|chore)(\(.+\))?: .+'; then
+              echo "::error::Invalid commit message: $msg"
+              exit 1
+            fi
+          done
+```
+
+### Team Synchronization Strategies
+
+#### Daily Sync Workflow
+
+```bash
+#!/bin/bash
+# daily-sync.sh - Script for daily team synchronization
+
+echo "🔄 Starting daily sync..."
+
+# Fetch latest changes
+git fetch origin
+
+# Check if main branch has updates
+LOCAL=$(git rev-parse main)
+REMOTE=$(git rev-parse origin/main)
+
+if [ "$LOCAL" != "$REMOTE" ]; then
+    echo "📥 Main branch has updates, pulling..."
+    git checkout main
+    git pull origin main
+
+    # Update current feature branch
+    CURRENT_BRANCH=$(git branch --show-current)
+    if [ "$CURRENT_BRANCH" != "main" ]; then
+        echo "🔀 Rebasing $CURRENT_BRANCH onto main..."
+        git checkout "$CURRENT_BRANCH"
+        git rebase main
+    fi
+else
+    echo "✅ Main branch is up to date"
+fi
+
+# Check for conflicts
+if git status --porcelain | grep -q "^UU"; then
+    echo "⚠️  Merge conflicts detected. Please resolve them."
+    exit 1
+fi
+
+echo "🎉 Daily sync completed successfully!"
+```
+
+### Distributed Team Workflow
+
+```bash
+# Multi-timezone team workflow
+# .github/workflows/timezone-aware-ci.yml
+name: Timezone Aware CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Run tests at different times for different timezones
+    - cron: '0 9 * * 1-5'   # 9 AM UTC (Europe)
+    - cron: '0 17 * * 1-5'  # 5 PM UTC (Asia)
+    - cron: '0 1 * * 1-5'   # 1 AM UTC (Americas)
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        timezone: [UTC, America/New_York, Europe/London, Asia/Tokyo]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set timezone
+      run: |
+        sudo timedatectl set-timezone ${{ matrix.timezone }}
+        echo "Running tests in timezone: $(date)"
+
+    - name: Run tests
+      run: npm test
+```
+
+
+<BackToTop />
+## Git Security and Best Practices
+
+### Secure Git Configuration
+
+#### GPG Signing
+
+```bash
+# Generate GPG key
+gpg --full-generate-key
+
+# List GPG keys
+gpg --list-secret-keys --keyid-format LONG
+
+# Configure Git to use GPG key
+git config --global user.signingkey YOUR_KEY_ID
+git config --global commit.gpgsign true
+git config --global tag.gpgsign true
+
+# Sign commits
+git commit -S -m "Signed commit"
+
+# Verify signatures
+git log --show-signature
+git verify-commit HEAD
+```
+
+#### Credential Management
+
+```bash
+# Configure credential helper
+git config --global credential.helper store  # Not recommended for production
+git config --global credential.helper cache  # Cache for 15 minutes
+git config --global credential.helper 'cache --timeout=3600'  # Cache for 1 hour
+
+# macOS Keychain
+git config --global credential.helper osxkeychain
+
+# Windows Credential Manager
+git config --global credential.helper manager
+
+# Clear stored credentials
+git config --global --unset credential.helper
+```
+
+### Security Scanning and Secrets Management
+
+#### Pre-commit Secret Scanning
+
+```yaml
+# .pre-commit-config.yaml
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+      - id: detect-secrets
+        args: ["--baseline", ".secrets.baseline"]
+
+  - repo: https://github.com/gitguardian/ggshield
+    rev: v1.18.0
+    hooks:
+      - id: ggshield
+        language: python
+        stages: [commit]
+```
+
+#### GitHub Security Features
+
+```yaml
+# .github/workflows/security.yml
+name: Security Scan
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: "fs"
+          scan-ref: "."
+          format: "sarif"
+          output: "trivy-results.sarif"
+
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: "trivy-results.sarif"
+
+      - name: GitLeaks secret scanning
+        uses: zricethezav/gitleaks-action@master
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v3
+        if: github.event_name == 'pull_request'
+```
+
+
+<BackToTop />
+## Database Version Control Strategies
+
+### Schema Migration Management
+
+#### Flyway Integration
+
+```sql
+-- V1__Create_users_table.sql
+CREATE TABLE users (
+    id BIGSERIAL PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_users_username ON users(username);
+CREATE INDEX idx_users_email ON users(email);
+```
+
+```sql
+-- V2__Add_user_profiles_table.sql
+CREATE TABLE user_profiles (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
+    first_name VARCHAR(50),
+    last_name VARCHAR(50),
+    bio TEXT,
+    avatar_url VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_user_profiles_user_id ON user_profiles(user_id);
+```
+
+```bash
+# Flyway commands
+flyway migrate    # Apply migrations
+flyway validate   # Validate migration files
+flyway info       # Show migration status
+flyway baseline   # Baseline existing database
+flyway repair     # Repair metadata table
+```
+
+#### Liquibase Integration
+
+```xml
+<!-- db/changelog/db.changelog-master.xml -->
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.0.xsd">
+
+    <changeSet id="1" author="developer">
+        <createTable tableName="users">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="username" type="VARCHAR(50)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="email" type="VARCHAR(100)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
+        </createTable>
+
+        <createIndex tableName="users" indexName="idx_users_username">
+            <column name="username"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="2" author="developer">
+        <addColumn tableName="users">
+            <column name="last_login" type="TIMESTAMP"/>
+            <column name="is_active" type="BOOLEAN" defaultValue="true"/>
+        </addColumn>
+    </changeSet>
+</databaseChangeLog>
+```
+
+### Database Branching Strategies
+
+#### Environment-specific Migrations
+
+```bash
+# Development environment
+DATABASE_URL=postgresql://dev:password@localhost:5432/myapp_dev
+npm run migrate
+
+# Staging environment
+DATABASE_URL=postgresql://staging:password@staging-db:5432/myapp_staging
+npm run migrate
+
+# Production environment
+DATABASE_URL=postgresql://prod:password@prod-db:5432/myapp_prod
+npm run migrate
+```
+
+#### Migration Testing Workflow
+
+```yaml
+# .github/workflows/migration-test.yml
+name: Migration Testing
+
+on:
+  pull_request:
+    paths:
+      - "migrations/**"
+      - "schemas/**"
+
+jobs:
+  test-migrations:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        postgres-version: [13, 14, 15]
+
+    services:
+      postgres:
+        image: postgres:${{ matrix.postgres-version }}
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: testdb
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup test data
+        run: |
+          # Create test database with sample data
+          psql -h localhost -U postgres -d testdb -c "
+            CREATE TABLE legacy_table (id INT, data TEXT);
+            INSERT INTO legacy_table VALUES (1, 'test data');
+          "
+        env:
+          PGPASSWORD: postgres
+
+      - name: Run migrations
+        run: |
+          npm run migrate
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/testdb
+
+      - name: Verify migration results
+        run: |
+          # Check that data is preserved and schema is correct
+          psql -h localhost -U postgres -d testdb -c "
+            SELECT COUNT(*) FROM users;
+            SELECT COUNT(*) FROM user_profiles;
+          "
+        env:
+          PGPASSWORD: postgres
+
+      - name: Test rollback
+        run: |
+          npm run migrate:rollback
+          npm run migrate
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/testdb
+```
+
+<BackToTop />
+
+## Integration with Development Tools
+
+### IDE Integration
+
+#### VS Code Extensions
+
+```json
+{
+  "recommendations": [
+    "eamodio.gitlens",
+    "mhutchie.git-graph",
+    "donjayamanne.githistory",
+    "github.vscode-pull-request-github",
+    "github.copilot",
+    "ms-vscode.vscode-github-issue-notebooks"
+  ]
+}
+```
+
+#### GitLens Configuration
+
+```json
+// .vscode/settings.json
+{
+  "gitlens.blame.compact": false,
+  "gitlens.blame.heatmap.enabled": true,
+  "gitlens.codeLens.enabled": true,
+  "gitlens.currentLine.enabled": true,
+  "gitlens.hovers.enabled": true,
+  "gitlens.statusBar.enabled": true,
+  "gitlens.views.repositories.files.layout": "tree",
+  "gitlens.views.fileHistory.enabled": true,
+  "gitlens.views.lineHistory.enabled": true
+}
+```
+
+
+<BackToTop />
+### Build Tool Integration
+
+#### npm/Package.json Scripts
+
+```json
+{
+  "scripts": {
+    "precommit": "lint-staged",
+    "commit": "git-cz",
+    "release": "standard-version",
+    "release:minor": "standard-version --release-as minor",
+    "release:major": "standard-version --release-as major",
+    "deploy": "npm run build && gh-pages -d dist"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged",
+      "commit-msg": "commitlint -E HUSKY_GIT_PARAMS",
+      "pre-push": "npm test"
+    }
+  },
+  "lint-staged": {
+    "*.{js,ts,jsx,tsx}": ["eslint --fix", "prettier --write"],
+    "*.{css,scss,md}": ["prettier --write"]
+  }
+}
+```
+
+#### Conventional Commits Setup
+
+```json
+{
+  "devDependencies": {
+    "@commitlint/cli": "^17.0.0",
+    "@commitlint/config-conventional": "^17.0.0",
+    "commitizen": "^4.2.4",
+    "cz-conventional-changelog": "^3.3.0",
+    "husky": "^8.0.0",
+    "lint-staged": "^13.0.0"
+  },
+  "config": {
+    "commitizen": {
+      "path": "./node_modules/cz-conventional-changelog"
+    }
+  }
+}
+```
+
+```js
+// commitlint.config.js
+module.exports = {
+  extends: ["@commitlint/config-conventional"],
+  rules: {
+    "type-enum": [
+      2,
+      "always",
+      [
+        "feat",
+        "fix",
+        "docs",
+        "style",
+        "refactor",
+        "perf",
+        "test",
+        "chore",
+        "revert",
+        "ci",
+        "build",
+      ],
+    ],
+    "subject-max-length": [2, "always", 50],
+    "body-max-line-length": [2, "always", 72],
+  },
+};
+```
+
+
+<BackToTop />
+## Troubleshooting Common Issues
+
+### Merge Conflicts Resolution
+
+#### Understanding Conflict Markers
+
+```bash
+# Conflict example
+<<<<<<< HEAD
+function calculateTotal(items) {
+    return items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+}
+=======
+function calculateTotal(items) {
+    let total = 0;
+    for (const item of items) {
+        total += item.price * item.quantity;
+    }
+    return total;
+}
+>>>>>>> feature/new-calculation
+```
+
+#### Conflict Resolution Strategies
+
+```bash
+# Use merge tool
+git mergetool
+
+# Accept all changes from one side
+git checkout --theirs filename.js    # Accept their version
+git checkout --ours filename.js      # Accept our version
+
+# Reset and try different merge strategy
+git merge --abort
+git merge -X theirs feature-branch    # Prefer their changes for conflicts
+git merge -X ours feature-branch      # Prefer our changes for conflicts
+
+# Manual resolution process
+git status                            # See conflicted files
+# Edit files to resolve conflicts
+git add resolved-file.js
+git commit -m "Resolve merge conflicts"
+```
+
+### Large File Management
+
+#### Git LFS Setup
+
+```bash
+# Install Git LFS
+git lfs install
+
+# Track large files
+git lfs track "*.psd"
+git lfs track "*.zip"
+git lfs track "*.mp4"
+git lfs track "*.bin"
+
+# Track by directory
+git lfs track "assets/**"
+
+# View tracked patterns
+git lfs track
+
+# Add .gitattributes to repository
+git add .gitattributes
+git commit -m "Configure Git LFS tracking"
+```
+
+```gitattributes
+# .gitattributes
+*.psd filter=lfs diff=lfs merge=lfs -text
+*.zip filter=lfs diff=lfs merge=lfs -text
+*.mp4 filter=lfs diff=lfs merge=lfs -text
+*.bin filter=lfs diff=lfs merge=lfs -text
+assets/** filter=lfs diff=lfs merge=lfs -text
+```
+
+#### Cleaning Up Repository History
+
+```bash
+# Remove large files from history using BFG Repo-Cleaner
+java -jar bfg.jar --strip-blobs-bigger-than 100M my-repo.git
+java -jar bfg.jar --delete-files "*.{zip,exe,bin}" my-repo.git
+
+# Alternative using git-filter-branch (slower)
+git filter-branch --tree-filter 'rm -rf large-directory' HEAD
+
+# Force push cleaned history
+git push --force-with-lease origin main
+
+# Clean up references
+git for-each-ref --format="delete %(refname)" refs/original | git update-ref --stdin
+git reflog expire --expire=now --all
+git gc --prune=now --aggressive
+```
+
+### Performance Issues
+
+#### Repository Size Optimization
+
+```bash
+# Check repository size
+git count-objects -vH
+
+# Find large objects
+git rev-list --objects --all | git cat-file --batch-check='%(objecttype) %(objectname) %(objectsize) %(rest)' | sed -n 's/^blob //p' | sort --numeric-sort --key=2 | tail -10
+
+# Aggressive garbage collection
+git gc --aggressive --prune=now
+
+# Shallow clone for CI/CD
+git clone --depth 1 --single-branch --branch main repo-url
+
+# Partial clone (Git 2.19+)
+git clone --filter=blob:none repo-url  # Clone without blobs
+git clone --filter=tree:0 repo-url     # Clone without trees and blobs
+```
+
+#### Network Performance
+
+```bash
+# Configure Git for better network performance
+git config --global pack.windowMemory "100m"
+git config --global pack.packSizeLimit "100m"
+git config --global pack.threads "1"
+
+# Use shallow clones in CI
+git clone --depth 50 repo-url
+
+# Configure credential caching
+git config --global credential.helper 'cache --timeout=3600'
+
+# Use SSH instead of HTTPS for better performance
+git remote set-url origin git@github.com:user/repo.git
+```
+
+
+<BackToTop />
+## Performance and Optimization
+
+### Git Configuration Optimization
+
+#### Performance Settings
+
+```bash
+# Optimize for large repositories
+git config --global core.preloadindex true
+git config --global core.fscache true
+git config --global gc.auto 256
+
+# Parallel processing
+git config --global pack.threads 0  # Use all available cores
+git config --global index.threads 0  # Use all available cores
+
+# Memory optimization
+git config --global pack.windowMemory "100m"
+git config --global pack.packSizeLimit "100m"
+
+# Network optimization
+git config --global http.postBuffer 524288000  # 500MB
+git config --global http.lowSpeedLimit 0
+git config --global http.lowSpeedTime 999999
+```
+
+#### Maintenance Automation
+
+```bash
+# Configure automatic maintenance
+git config --global maintenance.auto true
+git config --global maintenance.strategy incremental
+
+# Set up maintenance tasks
+git maintenance register  # Register current repo
+git maintenance start     # Start background maintenance
+
+# Manual maintenance
+git maintenance run --task=gc
+git maintenance run --task=commit-graph
+git maintenance run --task=prefetch
+git maintenance run --task=loose-objects
+git maintenance run --task=incremental-repack
+```
+
+### Repository Structure Optimization
+
+#### Monorepo Best Practices
+
+```bash
+# Sparse checkout for large monorepos
+git config core.sparseCheckout true
+echo "frontend/*" > .git/info/sparse-checkout
+echo "shared/*" >> .git/info/sparse-checkout
+git read-tree -m -u HEAD
+
+# Partial clone for monorepos
+git clone --filter=blob:none --no-checkout repo-url
+cd repo
+git sparse-checkout init --cone
+git sparse-checkout set frontend shared
+git checkout main
+```
+
+#### Multiple Repository Management
+
+```bash
+# Using git-subrepo (alternative to submodules)
+git subrepo clone https://github.com/user/library.git libs/library
+git subrepo pull libs/library
+git subrepo push libs/library
+
+# Using git-subtree
+git subtree add --prefix=libs/library https://github.com/user/library.git main --squash
+git subtree pull --prefix=libs/library https://github.com/user/library.git main --squash
+git subtree push --prefix=libs/library origin library-updates
+```
+
+
+<BackToTop />
+## Migration and Repository Management
+
+### Repository Migration
+
+#### GitHub to GitHub Migration
+
+```bash
+# Mirror repository with all branches and tags
+git clone --mirror https://github.com/olduser/oldrepo.git
+cd oldrepo.git
+git remote set-url origin https://github.com/newuser/newrepo.git
+git push --mirror origin
+
+# Migrate issues and pull requests using GitHub CLI
+gh issue list --repo olduser/oldrepo --state all --json number,title,body,labels | \
+jq -r '.[] | "gh issue create --title \"\(.title)\" --body \"\(.body)\" --repo newuser/newrepo"' | \
+bash
+```
+
+#### Git Server Migration
+
+```bash
+# Migrate from GitLab to GitHub
+git clone --mirror https://gitlab.com/user/repo.git
+cd repo.git
+
+# Update remote URL
+git remote set-url origin https://github.com/user/repo.git
+
+# Push everything
+git push --mirror origin
+
+# Convert GitLab CI to GitHub Actions
+# .gitlab-ci.yml -> .github/workflows/ci.yml (manual conversion required)
+```
+
+### Advanced Repository Operations
+
+#### Repository Splitting
+
+```bash
+# Split subdirectory into new repository
+git subtree push --prefix=subdirectory origin new-repo-branch
+
+# Or use git filter-branch for complete history
+git filter-branch --prune-empty --subdirectory-filter subdirectory -- --all
+
+# Clean up and push to new repository
+git remote add new-origin https://github.com/user/new-repo.git
+git push new-origin --all
+git push new-origin --tags
+```
+
+#### Repository Merging
+
+```bash
+# Merge two repositories preserving history
+git remote add other-repo https://github.com/user/other-repo.git
+git fetch other-repo
+git merge --allow-unrelated-histories other-repo/main
+
+# Move files to subdirectory during merge
+git merge -s ours --no-commit other-repo/main
+git read-tree --prefix=other-project/ -u other-repo/main
+git commit -m "Merge other-repo into subdirectory"
+```
+
+### Backup and Disaster Recovery
+
+#### Automated Backup Strategy
+
+```bash
+#!/bin/bash
+# backup-repos.sh
+BACKUP_DIR="/backups/git-repos"
+DATE=$(date +%Y%m%d_%H%M%S)
+
+# Create backup directory
+mkdir -p "$BACKUP_DIR/$DATE"
+
+# Backup all repositories
+find /opt/git -name "*.git" -type d | while read repo; do
+    repo_name=$(basename "$repo" .git)
+    echo "Backing up $repo_name..."
+
+    # Create bundle with all refs
+    git --git-dir="$repo" bundle create "$BACKUP_DIR/$DATE/$repo_name.bundle" --all
+
+    # Backup repository metadata
+    tar -czf "$BACKUP_DIR/$DATE/$repo_name-metadata.tar.gz" -C "$repo" hooks config description
+done
+
+# Clean old backups (keep last 30 days)
+find "$BACKUP_DIR" -type d -mtime +30 -exec rm -rf {} \;
+```
+
+#### Repository Recovery
+
+```bash
+# Restore from bundle
+git clone backup.bundle restored-repo
+cd restored-repo
+git remote add origin https://github.com/user/repo.git
+git push origin --all
+git push origin --tags
+
+# Verify repository integrity
+git fsck --full
+git gc --aggressive
+```
 
 ## Next Steps
 
