@@ -156,6 +156,8 @@ Base.metadata.create_all(engine)
 
 This code connects to the SQLite database and creates the `users` table based on the `User` model defined earlier.
 
+<BackToTop />
+
 ## Basic CRUD Operations
 
 CRUD stands for Create, Read, Update, and Delete, which are the four basic operations you can perform on a database. SQLAlchemy provides a simple and intuitive way to perform these operations using Python objects.
@@ -247,6 +249,8 @@ if user_to_delete:
 ```
 
 This code retrieves a user with ID 1 and deletes them from the database, committing the changes to finalize the deletion.
+
+<BackToTop />
 
 ## Filtering Data
 
@@ -442,6 +446,8 @@ for name, user_count in users_grouped_by_name:
 ```
 
 This code constructs a select statement that groups users by their names and counts the number of users with each name. The results are printed, showing the name and the count of users with that name.
+
+<BackToTop />
 
 ## Using Joins
 
