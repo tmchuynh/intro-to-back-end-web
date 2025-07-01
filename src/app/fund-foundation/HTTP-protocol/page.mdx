@@ -264,6 +264,8 @@ HTTP status codes provide standardized error communication:
 }
 ```
 
+<BackToTop />
+
 ## HTTP Methods
 
 ### GET
@@ -411,6 +413,8 @@ ZREVRANGE leaderboard:users 0 9 WITHSCORES
 ZRANK leaderboard:users user:123
 ZSCORE leaderboard:users user:123
 ```
+
+<BackToTop />
 
 ### POST
 
@@ -629,6 +633,8 @@ HSET session:user:124 \
 EXPIRE session:user:124 86400
 ```
 
+<BackToTop />
+
 ### PUT
 
 The PUT method is used to update an existing resource on the server by completely replacing it with the data provided in the request body. PUT requests are idempotent, meaning that sending the same request multiple times will yield the same result without causing additional changes. This method implements the "replace entire resource" semantic.
@@ -772,6 +778,8 @@ HSET user:123:profile name "John Doe Updated" email "john.doe.updated@example.co
 HSET session:user:123 last_activity "2023-12-07T10:30:00Z" role "admin"
 ```
 
+<BackToTop />
+
 ### DELETE
 
 The DELETE method is used to remove a resource from the server. It's designed to delete specific resources identified by their URI. DELETE requests are idempotent, meaning that sending the same request multiple times will not result in further deletions after the resource has been removed - subsequent requests should return a 404 Not Found or maintain the same state.
@@ -905,6 +913,8 @@ LREM user:123:activity 0 "all_activities"
 # Delete multiple related keys
 DEL user:123 user:123:profile user:123:preferences user:123:cache
 ```
+
+<BackToTop />
 
 ### PATCH
 
@@ -1085,6 +1095,8 @@ SADD user:123:interests "technology" "programming"
 SREM user:123:interests "old_interest"
 ```
 
+<BackToTop />
+
 ## HTTP Status Codes
 
 HTTP status codes provide essential feedback about the outcome of requests, helping clients understand how to handle responses appropriately. Understanding these codes is crucial for effective API design and debugging.
@@ -1136,6 +1148,8 @@ These codes indicate that the server failed to fulfill a valid request:
 - **502 Bad Gateway**: Invalid response from upstream server
 - **503 Service Unavailable**: Server temporarily overloaded or under maintenance
 - **504 Gateway Timeout**: Upstream server timeout
+
+<BackToTop />
 
 ## HTTP Headers
 
@@ -1213,6 +1227,8 @@ Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
 Access-Control-Allow-Headers: Content-Type, Authorization
 Access-Control-Max-Age: 86400
 ```
+
+<BackToTop />
 
 ## RESTful API Design with HTTP
 
@@ -1463,6 +1479,8 @@ Content-Type: application/json
 }
 ```
 
+<BackToTop />
+
 ## Caching Strategies
 
 ### HTTP Cache Headers
@@ -1580,6 +1598,8 @@ SET "query:user_stats:active:2023" '{
 }' EX 1800
 ```
 
+<BackToTop />
+
 ## Security Considerations
 
 ### Authentication and Authorization
@@ -1677,6 +1697,8 @@ Access-Control-Allow-Headers: Content-Type, Authorization, X-Request-ID
 Access-Control-Max-Age: 86400
 Access-Control-Allow-Credentials: true
 ```
+
+<BackToTop />
 
 ## Performance Optimization
 
@@ -1779,6 +1801,8 @@ EVAL "
   end
 " 2 user:123 user:123:stats
 ```
+
+<BackToTop />
 
 ## Best Practices
 
@@ -1948,6 +1972,8 @@ HTTP/1.1 404 Not Found
 HTTP/1.1 409 Conflict
 ```
 
+<BackToTop />
+
 ### Security Best Practices
 
 #### Input Validation and Sanitization
@@ -2006,6 +2032,8 @@ X-RateLimit-Remaining: 999
 X-RateLimit-Reset: 1701944400
 X-RateLimit-Window: 3600
 ```
+
+<BackToTop />
 
 ### Performance Optimization Guidelines
 

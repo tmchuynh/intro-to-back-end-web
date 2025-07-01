@@ -576,6 +576,8 @@ However, this feature is not commonly used in practice, as it can introduce secu
 - Flexibility: Clients can adapt to changing requirements without needing to update the client application, as they can download the necessary code on demand.
 - Reduced Client Complexity: Clients can offload some processing to the server, reducing the complexity of the client application and allowing for more efficient resource utilization.
 
+<BackToTop />
+
 ## HTTP Methods in RESTful Services
 
 RESTful services utilize the rich semantics of HTTP methods to perform operations on resources. Each method has specific characteristics regarding safety, idempotency, and caching that make it suitable for particular types of operations. Understanding these methods and their proper usage is fundamental to creating well-designed RESTful APIs.
@@ -997,6 +999,8 @@ Access-Control-Allow-Headers: Authorization, Content-Type
 Access-Control-Max-Age: 86400
 ```
 
+<BackToTop />
+
 ## Resource Identification and URI Design
 
 Effective URI design is crucial for creating intuitive and maintainable RESTful APIs. URIs serve as the primary interface between clients and resources, making their design a critical factor in API usability and adoption. Well-designed URIs are self-documenting, predictable, and reflect the logical structure of the domain being modeled.
@@ -1225,6 +1229,8 @@ Version Negotiation:
 - Include version information in responses
 ```
 
+<BackToTop />
+
 ## HATEOAS (Hypermedia as the Engine of Application State)
 
 HATEOAS represents the most sophisticated constraint of REST architecture, enabling clients to navigate APIs dynamically through hypermedia links embedded in resource representations. This constraint transforms static APIs into self-describing systems where clients can discover and interact with resources without prior knowledge of the API structure.
@@ -1351,6 +1357,8 @@ State-Based Link Examples:
 }
 ```
 
+<BackToTop />
+
 ### Link Relations
 
 Link relations provide semantic meaning to the relationships between resources and define the types of operations that can be performed. They enable clients to understand the purpose and nature of links without requiring out-of-band knowledge about the API.
@@ -1415,6 +1423,8 @@ Custom Relation Examples:
   }
 }
 ```
+
+<BackToTop />
 
 ### Self-Descriptive Messages
 
@@ -1504,6 +1514,8 @@ Schema Integration Examples:
 }
 ```
 
+<BackToTop />
+
 ## Status Codes and Error Handling
 
 HTTP status codes provide a standardized way to communicate the result of client requests to RESTful services. Proper use of status codes enables clients to understand the outcome of their requests and take appropriate action. Combined with well-structured error responses, status codes form the foundation of effective error handling in RESTful APIs.
@@ -1585,6 +1597,8 @@ Content-Type: application/json
 
 HTTP/1.1 204 No Content
 ```
+
+<BackToTop />
 
 ### Client Error Status Codes
 
@@ -1728,6 +1742,8 @@ Content-Type: application/json
 }
 ```
 
+<BackToTop />
+
 ### Server Error Status Codes
 
 Server error status codes indicate that the server encountered an error while processing a valid client request. These codes help distinguish between client-side and server-side issues.
@@ -1788,6 +1804,8 @@ Content-Type: application/json
   }
 }
 ```
+
+<BackToTop />
 
 ### Error Response Formats
 
@@ -1858,6 +1876,8 @@ SYSTEM_* - System-level errors
   SYSTEM_OVERLOAD
   SYSTEM_UPSTREAM_ERROR
 ```
+
+<BackToTop />
 
 ## RESTful API Examples with Different Databases
 
@@ -1959,6 +1979,8 @@ Content-Type: application/json
 }
 ```
 
+<BackToTop />
+
 #### Transactional Operations
 
 Relational databases excel at maintaining data consistency through transactions. RESTful APIs can expose transaction-like operations through careful resource design:
@@ -2027,6 +2049,8 @@ Content-Type: application/json
   "createdAt": "2023-12-07T10:30:00Z"
 }
 ```
+
+<BackToTop />
 
 ### NoSQL Database Examples
 
@@ -2141,6 +2165,8 @@ Content-Type: application/json
   "updatedAt": "2023-12-07T11:00:00Z"
 }
 ```
+<BackToTop />
+
 
 #### Key-Value Store API with Redis
 
@@ -2190,6 +2216,8 @@ Cache-Control: max-age=3600
   "expires_at": "2023-12-07T11:30:00Z"
 }
 ```
+
+<BackToTop />
 
 ### Graph Database Examples
 
@@ -2285,6 +2313,8 @@ Content-Type: application/json
   }
 }
 ```
+
+<BackToTop />
 
 ### Time Series Database Examples
 
