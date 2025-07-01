@@ -265,6 +265,8 @@ Joining with array elements means you can relate documents based on shared items
 
 Performing complex nested queries is useful when your data includes arrays within objects, or objects within arrays, requiring you to traverse multiple levels of the document structure. These operations are essential for applications that require advanced data manipulation and analysis of JSON documents with intricate structures, such as analytics dashboards, recommendation systems, or content management platforms.
 
+<BackToTop />
+
 ## Data Projection and Transformation
 
 Cosmos DB SQL API provides powerful capabilities for transforming and reshaping query results to match application requirements. This includes selecting specific properties, creating nested objects, and performing computed transformations. It allows developers to tailor the output of queries to fit the needs of their applications, enabling efficient data retrieval and manipulation, which is essential for building responsive and data-driven applications. By using projections and transformations, developers can optimize data retrieval, reduce payload sizes, and enhance application performance.
@@ -532,6 +534,8 @@ The above examples demonstrate how to summarize customer orders by calculating m
 These advanced transformation queries enable developers to generate tailored data representations, supporting a wide range of application scenarios and reporting needs.
 
 By understanding and applying these patterns, you can efficiently query, aggregate, and transform JSON data in Azure Cosmos DB, unlocking the full potential of the SQL API for modern, scalable applications.
+
+<BackToTop />
 
 ## Aggregation and Analytics
 
@@ -862,6 +866,8 @@ ORDER BY year, month
 
 The above examples illustrate how to segment customers by spending, evaluate product performance across categories and price ranges, and analyze sales trends over time. These advanced analytics queries highlight the capabilities of Cosmos DB SQL API for extracting actionable insights from complex data, supporting informed business decisions.
 
+<BackToTop />
+
 ## Advanced Query Patterns
 
 Advanced querying in Cosmos DB SQL API enables sophisticated data analysis and complex business logic implementation. It includes subqueries, correlated queries, window functions, and advanced join operations. These features allow developers to perform intricate data manipulations, aggregations, and transformations directly within the query language. The following sections illustrate various advanced query patterns that are essential for building complex applications and performing in-depth data analysis.
@@ -990,6 +996,8 @@ WHERE EXISTS(
 ```
 
 Advanced JOIN operations in Cosmos DB SQL API enable developers to work with complex relationships between documents, including self-joins for hierarchical data, multi-level array joins for nested structures, and logical joins across containers. These operations allow for sophisticated data retrieval patterns, enabling applications to access related data efficiently.
+
+<BackToTop />
 
 ## Real-World Cosmos DB Applications
 
@@ -1255,6 +1263,8 @@ SELECT c.contentId,
 FROM c c
 WHERE c.type = "content"
 ```
+
+<BackToTop />
 
 ## Performance Optimization and Best Practices
 
