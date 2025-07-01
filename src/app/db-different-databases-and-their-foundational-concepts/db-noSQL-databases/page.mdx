@@ -57,6 +57,8 @@ Consider a social media application that needs to store user profiles, posts, co
 - **Eventual Consistency:** NoSQL databases often prioritize availability and partition tolerance over strict consistency, which can lead to eventual consistency. This means that while data may not be immediately consistent across all nodes, it will eventually converge to a consistent state. Developers need to design their applications to handle this eventual consistency and ensure that data remains accurate across distributed systems.
 - **Data Modeling:** NoSQL databases require careful data modeling to optimize performance and ensure efficient querying. This involves understanding the specific data access patterns of the application and designing the data model accordingly. For example, in a document store like MongoDB, developers may choose to embed related data within a single document to reduce the need for joins and improve query performance. In a key-value store like Redis, developers may use hashes or sets to group related data together for efficient retrieval.
 
+<BackToTop />
+
 ## MongoDB
 
 MongoDB is a widely used document-oriented NoSQL database that stores data in flexible, JSON-like documents. It is designed for scalability and high performance, making it suitable for applications with large volumes of unstructured or semi-structured data. MongoDB uses a flexible schema design, allowing developers to easily adapt the data model as application requirements change. It provides a rich query language and supports complex queries, aggregations, and indexing. MongoDB Query Language (MQL) allows developers to perform CRUD (Create, Read, Update, Delete) operations on documents and collections. MongoDB is often used in scenarios where rapid development, scalability, and flexibility are essential, such as content management systems, real-time analytics, and web applications. It supports horizontal scaling through sharding, enabling the distribution of data across multiple servers. MongoDB also offers built-in replication and automatic failover to ensure data availability and reliability.
@@ -168,6 +170,8 @@ db.users.insertMany([
 }
 ```
 
+<BackToTop />
+
 ## Redis
 
 Redis is an in-memory key-value store that is often used as a caching layer or for real-time data processing. It is known for its high performance, low latency, and support for various data structures such as strings, hashes, lists, sets, and sorted sets. Redis is designed to handle high-throughput workloads and can be used for applications that require real-time data access, such as gaming, messaging, and analytics. It supports various data operations, including atomic operations, transactions, and pub/sub messaging patterns. Redis is often used as a caching layer to improve application performance by storing frequently accessed data in memory, reducing the need for expensive database queries. It can also be used for real-time analytics, session management, and message brokering. Redis is often used in scenarios where low latency and high throughput are critical, such as in gaming applications, real-time analytics, and messaging systems. It can also be used as a caching layer to improve application performance by storing frequently accessed data in memory, reducing the need for expensive database queries. Redis supports various data operations, including atomic operations, transactions, and pub/sub messaging patterns. It is often used in scenarios where low latency and high throughput are critical, such as in gaming applications, real-time analytics, and messaging systems.
@@ -212,6 +216,8 @@ LRANGE user:123:friends 0 -1
 PUBLISH notifications "New message received"
 SUBSCRIBE notifications
 ```
+
+<BackToTop />
 
 ## Cassandra
 
@@ -290,6 +296,8 @@ VALUES ('user123', 'John Doe', 'john_doe@sample.com', 30,
 ```cql title="Cassandra Query"
 SELECT * FROM users WHERE user_id = 'user123';
 ```
+
+<BackToTop />
 
 ## Choosing the Right NoSQL Database
 

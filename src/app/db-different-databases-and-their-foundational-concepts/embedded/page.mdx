@@ -8,37 +8,13 @@ import BackToTop from "@/components/BackToTop";
 
 Embedded databases are lightweight database systems that are integrated into applications, providing data storage and retrieval capabilities without the need for a separate database server. They are designed to be fast, efficient, and easy to use, making them ideal for applications that require local data storage, such as mobile apps, IoT devices, and desktop applications.
 
-## Key Features of Embedded Databases
+### Key Features of Embedded Databases
 
-### Lightweight and Fast
+- **Lightweight**: Embedded databases are typically smaller in size and have lower resource requirements compared to traditional database systems. This makes them suitable for applications running on devices with limited resources, such as mobile phones or IoT devices.
+- **Integrated**: The database engine is integrated directly into the application, allowing for seamless data access and manipulation without the need for a separate database server. This integration reduces latency and improves performance, as there is no need for network communication to access the database.
+- **Self-Contained**: Embedded databases are self-contained, meaning they do not require external dependencies or configurations. They can be easily bundled with the application, making deployment straightforward and reducing the complexity of managing a separate database server.
 
-Embedded databases are optimized for performance and resource usage, allowing them to run efficiently on devices with limited resources. They typically have a small footprint and low memory overhead, making them suitable for embedded systems.
-
-Embedded databases are designed to be fast and efficient, often using in-memory storage or optimized disk access patterns. This allows for quick data retrieval and manipulation, which is crucial for applications that require real-time performance.
-
-### Easy Integration
-
-Embedded databases can be easily integrated into applications without the need for complex setup or configuration. They often provide simple APIs or libraries that developers can use to interact with the database directly from their code.
-This ease of integration allows developers to focus on building their applications rather than managing a separate database server.
-
-### Local Data Storage
-
-Embedded databases store data locally within the application, eliminating the need for network communication to access data. This is particularly beneficial for applications that require offline access or need to operate in environments with unreliable network connectivity. Local data storage also improves performance by reducing latency associated with remote database access.
-
-### ACID Compliance
-
-Many embedded databases support ACID (Atomicity, Consistency, Isolation, Durability) properties, ensuring that transactions are processed reliably and data integrity is maintained. This is crucial for applications that require robust data management and consistency, such as financial applications or critical systems.
-
-### Cross-Platform Support
-
-Embedded databases are often designed to be cross-platform, allowing them to run on various operating systems and hardware architectures. This flexibility enables developers to build applications that can run on multiple devices without worrying about database compatibility issues.
-
-## Data Models and Query Languages
-
-Embedded databases can support various data models, including key-value stores, document stores, and relational models. The choice of data model depends on the specific requirements of the application and the type of data being stored.
-Many embedded databases provide their own query languages or APIs for data manipulation. These query languages are often designed to be simple and intuitive, allowing developers to perform CRUD (Create, Read, Update, Delete) operations easily. Some embedded databases also support SQL-like query languages, enabling developers to leverage their existing SQL knowledge.
-
-## Benefits of Using Embedded Databases
+### Benefits of Using Embedded Databases
 
 - **Performance**: Embedded databases are optimized for speed and efficiency, providing fast data access and manipulation capabilities. This is particularly important for applications that require real-time performance or need to handle large volumes of data.
 - **Simplicity**: The ease of integration and setup makes embedded databases a convenient choice for developers. They can quickly add data storage capabilities to their applications without the need for complex configuration or management.
@@ -46,14 +22,14 @@ Many embedded databases provide their own query languages or APIs for data manip
 - **Resource Efficiency**: Embedded databases are designed to be lightweight and resource-efficient, making them suitable for devices with limited resources. They typically have a small footprint and low memory overhead, allowing them to run efficiently on embedded systems.
 - **Cross-Platform Compatibility**: Many embedded databases are designed to be cross-platform, enabling developers to build applications that can run on multiple devices and operating systems. This flexibility allows for greater portability and compatibility across different environments.
 
-## Disadvantages of Embedded Databases
+### Disadvantages of Embedded Databases
 
 - **Limited Scalability**: Embedded databases may not be suitable for applications that require high scalability or handle large volumes of data. They are typically designed for local data storage and may not support distributed architectures or clustering.
 - **Lack of Advanced Features**: Some embedded databases may lack advanced features found in full-fledged database management systems, such as advanced indexing, complex query optimization, or extensive data analytics capabilities.
 - **Vendor Lock-In**: Depending on the embedded database chosen, there may be a risk of vendor lock-in, especially if the database uses proprietary APIs or formats. This can make it difficult to switch to a different database solution in the future.
 - **Limited Community Support**: Some embedded databases may have smaller communities or less extensive documentation compared to larger database systems. This can make it more challenging to find support or resources when encountering issues or needing assistance with the database.
 
-## How does an embedded database work?
+### How does an embedded database work?
 
 An embedded database works by integrating the database engine directly into the application code, allowing the application to access and manipulate data without the need for a separate database server. The database engine is typically compiled into the application binary or linked as a library, enabling it to run in the same process as the application.
 
@@ -61,7 +37,7 @@ When the application needs to perform database operations, it uses the provided 
 
 Embedded databases differ from traditional client-server databases in that they are integrated directly into the application rather than running as a separate server process. This integration allows for faster data access and reduced latency, as there is no need for network communication to access the database. Additionally, embedded databases are typically designed to be lightweight and resource-efficient, making them suitable for applications with limited resources or those that require local data storage.
 
-## Common Use Cases
+### Common Use Cases
 
 Embedded databases are commonly used in various scenarios, including:
 
@@ -71,9 +47,9 @@ Embedded databases are commonly used in various scenarios, including:
 - **Gaming Applications**: Many games use embedded databases to store game state, player profiles, and other game-related data. The fast performance and local storage capabilities of embedded databases make them ideal for gaming applications that require real-time data access and manipulation.
 - **Embedded Systems**: Embedded databases are commonly used in embedded systems, such as automotive applications, medical devices, and industrial control systems. These systems often require reliable and efficient data storage solutions that can operate in resource-constrained environments.
 
-## Popular Embedded Databases
+<BackToTop />
 
-### SQLite
+## SQLite
 
 SQLite is a widely adopted embedded database known for being self-contained, serverless, and requiring zero configuration. It stores all data in a single file, making it easy to manage and distribute across different platforms. SQLite supports a broad subset of SQL features and is frequently used in mobile apps, desktop applications, and embedded systems. SQLite offers strong SQL support, covering most of the standard language while introducing some unique features and omitting a few advanced ones. It provides flexible upsert operations through the `INSERT ON CONFLICT` clause, supports subqueries in various statements, and allows the creation of user-defined functions and aggregates. Its comprehensive set of built-in functions enables developers to perform a wide range of data transformations and computations directly within SQL queries.
 
@@ -95,7 +71,9 @@ This query retrieves the names, ages, and cities of users older than 30, orderin
 SQLite is particularly well-suited for applications that require lightweight data storage and retrieval capabilities. It is often used in mobile applications, desktop software, and embedded systems due to its simplicity and efficiency. SQLite's self-contained nature allows developers to easily integrate it into their applications without the need for a separate database server. Its support for transactions, indexing, and complex queries makes it a powerful tool for managing application data.
 SQLite is a popular choice for developers looking for a lightweight, easy-to-use embedded database solution.
 
-### LevelDB
+<BackToTop />
+
+## LevelDB
 
 LevelDB is a fast key-value storage library developed by Google. It is designed for high performance and low memory usage, making it suitable for applications that require efficient data storage and retrieval. LevelDB provides a simple API for reading and writing key-value pairs and supports features like compression and batch writes. LevelDB is a high-performance key-value store that is optimized for fast read and write operations. It uses a log-structured merge-tree (LSM tree) data structure to efficiently handle large volumes of data. LevelDB is often used in applications that require low-latency access to data, such as web browsers, mobile apps, and embedded systems.
 
@@ -117,7 +95,9 @@ db.get('user:123', function (err, value) {
 
 This example demonstrates how to retrieve a value from LevelDB using its API. LevelDB does not use SQL for querying; instead, it provides a simple key-value interface for data access. LevelDB is particularly well-suited for applications that require fast, low-latency access to data. It is often used in scenarios where high write throughput and efficient storage are critical, such as in web browsers, mobile applications, and embedded systems. LevelDB's simplicity and performance make it a popular choice for developers looking for a lightweight key-value store.
 
-### DuckDB
+<BackToTop />
+
+## DuckDB
 
 DuckDB is an in-process SQL OLAP database management system that is designed for analytical workloads. It provides a lightweight and efficient way to perform complex queries on large datasets. DuckDB supports SQL queries, indexing, and vectorized execution, making it suitable for data analysis tasks. DuckDB is particularly well-suited for analytical workloads and data science applications. It can handle large datasets efficiently and provides features like columnar storage and vectorized execution for improved query performance. DuckDB can be embedded in applications, allowing developers to perform complex data analysis without the need for a separate database server.
 
@@ -138,7 +118,9 @@ ORDER BY
 
 This query retrieves the average salary and employee count for the Engineering department, grouped by country, and orders the results by average salary in descending order. DuckDB's SQL capabilities allow for complex aggregations and grouping operations, making it a powerful tool for data analysis.
 
-### RocksDB
+<BackToTop />
+
+## RocksDB
 
 RocksDB is a high-performance key-value store developed by Facebook. It is designed for fast storage and retrieval of data, making it suitable for applications that require low-latency access to large datasets. RocksDB supports features like compression, transactions, and secondary indexes, providing a robust solution for data management.
 RocksDB is built on the principles of LevelDB but adds additional features and optimizations for high-performance applications. It is particularly well-suited for write-heavy workloads and can handle large volumes of data efficiently. RocksDB is often used in distributed systems, big data applications, and real-time analytics.
@@ -161,7 +143,9 @@ db.get('user:123', function (err, value) {
 
 This example demonstrates how to retrieve a value from RocksDB using its API. Similar to LevelDB, RocksDB does not use SQL for querying; instead, it provides a simple key-value interface for data access. RocksDB is particularly well-suited for applications that require high write throughput and efficient storage. It is often used in scenarios where low-latency access to data is critical, such as in distributed systems, big data applications, and real-time analytics. RocksDB's performance optimizations and support for advanced features make it a popular choice for developers looking for a high-performance key-value store.
 
-### LMDB (Lightning Memory-Mapped Database)
+<BackToTop />
+
+## LMDB (Lightning Memory-Mapped Database)
 
 LMDB is a fast memory-mapped key-value database that provides high performance and low latency. It is designed for applications that require efficient data access and manipulation, such as web servers, messaging systems, and embedded systems. LMDB supports ACID transactions, multi-version concurrency control, and provides a simple API for data access.
 LMDB is known for its simplicity and efficiency, making it a popular choice for applications that require fast data access without the overhead of a full-fledged database server. It uses memory-mapped files to provide fast access to data, allowing applications to read and write data directly from memory. This approach minimizes disk I/O and improves overall performance, especially for read-heavy workloads.
@@ -184,7 +168,9 @@ db.get('user:123', function (err, value) {
 
 This example demonstrates how to retrieve a value from LMDB using its API. Similar to LevelDB and RocksDB, LMDB does not use SQL for querying; instead, it provides a simple key-value interface for data access. LMDB is particularly well-suited for applications that require fast, low-latency access to data. It is often used in scenarios where high read throughput and efficient storage are critical, such as in web servers, messaging systems, and embedded systems. LMDB's memory-mapped approach and support for ACID transactions make it a powerful tool for managing application data.
 
-### HSQLDB (HyperSQL Database)
+<BackToTop />
+
+## HSQLDB (HyperSQL Database)
 
 HSQLDB is a lightweight, open-source relational database management system written in Java. It supports both in-memory and disk-based storage, making it suitable for applications that require fast data access and manipulation. HSQLDB provides a rich set of SQL features, including support for transactions, indexing, and stored procedures.
 HSQLDB is often used in Java applications and provides a simple API for data access. It is designed to be easy to integrate into applications and can run in embedded mode, allowing developers to include it directly in their Java applications without the need for a separate database server. HSQLDB is particularly useful for applications that require lightweight data storage and retrieval capabilities, such as desktop applications, testing environments, and small-scale web applications.
@@ -205,7 +191,9 @@ ORDER BY
 This query retrieves the names, ages, and cities of users older than 30, ordering the results by age in descending order. HSQLDB's SQL capabilities allow for complex queries and data manipulation, making it a versatile choice for embedded applications.HSQLDB is particularly well-suited for applications that require a lightweight, easy-to-use relational database solution. It is often used in Java applications, testing environments, and small-scale web applications due to its simplicity and efficiency. HSQLDB's support for transactions, indexing, and stored procedures makes it a powerful tool for managing application data.
 HSQLDB is a popular choice for developers looking for a lightweight, easy-to-use embedded database solution.
 
-### Apache Derby
+<BackToTop />
+
+## Apache Derby
 
 Apache Derby is a lightweight, open-source relational database management system written in Java. It is designed for embedded use and provides a full-featured SQL database engine that can run in-process with the application. Derby supports ACID transactions, indexing, and stored procedures, making it suitable for applications that require robust data management.
 Derby is often used in Java applications and provides a simple API for data access. It can be embedded directly into applications, allowing developers to include it without the need for a separate database server. Derby is particularly useful for applications that require lightweight data storage and retrieval capabilities, such as desktop applications, testing environments, and small-scale web applications. Its support for SQL and ACID transactions makes it a versatile choice for developers looking for an embedded database solution.
@@ -225,7 +213,9 @@ ORDER BY
 
 This query retrieves the names, ages, and cities of users older than 30, ordering the results by age in descending order. Apache Derby's SQL capabilities allow for complex queries and data manipulation, making it a powerful tool for managing application data. Derby's support for transactions, indexing, and stored procedures makes it a robust choice for applications that require reliable data management. It is particularly well-suited for Java applications, testing environments, and small-scale web applications due to its simplicity and efficiency. Derby is a popular choice for developers looking for a lightweight, easy-to-use embedded database solution.
 
-### Berkeley DB
+<BackToTop />
+
+## Berkeley DB
 
 Berkeley DB is a high-performance embedded database that provides a key-value store interface. It is designed for applications that require fast and reliable data access, such as web servers, messaging systems, and financial applications. Berkeley DB supports ACID transactions, indexing, and replication, making it suitable for applications that require robust data management.
 Berkeley DB is known for its scalability and reliability, making it suitable for applications that require robust data management. It provides a rich set of APIs for data access and supports features like transactions, indexing, and replication. Berkeley DB can be embedded directly into applications, allowing developers to include it without the need for a separate database server.
@@ -248,7 +238,9 @@ db.get('user:123', function (err, value) {
 
 This example demonstrates how to retrieve a value from Berkeley DB using its API. Similar to LevelDB and RocksDB, Berkeley DB does not use SQL for querying; instead, it provides a simple key-value interface for data access. Berkeley DB is particularly well-suited for applications that require high write throughput and efficient storage. It is often used in scenarios where low-latency access to data is critical, such as in web servers, messaging systems, and financial applications. Berkeley DB's support for transactions, indexing, and replication makes it a powerful tool for managing application data. Its scalability and reliability make it a popular choice for developers looking for a high-performance embedded database solution.
 
-### Berkeley DB
+<BackToTop />
+
+## Berkeley DB
 
 Berkeley DB is a high-performance embedded database that supports various data models, including key-value pairs and tables. It is known for its scalability and reliability, making it suitable for applications that require robust data management. Berkeley DB provides a rich set of APIs for data access and supports features like transactions, indexing, and replication.
 
@@ -270,7 +262,9 @@ db.get('user:123', function (err, value) {
 
 This example demonstrates how to retrieve a value from Berkeley DB using its API. Similar to LevelDB and RocksDB, Berkeley DB does not use SQL for querying; instead, it provides a simple key-value interface for data access. Berkeley DB is particularly well-suited for applications that require high write throughput and efficient storage. It is often used in scenarios where low-latency access to data is critical, such as in web servers, messaging systems, and financial applications. Berkeley DB's support for transactions, indexing, and replication makes it a powerful tool for managing application data. Its scalability and reliability make it a popular choice for developers looking for a high-performance embedded database solution.
 
-### H2 Database
+<BackToTop />
+
+## H2 Database
 
 H2 is a lightweight Java-based embedded database that supports both in-memory and disk-based storage. It is designed for high performance and ease of use, making it suitable for Java applications. H2 supports a subset of the SQL standard and provides features like transactions, indexing, and full-text search. H2 is often used in Java applications and provides a simple API for data access. It can be embedded directly into applications, allowing developers to include it without the need for a separate database server. H2 is particularly useful for applications that require lightweight data storage and retrieval capabilities, such as desktop applications, testing environments, and small-scale web applications. Its support for SQL and ACID transactions makes it a versatile choice for developers looking for an embedded database solution.
 
@@ -289,7 +283,9 @@ ORDER BY
 
 This query retrieves the names, ages, and cities of users older than 30, ordering the results by age in descending order. H2's SQL capabilities allow for complex queries and data manipulation, making it a powerful tool for managing application data. H2 is particularly well-suited for Java applications, testing environments, and small-scale web applications due to its simplicity and efficiency. Its support for transactions, indexing, and full-text search makes it a robust choice for applications that require reliable data management. H2 is a popular choice for developers looking for a lightweight, easy-to-use embedded database solution.
 
-### Firebird Embedded
+<BackToTop />
+
+## Firebird Embedded
 
 Firebird Embedded is a lightweight version of the Firebird relational database management system. It is designed for embedded applications and provides a full-featured SQL database engine that can run in-process with the application. Firebird Embedded supports ACID transactions, stored procedures, and triggers, making it suitable for applications that require robust data management.
 Firebird Embedded is often used in applications that require a lightweight, easy-to-use relational database solution. It can be embedded directly into applications, allowing developers to include it without the need for a separate database server. Firebird Embedded is particularly useful for applications that require lightweight data storage and retrieval capabilities, such as desktop applications, testing environments, and small-scale web applications. Its support for SQL and ACID transactions makes it a versatile choice for developers looking for an embedded database solution.

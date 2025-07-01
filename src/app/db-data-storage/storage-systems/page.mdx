@@ -459,6 +459,8 @@ else
 fi
 ```
 
+<BackToTop />
+
 ### 2. Big Data Analytics
 
 Managing large volumes of data for analysis and insights, often requiring distributed processing capabilities.
@@ -494,6 +496,8 @@ monthly_sales.write \
 
 spark.stop()
 ```
+
+<BackToTop />
 
 ### 3. Content Delivery
 
@@ -541,6 +545,8 @@ def upload_to_cdn(file_path, content_type, cache_duration=86400):
         }
     )
 ```
+
+<BackToTop />
 
 ### 4. Database Management
 
@@ -591,6 +597,8 @@ BEGIN;
     END IF;
 COMMIT;
 ```
+
+<BackToTop />
 
 ### 5. File Sharing and Collaboration
 
@@ -658,6 +666,8 @@ class CollaborativeFileSystem:
         ]
 ```
 
+<BackToTop />
+
 ## Types of Storage Systems
 
 Storage systems can be categorized into several types based on their architecture and use cases:
@@ -706,6 +716,8 @@ for path, dirs, files in client.walk('/data'):
         file_status = client.status(f"{path}/{file}")
         print(f"File: {file}, Replication: {file_status['replication']}")
 ```
+
+<BackToTop />
 
 ### Object Storage
 
@@ -785,6 +797,8 @@ class ObjectStorageManager:
         )
 ```
 
+<BackToTop />
+
 ### Block Storage
 
 Divides data into fixed-size blocks, allowing for efficient storage and retrieval. Block storage is commonly used in databases and virtual machines, providing high performance and low latency.
@@ -853,6 +867,8 @@ echo "InitiatorName=iqn.2024.com.company:client" > /etc/iscsi/initiatorname.iscs
 iscsiadm -m discovery -t st -p 192.168.1.200
 iscsiadm -m node --login
 ```
+
+<BackToTop />
 
 ### Database Storage
 
@@ -928,6 +944,8 @@ class DocumentStorage {
     }
 }
 ```
+
+<BackToTop />
 
 ### Distributed Storage
 
@@ -1011,6 +1029,8 @@ class DistributedHashTable:
         return None
 ```
 
+<BackToTop />
+
 ## Storage Models
 
 Storage models define how data is organized, accessed, and managed within a storage system. Each model has specific advantages and use cases:
@@ -1083,6 +1103,8 @@ class HierarchicalStorage:
         return list(node['children'].keys()) if node else []
 ```
 
+<BackToTop />
+
 ### Relational Storage Model
 
 Uses tables to represent data, with relationships defined between tables through keys. This model is prevalent in relational databases, enabling complex queries and data manipulation.
@@ -1152,6 +1174,8 @@ JOIN users u ON o.user_id = u.user_id
 LEFT JOIN order_items oi ON o.order_id = oi.order_id
 GROUP BY o.order_id, u.username, u.email, o.order_date, o.status, o.total_amount;
 ```
+
+<BackToTop />
 
 ### Document Storage Model
 
@@ -1260,6 +1284,8 @@ const userProfile = {
 };
 ```
 
+<BackToTop />
+
 ### Key-Value Storage Model
 
 Stores data as key-value pairs, where each key is unique and maps to a specific value. This model is often used in caching systems and NoSQL databases, providing fast access to data based on keys.
@@ -1359,6 +1385,8 @@ class DistributedKeyValueStore:
         
         return responsible
 ```
+
+<BackToTop />
 
 ### Graph Storage Model
 
@@ -1462,6 +1490,8 @@ class GraphStorageManager:
                     'connections': record['connections']} 
                    for record in result]
 ```
+
+<BackToTop />
 
 ## Best Practices
 
@@ -1578,6 +1608,8 @@ case "$1" in
 esac
 ```
 
+<BackToTop />
+
 ### Data Encryption
 
 Encrypt sensitive data both at rest and in transit to protect it from unauthorized access. Use strong encryption algorithms and manage encryption keys securely.
@@ -1689,6 +1721,8 @@ class EnterpriseEncryption:
         )
         return pem.decode()
 ```
+
+<BackToTop />
 
 ### Access Control
 
@@ -1822,6 +1856,8 @@ abac.set_user_attributes('user123', {
 context = {'client_ip': '192.168.1.100'}
 has_access = abac.evaluate_access('user123', 'database/sales_data', 'read', context)
 ```
+
+<BackToTop />
 
 ### Data Monitoring
 
@@ -2020,6 +2056,8 @@ class DataAccessMonitor:
         
         return report
 ```
+
+<BackToTop />
 
 ### Data Archiving
 
