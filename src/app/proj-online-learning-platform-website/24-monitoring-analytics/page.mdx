@@ -1,0 +1,1692 @@
+import BackToTop from "@/components/BackToTop";
+
+# Monitoring and Analytics Implementation
+
+## Table of Contents
+
+## Introduction
+
+In this final module, we'll implement comprehensive monitoring and analytics for the online learning platform. We'll cover application performance monitoring (APM), business intelligence dashboards, user analytics, system health monitoring, alerting, and data-driven insights to optimize the platform's performance and user experience.
+
+## Monitoring Architecture Overview
+
+### Three-Tier Monitoring Strategy
+
+1. **Infrastructure Monitoring**
+   - Server metrics, resource utilization
+   - Network performance, disk I/O
+   - Database performance and connections
+
+2. **Application Performance Monitoring (APM)**
+   - Request tracing, error tracking
+   - Performance bottlenecks, memory leaks
+   - API response times and throughput
+
+3. **Business Intelligence Analytics**
+   - User behavior and engagement
+   - Course performance and completion rates
+   - Revenue metrics and conversion funnels
+
+## Infrastructure Monitoring with Prometheus & Grafana
+
+### Prometheus Configuration
+
+```yaml
+# monitoring/prometheus/prometheus.yml
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "alert_rules.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093
+
+scrape_configs:
+  # Prometheus itself
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # Spring Boot applications
+  - job_name: "learning-platform-backend"
+    metrics_path: "/actuator/prometheus"
+    static_configs:
+      - targets: ["backend-service:8080"]
+    scrape_interval: 10s
+
+  # Node Exporter for system metrics
+  - job_name: "node-exporter"
+    static_configs:
+      - targets: ["node-exporter:9100"]
+
+  # MongoDB Exporter
+  - job_name: "mongodb-exporter"
+    static_configs:
+      - targets: ["mongodb-exporter:9216"]
+
+  # Redis Exporter
+  - job_name: "redis-exporter"
+    static_configs:
+      - targets: ["redis-exporter:9121"]
+
+  # Nginx Exporter
+  - job_name: "nginx-exporter"
+    static_configs:
+      - targets: ["nginx-exporter:9113"]
+
+  # Kubernetes metrics
+  - job_name: "kubernetes-apiservers"
+    kubernetes_sd_configs:
+      - role: endpoints
+    scheme: https
+    tls_config:
+      ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+    bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+    relabel_configs:
+      - source_labels:
+          [
+            __meta_kubernetes_namespace,
+            __meta_kubernetes_service_name,
+            __meta_kubernetes_endpoint_port_name,
+          ]
+        action: keep
+        regex: default;kubernetes;https
+
+  - job_name: "kubernetes-nodes"
+    kubernetes_sd_configs:
+      - role: node
+    relabel_configs:
+      - action: labelmap
+        regex: __meta_kubernetes_node_label_(.+)
+
+  - job_name: "kubernetes-pods"
+    kubernetes_sd_configs:
+      - role: pod
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+        action: keep
+        regex: true
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+        action: replace
+        target_label: __metrics_path__
+        regex: (.+)
+```
+
+### Alert Rules
+
+```yaml
+# monitoring/prometheus/alert_rules.yml
+groups:
+  - name: learning-platform.rules
+    rules:
+      # High CPU Usage
+      - alert: HighCPUUsage
+        expr: cpu_usage_percent > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage detected"
+          description: "CPU usage is above 80% for more than 5 minutes"
+
+      # High Memory Usage
+      - alert: HighMemoryUsage
+        expr: memory_usage_percent > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage detected"
+          description: "Memory usage is above 85% for more than 5 minutes"
+
+      # Application Down
+      - alert: ApplicationDown
+        expr: up{job="learning-platform-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Learning platform backend is down"
+          description: "Backend service has been down for more than 1 minute"
+
+      # High Error Rate
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is above 10% for more than 2 minutes"
+
+      # Slow Response Time
+      - alert: SlowResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Slow response time detected"
+          description: "95th percentile response time is above 2 seconds"
+
+      # Database Connection Issues
+      - alert: DatabaseConnectionHigh
+        expr: mongodb_connections_current > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High database connections"
+          description: "MongoDB connections are above 80"
+
+      # Disk Space Low
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) * 100 < 10
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Low disk space"
+          description: "Disk space is below 10%"
+
+      # Redis Memory Usage
+      - alert: RedisMemoryHigh
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis memory usage high"
+          description: "Redis memory usage is above 90%"
+```
+
+### Spring Boot Metrics Configuration
+
+```java
+// src/main/java/com/learningplatform/config/MetricsConfig.java
+package com.learningplatform.config;
+
+import io.micrometer.core.aop.TimedAspect;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import org.springframework.boot.actuate.autoconfigure.metrics.MeterRegistryCustomizer;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class MetricsConfig {
+
+    @Bean
+    public MeterRegistryCustomizer<MeterRegistry> metricsCommonTags() {
+        return registry -> registry.config().commonTags(
+            "application", "learning-platform",
+            "environment", System.getProperty("spring.profiles.active", "local")
+        );
+    }
+
+    @Bean
+    public TimedAspect timedAspect(MeterRegistry registry) {
+        return new TimedAspect(registry);
+    }
+}
+
+// src/main/java/com/learningplatform/metrics/CustomMetrics.java
+package com.learningplatform.metrics;
+
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
+import org.springframework.stereotype.Component;
+
+import java.util.concurrent.atomic.AtomicInteger;
+
+@Component
+public class CustomMetrics {
+
+    private final Counter userRegistrationCounter;
+    private final Counter courseEnrollmentCounter;
+    private final Counter videoPlayCounter;
+    private final Timer courseCompletionTimer;
+    private final AtomicInteger activeUsersGauge;
+    private final AtomicInteger activeCourseSessionsGauge;
+
+    public CustomMetrics(MeterRegistry meterRegistry) {
+        this.userRegistrationCounter = Counter.builder("user_registrations_total")
+            .description("Total number of user registrations")
+            .register(meterRegistry);
+
+        this.courseEnrollmentCounter = Counter.builder("course_enrollments_total")
+            .description("Total number of course enrollments")
+            .tag("course_type", "unknown")
+            .register(meterRegistry);
+
+        this.videoPlayCounter = Counter.builder("video_plays_total")
+            .description("Total number of video plays")
+            .register(meterRegistry);
+
+        this.courseCompletionTimer = Timer.builder("course_completion_duration")
+            .description("Time taken to complete courses")
+            .register(meterRegistry);
+
+        this.activeUsersGauge = new AtomicInteger(0);
+        Gauge.builder("active_users_current")
+            .description("Current number of active users")
+            .register(meterRegistry, activeUsersGauge, AtomicInteger::get);
+
+        this.activeCourseSessionsGauge = new AtomicInteger(0);
+        Gauge.builder("active_course_sessions_current")
+            .description("Current number of active course sessions")
+            .register(meterRegistry, activeCourseSessionsGauge, AtomicInteger::get);
+    }
+
+    public void incrementUserRegistration() {
+        userRegistrationCounter.increment();
+    }
+
+    public void incrementCourseEnrollment(String courseType) {
+        courseEnrollmentCounter.increment("course_type", courseType);
+    }
+
+    public void incrementVideoPlay() {
+        videoPlayCounter.increment();
+    }
+
+    public Timer.Sample startCourseCompletion() {
+        return Timer.start();
+    }
+
+    public void recordCourseCompletion(Timer.Sample sample) {
+        sample.stop(courseCompletionTimer);
+    }
+
+    public void setActiveUsers(int count) {
+        activeUsersGauge.set(count);
+    }
+
+    public void setActiveCourseSessions(int count) {
+        activeCourseSessionsGauge.set(count);
+    }
+}
+
+// src/main/java/com/learningplatform/service/MetricsService.java
+package com.learningplatform.service;
+
+import com.learningplatform.metrics.CustomMetrics;
+import com.learningplatform.repository.UserRepository;
+import com.learningplatform.repository.CourseSessionRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+
+@Service
+@RequiredArgsConstructor
+public class MetricsService {
+
+    private final CustomMetrics customMetrics;
+    private final UserRepository userRepository;
+    private final CourseSessionRepository courseSessionRepository;
+
+    @Scheduled(fixedRate = 60000) // Every minute
+    public void updateActiveUserMetrics() {
+        LocalDateTime cutoff = LocalDateTime.now().minusMinutes(5);
+        long activeUsers = userRepository.countActiveUsersSince(cutoff);
+        customMetrics.setActiveUsers((int) activeUsers);
+    }
+
+    @Scheduled(fixedRate = 30000) // Every 30 seconds
+    public void updateActiveCourseSessionMetrics() {
+        LocalDateTime cutoff = LocalDateTime.now().minusMinutes(2);
+        long activeSessions = courseSessionRepository.countActiveSessionsSince(cutoff);
+        customMetrics.setActiveCourseSessions((int) activeSessions);
+    }
+
+    public void recordUserRegistration() {
+        customMetrics.incrementUserRegistration();
+    }
+
+    public void recordCourseEnrollment(String courseType) {
+        customMetrics.incrementCourseEnrollment(courseType);
+    }
+
+    public void recordVideoPlay() {
+        customMetrics.incrementVideoPlay();
+    }
+}
+```
+
+### Grafana Dashboard Configuration
+
+```json
+{
+  "dashboard": {
+    "id": null,
+    "title": "Learning Platform Overview",
+    "tags": ["learning-platform"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Active Users",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "active_users_current",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                { "color": "green", "value": null },
+                { "color": "yellow", "value": 100 },
+                { "color": "red", "value": 500 }
+              ]
+            }
+          }
+        },
+        "gridPos": { "h": 8, "w": 6, "x": 0, "y": 0 }
+      },
+      {
+        "id": 2,
+        "title": "Request Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total[5m])",
+            "refId": "A",
+            "legendFormat": "{{method}} {{uri}}"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 12, "x": 6, "y": 0 }
+      },
+      {
+        "id": 3,
+        "title": "Response Time (95th percentile)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))",
+            "refId": "A"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 6, "x": 18, "y": 0 }
+      },
+      {
+        "id": 4,
+        "title": "Error Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total{status=~\"5..\"}[5m]) / rate(http_requests_total[5m])",
+            "refId": "A"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 }
+      },
+      {
+        "id": 5,
+        "title": "Course Enrollments",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "increase(course_enrollments_total[1h])",
+            "refId": "A",
+            "legendFormat": "{{course_type}}"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 }
+      },
+      {
+        "id": 6,
+        "title": "Database Connections",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "mongodb_connections_current",
+            "refId": "A"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 8, "x": 0, "y": 16 }
+      },
+      {
+        "id": 7,
+        "title": "Memory Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "jvm_memory_used_bytes / jvm_memory_max_bytes * 100",
+            "refId": "A",
+            "legendFormat": "{{area}}"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 8, "x": 8, "y": 16 }
+      },
+      {
+        "id": 8,
+        "title": "CPU Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(process_cpu_seconds_total[5m]) * 100",
+            "refId": "A"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 8, "x": 16, "y": 16 }
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "refresh": "30s"
+  }
+}
+```
+
+## Application Performance Monitoring with Jaeger
+
+### Distributed Tracing Configuration
+
+```java
+// src/main/java/com/learningplatform/config/TracingConfig.java
+package com.learningplatform.config;
+
+import io.jaegertracing.Configuration;
+import io.jaegertracing.internal.JaegerTracer;
+import io.opentracing.Tracer;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+
+@org.springframework.context.annotation.Configuration
+public class TracingConfig {
+
+    @Value("${jaeger.service-name:learning-platform}")
+    private String serviceName;
+
+    @Value("${jaeger.agent.host:localhost}")
+    private String jaegerAgentHost;
+
+    @Value("${jaeger.agent.port:14268}")
+    private int jaegerAgentPort;
+
+    @Bean
+    public Tracer jaegerTracer() {
+        Configuration.SamplerConfiguration samplerConfig =
+            Configuration.SamplerConfiguration.fromEnv()
+                .withType("const")
+                .withParam(1);
+
+        Configuration.ReporterConfiguration reporterConfig =
+            Configuration.ReporterConfiguration.fromEnv()
+                .withLogSpans(true)
+                .withSender(
+                    Configuration.SenderConfiguration.fromEnv()
+                        .withEndpoint(String.format("http://%s:%d/api/traces",
+                            jaegerAgentHost, jaegerAgentPort))
+                );
+
+        Configuration config = new Configuration(serviceName)
+            .withSampler(samplerConfig)
+            .withReporter(reporterConfig);
+
+        return config.getTracer();
+    }
+}
+
+// src/main/java/com/learningplatform/aspect/TracingAspect.java
+package com.learningplatform.aspect;
+
+import io.opentracing.Scope;
+import io.opentracing.Span;
+import io.opentracing.Tracer;
+import lombok.RequiredArgsConstructor;
+import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.annotation.Around;
+import org.aspectj.lang.annotation.Aspect;
+import org.springframework.stereotype.Component;
+
+@Aspect
+@Component
+@RequiredArgsConstructor
+public class TracingAspect {
+
+    private final Tracer tracer;
+
+    @Around("@annotation(org.springframework.web.bind.annotation.RequestMapping) || " +
+            "@annotation(org.springframework.web.bind.annotation.GetMapping) || " +
+            "@annotation(org.springframework.web.bind.annotation.PostMapping) || " +
+            "@annotation(org.springframework.web.bind.annotation.PutMapping) || " +
+            "@annotation(org.springframework.web.bind.annotation.DeleteMapping)")
+    public Object traceControllerMethods(ProceedingJoinPoint joinPoint) throws Throwable {
+        String operationName = String.format("%s.%s",
+            joinPoint.getTarget().getClass().getSimpleName(),
+            joinPoint.getSignature().getName());
+
+        Span span = tracer.buildSpan(operationName)
+            .withTag("component", "controller")
+            .withTag("class", joinPoint.getTarget().getClass().getName())
+            .withTag("method", joinPoint.getSignature().getName())
+            .start();
+
+        try (Scope scope = tracer.scopeManager().activate(span)) {
+            Object result = joinPoint.proceed();
+            span.setTag("success", true);
+            return result;
+        } catch (Exception e) {
+            span.setTag("error", true);
+            span.setTag("error.message", e.getMessage());
+            throw e;
+        } finally {
+            span.finish();
+        }
+    }
+
+    @Around("@annotation(org.springframework.stereotype.Service)")
+    public Object traceServiceMethods(ProceedingJoinPoint joinPoint) throws Throwable {
+        String operationName = String.format("%s.%s",
+            joinPoint.getTarget().getClass().getSimpleName(),
+            joinPoint.getSignature().getName());
+
+        Span span = tracer.buildSpan(operationName)
+            .withTag("component", "service")
+            .withTag("class", joinPoint.getTarget().getClass().getName())
+            .withTag("method", joinPoint.getSignature().getName())
+            .start();
+
+        try (Scope scope = tracer.scopeManager().activate(span)) {
+            return joinPoint.proceed();
+        } catch (Exception e) {
+            span.setTag("error", true);
+            span.setTag("error.message", e.getMessage());
+            throw e;
+        } finally {
+            span.finish();
+        }
+    }
+}
+```
+
+## Business Intelligence Analytics
+
+### User Analytics Service
+
+```java
+// src/main/java/com/learningplatform/model/analytics/UserAnalytics.java
+package com.learningplatform.model.analytics;
+
+import lombok.Data;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+
+import java.time.LocalDateTime;
+import java.util.Map;
+
+@Data
+@Document(collection = "user_analytics")
+public class UserAnalytics {
+    @Id
+    private String id;
+    private String userId;
+    private String sessionId;
+    private LocalDateTime timestamp;
+    private String eventType;
+    private String pageUrl;
+    private Map<String, Object> eventData;
+    private String userAgent;
+    private String ipAddress;
+    private Long duration;
+    private String referrer;
+}
+
+// src/main/java/com/learningplatform/model/analytics/CourseAnalytics.java
+package com.learningplatform.model.analytics;
+
+import lombok.Data;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+
+import java.time.LocalDateTime;
+import java.util.Map;
+
+@Data
+@Document(collection = "course_analytics")
+public class CourseAnalytics {
+    @Id
+    private String id;
+    private String courseId;
+    private String userId;
+    private String contentId;
+    private LocalDateTime timestamp;
+    private String eventType; // VIEW, COMPLETE, QUIZ_ATTEMPT, DOWNLOAD
+    private Double progressPercentage;
+    private Long timeSpent;
+    private Map<String, Object> additionalData;
+}
+
+// src/main/java/com/learningplatform/dto/analytics/AnalyticsReportDto.java
+package com.learningplatform.dto.analytics;
+
+import lombok.Data;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
+
+@Data
+public class AnalyticsReportDto {
+    private LocalDateTime generatedAt;
+    private String reportType;
+    private Map<String, Object> summary;
+    private List<Map<String, Object>> data;
+    private Map<String, Object> metadata;
+}
+
+// src/main/java/com/learningplatform/service/AnalyticsService.java
+package com.learningplatform.service;
+
+import com.learningplatform.dto.analytics.AnalyticsReportDto;
+import com.learningplatform.model.analytics.CourseAnalytics;
+import com.learningplatform.model.analytics.UserAnalytics;
+import com.learningplatform.repository.analytics.CourseAnalyticsRepository;
+import com.learningplatform.repository.analytics.UserAnalyticsRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+public class AnalyticsService {
+
+    private final UserAnalyticsRepository userAnalyticsRepository;
+    private final CourseAnalyticsRepository courseAnalyticsRepository;
+
+    public void trackUserEvent(String userId, String sessionId, String eventType,
+                              String pageUrl, Map<String, Object> eventData,
+                              String userAgent, String ipAddress) {
+        UserAnalytics analytics = new UserAnalytics();
+        analytics.setUserId(userId);
+        analytics.setSessionId(sessionId);
+        analytics.setTimestamp(LocalDateTime.now());
+        analytics.setEventType(eventType);
+        analytics.setPageUrl(pageUrl);
+        analytics.setEventData(eventData);
+        analytics.setUserAgent(userAgent);
+        analytics.setIpAddress(ipAddress);
+
+        userAnalyticsRepository.save(analytics);
+    }
+
+    public void trackCourseEvent(String courseId, String userId, String contentId,
+                                String eventType, Double progressPercentage,
+                                Long timeSpent, Map<String, Object> additionalData) {
+        CourseAnalytics analytics = new CourseAnalytics();
+        analytics.setCourseId(courseId);
+        analytics.setUserId(userId);
+        analytics.setContentId(contentId);
+        analytics.setTimestamp(LocalDateTime.now());
+        analytics.setEventType(eventType);
+        analytics.setProgressPercentage(progressPercentage);
+        analytics.setTimeSpent(timeSpent);
+        analytics.setAdditionalData(additionalData);
+
+        courseAnalyticsRepository.save(analytics);
+    }
+
+    public AnalyticsReportDto generateUserEngagementReport(LocalDateTime startDate,
+                                                          LocalDateTime endDate) {
+        List<UserAnalytics> userEvents = userAnalyticsRepository
+            .findByTimestampBetween(startDate, endDate);
+
+        Map<String, Long> eventCounts = userEvents.stream()
+            .collect(Collectors.groupingBy(
+                UserAnalytics::getEventType,
+                Collectors.counting()
+            ));
+
+        Map<String, Long> dailyActiveUsers = userEvents.stream()
+            .collect(Collectors.groupingBy(
+                event -> event.getTimestamp().toLocalDate().toString(),
+                Collectors.mapping(UserAnalytics::getUserId,
+                    Collectors.toSet())
+            )).entrySet().stream()
+            .collect(Collectors.toMap(
+                Map.Entry::getKey,
+                entry -> (long) entry.getValue().size()
+            ));
+
+        List<Map<String, Object>> topPages = userEvents.stream()
+            .filter(event -> "PAGE_VIEW".equals(event.getEventType()))
+            .collect(Collectors.groupingBy(
+                UserAnalytics::getPageUrl,
+                Collectors.counting()
+            )).entrySet().stream()
+            .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
+            .limit(10)
+            .map(entry -> {
+                Map<String, Object> pageData = new HashMap<>();
+                pageData.put("url", entry.getKey());
+                pageData.put("views", entry.getValue());
+                return pageData;
+            })
+            .collect(Collectors.toList());
+
+        AnalyticsReportDto report = new AnalyticsReportDto();
+        report.setGeneratedAt(LocalDateTime.now());
+        report.setReportType("USER_ENGAGEMENT");
+
+        Map<String, Object> summary = new HashMap<>();
+        summary.put("totalEvents", userEvents.size());
+        summary.put("uniqueUsers", userEvents.stream()
+            .map(UserAnalytics::getUserId)
+            .collect(Collectors.toSet()).size());
+        summary.put("eventCounts", eventCounts);
+        summary.put("averageDailyActiveUsers", dailyActiveUsers.values().stream()
+            .mapToLong(Long::longValue)
+            .average()
+            .orElse(0.0));
+        report.setSummary(summary);
+
+        List<Map<String, Object>> data = new ArrayList<>();
+        data.addAll(topPages);
+        report.setData(data);
+
+        Map<String, Object> metadata = new HashMap<>();
+        metadata.put("startDate", startDate.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+        metadata.put("endDate", endDate.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+        metadata.put("dailyActiveUsers", dailyActiveUsers);
+        report.setMetadata(metadata);
+
+        return report;
+    }
+
+    public AnalyticsReportDto generateCoursePerformanceReport(LocalDateTime startDate,
+                                                             LocalDateTime endDate) {
+        List<CourseAnalytics> courseEvents = courseAnalyticsRepository
+            .findByTimestampBetween(startDate, endDate);
+
+        Map<String, Long> courseEnrollments = courseEvents.stream()
+            .filter(event -> "ENROLL".equals(event.getEventType()))
+            .collect(Collectors.groupingBy(
+                CourseAnalytics::getCourseId,
+                Collectors.counting()
+            ));
+
+        Map<String, Long> courseCompletions = courseEvents.stream()
+            .filter(event -> "COMPLETE".equals(event.getEventType()))
+            .collect(Collectors.groupingBy(
+                CourseAnalytics::getCourseId,
+                Collectors.counting()
+            ));
+
+        Map<String, Double> completionRates = courseEnrollments.entrySet().stream()
+            .collect(Collectors.toMap(
+                Map.Entry::getKey,
+                entry -> {
+                    Long enrollments = entry.getValue();
+                    Long completions = courseCompletions.getOrDefault(entry.getKey(), 0L);
+                    return enrollments > 0 ? (double) completions / enrollments * 100 : 0.0;
+                }
+            ));
+
+        Map<String, Double> averageProgress = courseEvents.stream()
+            .filter(event -> event.getProgressPercentage() != null)
+            .collect(Collectors.groupingBy(
+                CourseAnalytics::getCourseId,
+                Collectors.averagingDouble(CourseAnalytics::getProgressPercentage)
+            ));
+
+        AnalyticsReportDto report = new AnalyticsReportDto();
+        report.setGeneratedAt(LocalDateTime.now());
+        report.setReportType("COURSE_PERFORMANCE");
+
+        Map<String, Object> summary = new HashMap<>();
+        summary.put("totalEnrollments", courseEnrollments.values().stream()
+            .mapToLong(Long::longValue).sum());
+        summary.put("totalCompletions", courseCompletions.values().stream()
+            .mapToLong(Long::longValue).sum());
+        summary.put("averageCompletionRate", completionRates.values().stream()
+            .mapToDouble(Double::doubleValue).average().orElse(0.0));
+        report.setSummary(summary);
+
+        List<Map<String, Object>> data = courseEnrollments.entrySet().stream()
+            .map(entry -> {
+                String courseId = entry.getKey();
+                Map<String, Object> courseData = new HashMap<>();
+                courseData.put("courseId", courseId);
+                courseData.put("enrollments", entry.getValue());
+                courseData.put("completions", courseCompletions.getOrDefault(courseId, 0L));
+                courseData.put("completionRate", completionRates.getOrDefault(courseId, 0.0));
+                courseData.put("averageProgress", averageProgress.getOrDefault(courseId, 0.0));
+                return courseData;
+            })
+            .sorted((a, b) -> Long.compare((Long) b.get("enrollments"), (Long) a.get("enrollments")))
+            .collect(Collectors.toList());
+        report.setData(data);
+
+        return report;
+    }
+
+    public AnalyticsReportDto generateLearningPathReport(String userId,
+                                                        LocalDateTime startDate,
+                                                        LocalDateTime endDate) {
+        List<CourseAnalytics> userCourseEvents = courseAnalyticsRepository
+            .findByUserIdAndTimestampBetween(userId, startDate, endDate);
+
+        Map<String, List<CourseAnalytics>> courseProgress = userCourseEvents.stream()
+            .collect(Collectors.groupingBy(CourseAnalytics::getCourseId));
+
+        List<Map<String, Object>> learningPath = courseProgress.entrySet().stream()
+            .map(entry -> {
+                String courseId = entry.getKey();
+                List<CourseAnalytics> events = entry.getValue()
+                    .stream()
+                    .sorted(Comparator.comparing(CourseAnalytics::getTimestamp))
+                    .collect(Collectors.toList());
+
+                Map<String, Object> courseProgress1 = new HashMap<>();
+                courseProgress1.put("courseId", courseId);
+                courseProgress1.put("startDate", events.get(0).getTimestamp());
+                courseProgress1.put("lastActivity", events.get(events.size() - 1).getTimestamp());
+                courseProgress1.put("totalTimeSpent", events.stream()
+                    .mapToLong(e -> e.getTimeSpent() != null ? e.getTimeSpent() : 0L)
+                    .sum());
+                courseProgress1.put("currentProgress", events.stream()
+                    .filter(e -> e.getProgressPercentage() != null)
+                    .mapToDouble(CourseAnalytics::getProgressPercentage)
+                    .max()
+                    .orElse(0.0));
+                courseProgress1.put("isCompleted", events.stream()
+                    .anyMatch(e -> "COMPLETE".equals(e.getEventType())));
+
+                return courseProgress1;
+            })
+            .sorted((a, b) -> ((LocalDateTime) a.get("startDate"))
+                .compareTo((LocalDateTime) b.get("startDate")))
+            .collect(Collectors.toList());
+
+        AnalyticsReportDto report = new AnalyticsReportDto();
+        report.setGeneratedAt(LocalDateTime.now());
+        report.setReportType("LEARNING_PATH");
+        report.setData(learningPath);
+
+        Map<String, Object> summary = new HashMap<>();
+        summary.put("totalCourses", learningPath.size());
+        summary.put("completedCourses", learningPath.stream()
+            .mapToInt(course -> (Boolean) course.get("isCompleted") ? 1 : 0)
+            .sum());
+        summary.put("totalTimeSpent", learningPath.stream()
+            .mapToLong(course -> (Long) course.get("totalTimeSpent"))
+            .sum());
+        summary.put("averageProgress", learningPath.stream()
+            .mapToDouble(course -> (Double) course.get("currentProgress"))
+            .average()
+            .orElse(0.0));
+        report.setSummary(summary);
+
+        return report;
+    }
+}
+```
+
+### Analytics Dashboard Controller
+
+```java
+// src/main/java/com/learningplatform/controller/AnalyticsController.java
+package com.learningplatform.controller;
+
+import com.learningplatform.dto.analytics.AnalyticsReportDto;
+import com.learningplatform.service.AnalyticsService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDateTime;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/analytics")
+@RequiredArgsConstructor
+@Tag(name = "Analytics", description = "Analytics and reporting endpoints")
+public class AnalyticsController {
+
+    private final AnalyticsService analyticsService;
+
+    @PostMapping("/track/user")
+    @Operation(summary = "Track user event")
+    public ResponseEntity<Void> trackUserEvent(
+            @RequestParam String userId,
+            @RequestParam String sessionId,
+            @RequestParam String eventType,
+            @RequestParam String pageUrl,
+            @RequestBody(required = false) Map<String, Object> eventData,
+            @RequestHeader("User-Agent") String userAgent,
+            @RequestHeader(value = "X-Forwarded-For", defaultValue = "unknown") String ipAddress) {
+
+        analyticsService.trackUserEvent(userId, sessionId, eventType, pageUrl,
+                                       eventData, userAgent, ipAddress);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/track/course")
+    @Operation(summary = "Track course event")
+    public ResponseEntity<Void> trackCourseEvent(
+            @RequestParam String courseId,
+            @RequestParam String userId,
+            @RequestParam(required = false) String contentId,
+            @RequestParam String eventType,
+            @RequestParam(required = false) Double progressPercentage,
+            @RequestParam(required = false) Long timeSpent,
+            @RequestBody(required = false) Map<String, Object> additionalData) {
+
+        analyticsService.trackCourseEvent(courseId, userId, contentId, eventType,
+                                         progressPercentage, timeSpent, additionalData);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/reports/user-engagement")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('INSTRUCTOR')")
+    @Operation(summary = "Get user engagement report")
+    public ResponseEntity<AnalyticsReportDto> getUserEngagementReport(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
+
+        AnalyticsReportDto report = analyticsService.generateUserEngagementReport(startDate, endDate);
+        return ResponseEntity.ok(report);
+    }
+
+    @GetMapping("/reports/course-performance")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('INSTRUCTOR')")
+    @Operation(summary = "Get course performance report")
+    public ResponseEntity<AnalyticsReportDto> getCoursePerformanceReport(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
+
+        AnalyticsReportDto report = analyticsService.generateCoursePerformanceReport(startDate, endDate);
+        return ResponseEntity.ok(report);
+    }
+
+    @GetMapping("/reports/learning-path/{userId}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('INSTRUCTOR') or #userId == authentication.name")
+    @Operation(summary = "Get user learning path report")
+    public ResponseEntity<AnalyticsReportDto> getLearningPathReport(
+            @PathVariable String userId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
+
+        AnalyticsReportDto report = analyticsService.generateLearningPathReport(userId, startDate, endDate);
+        return ResponseEntity.ok(report);
+    }
+}
+```
+
+## Frontend Analytics Integration
+
+### Analytics Hook
+
+```typescript
+// src/hooks/useAnalytics.ts
+import { useCallback, useEffect } from "react";
+import { useAuth } from "./useAuth";
+
+interface AnalyticsEvent {
+  eventType: string;
+  pageUrl?: string;
+  eventData?: Record<string, any>;
+}
+
+interface CourseEvent {
+  courseId: string;
+  contentId?: string;
+  eventType: string;
+  progressPercentage?: number;
+  timeSpent?: number;
+  additionalData?: Record<string, any>;
+}
+
+export const useAnalytics = () => {
+  const { user } = useAuth();
+  const sessionId = sessionStorage.getItem("sessionId") || generateSessionId();
+
+  const generateSessionId = useCallback(() => {
+    const id = Math.random().toString(36).substring(7);
+    sessionStorage.setItem("sessionId", id);
+    return id;
+  }, []);
+
+  const trackEvent = useCallback(
+    async (event: AnalyticsEvent) => {
+      if (!user) return;
+
+      try {
+        await fetch("/api/analytics/track/user", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: JSON.stringify({
+            userId: user.id,
+            sessionId,
+            eventType: event.eventType,
+            pageUrl: event.pageUrl || window.location.pathname,
+            eventData: event.eventData || {},
+          }),
+        });
+      } catch (error) {
+        console.error("Analytics tracking failed:", error);
+      }
+    },
+    [user, sessionId]
+  );
+
+  const trackCourseEvent = useCallback(
+    async (event: CourseEvent) => {
+      if (!user) return;
+
+      try {
+        await fetch("/api/analytics/track/course", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: JSON.stringify({
+            courseId: event.courseId,
+            userId: user.id,
+            contentId: event.contentId,
+            eventType: event.eventType,
+            progressPercentage: event.progressPercentage,
+            timeSpent: event.timeSpent,
+            additionalData: event.additionalData || {},
+          }),
+        });
+      } catch (error) {
+        console.error("Course analytics tracking failed:", error);
+      }
+    },
+    [user]
+  );
+
+  const trackPageView = useCallback(
+    (pageUrl?: string) => {
+      trackEvent({
+        eventType: "PAGE_VIEW",
+        pageUrl: pageUrl || window.location.pathname,
+      });
+    },
+    [trackEvent]
+  );
+
+  const trackVideoPlay = useCallback(
+    (courseId: string, contentId: string) => {
+      trackCourseEvent({
+        courseId,
+        contentId,
+        eventType: "VIDEO_PLAY",
+      });
+    },
+    [trackCourseEvent]
+  );
+
+  const trackVideoComplete = useCallback(
+    (courseId: string, contentId: string, timeSpent: number) => {
+      trackCourseEvent({
+        courseId,
+        contentId,
+        eventType: "VIDEO_COMPLETE",
+        timeSpent,
+      });
+    },
+    [trackCourseEvent]
+  );
+
+  const trackCourseProgress = useCallback(
+    (courseId: string, progressPercentage: number) => {
+      trackCourseEvent({
+        courseId,
+        eventType: "PROGRESS_UPDATE",
+        progressPercentage,
+      });
+    },
+    [trackCourseEvent]
+  );
+
+  const trackQuizAttempt = useCallback(
+    (courseId: string, quizId: string, score: number) => {
+      trackCourseEvent({
+        courseId,
+        contentId: quizId,
+        eventType: "QUIZ_ATTEMPT",
+        additionalData: { score },
+      });
+    },
+    [trackCourseEvent]
+  );
+
+  // Auto-track page views
+  useEffect(() => {
+    trackPageView();
+  }, [trackPageView]);
+
+  return {
+    trackEvent,
+    trackCourseEvent,
+    trackPageView,
+    trackVideoPlay,
+    trackVideoComplete,
+    trackCourseProgress,
+    trackQuizAttempt,
+  };
+};
+```
+
+### Analytics Dashboard Component
+
+```tsx
+// src/components/analytics/AnalyticsDashboard.tsx
+import React, { useState, useEffect } from "react";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+} from "chart.js";
+import { Line, Bar } from "react-chartjs-2";
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
+);
+
+interface AnalyticsData {
+  userEngagement?: any;
+  coursePerformance?: any;
+  learningPath?: any;
+}
+
+export const AnalyticsDashboard: React.FC = () => {
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsData>({});
+  const [dateRange, setDateRange] = useState({
+    startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .split("T")[0],
+    endDate: new Date().toISOString().split("T")[0],
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchAnalyticsData();
+  }, [dateRange]);
+
+  const fetchAnalyticsData = async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      const headers = {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      };
+
+      const [userEngagement, coursePerformance] = await Promise.all([
+        fetch(
+          `/api/analytics/reports/user-engagement?startDate=${dateRange.startDate}T00:00:00&endDate=${dateRange.endDate}T23:59:59`,
+          { headers }
+        ),
+        fetch(
+          `/api/analytics/reports/course-performance?startDate=${dateRange.startDate}T00:00:00&endDate=${dateRange.endDate}T23:59:59`,
+          { headers }
+        ),
+      ]);
+
+      const userEngagementData = await userEngagement.json();
+      const coursePerformanceData = await coursePerformance.json();
+
+      setAnalyticsData({
+        userEngagement: userEngagementData,
+        coursePerformance: coursePerformanceData,
+      });
+    } catch (error) {
+      console.error("Failed to fetch analytics data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const renderUserEngagementChart = () => {
+    if (!analyticsData.userEngagement?.metadata?.dailyActiveUsers) return null;
+
+    const dailyActiveUsers =
+      analyticsData.userEngagement.metadata.dailyActiveUsers;
+    const dates = Object.keys(dailyActiveUsers).sort();
+    const values = dates.map((date) => dailyActiveUsers[date]);
+
+    const data = {
+      labels: dates,
+      datasets: [
+        {
+          label: "Daily Active Users",
+          data: values,
+          borderColor: "rgb(59, 130, 246)",
+          backgroundColor: "rgba(59, 130, 246, 0.1)",
+          tension: 0.1,
+        },
+      ],
+    };
+
+    const options = {
+      responsive: true,
+      plugins: {
+        legend: {
+          position: "top" as const,
+        },
+        title: {
+          display: true,
+          text: "Daily Active Users",
+        },
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+        },
+      },
+    };
+
+    return <Line data={data} options={options} />;
+  };
+
+  const renderCoursePerformanceChart = () => {
+    if (!analyticsData.coursePerformance?.data) return null;
+
+    const courseData = analyticsData.coursePerformance.data.slice(0, 10);
+    const courseIds = courseData.map((course: any) => course.courseId);
+    const enrollments = courseData.map((course: any) => course.enrollments);
+    const completions = courseData.map((course: any) => course.completions);
+
+    const data = {
+      labels: courseIds,
+      datasets: [
+        {
+          label: "Enrollments",
+          data: enrollments,
+          backgroundColor: "rgba(34, 197, 94, 0.6)",
+        },
+        {
+          label: "Completions",
+          data: completions,
+          backgroundColor: "rgba(59, 130, 246, 0.6)",
+        },
+      ],
+    };
+
+    const options = {
+      responsive: true,
+      plugins: {
+        legend: {
+          position: "top" as const,
+        },
+        title: {
+          display: true,
+          text: "Course Performance (Top 10)",
+        },
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+        },
+      },
+    };
+
+    return <Bar data={data} options={options} />;
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6 bg-white rounded-lg shadow-md">
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-gray-900 mb-4">
+          Analytics Dashboard
+        </h2>
+
+        <div className="flex gap-4 mb-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Start Date
+            </label>
+            <input
+              type="date"
+              value={dateRange.startDate}
+              onChange={(e) =>
+                setDateRange((prev) => ({ ...prev, startDate: e.target.value }))
+              }
+              className="border border-gray-300 rounded-md px-3 py-2"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              End Date
+            </label>
+            <input
+              type="date"
+              value={dateRange.endDate}
+              onChange={(e) =>
+                setDateRange((prev) => ({ ...prev, endDate: e.target.value }))
+              }
+              className="border border-gray-300 rounded-md px-3 py-2"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="bg-blue-50 p-6 rounded-lg">
+          <h3 className="text-lg font-semibold text-blue-900 mb-2">
+            Total Events
+          </h3>
+          <p className="text-3xl font-bold text-blue-600">
+            {analyticsData.userEngagement?.summary?.totalEvents?.toLocaleString() ||
+              0}
+          </p>
+        </div>
+        <div className="bg-green-50 p-6 rounded-lg">
+          <h3 className="text-lg font-semibold text-green-900 mb-2">
+            Unique Users
+          </h3>
+          <p className="text-3xl font-bold text-green-600">
+            {analyticsData.userEngagement?.summary?.uniqueUsers?.toLocaleString() ||
+              0}
+          </p>
+        </div>
+        <div className="bg-purple-50 p-6 rounded-lg">
+          <h3 className="text-lg font-semibold text-purple-900 mb-2">
+            Total Enrollments
+          </h3>
+          <p className="text-3xl font-bold text-purple-600">
+            {analyticsData.coursePerformance?.summary?.totalEnrollments?.toLocaleString() ||
+              0}
+          </p>
+        </div>
+        <div className="bg-orange-50 p-6 rounded-lg">
+          <h3 className="text-lg font-semibold text-orange-900 mb-2">
+            Avg Completion Rate
+          </h3>
+          <p className="text-3xl font-bold text-orange-600">
+            {analyticsData.coursePerformance?.summary?.averageCompletionRate?.toFixed(
+              1
+            ) || 0}
+            %
+          </p>
+        </div>
+      </div>
+
+      {/* Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="bg-gray-50 p-6 rounded-lg">
+          {renderUserEngagementChart()}
+        </div>
+        <div className="bg-gray-50 p-6 rounded-lg">
+          {renderCoursePerformanceChart()}
+        </div>
+      </div>
+
+      {/* Top Pages Table */}
+      {analyticsData.userEngagement?.data && (
+        <div className="mt-8">
+          <h3 className="text-xl font-semibold text-gray-900 mb-4">
+            Top Pages
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="min-w-full bg-white border border-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    URL
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Views
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {analyticsData.userEngagement.data.map(
+                  (page: any, index: number) => (
+                    <tr key={index}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {page.url}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {page.views.toLocaleString()}
+                      </td>
+                    </tr>
+                  )
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+```
+
+## Alerting System
+
+### AlertManager Configuration
+
+```yaml
+# monitoring/alertmanager/alertmanager.yml
+global:
+  smtp_smarthost: "localhost:587"
+  smtp_from: "alerts@learning-platform.com"
+  smtp_auth_username: "alerts@learning-platform.com"
+  smtp_auth_password: "your-email-password"
+
+route:
+  group_by: ["alertname"]
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 1h
+  receiver: "web.hook"
+  routes:
+    - match:
+        severity: critical
+      receiver: critical-alerts
+    - match:
+        severity: warning
+      receiver: warning-alerts
+
+receivers:
+  - name: "web.hook"
+    webhook_configs:
+      - url: "http://127.0.0.1:5001/"
+
+  - name: "critical-alerts"
+    email_configs:
+      - to: "admin@learning-platform.com"
+        subject: "CRITICAL: {{ .GroupLabels.alertname }}"
+        body: |
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          {{ end }}
+    slack_configs:
+      - api_url: "https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK"
+        channel: "#critical-alerts"
+        title: "Critical Alert"
+        text: "{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}"
+
+  - name: "warning-alerts"
+    email_configs:
+      - to: "ops@learning-platform.com"
+        subject: "WARNING: {{ .GroupLabels.alertname }}"
+        body: |
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          {{ end }}
+
+inhibit_rules:
+  - source_match:
+      severity: "critical"
+    target_match:
+      severity: "warning"
+    equal: ["alertname", "dev", "instance"]
+```
+
+## Real-time Monitoring Dashboard
+
+### WebSocket Analytics Updates
+
+```java
+// src/main/java/com/learningplatform/websocket/AnalyticsWebSocketHandler.java
+package com.learningplatform.websocket;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
+import org.springframework.web.socket.CloseStatus;
+import org.springframework.web.socket.TextMessage;
+import org.springframework.web.socket.WebSocketSession;
+import org.springframework.web.socket.handler.TextWebSocketHandler;
+
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+
+@Component
+@RequiredArgsConstructor
+public class AnalyticsWebSocketHandler extends TextWebSocketHandler {
+
+    private final ObjectMapper objectMapper;
+    private final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+
+    @Override
+    public void afterConnectionEstablished(WebSocketSession session) throws Exception {
+        sessions.put(session.getId(), session);
+
+        // Start sending real-time updates
+        scheduler.scheduleAtFixedRate(() -> {
+            sendRealTimeMetrics(session);
+        }, 0, 5, TimeUnit.SECONDS);
+    }
+
+    @Override
+    public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
+        sessions.remove(session.getId());
+    }
+
+    private void sendRealTimeMetrics(WebSocketSession session) {
+        try {
+            Map<String, Object> metrics = Map.of(
+                "timestamp", System.currentTimeMillis(),
+                "activeUsers", getActiveUsersCount(),
+                "ongoingSessions", getActiveSessionsCount(),
+                "systemLoad", getSystemLoad(),
+                "memoryUsage", getMemoryUsage()
+            );
+
+            String message = objectMapper.writeValueAsString(metrics);
+            session.sendMessage(new TextMessage(message));
+        } catch (Exception e) {
+            // Handle error
+        }
+    }
+
+    private int getActiveUsersCount() {
+        // Implementation to get current active users
+        return 0;
+    }
+
+    private int getActiveSessionsCount() {
+        // Implementation to get active sessions
+        return 0;
+    }
+
+    private double getSystemLoad() {
+        // Implementation to get system load
+        return 0.0;
+    }
+
+    private double getMemoryUsage() {
+        // Implementation to get memory usage
+        return 0.0;
+    }
+}
+```
+
+## Key Monitoring Features Implemented
+
+1. **Comprehensive Metrics Collection**
+   - Custom application metrics with Micrometer
+   - Infrastructure metrics with Prometheus
+   - Business metrics and KPIs
+
+2. **Advanced Analytics**
+   - User behavior tracking and analysis
+   - Course performance and engagement metrics
+   - Learning path optimization insights
+
+3. **Real-time Monitoring**
+   - Live dashboard updates via WebSocket
+   - Distributed tracing with Jaeger
+   - Performance bottleneck identification
+
+4. **Intelligent Alerting**
+   - Multi-channel alert delivery
+   - Severity-based routing
+   - Alert suppression and escalation
+
+5. **Business Intelligence**
+   - Interactive analytics dashboards
+   - Automated report generation
+   - Data-driven decision support
+
+This comprehensive monitoring and analytics implementation provides complete visibility into the online learning platform's performance, user behavior, and business metrics, enabling data-driven optimization and proactive issue resolution.
+
+[← Previous: Deployment](/proj-online-learning-platform-website/23-deployment)
+
+<BackToTop />
