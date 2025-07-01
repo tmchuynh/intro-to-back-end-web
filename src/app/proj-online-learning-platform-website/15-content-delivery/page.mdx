@@ -1,0 +1,896 @@
+import BackToTop from "@/components/BackToTop";
+
+# Content Delivery System
+
+## Table of Contents
+
+## Introduction
+
+In this module, we'll implement a robust content delivery system that handles various types of learning materials including video lectures, documents, interactive content, and downloadable resources. We'll also implement streaming, caching, and progressive content loading.
+
+## Content Types
+
+### Supported Content Types
+
+1. **Video Content**
+   - Streaming video lectures
+   - Video chapters and segments
+   - Subtitles and captions
+   - Multiple quality options
+
+2. **Document Content**
+   - PDF materials
+   - Interactive presentations
+   - Reading materials
+   - Downloadable resources
+
+3. **Interactive Content**
+   - Embedded content
+   - Interactive exercises
+   - Code playgrounds
+   - Simulations
+
+4. **Audio Content**
+   - Audio lectures
+   - Podcasts
+   - Voice notes
+
+## Backend Implementation
+
+### Content Model
+
+```java
+@Document(collection = "content")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class Content {
+    @Id
+    private String id;
+
+    private String courseId;
+    private String moduleId;
+    private String lessonId;
+
+    private String title;
+    private String description;
+    private ContentType type;
+    private ContentStatus status;
+
+    // File information
+    private String fileName;
+    private String originalFileName;
+    private String mimeType;
+    private Long fileSize;
+    private String fileUrl;
+    private String thumbnailUrl;
+
+    // Video-specific fields
+    private Long duration; // in seconds
+    private String videoQuality;
+    private List<VideoQuality> availableQualities;
+    private List<Subtitle> subtitles;
+
+    // Document-specific fields
+    private Integer pageCount;
+    private String textContent; // for search
+
+    // Access control
+    private boolean isPreview; // Can be accessed without enrollment
+    private boolean isDownloadable;
+    private ContentAccess accessLevel;
+
+    // Metadata
+    private Map<String, Object> metadata;
+    private List<String> tags;
+
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+    private String uploadedBy;
+}
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class VideoQuality {
+    private String quality; // 360p, 720p, 1080p
+    private String url;
+    private Long bitrate;
+    private String codec;
+}
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class Subtitle {
+    private String language;
+    private String languageCode;
+    private String url;
+    private String format; // SRT, VTT, etc.
+}
+
+public enum ContentType {
+    VIDEO,
+    DOCUMENT,
+    AUDIO,
+    IMAGE,
+    INTERACTIVE,
+    ARCHIVE,
+    OTHER
+}
+
+public enum ContentStatus {
+    UPLOADING,
+    PROCESSING,
+    READY,
+    FAILED,
+    ARCHIVED
+}
+
+public enum ContentAccess {
+    PUBLIC,
+    ENROLLED_ONLY,
+    PREMIUM_ONLY
+}
+```
+
+### Content Service
+
+```java
+@Service
+public class ContentService {
+
+    @Autowired
+    private ContentRepository contentRepository;
+
+    @Autowired
+    private FileStorageService fileStorageService;
+
+    @Autowired
+    private VideoProcessingService videoProcessingService;
+
+    @Autowired
+    private DocumentProcessingService documentProcessingService;
+
+    @Autowired
+    private EnrollmentService enrollmentService;
+
+    // Upload content
+    @Async
+    public CompletableFuture<Content> uploadContent(
+            MultipartFile file,
+            ContentUploadRequest request,
+            String instructorId) {
+
+        try {
+            // Validate file
+            validateFile(file, request.getType());
+
+            // Create content record
+            Content content = Content.builder()
+                .courseId(request.getCourseId())
+                .moduleId(request.getModuleId())
+                .lessonId(request.getLessonId())
+                .title(request.getTitle())
+                .description(request.getDescription())
+                .type(request.getType())
+                .status(ContentStatus.UPLOADING)
+                .originalFileName(file.getOriginalFilename())
+                .fileName(generateUniqueFileName(file.getOriginalFilename()))
+                .mimeType(file.getContentType())
+                .fileSize(file.getSize())
+                .isPreview(request.isPreview())
+                .isDownloadable(request.isDownloadable())
+                .accessLevel(request.getAccessLevel())
+                .uploadedBy(instructorId)
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
+
+            content = contentRepository.save(content);
+
+            // Upload file to storage
+            String fileUrl = fileStorageService.uploadFile(file, content.getFileName());
+            content.setFileUrl(fileUrl);
+
+            // Update status to processing
+            content.setStatus(ContentStatus.PROCESSING);
+            content = contentRepository.save(content);
+
+            // Process content based on type
+            switch (request.getType()) {
+                case VIDEO:
+                    processVideoContent(content, file);
+                    break;
+                case DOCUMENT:
+                    processDocumentContent(content, file);
+                    break;
+                case AUDIO:
+                    processAudioContent(content, file);
+                    break;
+                default:
+                    // Mark as ready for other types
+                    content.setStatus(ContentStatus.READY);
+                    contentRepository.save(content);
+            }
+
+            return CompletableFuture.completedFuture(content);
+
+        } catch (Exception e) {
+            log.error("Failed to upload content", e);
+            throw new ContentUploadException("Failed to upload content: " + e.getMessage());
+        }
+    }
+
+    // Get content with access control
+    public Content getContent(String contentId, String userId) {
+        Content content = contentRepository.findById(contentId)
+            .orElseThrow(() -> new ContentNotFoundException("Content not found"));
+
+        // Check access permissions
+        if (!hasAccessToContent(content, userId)) {
+            throw new UnauthorizedException("Access denied to this content");
+        }
+
+        return content;
+    }
+
+    // Stream video content
+    public ResponseEntity<Resource> streamVideo(
+            String contentId,
+            String userId,
+            HttpServletRequest request) {
+
+        Content content = getContent(contentId, userId);
+
+        if (content.getType() != ContentType.VIDEO) {
+            throw new InvalidContentTypeException("Content is not a video");
+        }
+
+        try {
+            Resource videoResource = fileStorageService.getFileAsResource(content.getFileName());
+
+            String contentType = content.getMimeType();
+            long contentLength = content.getFileSize();
+
+            // Handle range requests for video streaming
+            String rangeHeader = request.getHeader("Range");
+            if (rangeHeader != null && rangeHeader.startsWith("bytes=")) {
+                return handleRangeRequest(videoResource, rangeHeader, contentType, contentLength);
+            }
+
+            return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(contentType))
+                .contentLength(contentLength)
+                .header("Accept-Ranges", "bytes")
+                .body(videoResource);
+
+        } catch (Exception e) {
+            throw new ContentDeliveryException("Failed to stream video: " + e.getMessage());
+        }
+    }
+
+    // Download content
+    public ResponseEntity<Resource> downloadContent(String contentId, String userId) {
+        Content content = getContent(contentId, userId);
+
+        if (!content.isDownloadable()) {
+            throw new UnauthorizedException("This content is not downloadable");
+        }
+
+        try {
+            Resource resource = fileStorageService.getFileAsResource(content.getFileName());
+
+            return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .header("Content-Disposition",
+                    "attachment; filename=\"" + content.getOriginalFileName() + "\"")
+                .body(resource);
+
+        } catch (Exception e) {
+            throw new ContentDeliveryException("Failed to download content: " + e.getMessage());
+        }
+    }
+
+    // Get content by lesson
+    public List<Content> getContentByLesson(String lessonId, String userId) {
+        List<Content> allContent = contentRepository.findByLessonIdOrderByCreatedAt(lessonId);
+
+        return allContent.stream()
+            .filter(content -> hasAccessToContent(content, userId))
+            .collect(Collectors.toList());
+    }
+
+    // Delete content
+    public void deleteContent(String contentId, String instructorId) {
+        Content content = contentRepository.findById(contentId)
+            .orElseThrow(() -> new ContentNotFoundException("Content not found"));
+
+        // Verify instructor owns the course
+        if (!courseService.isInstructorOfCourse(content.getCourseId(), instructorId)) {
+            throw new UnauthorizedException("You can only delete content from your own courses");
+        }
+
+        // Delete file from storage
+        fileStorageService.deleteFile(content.getFileName());
+
+        // Delete content record
+        contentRepository.delete(content);
+    }
+
+    private boolean hasAccessToContent(Content content, String userId) {
+        // Public content
+        if (content.getAccessLevel() == ContentAccess.PUBLIC || content.isPreview()) {
+            return true;
+        }
+
+        // Check enrollment
+        if (content.getAccessLevel() == ContentAccess.ENROLLED_ONLY) {
+            return enrollmentService.isStudentEnrolledInCourse(userId, content.getCourseId());
+        }
+
+        // Premium content (implement premium logic)
+        if (content.getAccessLevel() == ContentAccess.PREMIUM_ONLY) {
+            return enrollmentService.hasStudentPremiumAccess(userId, content.getCourseId());
+        }
+
+        return false;
+    }
+
+    private void processVideoContent(Content content, MultipartFile file) {
+        // Generate thumbnail
+        String thumbnailUrl = videoProcessingService.generateThumbnail(content.getFileName());
+        content.setThumbnailUrl(thumbnailUrl);
+
+        // Extract video metadata
+        VideoMetadata metadata = videoProcessingService.extractMetadata(content.getFileName());
+        content.setDuration(metadata.getDuration());
+
+        // Generate multiple quality versions
+        List<VideoQuality> qualities = videoProcessingService.generateQualities(content.getFileName());
+        content.setAvailableQualities(qualities);
+
+        // Extract subtitles if present
+        List<Subtitle> subtitles = videoProcessingService.extractSubtitles(content.getFileName());
+        content.setSubtitles(subtitles);
+
+        content.setStatus(ContentStatus.READY);
+        contentRepository.save(content);
+    }
+
+    private void processDocumentContent(Content content, MultipartFile file) {
+        try {
+            // Extract text for search
+            String textContent = documentProcessingService.extractText(content.getFileName());
+            content.setTextContent(textContent);
+
+            // Get page count for PDFs
+            if (content.getMimeType().equals("application/pdf")) {
+                Integer pageCount = documentProcessingService.getPageCount(content.getFileName());
+                content.setPageCount(pageCount);
+
+                // Generate thumbnail for first page
+                String thumbnailUrl = documentProcessingService.generateThumbnail(content.getFileName());
+                content.setThumbnailUrl(thumbnailUrl);
+            }
+
+            content.setStatus(ContentStatus.READY);
+            contentRepository.save(content);
+
+        } catch (Exception e) {
+            content.setStatus(ContentStatus.FAILED);
+            contentRepository.save(content);
+            throw new ContentProcessingException("Failed to process document: " + e.getMessage());
+        }
+    }
+
+    private ResponseEntity<Resource> handleRangeRequest(
+            Resource resource,
+            String rangeHeader,
+            String contentType,
+            long contentLength) throws IOException {
+
+        String[] ranges = rangeHeader.substring(6).split("-");
+        long start = Long.parseLong(ranges[0]);
+        long end = ranges.length > 1 && !ranges[1].isEmpty()
+            ? Long.parseLong(ranges[1])
+            : contentLength - 1;
+
+        long rangeLength = end - start + 1;
+
+        InputStream inputStream = resource.getInputStream();
+        inputStream.skip(start);
+
+        return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT)
+            .contentType(MediaType.parseMediaType(contentType))
+            .header("Content-Range", "bytes " + start + "-" + end + "/" + contentLength)
+            .header("Accept-Ranges", "bytes")
+            .header("Content-Length", String.valueOf(rangeLength))
+            .body(new InputStreamResource(inputStream));
+    }
+}
+```
+
+### Content Controller
+
+```java
+@RestController
+@RequestMapping("/api/content")
+public class ContentController {
+
+    @Autowired
+    private ContentService contentService;
+
+    @PostMapping("/upload")
+    @PreAuthorize("hasRole('INSTRUCTOR')")
+    public ResponseEntity<Content> uploadContent(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("courseId") String courseId,
+            @RequestParam("moduleId") String moduleId,
+            @RequestParam("lessonId") String lessonId,
+            @RequestParam("title") String title,
+            @RequestParam("description") String description,
+            @RequestParam("type") ContentType type,
+            @RequestParam(value = "isPreview", defaultValue = "false") boolean isPreview,
+            @RequestParam(value = "isDownloadable", defaultValue = "true") boolean isDownloadable,
+            @RequestParam(value = "accessLevel", defaultValue = "ENROLLED_ONLY") ContentAccess accessLevel,
+            Authentication authentication) {
+
+        ContentUploadRequest request = ContentUploadRequest.builder()
+            .courseId(courseId)
+            .moduleId(moduleId)
+            .lessonId(lessonId)
+            .title(title)
+            .description(description)
+            .type(type)
+            .isPreview(isPreview)
+            .isDownloadable(isDownloadable)
+            .accessLevel(accessLevel)
+            .build();
+
+        String instructorId = authentication.getName();
+
+        try {
+            CompletableFuture<Content> contentFuture = contentService.uploadContent(file, request, instructorId);
+            Content content = contentFuture.get();
+            return ResponseEntity.status(HttpStatus.CREATED).body(content);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @GetMapping("/{contentId}")
+    public ResponseEntity<Content> getContent(
+            @PathVariable String contentId,
+            Authentication authentication) {
+
+        String userId = authentication.getName();
+        Content content = contentService.getContent(contentId, userId);
+        return ResponseEntity.ok(content);
+    }
+
+    @GetMapping("/{contentId}/stream")
+    public ResponseEntity<Resource> streamContent(
+            @PathVariable String contentId,
+            HttpServletRequest request,
+            Authentication authentication) {
+
+        String userId = authentication.getName();
+        return contentService.streamVideo(contentId, userId, request);
+    }
+
+    @GetMapping("/{contentId}/download")
+    public ResponseEntity<Resource> downloadContent(
+            @PathVariable String contentId,
+            Authentication authentication) {
+
+        String userId = authentication.getName();
+        return contentService.downloadContent(contentId, userId);
+    }
+
+    @GetMapping("/lesson/{lessonId}")
+    public ResponseEntity<List<Content>> getContentByLesson(
+            @PathVariable String lessonId,
+            Authentication authentication) {
+
+        String userId = authentication.getName();
+        List<Content> content = contentService.getContentByLesson(lessonId, userId);
+        return ResponseEntity.ok(content);
+    }
+
+    @DeleteMapping("/{contentId}")
+    @PreAuthorize("hasRole('INSTRUCTOR')")
+    public ResponseEntity<Void> deleteContent(
+            @PathVariable String contentId,
+            Authentication authentication) {
+
+        String instructorId = authentication.getName();
+        contentService.deleteContent(contentId, instructorId);
+        return ResponseEntity.noContent().build();
+    }
+}
+```
+
+## Frontend Implementation
+
+### Video Player Component
+
+```jsx
+import React, { useRef, useEffect, useState } from "react";
+import {
+  Play,
+  Pause,
+  Volume2,
+  VolumeX,
+  Maximize,
+  Settings,
+} from "lucide-react";
+
+const VideoPlayer = ({ content, onProgress, onComplete }) => {
+  const videoRef = useRef(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [volume, setVolume] = useState(1);
+  const [isMuted, setIsMuted] = useState(false);
+  const [showControls, setShowControls] = useState(true);
+  const [quality, setQuality] = useState("auto");
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const handleTimeUpdate = () => {
+      const current = video.currentTime;
+      setCurrentTime(current);
+
+      if (onProgress) {
+        const progress = (current / video.duration) * 100;
+        onProgress(progress);
+      }
+    };
+
+    const handleLoadedMetadata = () => {
+      setDuration(video.duration);
+    };
+
+    const handleEnded = () => {
+      setIsPlaying(false);
+      if (onComplete) {
+        onComplete();
+      }
+    };
+
+    video.addEventListener("timeupdate", handleTimeUpdate);
+    video.addEventListener("loadedmetadata", handleLoadedMetadata);
+    video.addEventListener("ended", handleEnded);
+
+    return () => {
+      video.removeEventListener("timeupdate", handleTimeUpdate);
+      video.removeEventListener("loadedmetadata", handleLoadedMetadata);
+      video.removeEventListener("ended", handleEnded);
+    };
+  }, [onProgress, onComplete]);
+
+  const togglePlayPause = () => {
+    const video = videoRef.current;
+    if (isPlaying) {
+      video.pause();
+    } else {
+      video.play();
+    }
+    setIsPlaying(!isPlaying);
+  };
+
+  const handleSeek = (e) => {
+    const video = videoRef.current;
+    const rect = e.target.getBoundingClientRect();
+    const pos = (e.clientX - rect.left) / rect.width;
+    video.currentTime = pos * video.duration;
+  };
+
+  const toggleMute = () => {
+    const video = videoRef.current;
+    video.muted = !isMuted;
+    setIsMuted(!isMuted);
+  };
+
+  const handleVolumeChange = (e) => {
+    const newVolume = parseFloat(e.target.value);
+    const video = videoRef.current;
+    video.volume = newVolume;
+    setVolume(newVolume);
+    setIsMuted(newVolume === 0);
+  };
+
+  const toggleFullscreen = () => {
+    const video = videoRef.current;
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else {
+      video.requestFullscreen();
+    }
+  };
+
+  const formatTime = (time) => {
+    const minutes = Math.floor(time / 60);
+    const seconds = Math.floor(time % 60);
+    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+  };
+
+  const getVideoSource = () => {
+    if (quality === "auto" || !content.availableQualities) {
+      return content.fileUrl;
+    }
+
+    const selectedQuality = content.availableQualities.find(
+      (q) => q.quality === quality
+    );
+    return selectedQuality ? selectedQuality.url : content.fileUrl;
+  };
+
+  return (
+    <div
+      className="relative bg-black rounded-lg overflow-hidden group"
+      onMouseEnter={() => setShowControls(true)}
+      onMouseLeave={() => setShowControls(false)}
+    >
+      <video
+        ref={videoRef}
+        src={getVideoSource()}
+        className="w-full h-auto"
+        onClick={togglePlayPause}
+      >
+        {content.subtitles &&
+          content.subtitles.map((subtitle) => (
+            <track
+              key={subtitle.languageCode}
+              kind="subtitles"
+              src={subtitle.url}
+              srcLang={subtitle.languageCode}
+              label={subtitle.language}
+            />
+          ))}
+      </video>
+
+      {/* Video Controls */}
+      <div
+        className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4 transition-opacity duration-300 ${
+          showControls ? "opacity-100" : "opacity-0"
+        }`}
+      >
+        {/* Progress Bar */}
+        <div
+          className="w-full h-2 bg-gray-600 rounded-full mb-4 cursor-pointer"
+          onClick={handleSeek}
+        >
+          <div
+            className="h-full bg-blue-500 rounded-full"
+            style={{ width: `${(currentTime / duration) * 100}%` }}
+          />
+        </div>
+
+        <div className="flex items-center justify-between text-white">
+          <div className="flex items-center space-x-4">
+            <button onClick={togglePlayPause} className="hover:text-blue-400">
+              {isPlaying ? <Pause size={24} /> : <Play size={24} />}
+            </button>
+
+            <div className="flex items-center space-x-2">
+              <button onClick={toggleMute} className="hover:text-blue-400">
+                {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
+              </button>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.1"
+                value={isMuted ? 0 : volume}
+                onChange={handleVolumeChange}
+                className="w-20"
+              />
+            </div>
+
+            <span className="text-sm">
+              {formatTime(currentTime)} / {formatTime(duration)}
+            </span>
+          </div>
+
+          <div className="flex items-center space-x-4">
+            {/* Quality Selector */}
+            {content.availableQualities &&
+              content.availableQualities.length > 0 && (
+                <select
+                  value={quality}
+                  onChange={(e) => setQuality(e.target.value)}
+                  className="bg-gray-800 text-white rounded px-2 py-1 text-sm"
+                >
+                  <option value="auto">Auto</option>
+                  {content.availableQualities.map((q) => (
+                    <option key={q.quality} value={q.quality}>
+                      {q.quality}
+                    </option>
+                  ))}
+                </select>
+              )}
+
+            <button onClick={toggleFullscreen} className="hover:text-blue-400">
+              <Maximize size={20} />
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default VideoPlayer;
+```
+
+### Content Viewer Component
+
+```jsx
+import React, { useState, useEffect } from "react";
+import { Download, ExternalLink } from "lucide-react";
+import VideoPlayer from "./VideoPlayer";
+import { contentService } from "../services/contentService";
+
+const ContentViewer = ({ content, onProgress, onComplete }) => {
+  const [loading, setLoading] = useState(false);
+
+  const handleDownload = async () => {
+    if (!content.isDownloadable) return;
+
+    try {
+      setLoading(true);
+      const response = await contentService.downloadContent(content.id);
+
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = content.originalFileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Download failed:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const renderContent = () => {
+    switch (content.type) {
+      case "VIDEO":
+        return (
+          <VideoPlayer
+            content={content}
+            onProgress={onProgress}
+            onComplete={onComplete}
+          />
+        );
+
+      case "DOCUMENT":
+        return (
+          <div className="border rounded-lg overflow-hidden">
+            <iframe
+              src={content.fileUrl}
+              className="w-full h-96"
+              title={content.title}
+            />
+          </div>
+        );
+
+      case "AUDIO":
+        return (
+          <audio controls className="w-full">
+            <source src={content.fileUrl} type={content.mimeType} />
+            Your browser does not support the audio element.
+          </audio>
+        );
+
+      case "IMAGE":
+        return (
+          <img
+            src={content.fileUrl}
+            alt={content.title}
+            className="max-w-full h-auto rounded-lg"
+          />
+        );
+
+      default:
+        return (
+          <div className="bg-gray-100 p-8 rounded-lg text-center">
+            <p className="text-gray-600 mb-4">
+              This content type is not supported for preview.
+            </p>
+            {content.isDownloadable && (
+              <button
+                onClick={handleDownload}
+                disabled={loading}
+                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+              >
+                <Download size={20} className="inline mr-2" />
+                Download File
+              </button>
+            )}
+          </div>
+        );
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-between items-start">
+        <div>
+          <h3 className="text-xl font-semibold text-gray-900">
+            {content.title}
+          </h3>
+          {content.description && (
+            <p className="text-gray-600 mt-2">{content.description}</p>
+          )}
+        </div>
+
+        {content.isDownloadable && (
+          <button
+            onClick={handleDownload}
+            disabled={loading}
+            className="bg-gray-100 text-gray-700 px-3 py-2 rounded hover:bg-gray-200 flex items-center gap-2"
+          >
+            <Download size={16} />
+            Download
+          </button>
+        )}
+      </div>
+
+      {renderContent()}
+
+      {content.fileSize && (
+        <div className="text-sm text-gray-500">
+          File size: {(content.fileSize / 1024 / 1024).toFixed(2)} MB
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default ContentViewer;
+```
+
+## Key Features Implemented
+
+1. **Multi-format Content Support**
+   - Video streaming with quality options
+   - Document viewing and download
+   - Audio playback
+   - Image display
+
+2. **Advanced Video Features**
+   - Range request support for streaming
+   - Multiple quality options
+   - Subtitle support
+   - Thumbnail generation
+
+3. **Access Control**
+   - Enrollment-based access
+   - Preview content
+   - Downloadable restrictions
+
+4. **Performance Optimization**
+   - Async content processing
+   - Streaming for large files
+   - Caching support
+
+5. **User Experience**
+   - Responsive video player
+   - Progress tracking
+   - Download functionality
+
+[← Previous: Course Management](/proj-online-learning-platform-website/14-course-management) | [Next: Progress Tracking →](/proj-online-learning-platform-website/16-progress-tracking)
+
+<BackToTop />
