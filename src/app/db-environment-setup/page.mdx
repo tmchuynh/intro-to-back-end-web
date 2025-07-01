@@ -1160,78 +1160,83 @@ module.exports = config[process.env.NODE_ENV || "development"];
 ```
 
 <BackToTop />
-#### Configuration Validation ```javascript // config/validation.js const Joi =
-require('joi');
+#### Configuration Validation
+
+```javascript
+// config/validation.js const Joi =
+require("joi");
 
 const envSchema = Joi.object({
-NODE_ENV: Joi.string()
-.valid('development', 'test', 'staging', 'production')
-.default('development'),
+  NODE_ENV: Joi.string()
+    .valid("development", "test", "staging", "production")
+    .default("development"),
 
-// Database configuration
-DB_HOST: Joi.string().required(),
-DB_PORT: Joi.number().port().default(5432),
-DB_NAME: Joi.string().required(),
-DB_USER: Joi.string().required(),
-DB_PASSWORD: Joi.string().required(),
+  // Database configuration
+  DB_HOST: Joi.string().required(),
+  DB_PORT: Joi.number().port().default(5432),
+  DB_NAME: Joi.string().required(),
+  DB_USER: Joi.string().required(),
+  DB_PASSWORD: Joi.string().required(),
 
-// SSL configuration (required for production)
-DB_SSL_CA: Joi.when('NODE_ENV', {
-is: 'production',
-then: Joi.string().required(),
-otherwise: Joi.string().optional()
-}),
+  // SSL configuration (required for production)
+  DB_SSL_CA: Joi.when("NODE_ENV", {
+    is: "production",
+    then: Joi.string().required(),
+    otherwise: Joi.string().optional(),
+  }),
 
-// Redis configuration
-REDIS_URL: Joi.string().uri().required(),
-REDIS_PASSWORD: Joi.string().when('NODE_ENV', {
-is: Joi.string().valid('staging', 'production'),
-then: Joi.required(),
-otherwise: Joi.optional()
-}),
+  // Redis configuration
+  REDIS_URL: Joi.string().uri().required(),
+  REDIS_PASSWORD: Joi.string().when("NODE_ENV", {
+    is: Joi.string().valid("staging", "production"),
+    then: Joi.required(),
+    otherwise: Joi.optional(),
+  }),
 
-// Application configuration
-PORT: Joi.number().port().default(3000),
-LOG_LEVEL: Joi.string()
-.valid('error', 'warn', 'info', 'debug')
-.default('info'),
+  // Application configuration
+  PORT: Joi.number().port().default(3000),
+  LOG_LEVEL: Joi.string()
+    .valid("error", "warn", "info", "debug")
+    .default("info"),
 
-// Security
-JWT_SECRET: Joi.string().min(32).required(),
-ENCRYPTION_KEY: Joi.string().length(32).required()
+  // Security
+  JWT_SECRET: Joi.string().min(32).required(),
+  ENCRYPTION_KEY: Joi.string().length(32).required(),
 }).unknown();
 
 const { error, value: envVars } = envSchema.validate(process.env);
 
 if (error) {
-throw new Error(`Config validation error: ${error.message}`);
+  throw new Error(`Config validation error: ${error.message}`);
 }
 
 module.exports = envVars;
-
-````
+```
 
 <BackToTop />
 
 ### Secrets Management
 
 #### AWS Secrets Manager Integration
+
 ```javascript
 // utils/secrets.js
-const AWS = require('aws-sdk');
+const AWS = require("aws-sdk");
 
 class SecretsManager {
   constructor() {
     this.client = new AWS.SecretsManager({
-      region: process.env.AWS_REGION || 'us-east-1'
+      region: process.env.AWS_REGION || "us-east-1",
     });
   }
 
   async getSecret(secretName) {
     try {
-      const result = await this.client.getSecretValue({
-        SecretId: secretName
-      }).promise();
+      const result = await this.client
+        .getSecretValue({
+          SecretId: secretName,
+        })
+        .promise();
 
       return JSON.parse(result.SecretString);
     } catch (error) {
@@ -1247,12 +1252,13 @@ class SecretsManager {
 }
 
 // config/database-with-secrets.js
-const SecretsManager = require('../utils/secrets');
+const SecretsManager = require("../utils/secrets");
 
 async function getDatabaseConfig() {
-  if (process.env.NODE_ENV === 'production') {
+  if (process.env.NODE_ENV === "production") {
     const secretsManager = new SecretsManager();
-    const credentials = await secretsManager.getDatabaseCredentials('production');
+    const credentials =
+      await secretsManager.getDatabaseCredentials("production");
 
     return {
       host: credentials.host,
@@ -1263,65 +1269,72 @@ async function getDatabaseConfig() {
       ssl: {
         require: true,
         rejectUnauthorized: true,
-        ca: credentials.ssl_ca
-      }
+        ca: credentials.ssl_ca,
+      },
     };
   }
 
   // Use environment variables for development
-  return require('./database');
+  return require("./database");
 }
 
 module.exports = getDatabaseConfig;
-````
+```
 
 <BackToTop />
-#### HashiCorp Vault Integration ```javascript // utils/vault.js const vault =
-require('node-vault');
+#### HashiCorp Vault Integration
+
+```javascript
+// utils/vault.js const vault =
+require("node-vault");
 
 class VaultClient {
-constructor() {
-this.client = vault({
-apiVersion: 'v1',
-endpoint: process.env.VAULT_ENDPOINT,
-token: process.env.VAULT_TOKEN
-});
-}
+  constructor() {
+    this.client = vault({
+      apiVersion: "v1",
+      endpoint: process.env.VAULT_ENDPOINT,
+      token: process.env.VAULT_TOKEN,
+    });
+  }
 
-async getDatabaseCredentials(environment) {
-try {
-const result = await this.client.read(`secret/data/myapp/${environment}/database`);
-return result.data.data;
-} catch (error) {
-console.error('Error reading from Vault:', error);
-throw error;
-}
-}
+  async getDatabaseCredentials(environment) {
+    try {
+      const result = await this.client.read(
+        `secret/data/myapp/${environment}/database`
+      );
+      return result.data.data;
+    } catch (error) {
+      console.error("Error reading from Vault:", error);
+      throw error;
+    }
+  }
 
-async getTemporaryDatabaseCredentials(environment, ttl = '1h') {
-try {
-const result = await this.client.read(`database/creds/myapp-${environment}-role`);
-return {
-username: result.data.username,
-password: result.data.password,
-lease_duration: result.lease_duration
-};
-} catch (error) {
-console.error('Error getting temporary credentials:', error);
-throw error;
-}
-}
+  async getTemporaryDatabaseCredentials(environment, ttl = "1h") {
+    try {
+      const result = await this.client.read(
+        `database/creds/myapp-${environment}-role`
+      );
+      return {
+        username: result.data.username,
+        password: result.data.password,
+        lease_duration: result.lease_duration,
+      };
+    } catch (error) {
+      console.error("Error getting temporary credentials:", error);
+      throw error;
+    }
+  }
 }
 
 module.exports = VaultClient;
-
-````
+```
 
 <BackToTop />
 
 ### Configuration Files Management
 
 #### Database Configuration Files
+
 ```yaml
 # config/database.yml
 default: &default
@@ -1369,10 +1382,13 @@ production:
   sslkey: <%= ENV.fetch('DB_SSL_KEY') %>
   sslrootcert: <%= ENV.fetch('DB_SSL_CA') %>
   pool: 50
-````
+```
 
 <BackToTop />
-#### Environment-Specific Configurations ```bash # .env.development
+#### Environment-Specific Configurations
+
+```bash
+# .env.development
 NODE_ENV=development PORT=3000 LOG_LEVEL=debug
 
 # Database
@@ -1426,7 +1442,7 @@ DB_SSL_KEY=${PROD_DB_SSL_KEY}
 
 REDIS_URL=${PROD_REDIS_URL}
 
-````
+```
 
 <BackToTop />
 
@@ -1435,6 +1451,7 @@ REDIS_URL=${PROD_REDIS_URL}
 ### Database Seeding Strategies
 
 #### SQL-Based Seeding
+
 ```sql
 -- seeds/001_users.sql
 INSERT INTO users (id, email, first_name, last_name, role, created_at, updated_at) VALUES
@@ -1459,142 +1476,143 @@ INSERT INTO products (id, name, description, price, category_id, sku, stock_quan
   (3, 'The Great Gatsby', 'Classic American novel', 12.99, 5, 'TGG-CLASSIC', 100, NOW(), NOW()),
   (4, 'Dell XPS 13', 'Ultra-thin laptop with Intel i7', 1299.00, 2, 'DELL-XPS13', 15, NOW(), NOW())
 ON CONFLICT (sku) DO NOTHING;
-````
+```
 
 <BackToTop />
-#### JavaScript/Node.js Seeding ```javascript // seeds/index.js const
-{(Sequelize, DataTypes)} = require('sequelize'); const config =
-require('../config/database');
+#### JavaScript/Node.js Seeding
+
+```javascript
+// seeds/index.js
+const { Sequelize, DataTypes } = require("sequelize");
+const config = require("../config/database");
 
 const sequelize = new Sequelize(config);
 
 // Define models
-const User = require('../models/User')(sequelize, DataTypes);
-const Category = require('../models/Category')(sequelize, DataTypes);
-const Product = require('../models/Product')(sequelize, DataTypes);
+const User = require("../models/User")(sequelize, DataTypes);
+const Category = require("../models/Category")(sequelize, DataTypes);
+const Product = require("../models/Product")(sequelize, DataTypes);
 
 // Define associations
-Category.hasMany(Category, { as: 'children', foreignKey: 'parent_id' });
-Category.belongsTo(Category, { as: 'parent', foreignKey: 'parent_id' });
-Category.hasMany(Product, { foreignKey: 'category_id' });
-Product.belongsTo(Category, { foreignKey: 'category_id' });
+Category.hasMany(Category, { as: "children", foreignKey: "parent_id" });
+Category.belongsTo(Category, { as: "parent", foreignKey: "parent_id" });
+Category.hasMany(Product, { foreignKey: "category_id" });
+Product.belongsTo(Category, { foreignKey: "category_id" });
 
 const seedData = {
-users: [
-{
-email: 'admin@example.com',
-firstName: 'Admin',
-lastName: 'User',
-role: 'admin',
-passwordHash: '$2b$10$...' // Pre-hashed password
-},
-{
-email: 'user@example.com',
-firstName: 'Regular',
-lastName: 'User',
-role: 'user',
-passwordHash: '$2b$10$...'
-}
-],
+  users: [
+    {
+      email: "admin@example.com",
+      firstName: "Admin",
+      lastName: "User",
+      role: "admin",
+      passwordHash: "$2b$10$...", // Pre-hashed password
+    },
+    {
+      email: "user@example.com",
+      firstName: "Regular",
+      lastName: "User",
+      role: "user",
+      passwordHash: "$2b$10$...",
+    },
+  ],
 
-categories: [
-{
-id: 1,
-name: 'Electronics',
-description: 'Electronic devices and accessories',
-parentId: null
-},
-{
-id: 2,
-name: 'Computers',
-description: 'Desktop and laptop computers',
-parentId: 1
-},
-{
-id: 3,
-name: 'Mobile Phones',
-description: 'Smartphones and accessories',
-parentId: 1
-}
-],
+  categories: [
+    {
+      id: 1,
+      name: "Electronics",
+      description: "Electronic devices and accessories",
+      parentId: null,
+    },
+    {
+      id: 2,
+      name: "Computers",
+      description: "Desktop and laptop computers",
+      parentId: 1,
+    },
+    {
+      id: 3,
+      name: "Mobile Phones",
+      description: "Smartphones and accessories",
+      parentId: 1,
+    },
+  ],
 
-products: [
-{
-name: 'MacBook Pro 16"',
-description: 'Apple MacBook Pro with M2 chip',
-price: 2499.00,
-categoryId: 2,
-sku: 'MBP-16-M2',
-stockQuantity: 10
-},
-{
-name: 'iPhone 15 Pro',
-description: 'Latest iPhone with A17 Pro chip',
-price: 999.00,
-categoryId: 3,
-sku: 'IP15-PRO',
-stockQuantity: 25
-}
-]
+  products: [
+    {
+      name: 'MacBook Pro 16"',
+      description: "Apple MacBook Pro with M2 chip",
+      price: 2499.0,
+      categoryId: 2,
+      sku: "MBP-16-M2",
+      stockQuantity: 10,
+    },
+    {
+      name: "iPhone 15 Pro",
+      description: "Latest iPhone with A17 Pro chip",
+      price: 999.0,
+      categoryId: 3,
+      sku: "IP15-PRO",
+      stockQuantity: 25,
+    },
+  ],
 };
 
 async function seedDatabase() {
-try {
-// Sync database (create tables)
-await sequelize.sync({ force: process.env.NODE_ENV === 'development' });
+  try {
+    // Sync database (create tables)
+    await sequelize.sync({ force: process.env.NODE_ENV === "development" });
 
-    console.log('Seeding users...');
+    console.log("Seeding users...");
     for (const userData of seedData.users) {
       await User.findOrCreate({
         where: { email: userData.email },
-        defaults: userData
+        defaults: userData,
       });
     }
 
-    console.log('Seeding categories...');
+    console.log("Seeding categories...");
     for (const categoryData of seedData.categories) {
       await Category.findOrCreate({
         where: { name: categoryData.name },
-        defaults: categoryData
+        defaults: categoryData,
       });
     }
 
-    console.log('Seeding products...');
+    console.log("Seeding products...");
     for (const productData of seedData.products) {
       await Product.findOrCreate({
         where: { sku: productData.sku },
-        defaults: productData
+        defaults: productData,
       });
     }
 
-    console.log('Database seeded successfully!');
-
-} catch (error) {
-console.error('Error seeding database:', error);
-throw error;
-} finally {
-await sequelize.close();
-}
+    console.log("Database seeded successfully!");
+  } catch (error) {
+    console.error("Error seeding database:", error);
+    throw error;
+  } finally {
+    await sequelize.close();
+  }
 }
 
 // Run seeding if called directly
 if (require.main === module) {
-seedDatabase()
-.then(() => process.exit(0))
-.catch(() => process.exit(1));
+  seedDatabase()
+    .then(() => process.exit(0))
+    .catch(() => process.exit(1));
 }
 
 module.exports = seedDatabase;
-
-````
-
+```
 
 <BackToTop />
 #### Factory-Based Data Generation
+
 ```javascript
 // factories/userFactory.js
-const { faker } = require('@faker-js/faker');
-const bcrypt = require('bcrypt');
+const { faker } = require("@faker-js/faker");
+const bcrypt = require("bcrypt");
 
 class UserFactory {
   static async create(overrides = {}) {
@@ -1602,8 +1620,8 @@ class UserFactory {
       email: faker.internet.email(),
       firstName: faker.person.firstName(),
       lastName: faker.person.lastName(),
-      passwordHash: await bcrypt.hash('password123', 10),
-      role: faker.helpers.arrayElement(['user', 'admin', 'manager']),
+      passwordHash: await bcrypt.hash("password123", 10),
+      role: faker.helpers.arrayElement(["user", "admin", "manager"]),
       isActive: faker.datatype.boolean({ probability: 0.9 }),
       lastLoginAt: faker.date.recent({ days: 30 }),
       createdAt: faker.date.past({ years: 2 }),
@@ -1611,8 +1629,8 @@ class UserFactory {
         bio: faker.lorem.paragraph(),
         avatar: faker.image.avatar(),
         location: faker.location.city(),
-        website: faker.internet.url()
-      }
+        website: faker.internet.url(),
+      },
     };
 
     return { ...defaultData, ...overrides };
@@ -1627,37 +1645,43 @@ class UserFactory {
   }
 
   static admin(overrides = {}) {
-    return this.create({ role: 'admin', ...overrides });
+    return this.create({ role: "admin", ...overrides });
   }
 
   static regularUser(overrides = {}) {
-    return this.create({ role: 'user', ...overrides });
+    return this.create({ role: "user", ...overrides });
   }
 }
 
 // factories/productFactory.js
 class ProductFactory {
   static create(overrides = {}) {
-    const categories = ['Electronics', 'Books', 'Clothing', 'Home & Garden', 'Sports'];
+    const categories = [
+      "Electronics",
+      "Books",
+      "Clothing",
+      "Home & Garden",
+      "Sports",
+    ];
 
     const defaultData = {
       name: faker.commerce.productName(),
       description: faker.commerce.productDescription(),
       price: parseFloat(faker.commerce.price({ min: 10, max: 1000 })),
-      sku: faker.string.alphanumeric({ length: 8, casing: 'upper' }),
+      sku: faker.string.alphanumeric({ length: 8, casing: "upper" }),
       stockQuantity: faker.number.int({ min: 0, max: 100 }),
       weight: faker.number.float({ min: 0.1, max: 50, fractionDigits: 2 }),
       dimensions: {
         length: faker.number.float({ min: 1, max: 100, fractionDigits: 1 }),
         width: faker.number.float({ min: 1, max: 100, fractionDigits: 1 }),
-        height: faker.number.float({ min: 1, max: 100, fractionDigits: 1 })
+        height: faker.number.float({ min: 1, max: 100, fractionDigits: 1 }),
       },
       category: faker.helpers.arrayElement(categories),
       isActive: faker.datatype.boolean({ probability: 0.95 }),
       tags: faker.helpers.arrayElements(
-        ['new', 'popular', 'sale', 'featured', 'limited'],
-        { min: 0, max: 3 }
-      )
+        ["new", "popular", "sale", "featured", "limited"],
+        3
+      ),
     };
 
     return { ...defaultData, ...overrides };
@@ -1669,29 +1693,37 @@ class ProductFactory {
 }
 
 // seeds/factories.js
-const { User, Product, Order, OrderItem } = require('../models');
-const UserFactory = require('../factories/userFactory');
-const ProductFactory = require('../factories/productFactory');
+const { User, Product, Order, OrderItem } = require("../models");
+const UserFactory = require("../factories/userFactory");
+const ProductFactory = require("../factories/productFactory");
 
 async function seedWithFactories() {
-  console.log('Creating users...');
+  console.log("Creating users...");
   const users = await UserFactory.createMany(50);
   const createdUsers = await User.bulkCreate(users);
 
-  console.log('Creating products...');
+  console.log("Creating products...");
   const products = ProductFactory.createMany(100);
   const createdProducts = await Product.bulkCreate(products);
 
-  console.log('Creating orders...');
+  console.log("Creating orders...");
   const orders = [];
   for (let i = 0; i < 200; i++) {
     const user = faker.helpers.arrayElement(createdUsers);
-    const orderProducts = faker.helpers.arrayElements(createdProducts, { min: 1, max: 5 });
+    const orderProducts = faker.helpers.arrayElements(createdProducts, {
+      min: 1,
+      max: 5,
+    });
 
     const order = await Order.create({
       userId: user.id,
-      status: faker.helpers.arrayElement(['pending', 'confirmed', 'shipped', 'delivered']),
-      totalAmount: 0 // Will be calculated
+      status: faker.helpers.arrayElement([
+        "pending",
+        "confirmed",
+        "shipped",
+        "delivered",
+      ]),
+      totalAmount: 0, // Will be calculated
     });
 
     let totalAmount = 0;
@@ -1704,7 +1736,7 @@ async function seedWithFactories() {
         productId: product.id,
         quantity,
         unitPrice,
-        lineTotal: quantity * unitPrice
+        lineTotal: quantity * unitPrice,
       });
 
       totalAmount += quantity * unitPrice;
@@ -1713,11 +1745,11 @@ async function seedWithFactories() {
     await order.update({ totalAmount });
   }
 
-  console.log('Factory seeding completed!');
+  console.log("Factory seeding completed!");
 }
 
 module.exports = seedWithFactories;
-````
+```
 
 <BackToTop />
 
@@ -1810,104 +1842,104 @@ module.exports = testData;
 ```
 
 <BackToTop />
-#### Test Database Setup and Teardown ```javascript // tests/helpers/database.js
-const {Sequelize} = require('sequelize'); const config =
-require('../../config/database'); const models = require('../../models'); const
-testData = require('../../fixtures/testData');
+#### Test Database Setup and Teardown
+
+```javascript
+// tests/helpers/database.js
+const { Sequelize } = require("sequelize");
+const config = require("../../config/database");
+const models = require("../../models");
+const testData = require("../../fixtures/testData");
 
 class TestDatabase {
-constructor() {
-this.sequelize = new Sequelize(config.test);
-this.models = models(this.sequelize);
-}
+  constructor() {
+    this.sequelize = new Sequelize(config.test);
+    this.models = models(this.sequelize);
+  }
 
-async setup() {
-try {
-// Create all tables
-await this.sequelize.sync({ force: true });
+  async setup() {
+    try {
+      // Create all tables
+      await this.sequelize.sync({ force: true });
 
       // Seed basic test data
       await this.seedTestData();
 
-      console.log('Test database setup completed');
+      console.log("Test database setup completed");
     } catch (error) {
-      console.error('Test database setup failed:', error);
+      console.error("Test database setup failed:", error);
       throw error;
     }
+  }
 
-}
+  async teardown() {
+    try {
+      // Clean up all data
+      await this.sequelize.drop();
+      await this.sequelize.close();
 
-async teardown() {
-try {
-// Clean up all data
-await this.sequelize.drop();
-await this.sequelize.close();
-
-      console.log('Test database teardown completed');
+      console.log("Test database teardown completed");
     } catch (error) {
-      console.error('Test database teardown failed:', error);
+      console.error("Test database teardown failed:", error);
       throw error;
     }
+  }
 
-}
-
-async seedTestData() {
-// Create test users
-for (const [key, userData] of Object.entries(testData.users)) {
-await this.models.User.create(userData);
-}
+  async seedTestData() {
+    // Create test users
+    for (const [key, userData] of Object.entries(testData.users)) {
+      await this.models.User.create(userData);
+    }
 
     // Create test categories
     await this.models.Category.bulkCreate([
-      { id: 1, name: 'Electronics' },
-      { id: 2, name: 'Mobile Phones' }
+      { id: 1, name: "Electronics" },
+      { id: 2, name: "Mobile Phones" },
     ]);
 
     // Create test products
     for (const [key, productData] of Object.entries(testData.products)) {
       await this.models.Product.create(productData);
     }
+  }
 
-}
+  async cleanTable(tableName) {
+    await this.models[tableName].destroy({ where: {}, truncate: true });
+  }
 
-async cleanTable(tableName) {
-await this.models[tableName].destroy({ where: {}, truncate: true });
-}
-
-async resetSequences() {
-// Reset auto-increment sequences (PostgreSQL)
-const tables = Object.keys(this.models);
-for (const table of tables) {
-await this.sequelize.query(
-`ALTER SEQUENCE ${table.toLowerCase()}s_id_seq RESTART WITH 1`
-);
-}
-}
+  async resetSequences() {
+    // Reset auto-increment sequences (PostgreSQL)
+    const tables = Object.keys(this.models);
+    for (const table of tables) {
+      await this.sequelize.query(
+        `ALTER SEQUENCE ${table.toLowerCase()}s_id_seq RESTART WITH 1`
+      );
+    }
+  }
 }
 
 // Global test setup/teardown
 let testDb;
 
 async function setupTestDatabase() {
-testDb = new TestDatabase();
-await testDb.setup();
-return testDb;
+  testDb = new TestDatabase();
+  await testDb.setup();
+  return testDb;
 }
 
 async function teardownTestDatabase() {
-if (testDb) {
-await testDb.teardown();
-}
+  if (testDb) {
+    await testDb.teardown();
+  }
 }
 
 module.exports = {
-TestDatabase,
-setupTestDatabase,
-teardownTestDatabase,
-testData
+  TestDatabase,
+  setupTestDatabase,
+  teardownTestDatabase,
+  testData,
 };
-
-````
+```
 
 <BackToTop />
 
@@ -1916,85 +1948,90 @@ testData
 ### Migration Systems
 
 #### Sequelize Migrations
+
 ```javascript
 // migrations/20240101000001-create-users.js
-'use strict';
+"use strict";
 
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('users', {
+    await queryInterface.createTable("users", {
       id: {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
-        type: Sequelize.INTEGER
+        type: Sequelize.INTEGER,
       },
       email: {
         type: Sequelize.STRING(100),
         allowNull: false,
-        unique: true
+        unique: true,
       },
       first_name: {
         type: Sequelize.STRING(50),
-        allowNull: false
+        allowNull: false,
       },
       last_name: {
         type: Sequelize.STRING(50),
-        allowNull: false
+        allowNull: false,
       },
       password_hash: {
         type: Sequelize.STRING(255),
-        allowNull: false
+        allowNull: false,
       },
       role: {
-        type: Sequelize.ENUM('user', 'admin', 'manager'),
+        type: Sequelize.ENUM("user", "admin", "manager"),
         allowNull: false,
-        defaultValue: 'user'
+        defaultValue: "user",
       },
       is_active: {
         type: Sequelize.BOOLEAN,
         allowNull: false,
-        defaultValue: true
+        defaultValue: true,
       },
       last_login_at: {
         type: Sequelize.DATE,
-        allowNull: true
+        allowNull: true,
       },
       created_at: {
         allowNull: false,
         type: Sequelize.DATE,
-        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
+        defaultValue: Sequelize.literal("CURRENT_TIMESTAMP"),
       },
       updated_at: {
         allowNull: false,
         type: Sequelize.DATE,
-        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
-      }
+        defaultValue: Sequelize.literal("CURRENT_TIMESTAMP"),
+      },
     });
 
     // Create indexes
-    await queryInterface.addIndex('users', ['email'], {
+    await queryInterface.addIndex("users", ["email"], {
       unique: true,
-      name: 'users_email_unique_idx'
+      name: "users_email_unique_idx",
     });
 
-    await queryInterface.addIndex('users', ['role'], {
-      name: 'users_role_idx'
+    await queryInterface.addIndex("users", ["role"], {
+      name: "users_role_idx",
     });
 
-    await queryInterface.addIndex('users', ['is_active'], {
-      name: 'users_active_idx'
+    await queryInterface.addIndex("users", ["is_active"], {
+      name: "users_active_idx",
     });
   },
 
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('users');
-  }
+    await queryInterface.dropTable("users");
+  },
 };
-````
+```
 
 <BackToTop />
-#### TypeORM Migrations ```typescript // migrations/1640000000000-CreateUsers.ts
+#### TypeORM Migrations
+
+```typescript
+
+// migrations/1640000000000-CreateUsers.ts
 import {(MigrationInterface, QueryRunner, Table, Index)} from 'typeorm';
 
 export class CreateUsers1640000000000 implements MigrationInterface {
@@ -2069,7 +2106,7 @@ export class CreateUsers1640000000000 implements MigrationInterface {
       }),
       true
     );
-    
+
     // Create indexes
     await queryRunner.createIndex('users', new Index('IDX_USER_EMAIL', ['email']));
     await queryRunner.createIndex('users', new Index('IDX_USER_ROLE', ['role']));
@@ -2081,13 +2118,14 @@ await queryRunner.dropTable('users');
 }
 }
 
-````
-
+```
 
 <BackToTop />
 #### Prisma Schema Management
+
 ```prisma
 // prisma/schema.prisma
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -2098,20 +2136,20 @@ datasource db {
 }
 
 model User {
-  id          Int      @id @default(autoincrement())
-  email       String   @unique @db.VarChar(100)
-  firstName   String   @map("first_name") @db.VarChar(50)
-  lastName    String   @map("last_name") @db.VarChar(50)
-  passwordHash String  @map("password_hash") @db.VarChar(255)
-  role        Role     @default(USER)
-  isActive    Boolean  @default(true) @map("is_active")
+  id Int @id @default(autoincrement())
+  email String @unique @db.VarChar(100)
+  role Role @default(user)
+  lastName String @map("last_name") @db.VarChar(50)
+  passwordHash String @map("password_hash") @db.VarChar(255)
+  role Role @default(USER)
+  isActive Boolean @default(true) @map("is_active")
   lastLoginAt DateTime? @map("last_login_at")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  orders      Order[]
-  profile     Profile?
+  orders Order[]
+  profile Profile?
 
   @@index([email])
   @@index([role])
@@ -2120,12 +2158,12 @@ model User {
 }
 
 model Profile {
-  id       Int     @id @default(autoincrement())
-  userId   Int     @unique @map("user_id")
-  bio      String?
-  avatar   String?
+  id Int @id @default(autoincrement())
+  userId Int @unique @map("user_id")
+  bio String?
+  avatar String?
   location String?
-  website  String?
+  website String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -2133,15 +2171,15 @@ model Profile {
 }
 
 model Order {
-  id          Int         @id @default(autoincrement())
-  userId      Int         @map("user_id")
-  orderNumber String      @unique @map("order_number") @db.VarChar(50)
-  status      OrderStatus @default(PENDING)
-  totalAmount Decimal     @map("total_amount") @db.Decimal(10, 2)
-  createdAt   DateTime    @default(now()) @map("created_at")
-  updatedAt   DateTime    @updatedAt @map("updated_at")
+  status OrderStatus @default(pending)
+  userId Int @map("user_id")
+  orderNumber String @unique @map("order_number") @db.VarChar(50)
+  status OrderStatus @default(PENDING)
+  totalAmount Decimal @map("total_amount") @db.Decimal(10, 2)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  user  User        @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id])
   items OrderItem[]
 
   @@index([userId])
@@ -2151,14 +2189,14 @@ model Order {
 }
 
 model OrderItem {
-  id        Int     @id @default(autoincrement())
-  orderId   Int     @map("order_id")
-  productId Int     @map("product_id")
-  quantity  Int
+  id Int @id @default(autoincrement())
+  orderId Int @map("order_id")
+  productId Int @map("product_id")
+  quantity Int
   unitPrice Decimal @map("unit_price") @db.Decimal(10, 2)
   lineTotal Decimal @map("line_total") @db.Decimal(10, 2)
 
-  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product Product @relation(fields: [productId], references: [id])
 
   @@unique([orderId, productId])
@@ -2166,38 +2204,39 @@ model OrderItem {
 }
 
 model Product {
-  id            Int         @id @default(autoincrement())
-  name          String      @db.VarChar(200)
-  description   String?
-  price         Decimal     @db.Decimal(10, 2)
-  sku           String      @unique @db.VarChar(50)
-  stockQuantity Int         @default(0) @map("stock_quantity")
-  isActive      Boolean     @default(true) @map("is_active")
-  createdAt     DateTime    @default(now()) @map("created_at")
-  updatedAt     DateTime    @updatedAt @map("updated_at")
+  id Int @id @default(autoincrement())
+  name String @db.VarChar(200)
+  description String?
+  price Decimal @db.Decimal(10, 2)
+  sku String @unique @db.VarChar(50)
+  stockQuantity Int @default(0) @map("stock_quantity")
+  isActive Boolean @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   orderItems OrderItem[]
 
   @@index([sku])
   @@index([isActive])
-  @@map("products")
-}
+  enum Role {
+    user
+    admin
+    manager
+  }
 
-enum Role {
-  USER
-  ADMIN
-  MANAGER
-}
-
-enum OrderStatus {
-  PENDING
-  CONFIRMED
-  PROCESSING
-  SHIPPED
+  enum OrderStatus {
+    pending
+    confirmed
+    processing
+    shipped
+    delivered
+    cancelled
+  }
   DELIVERED
   CANCELLED
 }
-````
+
+```
 
 <BackToTop />
 
@@ -2251,8 +2290,10 @@ echo "Migration completed successfully!"
 ```
 
 <BackToTop />
-#### CI/CD Pipeline Integration ```yaml #
-.github/workflows/database-migrations.yml name: Database Migrations
+#### CI/CD Pipeline Integration
+
+```yaml title=".github/workflows/migrations.yml"
+name: Database Migrations
 
 on:
 push:
