@@ -23,234 +23,7 @@ import { SiGraphql, SiMysql } from "react-icons/si";
 import Button from "../components/Button.tsx";
 import Guides from "../components/Guides";
 import Resources from "../components/Resources";
-
-export const chapters = [
-  {
-    href: "/fund-introduction-to-back-end",
-    title: "Introduction to Back-end",
-    description:
-      "Server-side programming, architecture, and environment setup.",
-    bgColor: "primary",
-    icon: FaServer,
-    ctaText: "Start Here",
-  },
-  {
-    href: "/fund-back-end-architecture",
-    title: "Back-end Architecture",
-    description:
-      "Understanding client-server communication and back-end responsibilities.",
-    bgColor: "secondary",
-    icon: FaCogs,
-    ctaText: "Learn Architecture",
-  },
-  {
-    href: "/db-data-storage/caching-strategies",
-    title: "Caching Strategies",
-    description:
-      "Implementing caching mechanisms to improve performance and scalability.",
-    bgColor: "tertiary",
-    icon: FaBolt,
-    ctaText: "Explore Caching",
-  },
-  {
-    href: "/fund-foundation/API-design",
-    title: "API Design",
-    description:
-      "Designing RESTful APIs, understanding HTTP methods, and best practices.",
-    bgColor: "primary",
-    icon: FaNetworkWired,
-    ctaText: "Learn API Design",
-  },
-  {
-    href: "/fund-foundation/http-protocol",
-    title: "HTTP Protocol",
-    description:
-      "Deep dive into HTTP protocol, status codes, and request/response lifecycle.",
-    bgColor: "secondary",
-    icon: FaCode,
-    ctaText: "Understand HTTP",
-  },
-  {
-    href: "/fund-foundation/web-server-basics",
-    title: "Web Server Basics",
-    description:
-      "Setting up and configuring web servers, understanding server-side rendering.",
-    bgColor: "tertiary",
-    icon: FaServer,
-    ctaText: "Web Server Setup",
-  },
-  {
-    href: "/fund-foundation/RESTful-services",
-    title: "RESTful Services",
-    description:
-      "Building RESTful services, understanding resource representation and statelessness.",
-    bgColor: "primary",
-    icon: FaRocket,
-    ctaText: "Build RESTful APIs",
-  },
-  {
-    href: "/db-getting-started-with-database-design/fundamentals",
-    title: "Database Design Fundamentals",
-    description:
-      "Getting started with database design, normalization, and relationships.",
-    bgColor: "secondary",
-    icon: FaDatabase,
-    ctaText: "Learn Database Design",
-  },
-  {
-    href: "/db-getting-started-with-database-design/normalization-and-relationships",
-    title: "Normalization and Relationships",
-    description:
-      "Understanding normalization, relationships, and schema design principles.",
-    bgColor: "tertiary",
-    icon: FaDatabase,
-    ctaText: "Explore Normalization",
-  },
-  {
-    href: "/db-getting-started-with-database-design/schema-design",
-    title: "Schema Design",
-    description:
-      "Creating efficient database schemas, indexing, and query optimization.",
-    bgColor: "primary",
-    icon: SiMysql,
-    ctaText: "Design Database Schemas",
-  },
-  {
-    href: "/db-getting-started-with-database-design/schema-migration",
-    title: "Schema Migration",
-    description:
-      "Managing schema changes, migrations, and version control for databases.",
-    bgColor: "secondary",
-    icon: FaTools,
-    ctaText: "Manage Database Migrations",
-  },
-  {
-    href: "/db-relational-databases",
-    title: "Relational Databases",
-    description:
-      "Exploring relational databases, SQL, and data integrity constraints.",
-    bgColor: "tertiary",
-    icon: FaDatabase,
-    ctaText: "Learn about Relational Databases",
-  },
-  {
-    href: "/db-non-relational-databases",
-    title: "Non-Relational Databases",
-    description:
-      "Understanding NoSQL databases, document stores, and key-value stores.",
-    bgColor: "primary",
-    icon: SiGraphql,
-    ctaText: "Explore NoSQL Databases",
-  },
-  {
-    href: "/db-object-relational-mappers-fundamentals",
-    title: "Object Relational Mappers (ORMs)",
-    description: "Introduction to ORMs, benefits, and popular ORM frameworks.",
-    bgColor: "secondary",
-    icon: FaCode,
-    ctaText: "Learn about ORMs",
-
-  },
-  {
-    href: "/db-transaction-models/introduction-to-ACID-and-BASE",
-    title: "ACID and BASE Consistency Models",
-    description:
-      "Understanding ACID properties, BASE model, and transaction management.",
-    bgColor: "tertiary",
-    icon: FaCheckCircle,
-    ctaText: "Understand ACID/BASE",
-  },
-  {
-    href: "/db-transaction-models/consistency-models",
-    title: "Consistency Models",
-    description:
-      "Exploring different consistency models, including eventual consistency.",
-    bgColor: "primary",
-    icon: FaShieldAlt,
-    ctaText: "Learn Consistency Models",
-  },
-  {
-    href: "/db-transaction-models/transaction-management",
-    title: "Transaction Management",
-    description:
-      "Managing transactions, isolation levels, and concurrency control.",
-    bgColor: "secondary",
-    icon: FaLock,
-    ctaText: "Manage Transactions",
-  },
-  {
-    href: "/db-transaction-models/concurrency-control",
-    title: "Concurrency Control",
-    description:
-      "Techniques for managing concurrent transactions and preventing conflicts.",
-    bgColor: "tertiary",
-    icon: FaTachometerAlt,
-    ctaText: "Master Control Concurrency",
-  },
-  {
-    href: "/db-data-storage/storage-systems",
-    title: "Storage Systems",
-    description:
-      "Understanding storage systems, file systems, and data management strategies.",
-    bgColor: "primary",
-    icon: FaDatabase,
-    ctaText: "Explore Storage Systems",
-  },
-  {
-    href: "/db-different-databases-and-their-foundational-concepts/data-warehouses-and-data-lakes",
-    title: "Data Warehouses & Data Lakes",
-    description:
-      "Exploring storage systems, data warehouses, and data lakes for big data.",
-    bgColor: "secondary",
-    icon: FaDatabase,
-    ctaText: "Learn Data Warehousing",
-  },
-  {
-    href: "/db-data-storage/data-recovery",
-    title: "Data Recovery, In-Memory, Embedded, Time Series, Search Engines",
-    description:
-      "Understanding data recovery, in-memory databases, embedded systems, time series databases, and search engines.",
-    bgColor: "tertiary",
-    icon: FaDatabase,
-    ctaText: "Explore Data Storage",
-  },
-  {
-    href: "/db-different-databases-and-their-foundational-concepts/in-memory",
-    title: "In-Memory Databases",
-    description:
-      "Exploring in-memory databases, their use cases, and performance benefits.",
-    bgColor: "primary",
-    icon: FaDatabase,
-    ctaText: "Learn In-Memory Databases",
-  },
-  {
-    href: "/db-different-databases-and-their-foundational-concepts/embedded",
-    title: "Embedded Databases",
-    description:
-      "Understanding embedded databases, their applications, and integration.",
-    bgColor: "secondary",
-    icon: FaDatabase,
-    ctaText: "Explore Embedded Databases",
-  },
-  {
-    href: "/db-different-databases-and-their-foundational-concepts/time-series",
-    title: "Time Series Databases",
-    description:
-      "Exploring time series databases, their structure, and use cases in analytics.",
-    bgColor: "tertiary",
-    icon: FaDatabase,
-    ctaText: "Learn Time Series Databases",
-  },
-  {
-    href: "/db-different-databases-and-their-foundational-concepts/search-engines",
-    title: "Search Engines",
-    description:
-      "Understanding search engines, indexing, and full-text search capabilities.",
-    bgColor: "primary",
-    icon: FaDatabase,
-    ctaText: "Explore Search Engines",
-  },
-];
+import { chapters, additional_resources } from "../data/navigation";
 
 # Welcome to Back-end Development!
 
@@ -270,11 +43,25 @@ This isn't just another collection of tutorials - it's a comprehensive guide tha
 
 A Back End dev uses a set of Back End developer languages to bring the Front End language of a developer to life. While a Front End dev creates the user experience within a browser, the Back End dev is creating the logic that makes those requests a reality. In some ways, a Back End dev is creating the brains and logic of the website. Back End devs can be more technical and organized, but they are still a part of a larger team. While they need to know how to create the logic that efficiently pulls the data to fulfill a request, they also need to communicate their needs and potential limitations to the Front End dev. They are also responsible for maintaining this logic system. Back End devs are working with databases, servers, an application programming interface (API) that creates a structure for component interaction and the integration of all these processes. Back-end development starts with writing code that defines the application’s core functionality. From there, you’ll host the code on a server, manage database operations, and handle APIs. Let’s break down each of these areas.
 
-## Complete Learning Path
+## Why Learn Back-end Development?
+
+Back-end development is the backbone of modern web applications and one of the most critical and rewarding careers in technology. This course prepares you for success by covering:
+
+- High-Demand Skills: Server-side development skills are in extremely high demand with excellent career prospects
+- System Architecture: Learn to design scalable, efficient systems that power millions of users
+- Data Management: Master databases, data modeling, and information architecture
+- Security Expertise: Implement robust security measures and protect sensitive data
+- Performance Optimization: Build fast, scalable applications that handle massive traffic
+- Problem Solving: Tackle complex technical challenges in distributed systems
+- Full-Stack Understanding: Gain deep knowledge of how web applications work end-to-end
+
+## How This Course is Structured
 
 As you work through the content of this course, you’ll notice that each module concludes with a dedicated “Next Steps” section. This section is carefully designed to guide you seamlessly to the most logical and important topic to study next, ensuring you build your skills in a progressive, structured manner. This approach eliminates the guesswork often associated with self-paced learning by giving you a clear, prioritized path forward. It allows you to focus on practical, hands-on experience, so you’re not just reading about concepts but actually applying them as you go. By emphasizing real-world practice, you’ll internalize each skill before moving on, resulting in a deeper, more confident understanding of the material.
 
-They will be in the following format:
+The "Next Steps" sections will assume you are following the course in order, so they will always point to the next logical topic based on the current module. If you choose to skip around, you may need to adjust your path accordingly.
+
+If there are no immediate next steps listed, optional actions will be provided to help you explore additional resources or tools that can enhance your learning experience. These optional actions are designed to give you flexibility in how you deepen your understanding of back-end development, allowing you to tailor your learning journey to your interests and needs.
 
 <blockquote>
 ## Next Steps
@@ -299,11 +86,7 @@ At any point, you can revisit this curriculum page to see the entire course outl
 
 This structured approach helps you avoid the overwhelm that often comes with trying to navigate the vast sea of online resources alone. By following a clear, thoughtfully designed progression, you can stay focused, motivated, and confident that you’re investing your time effectively in building practical, job-ready skills.
 
-##### NOTE
-
-> The "Next Steps" sections will assume you are following the course in order, so they will always point to the next logical topic based on the current module. If you choose to skip around, you may need to adjust your path accordingly.
-
-Follow our structured learning path designed to build your back-end skills progressively:
+## Back-end Development Learning Path
 
 <div className="gap-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mt-8">
   {chapters.map((chapter) => {
@@ -342,101 +125,27 @@ Follow our structured learning path designed to build your back-end skills progr
 Beyond the main curriculum, we provide supplementary resources to enhance your learning experience:
 
 <div className="gap-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mt-6">
-  <Link
-    href="/db-version-control-fundamentals"
-    className="group flex items-center  hover:shadow-md shadow-sm p-4 border  rounded-lg no-underline transition-all duration-200"
-  >
-    <div className="flex items-center justify-center bg-accent text-background mr-3 rounded-lg h-10 w-10">
-      <FaGitAlt className="h-5 w-5 " />
-    </div>
-    <div>
-      <h4 className="font-semibold  text-sm ">Version Control</h4>
-      <span className="block">Git fundamentals and collaborative development</span>
-    </div>
-    <FaChevronRight className="ml-auto h-4 w-4 " />
-  </Link>
-  
-  <Link
-    href="/db-different-databases-and-their-foundational-concepts"
-    className="group flex items-center  hover:shadow-md p-4 border  rounded-lg no-underline transition-all duration-200"
-  >
-    <div className="flex items-center justify-center bg-primary text-background mr-3 rounded-lg h-10 w-10">
-      <FaDatabase className="h-5 w-5 " />
-    </div>
-    <div>
-      <h4 className="font-semibold  text-sm ">Database Technologies</h4>
-      <span className="block">Relational, NoSQL, and data management systems</span>
-    </div>
-    <FaChevronRight className="ml-auto h-4 w-4 " />
-  </Link>
-
-<Link
-  href="/adv-docker"
-  className="group flex items-center  hover:shadow-md p-4 border  rounded-lg no-underline transition-all duration-200"
->
-  <div className="flex items-center justify-center bg-secondary text-background mr-3 rounded-lg h-10 w-10">
-    <FaDocker className="h-5 w-5 " />
-  </div>
-  <div>
-    <h4 className="font-semibold  text-sm ">
-      Containerization
-    </h4>
-    <span className="block">
-      Docker, Kubernetes, and deployment strategies
-    </span>
-  </div>
-  <FaChevronRight className="ml-auto h-4 w-4 " />
-</Link>
-
-<Link
-  href="/adv-quality-security-performance"
-  className="group flex items-center  hover:shadow-md p-4 border  rounded-lg no-underline transition-all duration-200"
->
-  <div className="flex items-center justify-center bg-secondary text-background mr-3 rounded-lg h-10 w-10">
-    <FaShieldAlt className="h-5 w-5 " />
-  </div>
-  <div>
-    <h4 className="font-semibold  text-sm ">
-      Security
-    </h4>
-    <span className="block">
-      Authentication, authorization, and security best practices
-    </span>
-  </div>
-  <FaChevronRight className="ml-auto h-4 w-4 " />
-</Link>
-
-<Link
-  href="/adv-quality-security-performance"
-  className="group flex items-center  hover:shadow-md p-4 border  rounded-lg no-underline transition-all duration-200"
->
-  <div className="flex items-center justify-center bg-sidebar-text text-background mr-3 rounded-lg h-10 w-10">
-    <FaTachometerAlt className="h-5 w-5 " />
-  </div>
-  <div>
-    <h4 className="font-semibold  text-sm ">
-      Performance Optimization
-    </h4>
-    <span className="block">
-      Scalability, monitoring, and load balancing
-    </span>
-  </div>
-  <FaChevronRight className="ml-auto h-4 w-4 " />
-</Link>
-
-  <Link
-    href="/adv-quality-security-performance"
-    className="group flex items-center  hover:shadow-md p-4 border  rounded-lg no-underline transition-all duration-200"
-  >
-    <div className="flex items-center justify-center bg-sidebar-active-text text-background mr-3 rounded-lg h-10 w-10">
-      <FaVial className="h-5 w-5 " />
-    </div>
-    <div>
-      <h4 className="font-semibold  text-sm ">Testing Strategies</h4>
-      <span className="block">Unit, integration, and performance testing</span>
-    </div>
-    <FaChevronRight className="ml-auto h-4 w-4 " />
-  </Link>
+  {additional_resources.map((resource) => {
+    const IconComponent = resource.icon;
+    return (
+      <Link
+        key={resource.href}
+        href={resource.href}
+        className="group flex items-center gap-4 hover:shadow-md shadow-sm p-4 border  rounded-lg no-underline transition-all duration-200"
+      >
+        <div
+          className={`flex items-center justify-center rounded-lg h-10 w-10 ${resource.iconBg}`}
+        >
+          <IconComponent className="h-5 w-5 text-white" />
+        </div>
+        <div>
+          <h4 className="font-semibold text-sm ">{resource.title}</h4>
+          <span className="block">{resource.description}</span>
+        </div>
+        <FaChevronRight className="ml-auto h-4 w-4 " />
+      </Link>
+    );
+  })}
 </div>
 
 ## Course Curriculum
@@ -475,17 +184,11 @@ Beyond the main curriculum, we provide supplementary resources to enhance your l
 - Security Implementation - Authentication, authorization, and security best practices
 - Performance Optimization - Scalability patterns, monitoring, and load balancing techniques
 
-## Why Learn Back-end Development?
+### Projects
 
-Back-end development is the backbone of modern web applications and one of the most critical and rewarding careers in technology. This course prepares you for success by covering:
-
-- High-Demand Skills: Server-side development skills are in extremely high demand with excellent career prospects
-- System Architecture: Learn to design scalable, efficient systems that power millions of users
-- Data Management: Master databases, data modeling, and information architecture
-- Security Expertise: Implement robust security measures and protect sensitive data
-- Performance Optimization: Build fast, scalable applications that handle massive traffic
-- Problem Solving: Tackle complex technical challenges in distributed systems
-- Full-Stack Understanding: Gain deep knowledge of how web applications work end-to-end
+- To-Do List Application - Build a full-stack application with user authentication, data storage, and RESTful API
+- E-commerce Platform - Develop a complete e-commerce solution with product management, user accounts, and payment processing
+- Online Learning Platform - Create a platform for courses, user accounts, and content management
 
 ## Getting Started
 
