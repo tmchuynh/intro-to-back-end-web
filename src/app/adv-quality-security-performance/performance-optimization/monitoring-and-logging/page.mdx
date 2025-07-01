@@ -6,2446 +6,289 @@ import BackToTop from "@/components/BackToTop";
 
 ## Introduction
 
-Performance monitoring is a critical aspect of maintaining the health and efficiency of applications and systems. It involves tracking various metrics to ensure that applications run smoothly, respond quickly, and handle user requests effectively. This comprehensive guide covers the key concepts, tools, and best practices for performance monitoring in modern software development.
-
-Performance monitoring goes beyond simply checking if an application is "up" or "down." It provides deep insights into how applications behave under different conditions, helping teams:
-
-- **Prevent Issues**: Identify potential problems before they impact users
-- **Optimize Performance**: Find bottlenecks and optimization opportunities
-- **Ensure Reliability**: Maintain service level agreements (SLAs) and user expectations
-- **Support Growth**: Scale systems based on actual usage patterns
-- **Reduce Costs**: Optimize resource usage and prevent over-provisioning
-
-## Why Performance Monitoring Matters
-
-### Business Impact
-
-Performance directly affects business outcomes:
-
-- **User Experience**: Every 100ms delay can reduce conversion rates by 1%
-- **Revenue Loss**: Amazon found that 1 second delay costs them $1.6 billion annually
-- **User Retention**: 53% of mobile users abandon sites that take longer than 3 seconds to load
-- **SEO Rankings**: Page speed is a Google ranking factor
-- **Operational Costs**: Poor performance leads to increased infrastructure costs
-
-### Technical Benefits
-
-From a technical perspective, monitoring provides:
-
-```txt
-┌─────────────────────────────────────────────────────────────┐
-│                    Monitoring Benefits                      │
-├─────────────────────────────────────────────────────────────┤
-│  Proactive Issue Detection  │  Performance Optimization     │
-│  • Early warning alerts     │  • Identify bottlenecks       │
-│  • Trend analysis           │  • Resource optimization      │
-│  • Capacity planning        │  • Code-level insights        │
-│                             │                               │
-│  Operational Excellence     │  Data-Driven Decisions        │
-│  • MTTR reduction           │  • Evidence-based changes     │
-│  • SLA compliance           │  • ROI measurement            │
-│  • Team coordination        │  • Strategic planning         │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### The Cost of Not Monitoring
-
-Without proper monitoring:
-
-- **Blind Spots**: Issues go undetected until users complain
-- **Reactive Mode**: Always fighting fires instead of preventing them
-- **Resource Waste**: Over-provisioning to compensate for unknown performance
-- **Poor Decisions**: Changes made without understanding their impact
+Performance monitoring and logging are critical components of maintaining the health and efficiency of your applications. They provide insights into system behavior, help identify bottlenecks, and ensure that your application runs smoothly under various conditions.
 
 ## Key Concepts
 
-Understanding these fundamental concepts is essential for effective performance monitoring:
+- **Performance Monitoring**: The process of continuously measuring the performance of an application to ensure it meets its performance goals. This includes tracking metrics such as response times, throughput, and resource utilization.
+- **Logging**: The practice of recording events, errors, and other significant occurrences in an application. Logs provide a detailed history of application behavior, which is invaluable for debugging and performance analysis.
+- **Metrics**: Quantitative measures that provide insights into the performance and health of an application. Common metrics include CPU usage, memory consumption, request latency, and error rates.
+- **Alerts**: Notifications triggered by specific conditions in the application, such as high error rates or slow response times. Alerts help teams respond quickly to potential issues before they escalate.
 
-### Metrics
+## Performance Monitoring Tools
 
-**Metrics** are quantitative measures that provide insights into system behavior and performance. They are the foundation of any monitoring strategy.
+### Prometheus
 
-#### Types of Metrics:
+Prometheus is an open-source monitoring and alerting toolkit designed for reliability and scalability. It collects metrics from configured targets at specified intervals, evaluates rule expressions, and can trigger alerts if certain conditions are met. Prometheus is particularly well-suited for dynamic environments like microservices and containerized applications.
 
-1. **Golden Signals** (Google SRE):
-   - **Latency**: Time to process requests
-   - **Traffic**: Volume of requests
-   - **Errors**: Rate of failed requests
-   - **Saturation**: Resource utilization
+#### Key Features
 
-2. **RED Metrics** (Request-focused):
-   - **Rate**: Requests per second
-   - **Errors**: Error percentage
-   - **Duration**: Response time distribution
+- **Time-Series Database**: Stores metrics as time-series data, allowing for efficient querying and analysis.
+- **Flexible Query Language**: PromQL (Prometheus Query Language) allows for powerful querying and aggregation of metrics.
+- **Alerting**: Supports alerting rules that can trigger notifications based on metric thresholds.
+- **Visualization**: Integrates with Grafana for rich visualizations of metrics and dashboards.
 
-3. **USE Metrics** (Resource-focused):
-   - **Utilization**: Percentage of time resource is busy
-   - **Saturation**: Queue length or waiting time
-   - **Errors**: Error count
-
-### Observability vs Monitoring
-
-```txt
-┌─────────────────────────────────────────────────────────────┐
-│                 Monitoring vs Observability                 │
-├─────────────────────┬───────────────────────────────────────┤
-│     Monitoring      │           Observability               │
-├─────────────────────┼───────────────────────────────────────┤
-│ Predefined metrics  │ Understanding system state            │
-│ Known unknowns      │ Unknown unknowns                      │
-│ Dashboards & alerts │ Exploration & discovery               │
-│ "Is it working?"    │ "Why is it not working?"              │
-│ Reactive            │ Proactive                             │
-└─────────────────────┴───────────────────────────────────────┘
-```
-
-#### The Three Pillars of Observability:
-
-1. **Metrics**: Numerical data points over time
-2. **Logs**: Discrete events with context
-3. **Traces**: Request flow through distributed systems
-
-### Monitoring Tools
-
-Modern monitoring tools can be categorized by their primary function:
-
-- **Infrastructure Monitoring**: System-level metrics (CPU, memory, network)
-- **Application Performance Monitoring (APM)**: Code-level insights and user experience
-- **Log Management**: Centralized log collection and analysis
-- **Synthetic Monitoring**: Proactive testing of user journeys
-- **Real User Monitoring (RUM)**: Actual user experience data
-
-### Alerts and Notifications
-
-**Alerts** are automated notifications triggered when metrics cross predefined thresholds. Effective alerting requires:
-
-- **Actionable**: Every alert should require human intervention
-- **Contextual**: Include enough information to start troubleshooting
-- **Properly Routed**: Right person, right time, right channel
-- **Escalation**: Clear escalation paths for unacknowledged alerts
-
-### Dashboards
-
-**Dashboards** provide visual representations of system health and performance. They serve different audiences:
-
-- **Executive Dashboards**: High-level business metrics
-- **Operational Dashboards**: Real-time system health
-- **Analytical Dashboards**: Deep-dive investigation tools
-- **Team Dashboards**: Service-specific metrics
-
-<BackToTop />
-
-## Types of Performance Monitoring
-
-### Infrastructure Monitoring
-
-Focuses on the underlying hardware and operating system metrics:
-
-```yaml title="config/infrastructure-metrics.yml"
-# Example infrastructure metrics
-system_metrics:
-  cpu:
-    - usage_percent
-    - load_average
-    - context_switches
-  memory:
-    - usage_percent
-    - available_bytes
-    - swap_usage
-  disk:
-    - usage_percent
-    - iops
-    - read_write_latency
-  network:
-    - bytes_in_out
-    - packets_in_out
-    - connection_count
-```
-
-**Why It Matters**: Infrastructure issues often cascade to application problems. Monitoring infrastructure helps identify:
-
-- Resource exhaustion before it impacts users
-- Capacity planning needs
-- Hardware failures
-- Network connectivity issues
-
-### Application Performance Monitoring (APM)
-
-Focuses on application-level performance and user experience:
-
-```txt
-┌─────────────────────────────────────────────────────────────┐
-│                    APM Monitoring Layers                    │
-├─────────────────────────────────────────────────────────────┤
-│  User Experience    │  • Page load times                    │
-│                     │  • Transaction traces                 │
-│                     │  • Error rates                        │
-├─────────────────────┼───────────────────────────────────────┤
-│  Application Code   │  • Method execution times             │
-│                     │  • Database queries                   │
-│                     │  • External service calls             │
-├─────────────────────┼───────────────────────────────────────┤
-│  Infrastructure     │  • CPU, Memory, Disk I/O              │
-│                     │  • Network connectivity               │
-│                     │  • Container/VM metrics               │
-└─────────────────────┴───────────────────────────────────────┘
-```
-
-<BackToTop />
-
-### Synthetic Monitoring
-
-Proactively tests application functionality from external locations:
-
-```javascript title="tests/synthetic-monitoring.js"
-// Example synthetic test
-const synthethicTest = {
-  name: "User Login Flow",
-  steps: [
-    { action: "navigate", url: "https://app.example.com/login" },
-    { action: "type", selector: "#username", text: "testuser" },
-    { action: "type", selector: "#password", text: "password123" },
-    { action: "click", selector: "#login-button" },
-    { action: "assert", selector: "#dashboard", condition: "visible" },
-  ],
-  frequency: "5 minutes",
-  locations: ["us-east", "eu-west", "asia-pacific"],
-};
-```
-
-**Benefits**:
-
-- Detects issues before users report them
-- Tests critical user journeys continuously
-- Provides external perspective on performance
-- Validates monitoring system health
-
-### Real User Monitoring (RUM)
-
-Collects performance data from actual user sessions:
-
-```javascript title="public/js/rum-implementation.js"
-// Example RUM implementation
-window.addEventListener("load", function () {
-  const navigationTiming = performance.getEntriesByType("navigation")[0];
-  const metrics = {
-    pageLoadTime:
-      navigationTiming.loadEventEnd - navigationTiming.navigationStart,
-    domInteractive:
-      navigationTiming.domInteractive - navigationTiming.navigationStart,
-    firstContentfulPaint: performance.getEntriesByType("paint")[0]?.startTime,
-    timeToInteractive: calculateTTI(),
-    userAgent: navigator.userAgent,
-    connectionType: navigator.connection?.effectiveType,
-  };
-
-  sendMetrics(metrics);
-});
-```
-
-<BackToTop />
-
-## Performance Metrics
-
-### Core Web Vitals (Google)
-
-Google's Core Web Vitals focus on user experience:
-
-1. **Largest Contentful Paint (LCP)**: Loading performance
-   - Good: ≤ 2.5 seconds
-   - Needs Improvement: 2.5-4.0 seconds
-   - Poor: > 4.0 seconds
-
-2. **First Input Delay (FID)**: Interactivity
-   - Good: ≤ 100 milliseconds
-   - Needs Improvement: 100-300 milliseconds
-   - Poor: > 300 milliseconds
-
-3. **Cumulative Layout Shift (CLS)**: Visual stability
-   - Good: ≤ 0.1
-   - Needs Improvement: 0.1-0.25
-   - Poor: > 0.25
-
-### Backend Performance Metrics
-
-```yaml title="config/backend-metrics.yml"
-backend_metrics:
-  response_time:
-    - p50: "50th percentile response time"
-    - p95: "95th percentile response time"
-    - p99: "99th percentile response time"
-
-  throughput:
-    - requests_per_second
-    - transactions_per_minute
-    - concurrent_users
-
-  error_rates:
-    - http_4xx_errors
-    - http_5xx_errors
-    - business_logic_errors
-
-  resource_utilization:
-    - cpu_usage
-    - memory_consumption
-    - database_connections
-    - thread_pool_usage
-```
-
-<BackToTop />
-
-### Database Performance Metrics
-
-```sql title="scripts/database-performance-queries.sql"
--- Example database performance queries
--- Query execution time
-SELECT
-  query_text,
-  total_exec_time / calls as avg_exec_time,
-  calls,
-  mean_exec_time
-FROM pg_stat_statements
-ORDER BY avg_exec_time DESC
-LIMIT 10;
-
--- Connection pool metrics
-SELECT
-  state,
-  count(*) as connection_count
-FROM pg_stat_activity
-GROUP BY state;
-
--- Lock monitoring
-SELECT
-  l.locktype,
-  l.database,
-  l.relation,
-  l.page,
-  l.tuple,
-  l.virtualxid,
-  l.transactionid,
-  l.classid,
-  l.objid,
-  l.objsubid,
-  l.virtualtransaction,
-  l.pid,
-  l.mode,
-  l.granted
-FROM pg_locks l
-WHERE NOT l.granted;
-```
-
-<BackToTop />
-
-## Monitoring Architecture
-
-### Pull vs Push Models
-
-#### Pull Model (Prometheus-style):
-
-```txt
-┌─────────────┐    HTTP GET     ┌─────────────┐
-│ Monitoring  │ ──────────────► │ Application │
-│   Server    │ ◄────────────── │   /metrics  │
-└─────────────┘    Metrics      └─────────────┘
-```
-
-#### Push Model (StatsD-style):
-
-```txt
-┌─────────────┐    UDP/TCP      ┌─────────────┐
-│ Application │ ──────────────► │ Monitoring  │
-│             │    Metrics      │   Server    │
-└─────────────┘                 └─────────────┘
-```
-
-#### Comparison:
-
-| Aspect      | Pull Model             | Push Model                |
-| ----------- | ---------------------- | ------------------------- |
-| Network     | HTTP-based             | UDP/TCP                   |
-| Reliability | Service discovery      | Fire-and-forget           |
-| Scaling     | Horizontal             | Vertical                  |
-| Debugging   | Easy to test endpoints | Harder to verify delivery |
-| Firewalls   | Requires open ports    | Works through NAT         |
-
-<BackToTop />
-
-### Distributed Monitoring Architecture
-
-```txt
-┌─────────────────────────────────────────────────────────────┐
-│                 Distributed Monitoring                      │
-├─────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐          │
-│  │   Region A  │  │   Region B  │  │   Region C  │          │
-│  │ ┌─────────┐ │  │ ┌─────────┐ │  │ ┌─────────┐ │          │
-│  │ │ Agents  │ │  │ │ Agents  │ │  │ │ Agents  │ │          │
-│  │ └─────────┘ │  │ └─────────┘ │  │ └─────────┘ │          │
-│  └─────────────┘  └─────────────┘  └─────────────┘          │
-│         │                 │                 │               │
-│         └─────────────────┼─────────────────┘               │
-│                           │                                 │
-│  ┌─────────────────────────▼─────────────────────────┐      │
-│  │            Central Monitoring System              │      │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌───────────┐  │      │
-│  │  │   Storage   │  │ Processing  │  │ Alerting  │  │      │
-│  │  └─────────────┘  └─────────────┘  └───────────┘  │      │
-│  └───────────────────────────────────────────────────┘      │
-└─────────────────────────────────────────────────────────────┘
-```
-
-## Tools and Technologies
-
-### Application Performance Monitoring (APM) Tools
-
-APM tools provide deep insights into application performance by monitoring transactions, tracing requests, and identifying bottlenecks. They help developers and operations teams understand how applications behave in production environments.
-
-Modern APM tools offer several key capabilities:
-
-- **Distributed Tracing**: Follow requests across microservices
-- **Code-Level Insights**: Identify slow methods and database queries
-- **User Experience Monitoring**: Track real user performance
-- **Error Tracking**: Capture and analyze application errors
-- **Infrastructure Correlation**: Connect application performance to underlying resources
-
-<BackToTop />
-
-#### Prometheus
-
-Prometheus is an open-source monitoring and alerting toolkit designed for reliability and scalability. It was originally built at SoundCloud and is now part of the Cloud Native Computing Foundation (CNCF).
-
-##### Architecture Overview:
-
-```txt
-┌─────────────────────────────────────────────────────────────┐
-│                 Prometheus Architecture                     │
-├─────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐    Pull      ┌─────────────┐               │
-│  │ Prometheus  │ ◄─────────── │   Targets   │               │
-│  │   Server    │              │ (exporters) │               │
-│  └─────────────┘              └─────────────┘               │
-│         │                                                   │
-│         ▼                                                   │
-│  ┌─────────────┐              ┌─────────────┐               │
-│  │   Storage   │              │ Alertmanager│               │
-│  │  (TSDB)     │              │             │               │
-│  └─────────────┘              └─────────────┘               │
-│         │                           │                       │
-│         ▼                           ▼                       │
-│  ┌─────────────┐             ┌──────────────┐               │
-│  │   Grafana   │             │ Notifications│               │
-│  │ (Dashboards)│             │  (PagerDuty) │               │
-│  └─────────────┘             └──────────────┘               │
-└─────────────────────────────────────────────────────────────┘
-```
-
-##### Key Features
-
-- **Time-series database** for storing metrics with efficient compression
-- **Powerful query language (PromQL)** for metric analysis and aggregation
-- **Alerting capabilities** with Alertmanager for flexible notification routing
-- **Service Discovery** for automatically finding targets to monitor
-- **Multi-dimensional data model** using labels for flexible querying
-- **HTTP pull model** for reliable metric collection
-
-##### Implementation Example
-
-###### Setting up a basic Prometheus configuration:
-
-```yaml title="config/prometheus.yml"
-# prometheus.yml
+```yaml title="prometheus.yml"
+# Prometheus configuration file
+# This file defines how Prometheus collects and stores metrics from your application.
+# Ensure to replace 'localhost:9090' with your application's endpoint.
+# Example Prometheus configuration
 global:
-  scrape_interval: 15s # How frequently to scrape targets
-  evaluation_interval: 15s # How frequently to evaluate rules
-
-# Alertmanager configuration
-alerting:
-  alertmanagers:
-    - static_configs:
-        - targets:
-            - alertmanager:9093
-
-# Load rules and evaluate them according to the global 'evaluation_interval'
-rule_files:
-  - "first_rules.yml"
-  - "second_rules.yml"
-
-# Scrape configuration
+  scrape_interval: 15s # Default scrape interval
 scrape_configs:
-  # The job name is added as a label `job=<job_name>` to any timeseries
-  - job_name: "prometheus"
+  - job_name: "my_application"
     static_configs:
-      - targets: ["localhost:9090"]
-
-  - job_name: "node-exporter"
-    static_configs:
-      - targets: ["localhost:9100"]
-
-  # Example application monitoring
-  - job_name: "my-application"
-    metrics_path: "/metrics"
-    static_configs:
-      - targets: ["app1:8080", "app2:8080"]
-
-  # Service discovery with consul
-  - job_name: "consul-services"
-    consul_sd_configs:
-      - server: "localhost:8500"
-        services: ["web", "api", "database"]
+      - targets: ["localhost:9090"] # Replace with your application's endpoint
 ```
 
-##### Application instrumentation example:
+#### Example Usage
 
-```javascript title="src/monitoring/prometheus-instrumentation.js"
-// Node.js application with Prometheus metrics
-const express = require("express");
-const promClient = require("prom-client");
-
-// Create a Registry to register the metrics
-const register = new promClient.Registry();
-
-// Add default metrics
-promClient.collectDefaultMetrics({
-  register,
-  timeout: 5000,
-  gcDurationBuckets: [0.001, 0.01, 0.1, 1, 2, 5],
+```javascript title="Using Prometheus in Node.js"
+const client = require("prom-client");
+const register = new client.Registry();
+const http = require("http");
+const responseTimeHistogram = new client.Histogram({
+  name: "http_response_time_seconds",
+  help: "HTTP response time in seconds",
+  labelNames: ["method", "route"],
+  buckets: [0.1, 0.5, 1, 2.5, 5, 10],
 });
-
-// Custom metrics
-const httpRequestDuration = new promClient.Histogram({
-  name: "http_request_duration_seconds",
-  help: "Duration of HTTP requests in seconds",
-  labelNames: ["method", "route", "status"],
-  buckets: [0.1, 0.3, 0.5, 0.7, 1, 3, 5, 7, 10],
-});
-
-const httpRequestsTotal = new promClient.Counter({
+const requestCounter = new client.Counter({
   name: "http_requests_total",
   help: "Total number of HTTP requests",
   labelNames: ["method", "route", "status"],
 });
-
-const activeConnections = new promClient.Gauge({
-  name: "active_connections",
-  help: "Number of active connections",
-});
-
 // Register metrics
-register.registerMetric(httpRequestDuration);
-register.registerMetric(httpRequestsTotal);
-register.registerMetric(activeConnections);
-
-const app = express();
-
-// Middleware to track metrics
-app.use((req, res, next) => {
-  const start = Date.now();
-
+register.registerMetric(responseTimeHistogram);
+register.registerMetric(requestCounter);
+// Middleware to measure response time
+const responseTimeMiddleware = (req, res, next) => {
+  const end = responseTimeHistogram.startTimer();
   res.on("finish", () => {
-    const duration = (Date.now() - start) / 1000;
-    const route = req.route ? req.route.path : req.path;
-
-    httpRequestDuration
-      .labels(req.method, route, res.statusCode)
-      .observe(duration);
-
-    httpRequestsTotal.labels(req.method, route, res.statusCode).inc();
-  });
-
-  next();
-});
-
-// Metrics endpoint
-app.get("/metrics", async (req, res) => {
-  try {
-    res.set("Content-Type", register.contentType);
-    res.end(await register.metrics());
-  } catch (ex) {
-    res.status(500).end(ex);
-  }
-});
-
-// Example alerting rules
-const alertingRules = `
-groups:
-- name: example
-  rules:
-  - alert: HighRequestLatency
-    expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 0.5
-    for: 10m
-    labels:
-      severity: warning
-    annotations:
-      summary: High request latency on {{ $labels.instance }}
-      description: "95th percentile latency is above 500ms (current value: {{ $value }}s)"
-
-  - alert: HighErrorRate
-    expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.1
-    for: 5m
-    labels:
-      severity: critical
-    annotations:
-      summary: High error rate on {{ $labels.instance }}
-      description: "Error rate is above 10% (current value: {{ $value }})"
-`;
-```
-
-##### PromQL Examples
-
-```txt title="promql-examples.md"
-# Basic metrics
-up{job="my-application"}                   # Check if application is up
-http_requests_total{job="my-application"}  # Total HTTP requests
-# Basic queries
-up                                    # Check if targets are up
-rate(http_requests_total[5m])         # Request rate over 5 minutes
-histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))  # 95th percentile latency
-
-# Aggregation
-sum(rate(http_requests_total[5m])) by (instance)     # Total RPS by instance
-avg(cpu_usage) by (service)                          # Average CPU by service
-max(memory_usage) by (pod)                           # Max memory by pod
-
-# Mathematical operations
-increase(http_requests_total[1h])                   # Total requests in last hour
-rate(http_requests_total[5m]) * 60                  # Requests per minute
-100 * (1 - rate(http_requests_total{status="200"}[5m]) / rate(http_requests_total[5m]))  # Error percentage
-
-# Time-based functions
-delta(cpu_usage[1h])                                # Change in CPU over 1 hour
-predict_linear(disk_usage[4h], 3600)                # Predict disk usage in 1 hour
-```
-
-##### Resources
-
-- [Prometheus Documentation](https://prometheus.io/docs/introduction/overview/)
-- [Prometheus GitHub Repository](https://github.com/prometheus/prometheus)
-- [PromQL Tutorial](https://prometheus.io/docs/prometheus/latest/querying/basics/)
-- [Best Practices](https://prometheus.io/docs/practices/naming/)
-
-<BackToTop />
-
-#### Grafana
-
-Grafana is an open-source platform for monitoring and observability that provides powerful and flexible dashboarding capabilities. It integrates with numerous data sources and offers rich visualization options.
-
-##### Grafana Ecosystem:
-
-```txt
-┌──────────────────────────────────────────────────────────────────┐
-│                    Grafana Ecosystem                             │
-├──────────────────────────────────────────────────────────────────┤
-│  Data Sources          │   Visualizations     │    Features      │
-│  ┌───────────────┐     │  ┌─────────────┐     │   ┌───────────┐  │
-│  │ Prometheus    │     │  │   Graphs    │     │   │ Alerting  │  │
-│  │ InfluxDB      │     │  │   Tables    │     │   │ Variables │  │
-│  │ Elasticsearch │     │  │   Heatmaps  │     │   │ Templates │  │
-│  │ MySQL         │     │  │   Gauges    │     │   │ Plugins   │  │
-│  │ PostgreSQL    │     │  │   Stat      │     │   │ Teams     │  │
-│  │ CloudWatch    │     │  │   Panels    │     │   │ RBAC      │  │
-│  └───────────────┘     │  └─────────────┘     │   └───────────┘  │
-└──────────────────────────────────────────────────────────────────┘
-```
-
-##### Key Features
-
-- **Multiple Data Sources**: Connect to 60+ different data sources
-- **Rich Visualizations**: Graphs, tables, heatmaps, gauges, and more
-- **Dashboard Templating**: Dynamic dashboards with variables
-- **Alerting System**: Visual alerts with multiple notification channels
-- **Plugin Ecosystem**: Extend functionality with community plugins
-- **Team Collaboration**: Share dashboards and manage team access
-- **Annotation Support**: Add context to graphs with events and deployments
-
-##### Dashboard Configuration Examples
-
-###### Data Source Configuration:
-
-```yaml title="grafana/datasources.yml"
-# grafana/datasources.yml
-apiVersion: 1
-
-datasources:
-  - name: Prometheus
-    type: prometheus
-    access: proxy
-    url: http://prometheus:9090
-    isDefault: true
-    editable: true
-    jsonData:
-      timeInterval: "15s"
-      queryTimeout: "60s"
-      httpMethod: "POST"
-
-  - name: Loki
-    type: loki
-    access: proxy
-    url: http://loki:3100
-    jsonData:
-      maxLines: 1000
-
-  - name: Elasticsearch
-    type: elasticsearch
-    access: proxy
-    url: http://elasticsearch:9200
-    database: "logstash-*"
-    jsonData:
-      interval: "Daily"
-      timeField: "@timestamp"
-```
-
-##### Dashboard JSON Configuration:
-
-```json title="grafana/dashboards/performance-dashboard.json"
-{
-  "dashboard": {
-    "title": "Application Performance Dashboard",
-    "tags": ["application", "performance"],
-    "time": {
-      "from": "now-1h",
-      "to": "now"
-    },
-    "panels": [
-      {
-        "title": "Request Rate",
-        "type": "graph",
-        "targets": [
-          {
-            "expr": "sum(rate(http_requests_total[5m])) by (service)",
-            "legendFormat": "{{service}}"
-          }
-        ],
-        "yAxes": [
-          {
-            "label": "Requests/sec",
-            "min": 0
-          }
-        ]
-      },
-      {
-        "title": "Response Time P95",
-        "type": "singlestat",
-        "targets": [
-          {
-            "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))",
-            "format": "time_series"
-          }
-        ],
-        "valueName": "current",
-        "format": "ms",
-        "thresholds": "500,1000"
-      }
-    ],
-    "templating": {
-      "list": [
-        {
-          "name": "service",
-          "type": "query",
-          "query": "label_values(up, service)",
-          "refresh": 1,
-          "includeAll": true,
-          "multi": true
-        }
-      ]
-    }
-  }
-}
-```
-
-##### Advanced Dashboard Features:
-
-```javascript title="grafana/plugins/custom-panel.js"
-// Custom panel plugin example
-import { PanelPlugin } from "@grafana/data";
-import { SimplePanel } from "./SimplePanel";
-
-export const plugin = new PanelPlugin(SimplePanel).setPanelOptions(
-  (builder) => {
-    return builder
-      .addTextInput({
-        path: "text",
-        name: "Simple text option",
-        description: "Description of panel option",
-        defaultValue: "Default value",
-      })
-      .addBooleanSwitch({
-        path: "showSeriesCount",
-        name: "Show series counter",
-        defaultValue: false,
-      });
-  }
-);
-```
-
-##### Best Practices for Grafana Dashboards
-
-1. **Dashboard Design Principles:**
-
-```yaml title="config/dashboard-design-principles.yml"
-dashboard_design:
-  layout:
-    - "Use consistent time ranges across panels"
-    - "Group related metrics together"
-    - "Place most important metrics at the top"
-
-  performance:
-    - "Limit number of queries per panel"
-    - "Use appropriate time intervals"
-    - "Avoid too many data points"
-
-  usability:
-    - "Use meaningful titles and descriptions"
-    - "Add units to metrics"
-    - "Use color coding consistently"
-    - "Provide drill-down capabilities"
-```
-
-2. **Variable Usage:**
-
-```json title="grafana/templates/variable-usage.json"
-{
-  "templating": {
-    "list": [
-      {
-        "name": "environment",
-        "type": "custom",
-        "query": "production,staging,development",
-        "current": {
-          "value": "production",
-          "text": "production"
-        }
-      },
-      {
-        "name": "service",
-        "type": "query",
-        "query": "label_values(up{environment=\"$environment\"}, service)",
-        "refresh": 2,
-        "sort": 1
-      }
-    ]
-  }
-}
-```
-
-### Log Monitoring Tools
-
-Log monitoring tools help collect, analyze, and visualize log data from applications and systems. They enable teams to identify issues, track performance, and gain insights into application behavior.
-
-<BackToTop />
-
-#### ELK Stack (Elasticsearch, Logstash, Kibana)
-
-The ELK Stack is a powerful combination of three open-source projects that together provide a comprehensive solution for log management and analysis.
-
-##### ELK Stack Architecture:
-
-```txt
-┌─────────────────────────────────────────────────────────────────┐
-│                    ELK Stack Flow                               │
-├─────────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐          │
-│  │ Log Sources │───►│  Logstash   │───►│Elasticsearch│          │
-│  │             │    │ (Processing)│    │  (Storage)  │          │
-│  │ • Apps      │    │             │    │             │          │
-│  │ • Servers   │    │ • Parse     │    │ • Index     │          │
-│  │ • Services  │    │ • Filter    │    │ • Search    │          │
-│  │ • Devices   │    │ • Transform │    │ • Aggregate │          │
-│  └─────────────┘    └─────────────┘    └─────────────┘          │
-│                                               │                 │
-│                                               ▼                 │
-│                                       ┌───────────────┐         │
-│                                       │   Kibana      │         │
-│                                       │(Visualization)│         │
-│                                       │               │         │
-│                                       │ • Dashboards  │         │
-│                                       │ • Analytics   │         │
-│                                       │ • Alerting    │         │
-│                                       └───────────────┘         │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-<BackToTop />
-
-##### Elasticsearch
-
-**Elasticsearch** is a distributed search and analytics engine built on Apache Lucene.
-
-**Key Capabilities:**
-
-- **Full-text search** with advanced query capabilities
-- **Real-time analytics** and aggregations
-- **Horizontal scaling** across multiple nodes
-- **RESTful APIs** for easy integration
-- **Machine learning** for anomaly detection
-
-###### Configuration Example:
-
-```yaml title="config/elasticsearch.yml"
-# elasticsearch.yml
-cluster.name: production-logs
-node.name: node-1
-path.data: /var/lib/elasticsearch
-path.logs: /var/log/elasticsearch
-network.host: 0.0.0.0
-http.port: 9200
-discovery.seed_hosts: ["node1", "node2", "node3"]
-cluster.initial_master_nodes: ["node1", "node2", "node3"]
-
-# Index template for application logs
-{
-  "index_patterns": ["app-logs-*"],
-  "template": {
-    "settings": {
-      "number_of_shards": 3,
-      "number_of_replicas": 1,
-      "index.refresh_interval": "30s"
-    },
-    "mappings": {
-      "properties": {
-        "@timestamp": {
-          "type": "date"
-        },
-        "level": {
-          "type": "keyword"
-        },
-        "message": {
-          "type": "text",
-          "analyzer": "standard"
-        },
-        "service": {
-          "type": "keyword"
-        },
-        "trace_id": {
-          "type": "keyword"
-        },
-        "response_time": {
-          "type": "float"
-        }
-      }
-    }
-  }
-}
-```
-
-<BackToTop />
-
-##### Logstash
-
-**Logstash** is a data processing pipeline that ingests, transforms, and outputs data.
-
-###### Pipeline Configuration:
-
-```ruby title="config/logstash.conf"
-# logstash.conf
-input {
-  beats {
-    port => 5044
-  }
-
-  syslog {
-    port => 514
-  }
-
-  http {
-    port => 8080
-    codec => json
-  }
-}
-
-filter {
-  # Parse application logs
-  if [fields][service] == "web-app" {
-    grok {
-      match => {
-        "message" => "%{TIMESTAMP_ISO8601:timestamp} %{LOGLEVEL:level} \[%{DATA:thread}\] %{DATA:logger} - %{GREEDYDATA:log_message}"
-      }
-    }
-
-    date {
-      match => [ "timestamp", "ISO8601" ]
-    }
-
-    if [log_message] =~ /response_time:(\d+)/ {
-      mutate {
-        add_field => { "response_time" => "%{[1]}" }
-      }
-      mutate {
-        convert => { "response_time" => "integer" }
-      }
-    }
-  }
-
-  # Parse nginx access logs
-  if [fields][log_type] == "nginx" {
-    grok {
-      match => {
-        "message" => '%{IPORHOST:remote_addr} - %{DATA:remote_user} \[%{HTTPDATE:time_local}\] "%{WORD:method} %{DATA:request} HTTP/%{NUMBER:http_version}" %{INT:status} %{INT:body_bytes_sent} "%{DATA:http_referer}" "%{DATA:http_user_agent}" %{NUMBER:request_time}'
-      }
-    }
-
-    mutate {
-      convert => {
-        "status" => "integer"
-        "body_bytes_sent" => "integer"
-        "request_time" => "float"
-      }
-    }
-  }
-
-  # Enrich with GeoIP
-  if [remote_addr] {
-    geoip {
-      source => "remote_addr"
-      target => "geoip"
-    }
-  }
-
-  # Add common fields
-  mutate {
-    add_field => {
-      "environment" => "${ENVIRONMENT:unknown}"
-      "datacenter" => "${DATACENTER:unknown}"
-    }
-  }
-}
-
-output {
-  elasticsearch {
-    hosts => ["elasticsearch1:9200", "elasticsearch2:9200"]
-    index => "%{[fields][service]}-%{+YYYY.MM.dd}"
-    template_name => "app-logs"
-  }
-
-  # For debugging
-  if [@metadata][debug] {
-    stdout {
-      codec => rubydebug
-    }
-  }
-}
-```
-
-<BackToTop />
-
-##### Kibana
-
-**Kibana** provides visualization and exploration capabilities for Elasticsearch data.
-
-**Key Features:**
-
-- **Discover**: Explore and search through log data
-- **Visualize**: Create charts, graphs, and other visualizations
-- **Dashboard**: Combine visualizations into comprehensive dashboards
-- **Canvas**: Create pixel-perfect presentations
-- **Maps**: Geospatial data visualization
-- **Machine Learning**: Anomaly detection and forecasting
-
-###### Dashboard Configuration:
-
-```json title="kibana/dashboards/performance-dashboard.json"
-{
-  "version": "7.15.0",
-  "objects": [
-    {
-      "attributes": {
-        "title": "Application Performance Dashboard",
-        "type": "dashboard",
-        "panelsJSON": "[{\"version\":\"7.15.0\",\"panelIndex\":\"1\",\"gridData\":{\"x\":0,\"y\":0,\"w\":24,\"h\":15},\"panelRefName\":\"panel_1\"}]",
-        "kibanaSavedObjectMeta": {
-          "searchSourceJSON": "{\"query\":{\"query\":\"\",\"language\":\"kuery\"},\"filter\":[]}"
-        }
-      }
-    },
-    {
-      "attributes": {
-        "title": "Response Time Distribution",
-        "visState": "{\"title\":\"Response Time Distribution\",\"type\":\"histogram\",\"params\":{\"grid\":{\"categoryLines\":false,\"style\":{\"color\":\"#eee\"}},\"categoryAxes\":[{\"id\":\"CategoryAxis-1\",\"type\":\"category\",\"position\":\"bottom\",\"show\":true,\"style\":{},\"scale\":{\"type\":\"linear\"},\"labels\":{\"show\":true,\"truncate\":100},\"title\":{}}],\"valueAxes\":[{\"id\":\"ValueAxis-1\",\"name\":\"LeftAxis-1\",\"type\":\"value\",\"position\":\"left\",\"show\":true,\"style\":{},\"scale\":{\"type\":\"linear\",\"mode\":\"normal\"},\"labels\":{\"show\":true,\"rotate\":0,\"filter\":false,\"truncate\":100},\"title\":{\"text\":\"Count\"}}]},\"aggs\":[{\"id\":\"1\",\"enabled\":true,\"type\":\"count\",\"schema\":\"metric\",\"params\":{}},{\"id\":\"2\",\"enabled\":true,\"type\":\"histogram\",\"schema\":\"segment\",\"params\":{\"field\":\"response_time\",\"interval\":100,\"extended_bounds\":{}}}]}",
-        "uiStateJSON": "{}",
-        "kibanaSavedObjectMeta": {
-          "searchSourceJSON": "{\"index\":\"app-logs-*\",\"query\":{\"match_all\":{}},\"filter\":[]}"
-        }
-      }
-    }
-  ]
-}
-```
-
-<BackToTop />
-
-##### Advanced ELK Features
-
-###### Index Lifecycle Management (ILM):
-
-```json title="elasticsearch/policies/ilm-policy.json"
-{
-  "policy": {
-    "phases": {
-      "hot": {
-        "actions": {
-          "rollover": {
-            "max_size": "50GB",
-            "max_age": "30d"
-          },
-          "set_priority": {
-            "priority": 100
-          }
-        }
-      },
-      "warm": {
-        "min_age": "30d",
-        "actions": {
-          "set_priority": {
-            "priority": 50
-          },
-          "allocate": {
-            "number_of_replicas": 0
-          }
-        }
-      },
-      "cold": {
-        "min_age": "90d",
-        "actions": {
-          "set_priority": {
-            "priority": 0
-          },
-          "allocate": {
-            "number_of_replicas": 0
-          }
-        }
-      },
-      "delete": {
-        "min_age": "365d"
-      }
-    }
-  }
-}
-```
-
-##### Resources
-
-- [Elasticsearch Documentation](https://www.elastic.co/guide/en/elasticsearch/reference/current/index.html)
-- [Logstash Documentation](https://www.elastic.co/guide/en/logstash/current/index.html)
-- [Kibana Documentation](https://www.elastic.co/guide/en/kibana/current/index.html)
-
-<BackToTop />
-
-#### Fluentd
-
-Fluentd is an open-source data collector that provides a unified logging layer between data sources and destinations.
-
-##### Fluentd Architecture:
-
-```txt
-┌────────────────────────────────────────────────────────────────┐
-│                  Fluentd Architecture                          │
-├────────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐      ┌─────────────┐      ┌─────────────────┐ │
-│  │   Input     │───►  │   Filter    │───►  │   Output        │ │
-│  │             │      │             │      │                 │ │
-│  │ • tail      │      │ • parser    │      │ • forward       │ │
-│  │ • forward   │      │ • grep      │      │ • file          │ │
-│  │ • http      │      │ • record    │      │ • s3            │ │
-│  │ • syslog    │      │ • transform │      │ • elasticsearch │ │
-│  │ • tcp       │      │ • geoip     │      │ • kafka         │ │
-│  └─────────────┘      └─────────────┘      └─────────────────┘ │
-│                                                                │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │                   Buffer                                │   │
-│  │ • Memory buffer for high-throughput                     │   │
-│  │ • File buffer for reliability                           │   │
-│  │ • Automatic retry with exponential backoff              │   │
-│  └─────────────────────────────────────────────────────────┘   │
-└────────────────────────────────────────────────────────────────┘
-```
-
-##### Key Features
-
-- **Pluggable architecture** with over 500 plugins for data sources and outputs
-- **Support for structured and unstructured** log data with automatic JSON parsing
-- **Built-in buffering and retry mechanisms** for reliable log delivery
-- **High performance** with C and Ruby optimization
-- **Flexible routing** based on tags and filters
-- **Memory and file buffering** options for different reliability requirements
-
-##### Configuration Examples
-
-###### Basic Fluentd Configuration:
-
-```ruby title="config/fluent.conf"
-# fluent.conf
-
-# Input plugins
-<source>
-  @type tail
-  path /var/log/nginx/access.log
-  pos_file /var/log/fluentd/nginx.log.pos
-  tag nginx.access
-  format nginx
-</source>
-
-<source>
-  @type tail
-  path /var/log/myapp/*.log
-  pos_file /var/log/fluentd/myapp.log.pos
-  tag myapp.*
-  format json
-  time_key timestamp
-  time_format %Y-%m-%d %H:%M:%S
-</source>
-
-<source>
-  @type forward
-  port 24224
-  bind 0.0.0.0
-</source>
-
-# Filter plugins
-<filter nginx.access>
-  @type parser
-  key_name message
-  reserve_data true
-  <parse>
-    @type nginx
-  </parse>
-</filter>
-
-<filter myapp.**>
-  @type record_transformer
-  <record>
-    hostname "#{Socket.gethostname}"
-    environment "#{ENV['ENVIRONMENT']}"
-    service_name ${tag_parts[1]}
-  </record>
-</filter>
-
-# Add GeoIP information
-<filter nginx.access>
-  @type geoip
-  geoip_lookup_keys remote_addr
-  <record>
-    geoip_country ${country.names.en["remote_addr"]}
-    geoip_city ${city.names.en["remote_addr"]}
-    geoip_latitude ${location.latitude["remote_addr"]}
-    geoip_longitude ${location.longitude["remote_addr"]}
-  </record>
-  skip_adding_null_record true
-</filter>
-
-# Output plugins
-<match nginx.access>
-  @type elasticsearch
-  host elasticsearch.example.com
-  port 9200
-  index_name nginx-access
-  type_name _doc
-  <buffer>
-    @type file
-    path /var/log/fluentd/buffers/nginx.access
-    flush_mode interval
-    retry_type exponential_backoff
-    flush_thread_count 2
-    flush_interval 5s
-    retry_forever
-    retry_max_interval 30
-    chunk_limit_size 2M
-    queue_limit_length 8
-  </buffer>
-</match>
-
-<match myapp.**>
-  @type copy
-  <store>
-    @type elasticsearch
-    host elasticsearch.example.com
-    port 9200
-    index_name myapp-${service_name}-%Y%m%d
-    type_name _doc
-    <buffer service_name,time>
-      @type file
-      path /var/log/fluentd/buffers/myapp
-      timekey 1d
-      timekey_use_utc true
-      flush_mode interval
-      flush_interval 10s
-    </buffer>
-  </store>
-
-  <store>
-    @type s3
-    aws_key_id YOUR_AWS_KEY_ID
-    aws_sec_key YOUR_AWS_SECRET_KEY
-    s3_bucket your-log-bucket
-    s3_region us-west-2
-    path logs/myapp/year=%Y/month=%m/day=%d/
-    s3_object_key_format %{path}%{time_slice}_%{index}.%{file_extension}
-    time_slice_format %Y%m%d-%H
-    <buffer time>
-      @type file
-      path /var/log/fluentd/buffers/s3
-      timekey 3600
-      timekey_wait 10m
-    </buffer>
-    <format>
-      @type json
-    </format>
-  </store>
-</match>
-
-# Error handling
-<label @ERROR>
-  <match **>
-    @type file
-    path /var/log/fluentd/error
-    <format>
-      @type json
-    </format>
-  </match>
-</label>
-```
-
-##### Docker Deployment:
-
-```yaml title="docker/docker-compose.fluentd.yml"
-# docker-compose.yml for Fluentd
-version: "3.8"
-services:
-  fluentd:
-    image: fluent/fluentd:v1.14-debian
-    ports:
-      - "24224:24224"
-      - "24224:24224/udp"
-    volumes:
-      - ./fluent.conf:/fluentd/etc/fluent.conf
-      - ./logs:/var/log
-      - fluentd-buffer:/var/log/fluentd/buffers
-    environment:
-      - FLUENTD_CONF=fluent.conf
-      - ENVIRONMENT=production
-    depends_on:
-      - elasticsearch
-
-volumes:
-  fluentd-buffer:
-```
-
-<BackToTop />
-
-##### Application Integration:
-
-```javascript title="src/logging/fluentd-integration.js"
-// Node.js application with Fluentd logging
-const winston = require("winston");
-require("winston-fluentd").Fluentd;
-
-const logger = winston.createLogger({
-  transports: [
-    new winston.transports.Fluentd("myapp.api", {
-      host: "fluentd-server",
-      port: 24224,
-      timeout: 3.0,
-      requireAckResponse: true,
-    }),
-    new winston.transports.Console({
-      format: winston.format.simple(),
-    }),
-  ],
-});
-
-// Usage
-logger.info("User login", {
-  user_id: 12345,
-  ip_address: "192.168.1.100",
-  user_agent: "Mozilla/5.0...",
-  response_time: 150,
-});
-
-logger.error("Database connection failed", {
-  error: "Connection timeout",
-  database: "primary",
-  retry_count: 3,
-});
-```
-
-<BackToTop />
-
-##### Performance Tuning
-
-###### High-Throughput Configuration:
-
-```ruby title="config/fluent-high-performance.conf"
-# High-performance configuration
-<system>
-  workers 4
-  root_dir /var/log/fluentd
-</system>
-
-<worker 0>
-  <source>
-    @type forward
-    port 24224
-    bind 0.0.0.0
-  </source>
-</worker>
-
-<worker 1-3>
-  <source>
-    @type tail
-    path /var/log/app-#{worker_id}/*.log
-    pos_file /var/log/fluentd/app-#{worker_id}.log.pos
-    tag app.log
-    format json
-    read_from_head true
-    refresh_interval 5
-  </source>
-</worker>
-
-<match app.log>
-  @type elasticsearch
-  <buffer>
-    @type file
-    path /var/log/fluentd/buffers/app
-    flush_mode interval
-    flush_interval 1s
-    flush_thread_count 8
-    chunk_limit_size 8MB
-    total_limit_size 1GB
-    retry_type exponential_backoff
-    retry_wait 1s
-    retry_max_times 3
-    overflow_action drop_oldest_chunk
-  </buffer>
-</match>
-```
-
-##### Resources
-
-- [Fluentd Documentation](https://docs.fluentd.org/)
-- [Fluentd GitHub Repository](https://github.com/fluent/fluentd)
-- [Fluentd Plugin Registry](https://www.fluentd.org/plugins)
-- [Performance Tuning Guide](https://docs.fluentd.org/deployment/performance-tuning)
-
-### Infrastructure Monitoring Tools
-
-Infrastructure monitoring tools focus on system resources, network performance, and hardware health. They provide visibility into the underlying infrastructure that supports applications.
-
-<BackToTop />
-
-#### New Relic
-
-New Relic is a comprehensive observability platform that provides monitoring for applications, infrastructure, and digital customer experiences. It offers real-time insights into performance across the entire technology stack.
-
-##### New Relic Ecosystem:
-
-```txt
-┌───────────────────────────────────────────────────────────────┐
-│                 New Relic Platform                            │
-├───────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐  ┌───────────────┐  ┌───────────────┐        │
-│  │     APM     │  │Infrastructure │  │   Browser     │        │
-│  │             │  │               │  │               │        │
-│  │ • Traces    │  │ • Servers     │  │ • Real User   │        │
-│  │ • Errors    │  │ • Containers  │  │ • Synthetic   │        │
-│  │ • Database  │  │ • Networks    │  │ • Core Vitals │        │
-│  └─────────────┘  └───────────────┘  └───────────────┘        │
-│  ┌─────────────┐  ┌───────────────┐  ┌──────────────┐         │
-│  │   Mobile    │  │    Logs       │  │   Alerts     │         │
-│  │             │  │               │  │              │         │
-│  │ • Crashes   │  │ • Ingestion   │  │ • Policies   │         │
-│  │ • Networks  │  │ • Analysis    │  │ • Workflows  │         │
-│  │ • Sessions  │  │ • Search      │  │ • Channels   │         │
-│  └─────────────┘  └───────────────┘  └──────────────┘         │
-└───────────────────────────────────────────────────────────────┘
-```
-
-##### Key Features
-
-- **Application Performance Monitoring (APM)**: Deep visibility into application performance with distributed tracing
-- **Infrastructure Monitoring**: Comprehensive monitoring of servers, containers, and cloud services
-- **Real User Monitoring (RUM)**: Track actual user experience and performance
-- **Synthetic Monitoring**: Proactive monitoring with scripted browser tests
-- **Mobile Monitoring**: Monitor mobile application performance and crashes
-- **Log Management**: Centralized log collection and analysis with context
-- **Alerting and Notifications**: Intelligent alerting with flexible notification channels
-
-##### Implementation Examples
-
-###### APM Agent Installation:
-
-```javascript title="config/newrelic.js"
-// newrelic.js configuration file
-"use strict";
-
-exports.config = {
-  app_name: ["My Application"],
-  license_key: "your-license-key",
-
-  // Logging configuration
-  logging: {
-    level: "info",
-  },
-
-  // Performance monitoring settings
-  allow_all_headers: true,
-  attributes: {
-    exclude: [
-      "request.headers.cookie",
-      "request.headers.authorization",
-      "request.headers.proxyAuthorization",
-    ],
-  },
-
-  // Distributed tracing
-  distributed_tracing: {
-    enabled: true,
-  },
-
-  // Browser monitoring
-  browser_monitoring: {
-    enable: true,
-  },
-
-  // Database configuration
-  database_name_reporting: {
-    enabled: true,
-  },
-  datastore_tracer: {
-    instance_reporting: {
-      enabled: true,
-    },
-    database_name_reporting: {
-      enabled: true,
-    },
-  },
-};
-
-// Application entry point
-require("newrelic");
-const express = require("express");
-const newrelic = require("newrelic");
-
-const app = express();
-
-// Custom metrics
-app.use((req, res, next) => {
-  // Record custom metric
-  newrelic.recordMetric("Custom/API/RequestCount", 1);
-
-  // Add custom attributes
-  newrelic.addCustomAttributes({
-    "user.id": req.user?.id,
-    "request.path": req.path,
-    "request.method": req.method,
-  });
-
-  next();
-});
-
-// Error tracking
-app.use((err, req, res, next) => {
-  newrelic.noticeError(err);
-  res.status(500).send("Something broke!");
-});
-```
-
-<BackToTop />
-
-##### Infrastructure Agent Configuration:
-
-```yaml title="config/newrelic-infra.yml"
-# newrelic-infra.yml
-license_key: your-license-key
-display_name: production-server-01
-
-# Logging
-log_file: /var/log/newrelic-infra/newrelic-infra.log
-verbose: 0
-
-# Custom attributes
-custom_attributes:
-  environment: production
-  datacenter: us-east-1
-  team: platform
-
-# Integration configurations
-integrations:
-  - name: nri-apache
-    config:
-      status_url: http://127.0.0.1/server-status?auto
-      metrics: true
-      inventory: true
-
-  - name: nri-mysql
-    config:
-      hostname: localhost
-      port: 3306
-      username: newrelic
-      password: password
-      database: mysql
-      metrics: true
-      inventory: true
-
-  - name: nri-redis
-    config:
-      hostname: localhost
-      port: 6379
-      metrics: true
-      inventory: true
-```
-
-<BackToTop />
-
-##### Custom Dashboard Configuration:
-
-```json title="newrelic/dashboards/application-performance.json"
-{
-  "dashboard": {
-    "title": "Application Performance Overview",
-    "description": "Key metrics for application health",
-    "permissions": "PUBLIC_READ_WRITE",
-    "pages": [
-      {
-        "name": "Application Health",
-        "description": "Overall application performance metrics",
-        "widgets": [
-          {
-            "title": "Response Time",
-            "visualization": {
-              "id": "viz.line"
-            },
-            "nrqlQueries": [
-              {
-                "query": "SELECT average(duration) FROM Transaction WHERE appName = 'My Application' TIMESERIES"
-              }
-            ]
-          },
-          {
-            "title": "Throughput",
-            "visualization": {
-              "id": "viz.billboard"
-            },
-            "nrqlQueries": [
-              {
-                "query": "SELECT rate(count(*), 1 minute) as 'Requests per minute' FROM Transaction WHERE appName = 'My Application'"
-              }
-            ]
-          },
-          {
-            "title": "Error Rate",
-            "visualization": {
-              "id": "viz.line"
-            },
-            "nrqlQueries": [
-              {
-                "query": "SELECT percentage(count(*), WHERE error IS true) FROM Transaction WHERE appName = 'My Application' TIMESERIES"
-              }
-            ]
-          }
-        ]
-      }
-    ]
-  }
-}
-```
-
-<BackToTop />
-
-##### Advanced Features
-
-###### Custom Instrumentation:
-
-```javascript title="src/monitoring/newrelic-custom-instrumentation.js"
-const newrelic = require("newrelic");
-
-// Custom transaction
-function processOrder(orderData) {
-  return newrelic.startWebTransaction("/api/orders/process", function () {
-    const startTime = Date.now();
-
-    // Create custom segment
-    return newrelic.startSegment("order-validation", true, function () {
-      validateOrder(orderData);
-
-      // Record custom metrics
-      const processingTime = Date.now() - startTime;
-      newrelic.recordMetric("Custom/Order/ProcessingTime", processingTime);
-
-      // Add custom events
-      newrelic.recordCustomEvent("OrderProcessed", {
-        orderId: orderData.id,
-        customerId: orderData.customerId,
-        amount: orderData.amount,
-        processingTime: processingTime,
-      });
-
-      return processPayment(orderData);
-    });
-  });
-}
-
-// Database query instrumentation
-const mysql = require("mysql");
-const connection = mysql.createConnection(config);
-
-function getUserData(userId) {
-  return newrelic.startSegment("database-query", true, function () {
-    return new Promise((resolve, reject) => {
-      const query = "SELECT * FROM users WHERE id = ?";
-      connection.query(query, [userId], (error, results) => {
-        if (error) {
-          newrelic.noticeError(error);
-          reject(error);
-        } else {
-          resolve(results[0]);
-        }
-      });
-    });
-  });
-}
-```
-
-##### Resources
-
-- [New Relic Documentation](https://docs.newrelic.com/)
-- [New Relic APM](https://docs.newrelic.com/docs/apm/)
-- [New Relic Infrastructure](https://docs.newrelic.com/docs/infrastructure/)
-
-<BackToTop />
-
-#### Datadog
-
-Datadog is a comprehensive monitoring and analytics platform that provides observability across applications, infrastructure, and logs. It offers real-time monitoring with advanced alerting and collaboration features.
-
-##### Datadog Architecture:
-
-```txt
-┌───────────────────────────────────────────────────────────────┐
-│                      Datadog Platform                         │
-├───────────────────────────────────────────────────────────────┤
-│  ┌────────────────────────────────────────────────────────┐   │
-│  │                   Data Collection                      │   │
-│  │  ┌───────────────┐  ┌─────────────┐  ┌──────────────┐  │   │
-│  │  │   Agents      │  │     APIs    │  │ Integrations │  │   │
-│  │  │               │  │             │  │              │  │   │
-│  │  │ • System      │  │ • Custom    │  │ • AWS        │  │   │
-│  │  │ • Container   │  │ • StatsD    │  │ • GCP        │  │   │
-│  │  │ • APM         │  │ • HTTP      │  │ • Azure      │  │   │
-│  │  └───────────────┘  └─────────────┘  └──────────────┘  │   │
-│  └────────────────────────────────────────────────────────┘   │
-│  ┌────────────────────────────────────────────────────────┐   │
-│  │                   Data Processing                      │   │
-│  │  ┌───────────────┐  ┌─────────────┐  ┌───────────────┐ │   │
-│  │  │   Metrics     │  │    Logs     │  │   Traces      │ │   │
-│  │  │               │  │             │  │               │ │   │
-│  │  │ • Tagging     │  │ • Parsing   │  │ • Sampling    │ │   │
-│  │  │ • Aggregation │  │ • Indexing  │  │ • Correlation │ │   │
-│  │  │ • Storage     │  │ • Analysis  │  │ • Retention   │ │   │
-│  │  └───────────────┘  └─────────────┘  └───────────────┘ │   │
-│  └────────────────────────────────────────────────────────┘   │
-│  ┌────────────────────────────────────────────────────────┐   │
-│  │               Visualization & Alerting                 │   │
-│  │  ┌───────────────┐  ┌─────────────┐  ┌─────────────┐   │   │
-│  │  │ Dashboards    │  │   Alerts    │  │    SLOs     │   │   │
-│  │  │               │  │             │  │             │   │   │
-│  │  │ • Widgets     │  │ • Monitors  │  │ • Tracking  │   │   │
-│  │  │ • Templates   │  │ • Channels  │  │ • Budgets   │   │   │
-│  │  │ • Sharing     │  │ • Escalation│  │ • Reports   │   │   │
-│  │  └───────────────┘  └─────────────┘  └─────────────┘   │   │
-│  └────────────────────────────────────────────────────────┘   │
-└───────────────────────────────────────────────────────────────┘
-```
-
-##### Key Features
-
-- **Infrastructure Monitoring**: Monitor servers, containers, and cloud services with auto-discovery
-- **Application Performance Monitoring**: Full-stack monitoring with distributed tracing
-- **Log Management**: Centralized logging with real-time analysis and correlation
-- **Network Performance Monitoring**: Monitor network traffic and dependencies
-- **Real User Monitoring**: Track user experience and performance
-- **Synthetic Monitoring**: Proactive monitoring with API and browser tests
-- **Security Monitoring**: Runtime application security and threat detection
-
-##### Implementation Examples
-
-###### Agent Configuration:
-
-```yaml title="config/datadog.yaml"
-# datadog.yaml
-api_key: your-api-key
-site: datadoghq.com
-
-# Hostname and tags
-hostname: web-server-01
-tags:
-  - env:production
-  - service:web-app
-  - version:1.2.3
-  - team:platform
-
-# Logging
-logs_enabled: true
-logs_config:
-  container_collect_all: true
-
-# APM
-apm_config:
-  enabled: true
-  env: production
-
-# Process monitoring
-process_config:
-  enabled: true
-
-# Network monitoring
-network_config:
-  enabled: true
-
-# System probe
-system_probe_config:
-  enabled: true
-
-# Integrations
-init_config:
-instances:
-
-# Docker integration
-docker_labels_as_tags:
-  - "app"
-  - "service"
-  - "version"
-
-# Kubernetes integration
-kubernetes_labels_as_tags:
-  app: application
-  service: service
-  version: version
-
-# Custom checks
-# /etc/datadog-agent/checks.d/custom_check.py
-from checks import AgentCheck
-
-class CustomCheck(AgentCheck):
-    def check(self, instance):
-        # Custom metric collection
-        self.gauge('custom.metric.value', 42, tags=['custom:tag'])
-        self.increment('custom.metric.counter')
-
-        # Service check
-        self.service_check('custom.service.status', AgentCheck.OK)
-```
-
-###### Application Instrumentation:
-
-```javascript title="src/monitoring/datadog-instrumentation.js"
-// Node.js APM setup
-const tracer = require("dd-trace").init({
-  service: "web-application",
-  env: "production",
-  version: "1.2.3",
-
-  // Sampling configuration
-  sampleRate: 1.0,
-  runtimeMetrics: true,
-
-  // Plugin configuration
-  plugins: {
-    express: {
-      hooks: {
-        request: (span, req, res) => {
-          span.setTag("user.id", req.user?.id);
-          span.setTag("request.size", req.headers["content-length"]);
-        },
-      },
-    },
-    mysql: {
-      service: "mysql-db",
-    },
-    redis: {
-      service: "redis-cache",
-    },
-  },
-});
-
-// Custom instrumentation
-const express = require("express");
-const app = express();
-
-app.use((req, res, next) => {
-  const span = tracer.scope().active();
-
-  // Add custom tags
-  span.setTag("http.url", req.url);
-  span.setTag("http.method", req.method);
-  span.setTag("user.type", req.user?.type);
-
-  // Custom metrics
-  tracer.dogstatsd.increment("api.requests", 1, {
-    endpoint: req.route?.path || req.path,
-    method: req.method,
-  });
-
-  const start = Date.now();
-  res.on("finish", () => {
-    const duration = Date.now() - start;
-    tracer.dogstatsd.histogram("api.request.duration", duration, {
-      endpoint: req.route?.path || req.path,
+    end({ method: req.method, route: req.route.path });
+    requestCounter.inc({
+      method: req.method,
+      route: req.route.path,
       status: res.statusCode,
     });
   });
-
   next();
+};
+// Create HTTP server
+const server = http.createServer((req, res) => {
+  if (req.url === "/metrics") {
+    res.setHeader("Content-Type", register.contentType);
+    res.end(register.metrics());
+  } else {
+    // Simulate a request handling
+    setTimeout(() => {
+      res.writeHead(200, { "Content-Type": "text/plain" });
+      res.end("Hello, World!");
+    }, Math.random() * 1000);
+  }
 });
-
-// Error tracking
-app.use((err, req, res, next) => {
-  const span = tracer.scope().active();
-  span.setTag("error", true);
-  span.setTag("error.msg", err.message);
-  span.setTag("error.type", err.constructor.name);
-
-  tracer.dogstatsd.increment("api.errors", 1, {
-    error_type: err.constructor.name,
-    endpoint: req.route?.path || req.path,
-  });
-
-  next(err);
+// Start the server
+server.listen(9090, () => {
+  console.log("Server is running on http://localhost:9090");
 });
 ```
 
-###### Dashboard as Code:
+In this example, we set up a simple HTTP server that uses Prometheus to monitor response times and request counts. The `/metrics` endpoint exposes the collected metrics, which can be scraped by Prometheus.
 
-```json title="datadog/dashboards/application-performance.json"
+#### Benefits of Using Prometheus
+
+- **Scalability**: Designed to handle large volumes of metrics efficiently.
+- **Flexibility**: Supports a wide range of exporters and integrations for various applications and services.
+- **Community Support**: A large and active community contributes to its development and provides numerous resources and integrations.
+
+#### When to Use Prometheus
+
+Prometheus is ideal for applications that require real-time monitoring and alerting, especially in dynamic environments like microservices or containerized applications. It is particularly useful when you need to track performance metrics over time and respond to changes in application behavior quickly.
+
+#### Limitations of Prometheus
+
+- **Storage**: Prometheus is primarily designed for short-term storage of metrics. Long-term storage may require additional solutions or integrations.
+- **Complexity**: Setting up and configuring Prometheus can be complex, especially in large-scale environments with many services.
+- **Resource Intensive**: Depending on the volume of metrics collected, Prometheus can be resource-intensive, requiring careful planning and resource allocation.
+
+### Grafana
+
+Grafana is an open-source platform for monitoring and observability that provides powerful visualization capabilities. It integrates seamlessly with Prometheus and other data sources to create interactive and customizable dashboards.
+
+#### Key Features
+
+- **Rich Visualizations**: Supports a wide range of visualization types, including graphs, tables, heatmaps, and more.
+- **Custom Dashboards**: Allows users to create custom dashboards tailored to their specific monitoring needs.
+- **Alerting**: Supports alerting based on metrics from various data sources, including Prometheus.
+- **Data Source Integrations**: Can connect to multiple data sources, including Prometheus, InfluxDB, Elasticsearch, and more.
+
+#### Getting Started with Grafana
+
+To get started with Grafana, you can follow these steps:
+
+1. **Install Grafana**: Download and install Grafana from the [official website](https://grafana.com/get).
+2. **Configure Data Sources**: Add Prometheus or other data sources in the Grafana UI.
+3. **Create Dashboards**: Use the Grafana UI to create custom dashboards by selecting metrics from your data sources.
+4. **Set Up Alerts**: Configure alert rules based on your metrics to receive notifications when certain conditions are met.
+
+#### Example Grafana Dashboard Configuration
+
+```json title="Grafana Dashboard JSON"
 {
-  "title": "Application Performance Dashboard",
-  "description": "Monitor key application metrics",
-  "widgets": [
-    {
-      "definition": {
-        "title": "Request Rate",
-        "type": "timeseries",
-        "requests": [
+  "dashboard": {
+    "title": "Application Performance",
+    "panels": [
+      {
+        "type": "graph",
+        "title": "HTTP Response Time",
+        "targets": [
           {
-            "q": "sum:trace.express.request.hits{env:production,service:web-application}.as_rate()",
-            "display_type": "line",
-            "style": {
-              "palette": "dog_classic",
-              "line_type": "solid",
-              "line_width": "normal"
-            }
+            "expr": "http_response_time_seconds",
+            "legendFormat": "{{method}} {{route}}"
           }
-        ],
-        "yaxis": {
-          "label": "",
-          "scale": "linear",
-          "min": "auto",
-          "max": "auto"
-        }
-      }
-    },
-    {
-      "definition": {
-        "title": "P99 Latency",
-        "type": "timeseries",
-        "requests": [
+        ]
+      },
+      {
+        "type": "singlestat",
+        "title": "Total Requests",
+        "targets": [
           {
-            "q": "p99:trace.express.request.duration{env:production,service:web-application}",
-            "display_type": "line"
+            "expr": "sum(http_requests_total)",
+            "format": "time_series"
           }
         ]
       }
-    },
-    {
-      "definition": {
-        "title": "Error Rate",
-        "type": "timeseries",
-        "requests": [
-          {
-            "q": "sum:trace.express.request.errors{env:production,service:web-application}.as_rate()",
-            "display_type": "line",
-            "style": {
-              "palette": "red"
-            }
-          }
-        ]
-      }
-    }
-  ],
-  "template_variables": [
-    {
-      "name": "env",
-      "default": "production",
-      "prefix": "env"
-    },
-    {
-      "name": "service",
-      "default": "web-application",
-      "prefix": "service"
-    }
-  ],
-  "layout_type": "ordered",
-  "is_read_only": false,
-  "notify_list": [],
-  "reflow_type": "fixed"
-}
-```
-
-###### Monitor Configuration:
-
-```json title="datadog/monitors/error-rate-alert.json"
-{
-  "name": "High Error Rate Alert",
-  "type": "metric alert",
-  "query": "avg(last_5m):sum:trace.express.request.errors{env:production,service:web-application}.as_rate() / sum:trace.express.request.hits{env:production,service:web-application}.as_rate() > 0.05",
-  "message": "Error rate is above 5% for the web application.\n\n@pagerduty-platform-team @slack-alerts",
-  "tags": ["env:production", "service:web-application", "team:platform"],
-  "options": {
-    "thresholds": {
-      "critical": 0.05,
-      "warning": 0.02
-    },
-    "notify_audit": false,
-    "require_full_window": true,
-    "notify_no_data": true,
-    "renotify_interval": 60,
-    "evaluation_delay": 300,
-    "escalation_message": "Error rate is still high after 1 hour. @pagerduty-oncall",
-    "include_tags": true
+    ]
   }
 }
 ```
 
-##### Advanced Monitoring Patterns
+This JSON configuration defines a simple Grafana dashboard with two panels: one for visualizing HTTP response times and another for displaying the total number of requests. You can import this JSON into Grafana to create the dashboard.
 
-###### Service Level Objectives (SLOs):
+#### Benefits of Using Grafana
 
-```json title="datadog/slos/api-availability.json"
-{
-  "name": "API Availability SLO",
-  "description": "99.9% availability for critical API endpoints",
-  "type": "metric",
-  "type_id": 0,
-  "sli_specification": {
-    "time_slice": {
-      "query": {
-        "numerator": "sum:trace.express.request.hits{env:production,service:web-application,resource_name:/api/critical/*}.as_count() - sum:trace.express.request.errors{env:production,service:web-application,resource_name:/api/critical/*}.as_count()",
-        "denominator": "sum:trace.express.request.hits{env:production,service:web-application,resource_name:/api/critical/*}.as_count()"
-      },
-      "comparator": ">=",
-      "threshold": 0.999
-    }
-  },
-  "thresholds": [
-    {
-      "target": 99.9,
-      "target_display": "99.9%",
-      "timeframe": "30d",
-      "warning": 99.95,
-      "warning_display": "99.95%"
-    }
-  ],
-  "tags": ["env:production", "service:web-application"]
+- **User-Friendly Interface**: Grafana provides an intuitive and user-friendly interface for creating and managing dashboards.
+- **Customizable Visualizations**: Users can customize visualizations to suit their specific needs, making it easy to highlight important metrics.
+- **Community and Ecosystem**: Grafana has a large community and ecosystem, with numerous plugins and integrations available for extended functionality.
+
+#### When to Use Grafana
+
+Grafana is ideal for teams that need to visualize and analyze metrics from multiple data sources in a single, unified interface. It is particularly useful for creating dashboards that provide real-time insights into application performance and health.
+
+#### Limitations of Grafana
+
+- **Dependency on Data Sources**: Grafana relies on data sources like Prometheus for metrics. If the data source is not configured correctly, Grafana cannot display metrics.
+- **Learning Curve**: While Grafana is user-friendly, creating complex dashboards and visualizations may require some learning and experimentation.
+- **Resource Usage**: Depending on the number of dashboards and panels, Grafana can consume significant resources, especially in large deployments.
+
+## Logging Tools
+
+### ELK Stack (Elasticsearch, Logstash, Kibana)
+
+The ELK Stack is a powerful set of tools for managing and analyzing log data. It consists of three main components:
+
+- **Elasticsearch**: A distributed search and analytics engine that stores and indexes log data.
+- **Logstash**: A data processing pipeline that ingests, transforms, and sends log data to Elasticsearch.
+- **Kibana**: A visualization tool that provides a user interface for exploring and analyzing log data stored in Elasticsearch.
+
+#### Key Features
+
+- **Centralized Logging**: Collects logs from multiple sources and centralizes them in Elasticsearch for easy access and analysis.
+- **Real-Time Search and Analytics**: Allows users to perform real-time searches and analytics on log data, enabling quick identification of issues and trends.
+- **Custom Dashboards**: Kibana provides a powerful interface for creating custom dashboards to visualize log data and metrics.
+
+#### Getting Started with ELK Stack
+
+To get started with the ELK Stack, follow these steps:
+
+1. **Install Elasticsearch**: Download and install Elasticsearch from the [official website](https://www.elastic.co/downloads/elasticsearch).
+2. **Install Logstash**: Download and install Logstash from the [official website](https://www.elastic.co/downloads/logstash).
+3. **Configure Logstash**: Create a Logstash configuration file to define how logs are ingested and processed. For example:
+
+```json title="logstash.conf"
+// Path to your log files
+input {
+  file {
+    path => "/var/log/myapp/*.log"
+    start_position => "beginning"
+  }
+}
+filter {
+  // Add filters to parse and transform log data as needed
+}
+output {
+  elasticsearch {
+    // Elasticsearch endpoint
+    hosts => ["http://localhost:9200"]
+    // Index name pattern
+    index => "myapp-logs-%{+YYYY.MM.dd}"
+  }
 }
 ```
 
-##### Resources
+4. **Start Logstash**: Run Logstash with the configuration file to start ingesting logs.
+5. **Install Kibana**: Download and install Kibana from the [official website](https://www.elastic.co/downloads/kibana).
+6. **Configure Kibana**: Connect Kibana to your Elasticsearch instance by editing the `kibana.yml` configuration file:
 
-- [Datadog Documentation](https://docs.datadoghq.com/)
-- [Datadog APM](https://docs.datadoghq.com/tracing/)
-- [Datadog Infrastructure](https://docs.datadoghq.com/infrastructure/)
-
-<BackToTop />
-
-### Cloud-Native Monitoring
-
-Modern cloud-native applications require specialized monitoring approaches that account for dynamic, containerized environments and microservices architectures.
-
-#### Kubernetes Monitoring
-
-Monitoring Kubernetes clusters requires understanding of both the infrastructure layer (nodes, pods, containers) and the application layer (services, workloads).
-
-##### Kubernetes Monitoring Stack:
-
-```txt
-┌─────────────────────────────────────────────────────────────┐
-│                 Kubernetes Monitoring                       │
-├─────────────────────────────────────────────────────────────┤
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │                 Cluster Level                        │   │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐   │   │
-│  │  │   Nodes     │  │   Pods      │  │  Services   │   │   │
-│  │  │             │  │             │  │             │   │   │
-│  │  │ • CPU/Mem   │  │ • Status    │  │ • Endpoints │   │   │
-│  │  │ • Disk I/O  │  │ • Resources │  │ • Traffic   │   │   │
-│  │  │ • Network   │  │ • Logs      │  │ • Latency   │   │   │
-│  │  └─────────────┘  └─────────────┘  └─────────────┘   │   │
-│  └──────────────────────────────────────────────────────┘   │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │              Application Level                       │   │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐   │   │
-│  │  │ Deployments │  │  ConfigMaps │  │   Ingress   │   │   │
-│  │  │             │  │             │  │             │   │   │
-│  │  │ • Replicas  │  │ • Changes   │  │ • Rules     │   │   │
-│  │  │ • Rollouts  │  │ • Versions  │  │ • SSL       │   │   │
-│  │  │ • Health    │  │ • Usage     │  │ • Backends  │   │   │
-│  │  └─────────────┘  └─────────────┘  └─────────────┘   │   │
-│  └──────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
+```yaml title="kibana.yml"
+elasticsearch.hosts: ["http://localhost:9200"]
+server.port: 5601
+server.host: "localhost"
 ```
 
-##### Monitoring Configuration:
+7. **Start Kibana**: Run Kibana to access the web interface at `http://localhost:5601`.
+8. **Create Index Patterns**: In Kibana, create index patterns to match the log indices in Elasticsearch (e.g., `myapp-logs-*`).
+9. **Build Dashboards**: Use Kibana to create visualizations and dashboards based on your log data.
 
-```yaml title="k8s/monitoring/prometheus-config.yaml"
-# Prometheus configuration for Kubernetes
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: prometheus-config
-  namespace: monitoring
-data:
-  prometheus.yml: |
-    global:
-      scrape_interval: 15s
-      evaluation_interval: 15s
+#### Example Logstash Configuration
 
-    rule_files:
-      - "kubernetes-alerts.yml"
-
-    scrape_configs:
-      # Kubernetes API server
-      - job_name: 'kubernetes-apiservers'
-        kubernetes_sd_configs:
-          - role: endpoints
-        scheme: https
-        tls_config:
-          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
-        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
-        relabel_configs:
-          - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
-            action: keep
-            regex: default;kubernetes;https
-      
-      # Kubernetes nodes
-      - job_name: 'kubernetes-nodes'
-        kubernetes_sd_configs:
-          - role: node
-        scheme: https
-        tls_config:
-          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
-        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
-        relabel_configs:
-          - action: labelmap
-            regex: __meta_kubernetes_node_label_(.+)
-          - target_label: __address__
-            replacement: kubernetes.default.svc:443
-          - source_labels: [__meta_kubernetes_node_name]
-            regex: (.+)
-            target_label: __metrics_path__
-            replacement: /api/v1/nodes/${1}/proxy/metrics
-      
-      # Kubernetes pods
-      - job_name: 'kubernetes-pods'
-        kubernetes_sd_configs:
-          - role: pod
-        relabel_configs:
-          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
-            action: keep
-            regex: true
-          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
-            action: replace
-            target_label: __metrics_path__
-            regex: (.+)
-          - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
-            action: replace
-            regex: ([^:]+)(?::\d+)?;(\d+)
-            replacement: $1:$2
-            target_label: __address__
-          - action: labelmap
-            regex: __meta_kubernetes_pod_label_(.+)
-          - source_labels: [__meta_kubernetes_namespace]
-            action: replace
-            target_label: kubernetes_namespace
-          - source_labels: [__meta_kubernetes_pod_name]
-            action: replace
-            target_label: kubernetes_pod_name
-
----
-# AlertManager rules for Kubernetes
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: prometheus-rules
-  namespace: monitoring
-data:
-  kubernetes-alerts.yml: |
-    groups:
-    - name: kubernetes
-      rules:
-      - alert: KubernetesPodCrashLooping
-        expr: increase(kube_pod_container_status_restarts_total[1h]) > 5
-        for: 5m
-        labels:
-          severity: warning
-        annotations:
-          summary: "Pod {{ $labels.pod }} is crash looping"
-          description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} is restarting frequently"
-      
-      - alert: KubernetesNodeNotReady
-        expr: kube_node_status_condition{condition="Ready",status="true"} == 0
-        for: 10m
-        labels:
-          severity: critical
-        annotations:
-          summary: "Node {{ $labels.node }} is not ready"
-          description: "Node {{ $labels.node }} has been not ready for more than 10 minutes"
-      
-      - alert: KubernetesPodNotReady
-        expr: kube_pod_status_condition{condition="Ready",status="true"} == 0
-        for: 10m
-        labels:
-          severity: warning
-        annotations:
-          summary: "Pod {{ $labels.pod }} is not ready"
-          description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} has been not ready for more than 10 minutes"
-      
-      - alert: KubernetesMemoryPressure
-        expr: kube_node_status_condition{condition="MemoryPressure",status="true"} == 1
-        for: 2m
-        labels:
-          severity: critical
-        annotations:
-          summary: "Node {{ $labels.node }} has memory pressure"
-          description: "Node {{ $labels.node }} is experiencing memory pressure"
-      
-      - alert: KubernetesDiskPressure
-        expr: kube_node_status_condition{condition="DiskPressure",status="true"} == 1
-        for: 2m
-        labels:
-          severity: critical
-        annotations:
-          summary: "Node {{ $labels.node }} has disk pressure"
-          description: "Node {{ $labels.node }} is experiencing disk pressure"
+```json title="Logstash Configuration Example"
+input {
+  file {
+    path => "/var/log/myapp/*.log"
+    start_position => "beginning"
+    // Disable sincedb for testing
+    sincedb_path => "/dev/null"
+  }
+}
+filter {
+  grok {
+    match => { "message" => "%{COMBINEDAPACHELOG}" }
+  }
+  date {
+    match => [ "timestamp", "dd/MMM/yyyy:HH:mm:ss Z" ]
+    target => "@timestamp"
+  }
+}
+output {
+  elasticsearch {
+    hosts => ["http://localhost:9200"]
+    index => "myapp-logs-%{+YYYY.MM.dd}"
+  }
+  // Output to console for debugging
+  stdout { codec => rubydebug }
+}
 ```
 
-<BackToTop />
+This Logstash configuration reads log files from `/var/log/myapp/*.log`, parses them using the `grok` filter, and sends the processed logs to Elasticsearch. The `date` filter is used to parse the timestamp and set the `@timestamp` field.
 
-##### Application Monitoring in Kubernetes:
+#### Benefits of Using the ELK Stack
 
-```yaml title="k8s/apps/web-app-monitoring.yaml"
-# Service with monitoring annotations
-apiVersion: v1
-kind: Service
-metadata:
-  name: web-app-service
-  labels:
-    app: web-app
-  annotations:
-    prometheus.io/scrape: "true"
-    prometheus.io/port: "8080"
-    prometheus.io/path: "/metrics"
-spec:
-  selector:
-    app: web-app
-  ports:
-    - port: 80
-      targetPort: 8080
+- **Centralized Log Management**: Collects and centralizes logs from multiple sources, making it easier to manage and analyze log data.
+- **Powerful Search and Analytics**: Elasticsearch provides fast and powerful search capabilities, allowing users to quickly find relevant log entries and analyze trends.
+- **Customizable Dashboards**: Kibana allows users to create custom dashboards to visualize log data, making it easy to monitor application health and performance.
+- **Scalability**: The ELK Stack can scale horizontally by adding more nodes to the Elasticsearch cluster, allowing it to handle large volumes of log data.
 
----
-# Deployment with monitoring configuration
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: web-app
-  labels:
-    app: web-app
-spec:
-  replicas: 3
-  selector:
-    matchLabels:
-      app: web-app
-  template:
-    metadata:
-      labels:
-        app: web-app
-      annotations:
-        prometheus.io/scrape: "true"
-        prometheus.io/port: "8080"
-        prometheus.io/path: "/metrics"
-    spec:
-      containers:
-        - name: web-app
-          image: web-app:latest
-          ports:
-            - containerPort: 8080
-          env:
-            - name: METRICS_ENABLED
-              value: "true"
-          resources:
-            requests:
-              memory: "256Mi"
-              cpu: "250m"
-            limits:
-              memory: "512Mi"
-              cpu: "500m"
-          livenessProbe:
-            httpGet:
-              path: /health
-              port: 8080
-            initialDelaySeconds: 30
-            periodSeconds: 10
-          readinessProbe:
-            httpGet:
-              path: /ready
-              port: 8080
-            initialDelaySeconds: 5
-            periodSeconds: 5
-```
+#### When to Use the ELK Stack
 
-#### Service Mesh Monitoring
+The ELK Stack is ideal for applications that generate large volumes of log data and require centralized logging, real-time search, and analytics capabilities. It is particularly useful for monitoring application performance, troubleshooting issues, and gaining insights into user behavior.
 
-Service meshes like Istio provide additional observability capabilities for microservices communication.
+#### Limitations of the ELK Stack
 
-##### Istio Monitoring Architecture:
-
-```txt
-┌─────────────────────────────────────────────────────────────┐
-│                  Istio Service Mesh                         │
-├─────────────────────────────────────────────────────────────┤
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │                   Data Plane                         │   │
-│  │   ┌─────────────┐  ┌─────────────┐   ┌─────────────┐ │   │
-│  │   │   Service A │  │   Service B │   │   Service C │ │   │
-│  │   │  ┌───────┐  │  │  ┌───────┐  │   │  ┌───────┐  │ │   │
-│  │   │  │ Envoy │  │  │  │ Envoy │  │   │  │ Envoy │  │ │   │
-│  │   │  │Sidecar│  │  │  │Sidecar│  │   │  │Sidecar│  │ │   │
-│  │   │  └───────┘  │  │  └───────┘  │   │  └───────┘  │ │   │
-│  │   └─────────────┘  └─────────────┘   └─────────────┘ │   │
-│  └──────────────────────────────────────────────────────┘   │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │                    Control Plane                     │   │
-│  │   ┌─────────────┐  ┌─────────────┐   ┌─────────────┐ │   │
-│  │   │    Pilot    │  │   Citadel   │   │   Galley    │ │   │
-│  │   │  (Config)   │  │ (Security)  │   │ (Validation)│ │   │
-│  │   └─────────────┘  └─────────────┘   └─────────────┘ │   │
-│  │   ┌─────────────┐  ┌─────────────┐   ┌─────────────┐ │   │
-│  │   │   Mixer     │  │   Jaeger    │   │  Kiali      │ │   │
-│  │   │ (Telemetry) │  │  (Tracing)  │   │   (UI)      │ │   │
-│  │   └─────────────┘  └─────────────┘   └─────────────┘ │   │
-│  └──────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
-```
-
-<BackToTop />
-
-##### Istio Telemetry Configuration:
-
-```yaml title="istio/telemetry/istio-operator.yaml"
-# Telemetry v2 configuration
-apiVersion: install.istio.io/v1alpha1
-kind: IstioOperator
-metadata:
-  name: control-plane
-spec:
-  values:
-    telemetry:
-      v2:
-        enabled: true
-        prometheus:
-          configOverride:
-            metric_relabeling_configs:
-              - source_labels: [__name__]
-                target_label: __name__
-                regex: "istio_(.*)"
-                replacement: "${1}"
-  meshConfig:
-    extensionProviders:
-      - name: jaeger
-        envoyExtAuthzHttp:
-          service: jaeger-collector.istio-system.svc.cluster.local
-          port: 14268
-          pathPrefix: /api/traces
-      - name: prometheus
-        prometheus:
-          configOverride:
-            disable_host_header_fallback: true
-
----
-# Custom telemetry configuration
-apiVersion: telemetry.istio.io/v1alpha1
-kind: Telemetry
-metadata:
-  name: default-metrics
-  namespace: istio-system
-spec:
-  metrics:
-    - providers:
-        - name: prometheus
-    - overrides:
-        - match:
-            metric: ALL_METRICS
-          tagOverrides:
-            request_protocol:
-              value: "http"
-        - match:
-            metric: REQUEST_COUNT
-          disabled: false
-        - match:
-            metric: REQUEST_DURATION
-          disabled: false
-        - match:
-            metric: REQUEST_SIZE
-          disabled: false
-        - match:
-            metric: RESPONSE_SIZE
-          disabled: false
-
----
-# Distributed tracing configuration
-apiVersion: telemetry.istio.io/v1alpha1
-kind: Telemetry
-metadata:
-  name: default-tracing
-  namespace: istio-system
-spec:
-  tracing:
-    - providers:
-        - name: jaeger
-    - customTags:
-        custom_header:
-          header:
-            name: custom-header
-            defaultValue: "unknown"
-        user_agent:
-          header:
-            name: user-agent
-            defaultValue: "unknown"
-```
-
-##### Resources
-
-- [Kubernetes Monitoring Guide](https://kubernetes.io/docs/concepts/cluster-administration/monitoring/)
-- [Istio Observability](https://istio.io/latest/docs/concepts/observability/)
-- [Prometheus Operator](https://github.com/prometheus-operator/prometheus-operator)
-- [Fluentd Plugin Registry](https://www.fluentd.org/plugins)
-- [Performance Tuning Guide](https://docs.fluentd.org/deployment/performance-tuning)
-
-## Best Practices
-
-- **Define Key Metrics**: Identify the most critical performance metrics for your application, such as response time, error rates, and throughput.
-- **Set Up Alerts**: Configure alerts for critical metrics to proactively address performance issues before they impact users.
-- **Use Dashboards**: Create dashboards to visualize performance metrics and trends, making it easier to monitor application health.
-- **Regularly Review Performance**: Continuously analyze performance data to identify bottlenecks and areas for improvement.
-- **Integrate with CI/CD**: Incorporate performance monitoring into your CI/CD pipeline to catch performance issues early in the development process.
+- **Resource Intensive**: The ELK Stack can be resource-intensive, especially when handling large volumes of log data. Proper resource allocation and optimization are essential.
+- **Complex Setup**: Setting up and configuring the ELK Stack can be complex, especially in large-scale deployments. It may require additional tools and configurations for optimal performance.
+- **Learning Curve**: While Kibana provides a user-friendly interface, mastering the full capabilities of the ELK Stack may require some learning and experimentation, especially for advanced features like custom visualizations and aggregations.
 
 ## Conclusion
 
-Performance monitoring is essential for maintaining the health and efficiency of applications. By leveraging tools like Prometheus, Grafana, the ELK Stack, and Fluentd, teams can gain valuable insights into application performance, identify bottlenecks, and ensure a smooth user experience. Implementing best practices for performance monitoring helps teams proactively address issues and continuously improve application performance.
-
-## Next Steps
-
-| Resource                                                                                           | Tools                                                                                                                              |
-| -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| [Load Balancing](/adv-quality-security-performance/performance/load-balancing)                     | [Development Resources and Tools for Back-End Development](/util-general-development-resources-and-tools-for-back-end-development) |
-| [Scalability](/adv-quality-security-performance/performance/scalability)                           | [Load Testing and Benchmarking Tools](/util-load-testing-and-benchmarking-tools)                                                   |
-| [Performance Optimization](/adv-quality-security-performance/performance/performance-optimization) | [Backup and Recovery Tools](/util-backup-and-recovery-tools)                                                                       |
-
-<BackToTop />
+Performance monitoring and logging are essential practices for maintaining the health and efficiency of your applications. By implementing tools like Prometheus, Grafana, and the ELK Stack, you can gain valuable insights into application performance, identify bottlenecks, and ensure that your systems run smoothly.
