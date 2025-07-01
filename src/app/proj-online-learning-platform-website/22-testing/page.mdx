@@ -1,0 +1,1609 @@
+import BackToTop from "@/components/BackToTop";
+
+# Testing Strategy and Implementation
+
+## Table of Contents
+
+## Introduction
+
+In this module, we'll implement a comprehensive testing strategy for the online learning platform. We'll cover unit testing, integration testing, end-to-end testing, performance testing, and security testing to ensure the platform is reliable, secure, and performs well under various conditions.
+
+## Testing Strategy Overview
+
+### Testing Pyramid
+
+1. **Unit Tests (70%)**
+   - Service layer testing
+   - Repository testing
+   - Component testing
+   - Utility function testing
+
+2. **Integration Tests (20%)**
+   - API endpoint testing
+   - Database integration testing
+   - External service integration testing
+   - Component integration testing
+
+3. **End-to-End Tests (10%)**
+   - User journey testing
+   - Cross-browser testing
+   - Mobile responsiveness testing
+   - Performance testing
+
+## Backend Testing Implementation
+
+### Unit Testing with JUnit and Mockito
+
+#### Service Layer Tests
+
+```java
+@ExtendWith(MockitoExtension.class)
+class CourseServiceTest {
+
+    @Mock
+    private CourseRepository courseRepository;
+
+    @Mock
+    private UserService userService;
+
+    @Mock
+    private EnrollmentService enrollmentService;
+
+    @Mock
+    private NotificationService notificationService;
+
+    @InjectMocks
+    private CourseService courseService;
+
+    private Course testCourse;
+    private User testInstructor;
+    private User testStudent;
+
+    @BeforeEach
+    void setUp() {
+        testInstructor = User.builder()
+            .id("instructor-1")
+            .email("instructor@test.com")
+            .fullName("Test Instructor")
+            .role(UserRole.INSTRUCTOR)
+            .build();
+
+        testStudent = User.builder()
+            .id("student-1")
+            .email("student@test.com")
+            .fullName("Test Student")
+            .role(UserRole.STUDENT)
+            .build();
+
+        testCourse = Course.builder()
+            .id("course-1")
+            .title("Test Course")
+            .description("Test course description")
+            .instructorId("instructor-1")
+            .instructorName("Test Instructor")
+            .category("Programming")
+            .difficultyLevel(DifficultyLevel.BEGINNER)
+            .price(BigDecimal.valueOf(99.99))
+            .status(CourseStatus.PUBLISHED)
+            .enrollmentCount(0)
+            .rating(0.0)
+            .isActive(true)
+            .createdAt(LocalDateTime.now())
+            .updatedAt(LocalDateTime.now())
+            .build();
+    }
+
+    @Test
+    @DisplayName("Should create course successfully")
+    void shouldCreateCourseSuccessfully() {
+        // Given
+        CreateCourseRequest request = CreateCourseRequest.builder()
+            .title("Test Course")
+            .description("Test course description")
+            .category("Programming")
+            .difficultyLevel(DifficultyLevel.BEGINNER)
+            .price(BigDecimal.valueOf(99.99))
+            .build();
+
+        when(userService.findById("instructor-1")).thenReturn(testInstructor);
+        when(courseRepository.save(any(Course.class))).thenReturn(testCourse);
+
+        // When
+        Course result = courseService.createCourse(request, "instructor-1");
+
+        // Then
+        assertThat(result).isNotNull();
+        assertThat(result.getTitle()).isEqualTo("Test Course");
+        assertThat(result.getInstructorId()).isEqualTo("instructor-1");
+        assertThat(result.getStatus()).isEqualTo(CourseStatus.DRAFT);
+
+        verify(courseRepository).save(any(Course.class));
+        verify(userService).findById("instructor-1");
+    }
+
+    @Test
+    @DisplayName("Should throw exception when creating course with invalid instructor")
+    void shouldThrowExceptionWhenCreatingCourseWithInvalidInstructor() {
+        // Given
+        CreateCourseRequest request = CreateCourseRequest.builder()
+            .title("Test Course")
+            .description("Test course description")
+            .build();
+
+        when(userService.findById("invalid-instructor")).thenThrow(new UserNotFoundException("User not found"));
+
+        // When & Then
+        assertThatThrownBy(() -> courseService.createCourse(request, "invalid-instructor"))
+            .isInstanceOf(UserNotFoundException.class)
+            .hasMessage("User not found");
+
+        verify(userService).findById("invalid-instructor");
+        verify(courseRepository, never()).save(any(Course.class));
+    }
+
+    @Test
+    @DisplayName("Should enroll student in course successfully")
+    void shouldEnrollStudentInCourseSuccessfully() {
+        // Given
+        when(courseRepository.findById("course-1")).thenReturn(Optional.of(testCourse));
+        when(userService.findById("student-1")).thenReturn(testStudent);
+        when(enrollmentService.isStudentEnrolledInCourse("student-1", "course-1")).thenReturn(false);
+        when(enrollmentService.enrollStudent("student-1", "course-1")).thenReturn(new Enrollment());
+
+        // When
+        Enrollment result = courseService.enrollStudent("course-1", "student-1");
+
+        // Then
+        assertThat(result).isNotNull();
+
+        verify(courseRepository).findById("course-1");
+        verify(userService).findById("student-1");
+        verify(enrollmentService).isStudentEnrolledInCourse("student-1", "course-1");
+        verify(enrollmentService).enrollStudent("student-1", "course-1");
+        verify(notificationService).createAndSendNotification(any(CreateNotificationRequest.class));
+    }
+
+    @Test
+    @DisplayName("Should throw exception when enrolling already enrolled student")
+    void shouldThrowExceptionWhenEnrollingAlreadyEnrolledStudent() {
+        // Given
+        when(courseRepository.findById("course-1")).thenReturn(Optional.of(testCourse));
+        when(userService.findById("student-1")).thenReturn(testStudent);
+        when(enrollmentService.isStudentEnrolledInCourse("student-1", "course-1")).thenReturn(true);
+
+        // When & Then
+        assertThatThrownBy(() -> courseService.enrollStudent("course-1", "student-1"))
+            .isInstanceOf(EnrollmentException.class)
+            .hasMessage("Student is already enrolled in this course");
+
+        verify(enrollmentService, never()).enrollStudent(any(), any());
+    }
+
+    @Test
+    @DisplayName("Should get course statistics correctly")
+    void shouldGetCourseStatisticsCorrectly() {
+        // Given
+        CourseStats expectedStats = CourseStats.builder()
+            .totalEnrollments(50)
+            .activeStudents(45)
+            .completionRate(0.8)
+            .averageRating(4.5)
+            .totalRevenue(BigDecimal.valueOf(4999.50))
+            .build();
+
+        when(courseRepository.findById("course-1")).thenReturn(Optional.of(testCourse));
+        when(enrollmentService.getCourseEnrollmentCount("course-1")).thenReturn(50);
+        when(enrollmentService.getActiveStudentCount("course-1")).thenReturn(45);
+        when(enrollmentService.getCourseCompletionRate("course-1")).thenReturn(0.8);
+        when(courseRepository.getCourseAverageRating("course-1")).thenReturn(4.5);
+        when(enrollmentService.getCourseRevenue("course-1")).thenReturn(BigDecimal.valueOf(4999.50));
+
+        // When
+        CourseStats result = courseService.getCourseStatistics("course-1");
+
+        // Then
+        assertThat(result.getTotalEnrollments()).isEqualTo(50);
+        assertThat(result.getActiveStudents()).isEqualTo(45);
+        assertThat(result.getCompletionRate()).isEqualTo(0.8);
+        assertThat(result.getAverageRating()).isEqualTo(4.5);
+        assertThat(result.getTotalRevenue()).isEqualByComparingTo(BigDecimal.valueOf(4999.50));
+    }
+
+    @ParameterizedTest
+    @EnumSource(CourseStatus.class)
+    @DisplayName("Should filter courses by status correctly")
+    void shouldFilterCoursesByStatusCorrectly(CourseStatus status) {
+        // Given
+        List<Course> mockCourses = Arrays.asList(testCourse);
+        when(courseRepository.findByStatus(status, PageRequest.of(0, 10)))
+            .thenReturn(new PageImpl<>(mockCourses));
+
+        // When
+        Page<Course> result = courseService.getCoursesByStatus(status, PageRequest.of(0, 10));
+
+        // Then
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().get(0).getStatus()).isEqualTo(status);
+
+        verify(courseRepository).findByStatus(status, PageRequest.of(0, 10));
+    }
+}
+
+@ExtendWith(MockitoExtension.class)
+class QuizServiceTest {
+
+    @Mock
+    private QuizRepository quizRepository;
+
+    @Mock
+    private QuizAttemptRepository quizAttemptRepository;
+
+    @Mock
+    private CourseService courseService;
+
+    @Mock
+    private NotificationService notificationService;
+
+    @InjectMocks
+    private QuizService quizService;
+
+    private Quiz testQuiz;
+    private QuizAttempt testAttempt;
+
+    @BeforeEach
+    void setUp() {
+        testQuiz = Quiz.builder()
+            .id("quiz-1")
+            .title("Test Quiz")
+            .courseId("course-1")
+            .lessonId("lesson-1")
+            .timeLimit(Duration.ofMinutes(30))
+            .maxAttempts(3)
+            .passingScore(70.0)
+            .questions(createTestQuestions())
+            .isActive(true)
+            .build();
+
+        testAttempt = QuizAttempt.builder()
+            .id("attempt-1")
+            .quizId("quiz-1")
+            .studentId("student-1")
+            .attemptNumber(1)
+            .status(QuizAttemptStatus.IN_PROGRESS)
+            .startTime(LocalDateTime.now())
+            .answers(new HashMap<>())
+            .build();
+    }
+
+    @Test
+    @DisplayName("Should start quiz attempt successfully")
+    void shouldStartQuizAttemptSuccessfully() {
+        // Given
+        when(quizRepository.findById("quiz-1")).thenReturn(Optional.of(testQuiz));
+        when(quizAttemptRepository.countByQuizIdAndStudentId("quiz-1", "student-1")).thenReturn(0);
+        when(quizAttemptRepository.save(any(QuizAttempt.class))).thenReturn(testAttempt);
+
+        // When
+        QuizAttempt result = quizService.startQuizAttempt("quiz-1", "student-1");
+
+        // Then
+        assertThat(result).isNotNull();
+        assertThat(result.getStatus()).isEqualTo(QuizAttemptStatus.IN_PROGRESS);
+        assertThat(result.getAttemptNumber()).isEqualTo(1);
+
+        verify(quizRepository).findById("quiz-1");
+        verify(quizAttemptRepository).save(any(QuizAttempt.class));
+    }
+
+    @Test
+    @DisplayName("Should throw exception when exceeding max attempts")
+    void shouldThrowExceptionWhenExceedingMaxAttempts() {
+        // Given
+        when(quizRepository.findById("quiz-1")).thenReturn(Optional.of(testQuiz));
+        when(quizAttemptRepository.countByQuizIdAndStudentId("quiz-1", "student-1")).thenReturn(3);
+
+        // When & Then
+        assertThatThrownBy(() -> quizService.startQuizAttempt("quiz-1", "student-1"))
+            .isInstanceOf(QuizException.class)
+            .hasMessage("Maximum number of attempts exceeded");
+
+        verify(quizAttemptRepository, never()).save(any(QuizAttempt.class));
+    }
+
+    @Test
+    @DisplayName("Should calculate quiz score correctly")
+    void shouldCalculateQuizScoreCorrectly() {
+        // Given
+        Map<String, Object> answers = new HashMap<>();
+        answers.put("question-1", "A");
+        answers.put("question-2", "B");
+        answers.put("question-3", "C");
+
+        testAttempt.setAnswers(answers);
+        testAttempt.setStatus(QuizAttemptStatus.COMPLETED);
+        testAttempt.setEndTime(LocalDateTime.now());
+
+        when(quizRepository.findById("quiz-1")).thenReturn(Optional.of(testQuiz));
+        when(quizAttemptRepository.findById("attempt-1")).thenReturn(Optional.of(testAttempt));
+
+        // When
+        QuizResult result = quizService.calculateQuizScore("attempt-1");
+
+        // Then
+        assertThat(result).isNotNull();
+        assertThat(result.getTotalQuestions()).isEqualTo(testQuiz.getQuestions().size());
+        assertThat(result.getScore()).isBetween(0.0, 100.0);
+        assertThat(result.isPassed()).isEqualTo(result.getScore() >= testQuiz.getPassingScore());
+    }
+
+    @Test
+    @DisplayName("Should handle time-based quiz expiration")
+    void shouldHandleTimeBasedQuizExpiration() {
+        // Given
+        testAttempt.setStartTime(LocalDateTime.now().minusMinutes(35)); // Exceeded time limit
+        when(quizAttemptRepository.findById("attempt-1")).thenReturn(Optional.of(testAttempt));
+        when(quizRepository.findById("quiz-1")).thenReturn(Optional.of(testQuiz));
+
+        // When
+        boolean isExpired = quizService.isQuizAttemptExpired("attempt-1");
+
+        // Then
+        assertThat(isExpired).isTrue();
+    }
+
+    private List<QuizQuestion> createTestQuestions() {
+        return Arrays.asList(
+            QuizQuestion.builder()
+                .id("question-1")
+                .questionText("What is 2 + 2?")
+                .questionType(QuestionType.MULTIPLE_CHOICE)
+                .options(Arrays.asList("3", "4", "5", "6"))
+                .correctAnswer("4")
+                .points(10)
+                .build(),
+            QuizQuestion.builder()
+                .id("question-2")
+                .questionText("Java is a programming language")
+                .questionType(QuestionType.TRUE_FALSE)
+                .correctAnswer("true")
+                .points(5)
+                .build()
+        );
+    }
+}
+```
+
+#### Repository Layer Tests
+
+```java
+@DataMongoTest
+@ExtendWith(MockitoExtension.class)
+class CourseRepositoryTest {
+
+    @Autowired
+    private TestEntityManager entityManager;
+
+    @Autowired
+    private CourseRepository courseRepository;
+
+    private Course testCourse;
+
+    @BeforeEach
+    void setUp() {
+        testCourse = Course.builder()
+            .title("Test Course")
+            .description("Test course description")
+            .instructorId("instructor-1")
+            .instructorName("Test Instructor")
+            .category("Programming")
+            .difficultyLevel(DifficultyLevel.BEGINNER)
+            .price(BigDecimal.valueOf(99.99))
+            .status(CourseStatus.PUBLISHED)
+            .rating(4.5)
+            .enrollmentCount(50)
+            .isActive(true)
+            .createdAt(LocalDateTime.now())
+            .updatedAt(LocalDateTime.now())
+            .build();
+    }
+
+    @Test
+    @DisplayName("Should save and find course by id")
+    void shouldSaveAndFindCourseById() {
+        // Given
+        Course savedCourse = courseRepository.save(testCourse);
+
+        // When
+        Optional<Course> foundCourse = courseRepository.findById(savedCourse.getId());
+
+        // Then
+        assertThat(foundCourse).isPresent();
+        assertThat(foundCourse.get().getTitle()).isEqualTo("Test Course");
+        assertThat(foundCourse.get().getInstructorId()).isEqualTo("instructor-1");
+    }
+
+    @Test
+    @DisplayName("Should find courses by instructor id")
+    void shouldFindCoursesByInstructorId() {
+        // Given
+        courseRepository.save(testCourse);
+
+        // When
+        List<Course> courses = courseRepository.findByInstructorId("instructor-1");
+
+        // Then
+        assertThat(courses).hasSize(1);
+        assertThat(courses.get(0).getInstructorId()).isEqualTo("instructor-1");
+    }
+
+    @Test
+    @DisplayName("Should find courses by category")
+    void shouldFindCoursesByCategory() {
+        // Given
+        courseRepository.save(testCourse);
+
+        // When
+        Page<Course> courses = courseRepository.findByCategory("Programming", PageRequest.of(0, 10));
+
+        // Then
+        assertThat(courses.getContent()).hasSize(1);
+        assertThat(courses.getContent().get(0).getCategory()).isEqualTo("Programming");
+    }
+
+    @Test
+    @DisplayName("Should find courses by status and active flag")
+    void shouldFindCoursesByStatusAndActiveFlag() {
+        // Given
+        courseRepository.save(testCourse);
+
+        // When
+        List<Course> courses = courseRepository.findByStatusAndIsActive(CourseStatus.PUBLISHED, true);
+
+        // Then
+        assertThat(courses).hasSize(1);
+        assertThat(courses.get(0).getStatus()).isEqualTo(CourseStatus.PUBLISHED);
+        assertThat(courses.get(0).isActive()).isTrue();
+    }
+
+    @Test
+    @DisplayName("Should find courses with rating above threshold")
+    void shouldFindCoursesWithRatingAboveThreshold() {
+        // Given
+        courseRepository.save(testCourse);
+
+        // When
+        List<Course> courses = courseRepository.findByRatingGreaterThanEqual(4.0);
+
+        // Then
+        assertThat(courses).hasSize(1);
+        assertThat(courses.get(0).getRating()).isGreaterThanOrEqualTo(4.0);
+    }
+
+    @Test
+    @DisplayName("Should search courses by title containing text")
+    void shouldSearchCoursesByTitleContainingText() {
+        // Given
+        courseRepository.save(testCourse);
+
+        // When
+        List<Course> courses = courseRepository.findByTitleContainingIgnoreCase("test");
+
+        // Then
+        assertThat(courses).hasSize(1);
+        assertThat(courses.get(0).getTitle()).containsIgnoringCase("test");
+    }
+}
+
+@DataMongoTest
+class UserRepositoryTest {
+
+    @Autowired
+    private UserRepository userRepository;
+
+    private User testUser;
+
+    @BeforeEach
+    void setUp() {
+        testUser = User.builder()
+            .email("test@example.com")
+            .fullName("Test User")
+            .password("hashedPassword")
+            .role(UserRole.STUDENT)
+            .isActive(true)
+            .isEmailVerified(true)
+            .createdAt(LocalDateTime.now())
+            .updatedAt(LocalDateTime.now())
+            .build();
+    }
+
+    @Test
+    @DisplayName("Should find user by email")
+    void shouldFindUserByEmail() {
+        // Given
+        userRepository.save(testUser);
+
+        // When
+        Optional<User> foundUser = userRepository.findByEmail("test@example.com");
+
+        // Then
+        assertThat(foundUser).isPresent();
+        assertThat(foundUser.get().getEmail()).isEqualTo("test@example.com");
+    }
+
+    @Test
+    @DisplayName("Should check if email exists")
+    void shouldCheckIfEmailExists() {
+        // Given
+        userRepository.save(testUser);
+
+        // When
+        boolean exists = userRepository.existsByEmail("test@example.com");
+
+        // Then
+        assertThat(exists).isTrue();
+    }
+
+    @Test
+    @DisplayName("Should find users by role")
+    void shouldFindUsersByRole() {
+        // Given
+        userRepository.save(testUser);
+
+        // When
+        List<User> users = userRepository.findByRole(UserRole.STUDENT);
+
+        // Then
+        assertThat(users).hasSize(1);
+        assertThat(users.get(0).getRole()).isEqualTo(UserRole.STUDENT);
+    }
+}
+```
+
+### Integration Testing
+
+#### API Integration Tests
+
+```java
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@Testcontainers
+class CourseControllerIntegrationTest {
+
+    @Container
+    static MongoDBContainer mongoDBContainer = new MongoDBContainer("mongo:4.4.2")
+            .withExposedPorts(27017);
+
+    @Autowired
+    private TestRestTemplate restTemplate;
+
+    @Autowired
+    private CourseRepository courseRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @LocalServerPort
+    private int port;
+
+    private String baseUrl;
+    private String jwtToken;
+    private User testInstructor;
+
+    @DynamicPropertySource
+    static void configureProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.data.mongodb.uri", mongoDBContainer::getReplicaSetUrl);
+    }
+
+    @BeforeEach
+    void setUp() {
+        baseUrl = "http://localhost:" + port + "/api/courses";
+
+        // Create test instructor
+        testInstructor = User.builder()
+            .email("instructor@test.com")
+            .fullName("Test Instructor")
+            .password("$2a$10$encoded.password.here")
+            .role(UserRole.INSTRUCTOR)
+            .isActive(true)
+            .isEmailVerified(true)
+            .createdAt(LocalDateTime.now())
+            .updatedAt(LocalDateTime.now())
+            .build();
+
+        testInstructor = userRepository.save(testInstructor);
+
+        // Generate JWT token for authentication
+        jwtToken = generateJwtToken(testInstructor);
+    }
+
+    @AfterEach
+    void tearDown() {
+        courseRepository.deleteAll();
+        userRepository.deleteAll();
+    }
+
+    @Test
+    @DisplayName("Should create course successfully")
+    void shouldCreateCourseSuccessfully() {
+        // Given
+        CreateCourseRequest request = CreateCourseRequest.builder()
+            .title("Integration Test Course")
+            .description("Course created in integration test")
+            .category("Programming")
+            .difficultyLevel(DifficultyLevel.BEGINNER)
+            .price(BigDecimal.valueOf(99.99))
+            .build();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(jwtToken);
+        HttpEntity<CreateCourseRequest> entity = new HttpEntity<>(request, headers);
+
+        // When
+        ResponseEntity<Course> response = restTemplate.postForEntity(baseUrl, entity, Course.class);
+
+        // Then
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getTitle()).isEqualTo("Integration Test Course");
+        assertThat(response.getBody().getInstructorId()).isEqualTo(testInstructor.getId());
+
+        // Verify in database
+        Optional<Course> savedCourse = courseRepository.findById(response.getBody().getId());
+        assertThat(savedCourse).isPresent();
+    }
+
+    @Test
+    @DisplayName("Should return 401 when creating course without authentication")
+    void shouldReturn401WhenCreatingCourseWithoutAuthentication() {
+        // Given
+        CreateCourseRequest request = CreateCourseRequest.builder()
+            .title("Test Course")
+            .description("Test course description")
+            .build();
+
+        // When
+        ResponseEntity<String> response = restTemplate.postForEntity(baseUrl, request, String.class);
+
+        // Then
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
+    @DisplayName("Should get courses with pagination")
+    void shouldGetCoursesWithPagination() {
+        // Given
+        createTestCourses(5);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(jwtToken);
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+        // When
+        ResponseEntity<String> response = restTemplate.exchange(
+            baseUrl + "?page=0&size=3", HttpMethod.GET, entity, String.class);
+
+        // Then
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        // Parse JSON response and verify pagination
+        ObjectMapper objectMapper = new ObjectMapper();
+        JsonNode jsonResponse = objectMapper.readTree(response.getBody());
+
+        assertThat(jsonResponse.get("content").size()).isEqualTo(3);
+        assertThat(jsonResponse.get("totalElements").asInt()).isEqualTo(5);
+        assertThat(jsonResponse.get("totalPages").asInt()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("Should enroll student in course")
+    void shouldEnrollStudentInCourse() {
+        // Given
+        Course course = createTestCourse();
+        User student = createTestStudent();
+        String studentToken = generateJwtToken(student);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(studentToken);
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+        // When
+        ResponseEntity<String> response = restTemplate.exchange(
+            baseUrl + "/" + course.getId() + "/enroll", HttpMethod.POST, entity, String.class);
+
+        // Then
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+    }
+
+    @Test
+    @DisplayName("Should return 400 when creating course with invalid data")
+    void shouldReturn400WhenCreatingCourseWithInvalidData() {
+        // Given
+        CreateCourseRequest request = CreateCourseRequest.builder()
+            .title("") // Invalid: empty title
+            .description("Test course description")
+            .build();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(jwtToken);
+        HttpEntity<CreateCourseRequest> entity = new HttpEntity<>(request, headers);
+
+        // When
+        ResponseEntity<String> response = restTemplate.postForEntity(baseUrl, entity, String.class);
+
+        // Then
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    private void createTestCourses(int count) {
+        for (int i = 1; i <= count; i++) {
+            Course course = Course.builder()
+                .title("Test Course " + i)
+                .description("Test course " + i + " description")
+                .instructorId(testInstructor.getId())
+                .instructorName(testInstructor.getFullName())
+                .category("Programming")
+                .difficultyLevel(DifficultyLevel.BEGINNER)
+                .price(BigDecimal.valueOf(99.99))
+                .status(CourseStatus.PUBLISHED)
+                .isActive(true)
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
+
+            courseRepository.save(course);
+        }
+    }
+
+    private Course createTestCourse() {
+        Course course = Course.builder()
+            .title("Test Course")
+            .description("Test course description")
+            .instructorId(testInstructor.getId())
+            .instructorName(testInstructor.getFullName())
+            .category("Programming")
+            .difficultyLevel(DifficultyLevel.BEGINNER)
+            .price(BigDecimal.valueOf(99.99))
+            .status(CourseStatus.PUBLISHED)
+            .isActive(true)
+            .createdAt(LocalDateTime.now())
+            .updatedAt(LocalDateTime.now())
+            .build();
+
+        return courseRepository.save(course);
+    }
+
+    private User createTestStudent() {
+        User student = User.builder()
+            .email("student@test.com")
+            .fullName("Test Student")
+            .password("$2a$10$encoded.password.here")
+            .role(UserRole.STUDENT)
+            .isActive(true)
+            .isEmailVerified(true)
+            .createdAt(LocalDateTime.now())
+            .updatedAt(LocalDateTime.now())
+            .build();
+
+        return userRepository.save(student);
+    }
+
+    private String generateJwtToken(User user) {
+        // Implementation to generate JWT token for testing
+        // This would use your JWT utility class
+        return "mock.jwt.token.for." + user.getEmail();
+    }
+}
+```
+
+### Performance Testing
+
+#### Load Testing with JMeter
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<jmeterTestPlan version="1.2" properties="5.0" jmeter="5.4.1">
+  <hashTree>
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="Online Learning Platform Load Test">
+      <stringProp name="TestPlan.comments">Load test for the online learning platform API</stringProp>
+      <boolProp name="TestPlan.functional_mode">false</boolProp>
+      <boolProp name="TestPlan.tearDown_on_shutdown">true</boolProp>
+      <boolProp name="TestPlan.serialize_threadgroups">false</boolProp>
+      <elementProp name="TestPlan.arguments" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments">
+        <collectionProp name="Arguments.arguments"/>
+      </elementProp>
+      <stringProp name="TestPlan.user_define_classpath"></stringProp>
+    </TestPlan>
+    <hashTree>
+      <!-- Thread Group for Course API Load Test -->
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Course API Load Test">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlGui" testclass="LoopController">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">10</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">100</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">60</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+      </ThreadGroup>
+      <hashTree>
+        <!-- HTTP Request for Getting Courses -->
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Get Courses">
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="page" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">0</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+                <boolProp name="HTTPArgument.use_equals">true</boolProp>
+                <stringProp name="Argument.name">page</stringProp>
+              </elementProp>
+              <elementProp name="size" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">20</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+                <boolProp name="HTTPArgument.use_equals">true</boolProp>
+                <stringProp name="Argument.name">size</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">localhost</stringProp>
+          <stringProp name="HTTPSampler.port">8080</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.contentEncoding"></stringProp>
+          <stringProp name="HTTPSampler.path">/api/courses</stringProp>
+          <stringProp name="HTTPSampler.method">GET</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.connect_timeout"></stringProp>
+          <stringProp name="HTTPSampler.response_timeout"></stringProp>
+        </HTTPSamplerProxy>
+
+        <!-- Response Assertions -->
+        <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Response Assertion">
+          <collectionProp name="Asserion.test_strings">
+            <stringProp name="49586">200</stringProp>
+          </collectionProp>
+          <stringProp name="Assertion.custom_message"></stringProp>
+          <stringProp name="Assertion.test_field">Assertion.response_code</stringProp>
+          <boolProp name="Assertion.assume_success">false</boolProp>
+          <intProp name="Assertion.test_type">1</intProp>
+        </ResponseAssertion>
+
+        <!-- Duration Assertion -->
+        <DurationAssertion guiclass="DurationAssertionGui" testclass="DurationAssertion" testname="Duration Assertion">
+          <stringProp name="DurationAssertion.duration">2000</stringProp>
+        </DurationAssertion>
+      </hashTree>
+    </hashTree>
+  </hashTree>
+</jmeterTestPlan>
+```
+
+#### Performance Testing with Spring Boot
+
+```java
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+class PerformanceTest {
+
+    @Autowired
+    private TestRestTemplate restTemplate;
+
+    @Autowired
+    private CourseRepository courseRepository;
+
+    @LocalServerPort
+    private int port;
+
+    @Test
+    @DisplayName("Should handle concurrent course creation requests")
+    void shouldHandleConcurrentCourseCreationRequests() throws InterruptedException {
+        // Given
+        int numberOfThreads = 50;
+        int requestsPerThread = 10;
+        CountDownLatch latch = new CountDownLatch(numberOfThreads);
+        List<Long> responseTimes = Collections.synchronizedList(new ArrayList<>());
+        List<String> errors = Collections.synchronizedList(new ArrayList<>());
+
+        ExecutorService executor = Executors.newFixedThreadPool(numberOfThreads);
+
+        // When
+        for (int i = 0; i < numberOfThreads; i++) {
+            final int threadId = i;
+            executor.submit(() -> {
+                try {
+                    for (int j = 0; j < requestsPerThread; j++) {
+                        long startTime = System.currentTimeMillis();
+
+                        CreateCourseRequest request = CreateCourseRequest.builder()
+                            .title("Performance Test Course " + threadId + "-" + j)
+                            .description("Course created in performance test")
+                            .category("Programming")
+                            .difficultyLevel(DifficultyLevel.BEGINNER)
+                            .price(BigDecimal.valueOf(99.99))
+                            .build();
+
+                        try {
+                            ResponseEntity<Course> response = restTemplate.postForEntity(
+                                "http://localhost:" + port + "/api/courses", request, Course.class);
+
+                            long responseTime = System.currentTimeMillis() - startTime;
+                            responseTimes.add(responseTime);
+
+                            if (response.getStatusCode() != HttpStatus.CREATED) {
+                                errors.add("Unexpected status: " + response.getStatusCode());
+                            }
+                        } catch (Exception e) {
+                            errors.add("Request failed: " + e.getMessage());
+                        }
+                    }
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
+
+        // Wait for all threads to complete
+        latch.await(60, TimeUnit.SECONDS);
+        executor.shutdown();
+
+        // Then
+        assertThat(errors).as("Should have no errors").isEmpty();
+
+        // Calculate statistics
+        double averageResponseTime = responseTimes.stream()
+            .mapToLong(Long::longValue)
+            .average()
+            .orElse(0.0);
+
+        long maxResponseTime = responseTimes.stream()
+            .mapToLong(Long::longValue)
+            .max()
+            .orElse(0L);
+
+        System.out.println("Average response time: " + averageResponseTime + "ms");
+        System.out.println("Max response time: " + maxResponseTime + "ms");
+        System.out.println("Total requests: " + responseTimes.size());
+
+        // Assertions
+        assertThat(averageResponseTime).as("Average response time should be less than 1000ms")
+            .isLessThan(1000.0);
+        assertThat(maxResponseTime).as("Max response time should be less than 3000ms")
+            .isLessThan(3000L);
+        assertThat(responseTimes.size()).as("All requests should complete")
+            .isEqualTo(numberOfThreads * requestsPerThread);
+    }
+
+    @Test
+    @DisplayName("Should handle database connection pool under load")
+    void shouldHandleDatabaseConnectionPoolUnderLoad() throws InterruptedException {
+        // Given
+        int numberOfThreads = 20;
+        CountDownLatch latch = new CountDownLatch(numberOfThreads);
+        List<String> errors = Collections.synchronizedList(new ArrayList<>());
+
+        // Prepopulate some test data
+        for (int i = 0; i < 100; i++) {
+            Course course = Course.builder()
+                .title("Test Course " + i)
+                .description("Test course description")
+                .instructorId("instructor-1")
+                .category("Programming")
+                .difficultyLevel(DifficultyLevel.BEGINNER)
+                .price(BigDecimal.valueOf(99.99))
+                .status(CourseStatus.PUBLISHED)
+                .isActive(true)
+                .createdAt(LocalDateTime.now())
+                .build();
+            courseRepository.save(course);
+        }
+
+        ExecutorService executor = Executors.newFixedThreadPool(numberOfThreads);
+
+        // When
+        for (int i = 0; i < numberOfThreads; i++) {
+            executor.submit(() -> {
+                try {
+                    for (int j = 0; j < 50; j++) {
+                        // Perform various database operations
+                        List<Course> courses = courseRepository.findByCategory("Programming");
+                        assertThat(courses).isNotEmpty();
+
+                        // Simulate some processing time
+                        Thread.sleep(10);
+                    }
+                } catch (Exception e) {
+                    errors.add("Database operation failed: " + e.getMessage());
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
+
+        // Wait for all threads to complete
+        latch.await(30, TimeUnit.SECONDS);
+        executor.shutdown();
+
+        // Then
+        assertThat(errors).as("Should have no database errors").isEmpty();
+    }
+}
+```
+
+## Frontend Testing Implementation
+
+### Unit Testing with Jest and React Testing Library
+
+```javascript
+// Course component test
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { jest } from "@jest/globals";
+import CourseCard from "../components/CourseCard";
+import { courseService } from "../services/courseService";
+
+// Mock the course service
+jest.mock("../services/courseService");
+
+describe("CourseCard", () => {
+  const mockCourse = {
+    id: "course-1",
+    title: "Test Course",
+    description: "Test course description",
+    instructorName: "Test Instructor",
+    category: "Programming",
+    difficultyLevel: "BEGINNER",
+    price: 99.99,
+    rating: 4.5,
+    enrollmentCount: 150,
+    thumbnailUrl: "https://example.com/thumbnail.jpg",
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test("should render course information correctly", () => {
+    render(<CourseCard course={mockCourse} />);
+
+    expect(screen.getByText("Test Course")).toBeInTheDocument();
+    expect(screen.getByText("Test course description")).toBeInTheDocument();
+    expect(screen.getByText("Test Instructor")).toBeInTheDocument();
+    expect(screen.getByText("$99.99")).toBeInTheDocument();
+    expect(screen.getByText("4.5")).toBeInTheDocument();
+    expect(screen.getByText("150 students")).toBeInTheDocument();
+  });
+
+  test("should handle course enrollment", async () => {
+    const mockEnroll = jest.fn().mockResolvedValue({ success: true });
+    courseService.enrollInCourse = mockEnroll;
+
+    render(<CourseCard course={mockCourse} />);
+
+    const enrollButton = screen.getByText("Enroll Now");
+    fireEvent.click(enrollButton);
+
+    await waitFor(() => {
+      expect(mockEnroll).toHaveBeenCalledWith("course-1");
+    });
+  });
+
+  test("should show loading state during enrollment", async () => {
+    const mockEnroll = jest
+      .fn()
+      .mockImplementation(
+        () => new Promise((resolve) => setTimeout(resolve, 1000))
+      );
+    courseService.enrollInCourse = mockEnroll;
+
+    render(<CourseCard course={mockCourse} />);
+
+    const enrollButton = screen.getByText("Enroll Now");
+    fireEvent.click(enrollButton);
+
+    expect(screen.getByText("Enrolling...")).toBeInTheDocument();
+  });
+
+  test("should handle enrollment error", async () => {
+    const mockEnroll = jest
+      .fn()
+      .mockRejectedValue(new Error("Enrollment failed"));
+    courseService.enrollInCourse = mockEnroll;
+
+    render(<CourseCard course={mockCourse} />);
+
+    const enrollButton = screen.getByText("Enroll Now");
+    fireEvent.click(enrollButton);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("Enrollment failed. Please try again.")
+      ).toBeInTheDocument();
+    });
+  });
+
+  test("should display difficulty level badge", () => {
+    render(<CourseCard course={mockCourse} />);
+
+    const difficultyBadge = screen.getByText("BEGINNER");
+    expect(difficultyBadge).toBeInTheDocument();
+    expect(difficultyBadge).toHaveClass("bg-green-100", "text-green-800");
+  });
+});
+
+// Quiz component test
+import QuizTaker from "../components/QuizTaker";
+import { quizService } from "../services/quizService";
+
+jest.mock("../services/quizService");
+
+describe("QuizTaker", () => {
+  const mockQuiz = {
+    id: "quiz-1",
+    title: "Test Quiz",
+    timeLimit: 1800, // 30 minutes
+    questions: [
+      {
+        id: "q1",
+        questionText: "What is 2 + 2?",
+        type: "MULTIPLE_CHOICE",
+        options: ["3", "4", "5", "6"],
+        points: 10,
+      },
+      {
+        id: "q2",
+        questionText: "Java is a programming language",
+        type: "TRUE_FALSE",
+        points: 5,
+      },
+    ],
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  test("should render quiz questions", () => {
+    render(<QuizTaker quiz={mockQuiz} />);
+
+    expect(screen.getByText("Test Quiz")).toBeInTheDocument();
+    expect(screen.getByText("What is 2 + 2?")).toBeInTheDocument();
+    expect(
+      screen.getByText("Java is a programming language")
+    ).toBeInTheDocument();
+  });
+
+  test("should handle answer selection", () => {
+    render(<QuizTaker quiz={mockQuiz} />);
+
+    const option = screen.getByLabelText("4");
+    fireEvent.click(option);
+
+    expect(option).toBeChecked();
+  });
+
+  test("should show timer countdown", () => {
+    render(<QuizTaker quiz={mockQuiz} />);
+
+    expect(screen.getByText("30:00")).toBeInTheDocument();
+
+    // Fast-forward 1 minute
+    jest.advanceTimersByTime(60000);
+
+    expect(screen.getByText("29:00")).toBeInTheDocument();
+  });
+
+  test("should submit quiz when time runs out", async () => {
+    const mockSubmit = jest.fn().mockResolvedValue({ success: true });
+    quizService.submitQuiz = mockSubmit;
+
+    render(<QuizTaker quiz={mockQuiz} />);
+
+    // Fast-forward to quiz end
+    jest.advanceTimersByTime(1800000); // 30 minutes
+
+    await waitFor(() => {
+      expect(mockSubmit).toHaveBeenCalled();
+    });
+  });
+
+  test("should navigate between questions", () => {
+    render(<QuizTaker quiz={mockQuiz} />);
+
+    expect(screen.getByText("What is 2 + 2?")).toBeInTheDocument();
+
+    const nextButton = screen.getByText("Next");
+    fireEvent.click(nextButton);
+
+    expect(
+      screen.getByText("Java is a programming language")
+    ).toBeInTheDocument();
+  });
+});
+```
+
+### End-to-End Testing with Cypress
+
+```javascript
+// cypress/e2e/course-enrollment.cy.js
+describe("Course Enrollment Flow", () => {
+  beforeEach(() => {
+    // Setup test data
+    cy.task("db:seed");
+    cy.login("student@test.com", "password123");
+  });
+
+  it("should allow student to browse and enroll in a course", () => {
+    // Visit courses page
+    cy.visit("/courses");
+    cy.url().should("include", "/courses");
+
+    // Search for a course
+    cy.get("[data-cy=search-input]").type("JavaScript");
+    cy.get("[data-cy=search-button]").click();
+
+    // Verify search results
+    cy.get("[data-cy=course-card]").should("have.length.greaterThan", 0);
+    cy.get("[data-cy=course-card]").first().should("contain", "JavaScript");
+
+    // Click on first course
+    cy.get("[data-cy=course-card]").first().click();
+
+    // Verify course details page
+    cy.url().should("include", "/courses/");
+    cy.get("[data-cy=course-title]").should("be.visible");
+    cy.get("[data-cy=course-description]").should("be.visible");
+    cy.get("[data-cy=instructor-name]").should("be.visible");
+
+    // Enroll in course
+    cy.get("[data-cy=enroll-button]").click();
+
+    // Verify enrollment confirmation
+    cy.get("[data-cy=enrollment-modal]").should("be.visible");
+    cy.get("[data-cy=confirm-enrollment]").click();
+
+    // Verify successful enrollment
+    cy.get("[data-cy=enrollment-success]").should(
+      "contain",
+      "Successfully enrolled"
+    );
+    cy.get("[data-cy=go-to-course]").should("be.visible");
+
+    // Navigate to enrolled course
+    cy.get("[data-cy=go-to-course]").click();
+    cy.url().should("include", "/learn/");
+
+    // Verify course learning interface
+    cy.get("[data-cy=course-outline]").should("be.visible");
+    cy.get("[data-cy=lesson-list]").should("be.visible");
+    cy.get("[data-cy=first-lesson]").should("be.visible");
+  });
+
+  it("should prevent enrollment in course already enrolled", () => {
+    // Pre-enroll in course
+    cy.task("db:enrollStudent", {
+      studentEmail: "student@test.com",
+      courseId: "course-1",
+    });
+
+    // Visit course page
+    cy.visit("/courses/course-1");
+
+    // Verify enrollment status
+    cy.get("[data-cy=enrollment-status]").should("contain", "Already Enrolled");
+    cy.get("[data-cy=continue-learning]").should("be.visible");
+    cy.get("[data-cy=enroll-button]").should("not.exist");
+  });
+});
+
+// cypress/e2e/quiz-taking.cy.js
+describe("Quiz Taking Flow", () => {
+  beforeEach(() => {
+    cy.task("db:seed");
+    cy.login("student@test.com", "password123");
+
+    // Enroll in course with quiz
+    cy.task("db:enrollStudent", {
+      studentEmail: "student@test.com",
+      courseId: "course-with-quiz",
+    });
+  });
+
+  it("should allow student to take a quiz", () => {
+    // Navigate to course
+    cy.visit("/learn/course-with-quiz");
+
+    // Find and start quiz
+    cy.get("[data-cy=quiz-item]").first().click();
+    cy.get("[data-cy=start-quiz]").click();
+
+    // Verify quiz interface
+    cy.get("[data-cy=quiz-timer]").should("be.visible");
+    cy.get("[data-cy=question-counter]").should("contain", "1 of");
+    cy.get("[data-cy=quiz-question]").should("be.visible");
+
+    // Answer first question
+    cy.get("[data-cy=quiz-option]").first().click();
+    cy.get("[data-cy=next-question]").click();
+
+    // Verify navigation to next question
+    cy.get("[data-cy=question-counter]").should("contain", "2 of");
+
+    // Complete remaining questions
+    cy.get("[data-cy=quiz-option]").first().click();
+    cy.get("[data-cy=next-question]").click();
+
+    // Submit quiz
+    cy.get("[data-cy=submit-quiz]").click();
+    cy.get("[data-cy=confirm-submit]").click();
+
+    // Verify quiz results
+    cy.get("[data-cy=quiz-results]").should("be.visible");
+    cy.get("[data-cy=quiz-score]").should("be.visible");
+    cy.get("[data-cy=passing-status]").should("be.visible");
+  });
+
+  it("should auto-submit quiz when time expires", () => {
+    // Mock short timer for testing
+    cy.intercept("GET", "/api/quizzes/*/attempt", {
+      fixture: "quiz-short-timer.json",
+    });
+
+    cy.visit("/learn/course-with-quiz");
+    cy.get("[data-cy=quiz-item]").first().click();
+    cy.get("[data-cy=start-quiz]").click();
+
+    // Wait for timer to expire
+    cy.get("[data-cy=quiz-timer]", { timeout: 10000 }).should(
+      "contain",
+      "00:00"
+    );
+
+    // Verify auto-submission
+    cy.get("[data-cy=quiz-auto-submitted]").should("be.visible");
+    cy.get("[data-cy=quiz-results]").should("be.visible");
+  });
+
+  it("should save progress when navigating away", () => {
+    cy.visit("/learn/course-with-quiz");
+    cy.get("[data-cy=quiz-item]").first().click();
+    cy.get("[data-cy=start-quiz]").click();
+
+    // Answer first question
+    cy.get("[data-cy=quiz-option]").first().click();
+
+    // Navigate away
+    cy.visit("/dashboard");
+
+    // Return to quiz
+    cy.visit("/learn/course-with-quiz");
+    cy.get("[data-cy=quiz-item]").first().click();
+
+    // Verify resume option
+    cy.get("[data-cy=resume-quiz]").should("be.visible");
+    cy.get("[data-cy=resume-quiz]").click();
+
+    // Verify saved answer
+    cy.get("[data-cy=quiz-option]").first().should("be.checked");
+  });
+});
+
+// cypress/e2e/accessibility.cy.js
+describe("Accessibility Tests", () => {
+  beforeEach(() => {
+    cy.visit("/");
+    cy.injectAxe();
+  });
+
+  it("should not have accessibility violations on homepage", () => {
+    cy.checkA11y();
+  });
+
+  it("should be keyboard navigable", () => {
+    // Test keyboard navigation
+    cy.get("body").tab();
+    cy.focused().should("have.attr", "data-cy", "main-nav");
+
+    cy.focused().tab();
+    cy.focused().should("have.attr", "data-cy", "search-input");
+
+    cy.focused().tab();
+    cy.focused().should("have.attr", "data-cy", "search-button");
+  });
+
+  it("should have proper ARIA labels", () => {
+    cy.get("[data-cy=main-nav]").should("have.attr", "aria-label");
+    cy.get("[data-cy=search-input]").should("have.attr", "aria-label");
+    cy.get("[data-cy=course-card]").should("have.attr", "aria-label");
+  });
+
+  it("should support screen readers", () => {
+    cy.get("[data-cy=course-card]")
+      .first()
+      .within(() => {
+        cy.get('[aria-hidden="true"]').should("exist");
+        cy.get('[role="img"]').should("have.attr", "alt");
+      });
+  });
+});
+```
+
+### Performance Testing with Lighthouse
+
+```javascript
+// cypress/e2e/performance.cy.js
+describe("Performance Tests", () => {
+  it("should meet Lighthouse performance thresholds", () => {
+    cy.visit("/");
+
+    cy.lighthouse({
+      performance: 85,
+      accessibility: 95,
+      "best-practices": 85,
+      seo: 85,
+    });
+  });
+
+  it("should load course page within performance budget", () => {
+    cy.visit("/courses");
+
+    // Measure page load time
+    cy.window().then((win) => {
+      const loadTime =
+        win.performance.timing.loadEventEnd -
+        win.performance.timing.navigationStart;
+      expect(loadTime).to.be.lessThan(3000); // 3 seconds
+    });
+  });
+
+  it("should handle large course lists efficiently", () => {
+    // Mock large dataset
+    cy.intercept("GET", "/api/courses*", {
+      fixture: "large-course-list.json",
+    });
+
+    cy.visit("/courses");
+
+    // Measure rendering time
+    cy.get("[data-cy=course-card]").should("have.length", 100);
+
+    cy.window().then((win) => {
+      const renderTime = win.performance.now();
+      expect(renderTime).to.be.lessThan(2000); // 2 seconds
+    });
+  });
+});
+```
+
+### Test Configuration
+
+#### Jest Configuration
+
+```javascript
+// jest.config.js
+module.exports = {
+  testEnvironment: "jsdom",
+  setupFilesAfterEnv: ["<rootDir>/src/setupTests.js"],
+  moduleNameMapping: {
+    "^@/(.*)$": "<rootDir>/src/$1",
+    "\\.(css|less|scss|sass)$": "identity-obj-proxy",
+    "\\.(jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$":
+      "<rootDir>/__mocks__/fileMock.js",
+  },
+  collectCoverageFrom: [
+    "src/**/*.{js,jsx}",
+    "!src/index.js",
+    "!src/reportWebVitals.js",
+    "!src/**/*.test.{js,jsx}",
+    "!src/**/*.stories.{js,jsx}",
+  ],
+  coverageThreshold: {
+    global: {
+      branches: 80,
+      functions: 80,
+      lines: 80,
+      statements: 80,
+    },
+  },
+  testMatch: [
+    "<rootDir>/src/**/__tests__/**/*.{js,jsx}",
+    "<rootDir>/src/**/*.{test,spec}.{js,jsx}",
+  ],
+};
+```
+
+#### Cypress Configuration
+
+```javascript
+// cypress.config.js
+const { defineConfig } = require("cypress");
+
+module.exports = defineConfig({
+  e2e: {
+    baseUrl: "http://localhost:3000",
+    supportFile: "cypress/support/e2e.js",
+    specPattern: "cypress/e2e/**/*.cy.{js,jsx,ts,tsx}",
+    viewportWidth: 1280,
+    viewportHeight: 720,
+    video: true,
+    screenshotOnRunFailure: true,
+    defaultCommandTimeout: 10000,
+    requestTimeout: 15000,
+    responseTimeout: 15000,
+
+    setupNodeEvents(on, config) {
+      // Database seeding tasks
+      on("task", {
+        "db:seed": () => {
+          // Seed test database
+          return null;
+        },
+        "db:enrollStudent": ({ studentEmail, courseId }) => {
+          // Enroll student in course
+          return null;
+        },
+      });
+
+      // Lighthouse plugin
+      require("cypress-lighthouse")(on, config);
+
+      // Axe accessibility plugin
+      require("@cypress/code-coverage/task")(on, config);
+
+      return config;
+    },
+  },
+
+  component: {
+    devServer: {
+      framework: "react",
+      bundler: "webpack",
+    },
+    specPattern: "src/**/*.cy.{js,jsx,ts,tsx}",
+  },
+});
+```
+
+## Key Testing Features Implemented
+
+1. **Comprehensive Test Coverage**
+   - Unit tests for services and repositories
+   - Integration tests for API endpoints
+   - End-to-end tests for user journeys
+   - Performance and accessibility testing
+
+2. **Testing Best Practices**
+   - Test-driven development approach
+   - Proper mocking and stubbing
+   - Data-driven testing with parameterized tests
+   - Continuous testing in CI/CD pipeline
+
+3. **Quality Assurance**
+   - Code coverage requirements
+   - Performance benchmarking
+   - Accessibility compliance testing
+   - Cross-browser compatibility testing
+
+4. **Test Automation**
+   - Automated test execution
+   - Test reporting and analytics
+   - Integration with build pipeline
+   - Regression testing automation
+
+5. **Test Data Management**
+   - Test database seeding
+   - Test data isolation
+   - Mock data generation
+   - Test environment management
+
+[← Previous: Notifications](/proj-online-learning-platform-website/21-notifications) | [Next: Deployment →](/proj-online-learning-platform-website/23-deployment)
+
+<BackToTop />
