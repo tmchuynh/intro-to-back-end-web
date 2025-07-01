@@ -1,0 +1,1267 @@
+import BackToTop from "@/components/BackToTop";
+
+# Assessment and Quiz System
+
+## Table of Contents
+
+## Introduction
+
+In this module, we'll implement a comprehensive assessment and quiz system that allows instructors to create various types of questions, manage quizzes and assignments, and provide automated grading with detailed feedback. The system will support multiple question types and advanced features like time limits and randomization.
+
+## Assessment Features
+
+### Core Assessment Components
+
+1. **Question Types**
+   - Multiple choice (single and multiple answers)
+   - True/False questions
+   - Short answer (text input)
+   - Essay questions
+   - Fill-in-the-blank
+   - Matching questions
+
+2. **Quiz Management**
+   - Quiz creation and editing
+   - Question bank management
+   - Time limits and attempts
+   - Randomization and shuffling
+
+3. **Grading System**
+   - Automatic grading for objective questions
+   - Manual grading for subjective questions
+   - Weighted scoring
+   - Detailed feedback and explanations
+
+4. **Advanced Features**
+   - Question pools
+   - Adaptive quizzes
+   - Proctoring integration
+   - Analytics and reporting
+
+## Backend Implementation
+
+### Assessment Models
+
+```java
+@Document(collection = "quizzes")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class Quiz {
+    @Id
+    private String id;
+
+    private String courseId;
+    private String moduleId;
+    private String lessonId;
+    private String instructorId;
+
+    private String title;
+    private String description;
+    private String instructions;
+
+    // Quiz settings
+    private QuizType type;
+    private QuizStatus status;
+    private int totalQuestions;
+    private double totalPoints;
+    private int timeLimit; // in minutes, 0 = no limit
+    private int maxAttempts; // 0 = unlimited
+    private boolean shuffleQuestions;
+    private boolean shuffleAnswers;
+    private boolean showCorrectAnswers;
+    private boolean showScoreImmediately;
+
+    // Availability
+    private LocalDateTime availableFrom;
+    private LocalDateTime availableTo;
+    private LocalDateTime dueDate;
+
+    // Questions
+    private List<String> questionIds;
+    private List<QuestionPool> questionPools;
+
+    // Grading
+    private GradingMethod gradingMethod;
+    private double passingScore;
+
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+}
+
+@Document(collection = "questions")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class Question {
+    @Id
+    private String id;
+
+    private String instructorId;
+    private String courseId;
+    private List<String> tags;
+
+    private QuestionType type;
+    private String questionText;
+    private String explanation;
+    private double points;
+    private DifficultyLevel difficulty;
+
+    // Question content based on type
+    private MultipleChoiceData multipleChoiceData;
+    private TrueFalseData trueFalseData;
+    private ShortAnswerData shortAnswerData;
+    private EssayData essayData;
+    private FillInBlankData fillInBlankData;
+    private MatchingData matchingData;
+
+    // Media attachments
+    private List<String> imageUrls;
+    private List<String> videoUrls;
+    private List<String> audioUrls;
+
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+}
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class MultipleChoiceData {
+    private List<AnswerOption> options;
+    private boolean multipleAnswers; // Allow multiple correct answers
+    private boolean randomizeOptions;
+}
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class AnswerOption {
+    private String id;
+    private String text;
+    private boolean isCorrect;
+    private String feedback; // Feedback for this specific option
+}
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class TrueFalseData {
+    private boolean correctAnswer;
+    private String trueExplanation;
+    private String falseExplanation;
+}
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class ShortAnswerData {
+    private List<String> acceptedAnswers;
+    private boolean caseSensitive;
+    private boolean exactMatch; // false = contains match
+    private int maxLength;
+}
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class EssayData {
+    private String rubric;
+    private int minWords;
+    private int maxWords;
+    private List<String> gradingCriteria;
+}
+
+@Document(collection = "quiz_attempts")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class QuizAttempt {
+    @Id
+    private String id;
+
+    private String quizId;
+    private String studentId;
+    private String courseId;
+
+    private int attemptNumber;
+    private AttemptStatus status;
+
+    // Timing
+    private LocalDateTime startedAt;
+    private LocalDateTime submittedAt;
+    private LocalDateTime completedAt;
+    private int timeSpentMinutes;
+
+    // Answers
+    private List<QuestionAnswer> answers;
+
+    // Scoring
+    private double totalScore;
+    private double maxScore;
+    private double percentage;
+    private boolean passed;
+    private GradingStatus gradingStatus;
+
+    // Feedback
+    private String instructorFeedback;
+    private LocalDateTime feedbackAt;
+
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+}
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class QuestionAnswer {
+    private String questionId;
+    private QuestionType questionType;
+    private Object answer; // Can be String, List<String>, Boolean, etc.
+    private double pointsEarned;
+    private double maxPoints;
+    private boolean isCorrect;
+    private String feedback;
+    private GradingStatus gradingStatus;
+    private String gradedBy;
+    private LocalDateTime gradedAt;
+}
+
+public enum QuizType {
+    PRACTICE,
+    GRADED,
+    FINAL_EXAM,
+    SURVEY
+}
+
+public enum QuestionType {
+    MULTIPLE_CHOICE,
+    TRUE_FALSE,
+    SHORT_ANSWER,
+    ESSAY,
+    FILL_IN_BLANK,
+    MATCHING
+}
+
+public enum AttemptStatus {
+    IN_PROGRESS,
+    SUBMITTED,
+    COMPLETED,
+    ABANDONED,
+    EXPIRED
+}
+
+public enum GradingStatus {
+    NOT_GRADED,
+    AUTO_GRADED,
+    MANUAL_GRADING_REQUIRED,
+    MANUALLY_GRADED
+}
+```
+
+### Quiz Service
+
+```java
+@Service
+public class QuizService {
+
+    @Autowired
+    private QuizRepository quizRepository;
+
+    @Autowired
+    private QuestionRepository questionRepository;
+
+    @Autowired
+    private QuizAttemptRepository attemptRepository;
+
+    @Autowired
+    private EnrollmentService enrollmentService;
+
+    // Create quiz
+    public Quiz createQuiz(CreateQuizRequest request, String instructorId) {
+        Quiz quiz = Quiz.builder()
+            .courseId(request.getCourseId())
+            .moduleId(request.getModuleId())
+            .lessonId(request.getLessonId())
+            .instructorId(instructorId)
+            .title(request.getTitle())
+            .description(request.getDescription())
+            .instructions(request.getInstructions())
+            .type(request.getType())
+            .status(QuizStatus.DRAFT)
+            .timeLimit(request.getTimeLimit())
+            .maxAttempts(request.getMaxAttempts())
+            .shuffleQuestions(request.isShuffleQuestions())
+            .shuffleAnswers(request.isShuffleAnswers())
+            .showCorrectAnswers(request.isShowCorrectAnswers())
+            .showScoreImmediately(request.isShowScoreImmediately())
+            .availableFrom(request.getAvailableFrom())
+            .availableTo(request.getAvailableTo())
+            .dueDate(request.getDueDate())
+            .gradingMethod(request.getGradingMethod())
+            .passingScore(request.getPassingScore())
+            .questionIds(new ArrayList<>())
+            .totalQuestions(0)
+            .totalPoints(0.0)
+            .createdAt(LocalDateTime.now())
+            .updatedAt(LocalDateTime.now())
+            .build();
+
+        return quizRepository.save(quiz);
+    }
+
+    // Add question to quiz
+    public Quiz addQuestionToQuiz(String quizId, String questionId, String instructorId) {
+        Quiz quiz = getQuizByInstructor(quizId, instructorId);
+        Question question = questionRepository.findById(questionId)
+            .orElseThrow(() -> new QuestionNotFoundException("Question not found"));
+
+        if (!quiz.getQuestionIds().contains(questionId)) {
+            quiz.getQuestionIds().add(questionId);
+            quiz.setTotalQuestions(quiz.getQuestionIds().size());
+            quiz.setTotalPoints(quiz.getTotalPoints() + question.getPoints());
+            quiz.setUpdatedAt(LocalDateTime.now());
+        }
+
+        return quizRepository.save(quiz);
+    }
+
+    // Start quiz attempt
+    public QuizAttempt startQuizAttempt(String quizId, String studentId) {
+        Quiz quiz = quizRepository.findById(quizId)
+            .orElseThrow(() -> new QuizNotFoundException("Quiz not found"));
+
+        // Validate student enrollment
+        if (!enrollmentService.isStudentEnrolledInCourse(studentId, quiz.getCourseId())) {
+            throw new UnauthorizedException("Student not enrolled in course");
+        }
+
+        // Check availability
+        LocalDateTime now = LocalDateTime.now();
+        if (quiz.getAvailableFrom() != null && now.isBefore(quiz.getAvailableFrom())) {
+            throw new QuizNotAvailableException("Quiz not yet available");
+        }
+        if (quiz.getAvailableTo() != null && now.isAfter(quiz.getAvailableTo())) {
+            throw new QuizNotAvailableException("Quiz no longer available");
+        }
+
+        // Check previous attempts
+        List<QuizAttempt> previousAttempts = attemptRepository.findByQuizIdAndStudentId(quizId, studentId);
+        if (quiz.getMaxAttempts() > 0 && previousAttempts.size() >= quiz.getMaxAttempts()) {
+            throw new MaxAttemptsExceededException("Maximum attempts exceeded");
+        }
+
+        // Check for existing in-progress attempt
+        Optional<QuizAttempt> inProgressAttempt = previousAttempts.stream()
+            .filter(attempt -> attempt.getStatus() == AttemptStatus.IN_PROGRESS)
+            .findFirst();
+
+        if (inProgressAttempt.isPresent()) {
+            return inProgressAttempt.get();
+        }
+
+        // Create new attempt
+        QuizAttempt attempt = QuizAttempt.builder()
+            .quizId(quizId)
+            .studentId(studentId)
+            .courseId(quiz.getCourseId())
+            .attemptNumber(previousAttempts.size() + 1)
+            .status(AttemptStatus.IN_PROGRESS)
+            .startedAt(now)
+            .answers(initializeAnswers(quiz))
+            .totalScore(0.0)
+            .maxScore(quiz.getTotalPoints())
+            .percentage(0.0)
+            .passed(false)
+            .gradingStatus(GradingStatus.NOT_GRADED)
+            .createdAt(now)
+            .updatedAt(now)
+            .build();
+
+        return attemptRepository.save(attempt);
+    }
+
+    // Submit answer for question
+    public QuizAttempt submitAnswer(String attemptId, String questionId, Object answer, String studentId) {
+        QuizAttempt attempt = attemptRepository.findById(attemptId)
+            .orElseThrow(() -> new AttemptNotFoundException("Quiz attempt not found"));
+
+        if (!attempt.getStudentId().equals(studentId)) {
+            throw new UnauthorizedException("Cannot modify another student's attempt");
+        }
+
+        if (attempt.getStatus() != AttemptStatus.IN_PROGRESS) {
+            throw new IllegalStateException("Cannot modify submitted attempt");
+        }
+
+        // Check time limit
+        if (isAttemptExpired(attempt)) {
+            attempt.setStatus(AttemptStatus.EXPIRED);
+            attemptRepository.save(attempt);
+            throw new AttemptExpiredException("Quiz attempt has expired");
+        }
+
+        // Find and update answer
+        QuestionAnswer questionAnswer = attempt.getAnswers().stream()
+            .filter(qa -> qa.getQuestionId().equals(questionId))
+            .findFirst()
+            .orElseThrow(() -> new QuestionNotFoundException("Question not found in attempt"));
+
+        questionAnswer.setAnswer(answer);
+
+        // Auto-grade if possible
+        autoGradeAnswer(questionAnswer);
+
+        attempt.setUpdatedAt(LocalDateTime.now());
+
+        return attemptRepository.save(attempt);
+    }
+
+    // Submit complete quiz
+    public QuizAttempt submitQuiz(String attemptId, String studentId) {
+        QuizAttempt attempt = attemptRepository.findById(attemptId)
+            .orElseThrow(() -> new AttemptNotFoundException("Quiz attempt not found"));
+
+        if (!attempt.getStudentId().equals(studentId)) {
+            throw new UnauthorizedException("Cannot submit another student's attempt");
+        }
+
+        if (attempt.getStatus() != AttemptStatus.IN_PROGRESS) {
+            throw new IllegalStateException("Attempt already submitted");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        attempt.setStatus(AttemptStatus.SUBMITTED);
+        attempt.setSubmittedAt(now);
+
+        // Calculate time spent
+        long timeSpent = ChronoUnit.MINUTES.between(attempt.getStartedAt(), now);
+        attempt.setTimeSpentMinutes((int) timeSpent);
+
+        // Auto-grade all answers
+        attempt.getAnswers().forEach(this::autoGradeAnswer);
+
+        // Calculate total score
+        calculateTotalScore(attempt);
+
+        // Check if manual grading is needed
+        boolean needsManualGrading = attempt.getAnswers().stream()
+            .anyMatch(answer -> answer.getGradingStatus() == GradingStatus.MANUAL_GRADING_REQUIRED);
+
+        if (needsManualGrading) {
+            attempt.setGradingStatus(GradingStatus.MANUAL_GRADING_REQUIRED);
+        } else {
+            attempt.setGradingStatus(GradingStatus.AUTO_GRADED);
+            attempt.setStatus(AttemptStatus.COMPLETED);
+            attempt.setCompletedAt(now);
+        }
+
+        attempt.setUpdatedAt(now);
+
+        return attemptRepository.save(attempt);
+    }
+
+    // Get quiz for student (with access control)
+    public QuizDto getQuizForStudent(String quizId, String studentId) {
+        Quiz quiz = quizRepository.findById(quizId)
+            .orElseThrow(() -> new QuizNotFoundException("Quiz not found"));
+
+        // Check enrollment
+        if (!enrollmentService.isStudentEnrolledInCourse(studentId, quiz.getCourseId())) {
+            throw new UnauthorizedException("Student not enrolled in course");
+        }
+
+        // Get questions (filter sensitive information)
+        List<Question> questions = questionRepository.findAllById(quiz.getQuestionIds());
+
+        // Remove correct answers if not allowed to show
+        if (!quiz.isShowCorrectAnswers()) {
+            questions = questions.stream()
+                .map(this::sanitizeQuestionForStudent)
+                .collect(Collectors.toList());
+        }
+
+        // Shuffle questions if enabled
+        if (quiz.isShuffleQuestions()) {
+            Collections.shuffle(questions);
+        }
+
+        return QuizDto.builder()
+            .id(quiz.getId())
+            .title(quiz.getTitle())
+            .description(quiz.getDescription())
+            .instructions(quiz.getInstructions())
+            .timeLimit(quiz.getTimeLimit())
+            .totalQuestions(quiz.getTotalQuestions())
+            .totalPoints(quiz.getTotalPoints())
+            .questions(questions.stream().map(this::convertToQuestionDto).collect(Collectors.toList()))
+            .build();
+    }
+
+    // Manual grading
+    public QuizAttempt gradeAnswer(String attemptId, String questionId, double points, String feedback, String instructorId) {
+        QuizAttempt attempt = attemptRepository.findById(attemptId)
+            .orElseThrow(() -> new AttemptNotFoundException("Quiz attempt not found"));
+
+        QuestionAnswer answer = attempt.getAnswers().stream()
+            .filter(qa -> qa.getQuestionId().equals(questionId))
+            .findFirst()
+            .orElseThrow(() -> new QuestionNotFoundException("Question answer not found"));
+
+        answer.setPointsEarned(Math.min(points, answer.getMaxPoints()));
+        answer.setFeedback(feedback);
+        answer.setGradingStatus(GradingStatus.MANUALLY_GRADED);
+        answer.setGradedBy(instructorId);
+        answer.setGradedAt(LocalDateTime.now());
+
+        // Recalculate total score
+        calculateTotalScore(attempt);
+
+        // Check if all answers are graded
+        boolean allGraded = attempt.getAnswers().stream()
+            .allMatch(qa -> qa.getGradingStatus() == GradingStatus.AUTO_GRADED ||
+                          qa.getGradingStatus() == GradingStatus.MANUALLY_GRADED);
+
+        if (allGraded) {
+            attempt.setGradingStatus(GradingStatus.MANUALLY_GRADED);
+            attempt.setStatus(AttemptStatus.COMPLETED);
+            attempt.setCompletedAt(LocalDateTime.now());
+        }
+
+        attempt.setUpdatedAt(LocalDateTime.now());
+
+        return attemptRepository.save(attempt);
+    }
+
+    private void autoGradeAnswer(QuestionAnswer answer) {
+        Question question = questionRepository.findById(answer.getQuestionId())
+            .orElseThrow(() -> new QuestionNotFoundException("Question not found"));
+
+        switch (question.getType()) {
+            case MULTIPLE_CHOICE:
+                gradeMultipleChoice(answer, question);
+                break;
+            case TRUE_FALSE:
+                gradeTrueFalse(answer, question);
+                break;
+            case SHORT_ANSWER:
+                gradeShortAnswer(answer, question);
+                break;
+            case ESSAY:
+                // Essay questions require manual grading
+                answer.setGradingStatus(GradingStatus.MANUAL_GRADING_REQUIRED);
+                break;
+            case FILL_IN_BLANK:
+                gradeFillInBlank(answer, question);
+                break;
+            case MATCHING:
+                gradeMatching(answer, question);
+                break;
+        }
+    }
+
+    private void gradeMultipleChoice(QuestionAnswer answer, Question question) {
+        MultipleChoiceData mcData = question.getMultipleChoiceData();
+
+        if (mcData.isMultipleAnswers()) {
+            // Grade multiple answer question
+            @SuppressWarnings("unchecked")
+            List<String> selectedAnswers = (List<String>) answer.getAnswer();
+
+            Set<String> correctAnswers = mcData.getOptions().stream()
+                .filter(AnswerOption::isCorrect)
+                .map(AnswerOption::getId)
+                .collect(Collectors.toSet());
+
+            Set<String> studentAnswers = new HashSet<>(selectedAnswers);
+
+            if (correctAnswers.equals(studentAnswers)) {
+                answer.setPointsEarned(answer.getMaxPoints());
+                answer.setIsCorrect(true);
+            } else {
+                // Partial credit for partially correct answers
+                int correctSelected = (int) studentAnswers.stream()
+                    .mapToLong(id -> correctAnswers.contains(id) ? 1L : 0L)
+                    .sum();
+                int incorrectSelected = studentAnswers.size() - correctSelected;
+                int missedCorrect = correctAnswers.size() - correctSelected;
+
+                double score = Math.max(0, correctSelected - incorrectSelected - missedCorrect);
+                double percentage = score / correctAnswers.size();
+
+                answer.setPointsEarned(answer.getMaxPoints() * percentage);
+                answer.setIsCorrect(percentage == 1.0);
+            }
+        } else {
+            // Grade single answer question
+            String selectedAnswer = (String) answer.getAnswer();
+            boolean isCorrect = mcData.getOptions().stream()
+                .filter(option -> option.getId().equals(selectedAnswer))
+                .findFirst()
+                .map(AnswerOption::isCorrect)
+                .orElse(false);
+
+            answer.setIsCorrect(isCorrect);
+            answer.setPointsEarned(isCorrect ? answer.getMaxPoints() : 0.0);
+        }
+
+        answer.setGradingStatus(GradingStatus.AUTO_GRADED);
+    }
+
+    private void gradeTrueFalse(QuestionAnswer answer, Question question) {
+        TrueFalseData tfData = question.getTrueFalseData();
+        Boolean studentAnswer = (Boolean) answer.getAnswer();
+
+        boolean isCorrect = tfData.isCorrectAnswer() == studentAnswer;
+        answer.setIsCorrect(isCorrect);
+        answer.setPointsEarned(isCorrect ? answer.getMaxPoints() : 0.0);
+        answer.setGradingStatus(GradingStatus.AUTO_GRADED);
+
+        // Set appropriate feedback
+        String feedback = studentAnswer ? tfData.getTrueExplanation() : tfData.getFalseExplanation();
+        answer.setFeedback(feedback);
+    }
+
+    private void gradeShortAnswer(QuestionAnswer answer, Question question) {
+        ShortAnswerData saData = question.getShortAnswerData();
+        String studentAnswer = ((String) answer.getAnswer()).trim();
+
+        boolean isCorrect = saData.getAcceptedAnswers().stream()
+            .anyMatch(acceptedAnswer -> {
+                String comparison = saData.isCaseSensitive() ?
+                    acceptedAnswer : acceptedAnswer.toLowerCase();
+                String studentComparison = saData.isCaseSensitive() ?
+                    studentAnswer : studentAnswer.toLowerCase();
+
+                return saData.isExactMatch() ?
+                    comparison.equals(studentComparison) :
+                    studentComparison.contains(comparison);
+            });
+
+        answer.setIsCorrect(isCorrect);
+        answer.setPointsEarned(isCorrect ? answer.getMaxPoints() : 0.0);
+        answer.setGradingStatus(GradingStatus.AUTO_GRADED);
+    }
+
+    private void calculateTotalScore(QuizAttempt attempt) {
+        double totalScore = attempt.getAnswers().stream()
+            .mapToDouble(QuestionAnswer::getPointsEarned)
+            .sum();
+
+        attempt.setTotalScore(totalScore);
+        attempt.setPercentage((totalScore / attempt.getMaxScore()) * 100);
+
+        Quiz quiz = quizRepository.findById(attempt.getQuizId()).orElse(null);
+        if (quiz != null) {
+            attempt.setPassed(attempt.getPercentage() >= quiz.getPassingScore());
+        }
+    }
+}
+```
+
+### Quiz Controller
+
+```java
+@RestController
+@RequestMapping("/api/quizzes")
+public class QuizController {
+
+    @Autowired
+    private QuizService quizService;
+
+    // Create quiz (Instructor only)
+    @PostMapping
+    @PreAuthorize("hasRole('INSTRUCTOR')")
+    public ResponseEntity<Quiz> createQuiz(
+            @RequestBody @Valid CreateQuizRequest request,
+            Authentication authentication) {
+
+        String instructorId = authentication.getName();
+        Quiz quiz = quizService.createQuiz(request, instructorId);
+        return ResponseEntity.status(HttpStatus.CREATED).body(quiz);
+    }
+
+    // Get quiz for student
+    @GetMapping("/{quizId}")
+    public ResponseEntity<QuizDto> getQuiz(
+            @PathVariable String quizId,
+            Authentication authentication) {
+
+        String studentId = authentication.getName();
+        QuizDto quiz = quizService.getQuizForStudent(quizId, studentId);
+        return ResponseEntity.ok(quiz);
+    }
+
+    // Start quiz attempt
+    @PostMapping("/{quizId}/attempts")
+    public ResponseEntity<QuizAttempt> startQuizAttempt(
+            @PathVariable String quizId,
+            Authentication authentication) {
+
+        String studentId = authentication.getName();
+        QuizAttempt attempt = quizService.startQuizAttempt(quizId, studentId);
+        return ResponseEntity.status(HttpStatus.CREATED).body(attempt);
+    }
+
+    // Submit answer
+    @PutMapping("/attempts/{attemptId}/answers/{questionId}")
+    public ResponseEntity<QuizAttempt> submitAnswer(
+            @PathVariable String attemptId,
+            @PathVariable String questionId,
+            @RequestBody SubmitAnswerRequest request,
+            Authentication authentication) {
+
+        String studentId = authentication.getName();
+        QuizAttempt attempt = quizService.submitAnswer(attemptId, questionId, request.getAnswer(), studentId);
+        return ResponseEntity.ok(attempt);
+    }
+
+    // Submit complete quiz
+    @PostMapping("/attempts/{attemptId}/submit")
+    public ResponseEntity<QuizAttempt> submitQuiz(
+            @PathVariable String attemptId,
+            Authentication authentication) {
+
+        String studentId = authentication.getName();
+        QuizAttempt attempt = quizService.submitQuiz(attemptId, studentId);
+        return ResponseEntity.ok(attempt);
+    }
+
+    // Get attempt results
+    @GetMapping("/attempts/{attemptId}")
+    public ResponseEntity<QuizAttempt> getAttemptResults(
+            @PathVariable String attemptId,
+            Authentication authentication) {
+
+        String userId = authentication.getName();
+        QuizAttempt attempt = quizService.getAttemptResults(attemptId, userId);
+        return ResponseEntity.ok(attempt);
+    }
+
+    // Manual grading (Instructor only)
+    @PostMapping("/attempts/{attemptId}/grade/{questionId}")
+    @PreAuthorize("hasRole('INSTRUCTOR')")
+    public ResponseEntity<QuizAttempt> gradeAnswer(
+            @PathVariable String attemptId,
+            @PathVariable String questionId,
+            @RequestBody GradeAnswerRequest request,
+            Authentication authentication) {
+
+        String instructorId = authentication.getName();
+        QuizAttempt attempt = quizService.gradeAnswer(
+            attemptId,
+            questionId,
+            request.getPoints(),
+            request.getFeedback(),
+            instructorId
+        );
+        return ResponseEntity.ok(attempt);
+    }
+}
+```
+
+## Frontend Implementation
+
+### Quiz Taking Component
+
+```jsx
+import React, { useState, useEffect, useRef } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { Clock, AlertTriangle, CheckCircle } from "lucide-react";
+import { quizService } from "../services/quizService";
+import QuestionRenderer from "./QuestionRenderer";
+
+const QuizTaker = () => {
+  const { quizId } = useParams();
+  const navigate = useNavigate();
+  const [quiz, setQuiz] = useState(null);
+  const [attempt, setAttempt] = useState(null);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [answers, setAnswers] = useState({});
+  const [timeRemaining, setTimeRemaining] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const timerRef = useRef(null);
+
+  useEffect(() => {
+    loadQuiz();
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, [quizId]);
+
+  useEffect(() => {
+    if (quiz && quiz.timeLimit > 0 && attempt) {
+      startTimer();
+    }
+  }, [quiz, attempt]);
+
+  const loadQuiz = async () => {
+    try {
+      const [quizResponse, attemptResponse] = await Promise.all([
+        quizService.getQuiz(quizId),
+        quizService.startQuizAttempt(quizId),
+      ]);
+
+      setQuiz(quizResponse.data);
+      setAttempt(attemptResponse.data);
+
+      // Initialize answers from existing attempt
+      const existingAnswers = {};
+      attemptResponse.data.answers.forEach((answer) => {
+        if (answer.answer) {
+          existingAnswers[answer.questionId] = answer.answer;
+        }
+      });
+      setAnswers(existingAnswers);
+    } catch (error) {
+      console.error("Failed to load quiz:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const startTimer = () => {
+    const startTime = new Date(attempt.startedAt).getTime();
+    const duration = quiz.timeLimit * 60 * 1000; // Convert to milliseconds
+
+    timerRef.current = setInterval(() => {
+      const now = Date.now();
+      const elapsed = now - startTime;
+      const remaining = Math.max(0, duration - elapsed);
+
+      setTimeRemaining(Math.ceil(remaining / 1000));
+
+      if (remaining <= 0) {
+        handleTimeUp();
+      }
+    }, 1000);
+  };
+
+  const handleTimeUp = () => {
+    clearInterval(timerRef.current);
+    submitQuiz(true); // Auto-submit when time is up
+  };
+
+  const handleAnswerChange = async (questionId, answer) => {
+    setAnswers((prev) => ({ ...prev, [questionId]: answer }));
+
+    try {
+      await quizService.submitAnswer(attempt.id, questionId, answer);
+    } catch (error) {
+      console.error("Failed to save answer:", error);
+    }
+  };
+
+  const submitQuiz = async (isAutoSubmit = false) => {
+    if (isSubmitting) return;
+
+    if (!isAutoSubmit) {
+      const confirmed = window.confirm(
+        "Are you sure you want to submit your quiz? This action cannot be undone."
+      );
+      if (!confirmed) return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      await quizService.submitQuiz(attempt.id);
+      navigate(`/quiz-results/${attempt.id}`);
+    } catch (error) {
+      console.error("Failed to submit quiz:", error);
+      setIsSubmitting(false);
+    }
+  };
+
+  const formatTime = (seconds) => {
+    const minutes = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${minutes}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  const getAnsweredCount = () => {
+    return Object.keys(answers).length;
+  };
+
+  const currentQuestion = quiz?.questions[currentQuestionIndex];
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        Loading quiz...
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-4xl mx-auto p-6">
+      {/* Quiz Header */}
+      <div className="bg-white rounded-lg shadow mb-6 p-6">
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">{quiz.title}</h1>
+            <p className="text-gray-600">{quiz.description}</p>
+          </div>
+
+          {timeRemaining !== null && (
+            <div
+              className={`flex items-center p-3 rounded-lg ${
+                timeRemaining < 300
+                  ? "bg-red-100 text-red-700"
+                  : "bg-blue-100 text-blue-700"
+              }`}
+            >
+              <Clock size={20} className="mr-2" />
+              <span className="font-mono text-lg">
+                {formatTime(timeRemaining)}
+              </span>
+            </div>
+          )}
+        </div>
+
+        <div className="flex justify-between items-center">
+          <span className="text-sm text-gray-600">
+            Question {currentQuestionIndex + 1} of {quiz.questions.length}
+          </span>
+          <span className="text-sm text-gray-600">
+            Answered: {getAnsweredCount()}/{quiz.questions.length}
+          </span>
+        </div>
+
+        <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+          <div
+            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+            style={{
+              width: `${((currentQuestionIndex + 1) / quiz.questions.length) * 100}%`,
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Question Content */}
+      <div className="bg-white rounded-lg shadow p-6 mb-6">
+        {currentQuestion && (
+          <QuestionRenderer
+            question={currentQuestion}
+            answer={answers[currentQuestion.id]}
+            onAnswerChange={(answer) =>
+              handleAnswerChange(currentQuestion.id, answer)
+            }
+            showFeedback={false}
+          />
+        )}
+      </div>
+
+      {/* Navigation */}
+      <div className="flex justify-between items-center">
+        <button
+          onClick={() =>
+            setCurrentQuestionIndex(Math.max(0, currentQuestionIndex - 1))
+          }
+          disabled={currentQuestionIndex === 0}
+          className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+        >
+          Previous
+        </button>
+
+        <div className="flex gap-2">
+          {quiz.questions.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => setCurrentQuestionIndex(index)}
+              className={`w-8 h-8 rounded-full text-sm ${
+                index === currentQuestionIndex
+                  ? "bg-blue-600 text-white"
+                  : answers[quiz.questions[index].id]
+                    ? "bg-green-100 text-green-700"
+                    : "bg-gray-100 text-gray-700"
+              }`}
+            >
+              {index + 1}
+            </button>
+          ))}
+        </div>
+
+        {currentQuestionIndex === quiz.questions.length - 1 ? (
+          <button
+            onClick={() => submitQuiz()}
+            disabled={isSubmitting}
+            className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+          >
+            {isSubmitting ? "Submitting..." : "Submit Quiz"}
+          </button>
+        ) : (
+          <button
+            onClick={() =>
+              setCurrentQuestionIndex(
+                Math.min(quiz.questions.length - 1, currentQuestionIndex + 1)
+              )
+            }
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Next
+          </button>
+        )}
+      </div>
+
+      {/* Submit Warning */}
+      {timeRemaining !== null && timeRemaining < 300 && (
+        <div className="fixed bottom-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg shadow-lg">
+          <div className="flex items-center">
+            <AlertTriangle size={20} className="mr-2" />
+            <span>Less than 5 minutes remaining!</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default QuizTaker;
+```
+
+### Question Renderer Component
+
+```jsx
+import React from "react";
+import { CheckCircle, XCircle } from "lucide-react";
+
+const QuestionRenderer = ({
+  question,
+  answer,
+  onAnswerChange,
+  showFeedback = false,
+  isReview = false,
+}) => {
+  const renderMultipleChoice = () => {
+    const isMultiple = question.multipleChoiceData.multipleAnswers;
+    const selectedAnswers = Array.isArray(answer)
+      ? answer
+      : answer
+        ? [answer]
+        : [];
+
+    const handleOptionChange = (optionId) => {
+      if (isMultiple) {
+        const newAnswers = selectedAnswers.includes(optionId)
+          ? selectedAnswers.filter((id) => id !== optionId)
+          : [...selectedAnswers, optionId];
+        onAnswerChange(newAnswers);
+      } else {
+        onAnswerChange(optionId);
+      }
+    };
+
+    return (
+      <div className="space-y-3">
+        {question.multipleChoiceData.options.map((option) => (
+          <label
+            key={option.id}
+            className={`flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50 ${
+              selectedAnswers.includes(option.id)
+                ? "border-blue-500 bg-blue-50"
+                : "border-gray-300"
+            } ${
+              showFeedback && option.isCorrect
+                ? "border-green-500 bg-green-50"
+                : ""
+            } ${
+              showFeedback &&
+              selectedAnswers.includes(option.id) &&
+              !option.isCorrect
+                ? "border-red-500 bg-red-50"
+                : ""
+            }`}
+          >
+            <input
+              type={isMultiple ? "checkbox" : "radio"}
+              name={`question-${question.id}`}
+              value={option.id}
+              checked={selectedAnswers.includes(option.id)}
+              onChange={() => !isReview && handleOptionChange(option.id)}
+              disabled={isReview}
+              className="mr-3"
+            />
+            <span className="flex-1">{option.text}</span>
+            {showFeedback && (
+              <div className="ml-2">
+                {option.isCorrect ? (
+                  <CheckCircle size={20} className="text-green-500" />
+                ) : selectedAnswers.includes(option.id) ? (
+                  <XCircle size={20} className="text-red-500" />
+                ) : null}
+              </div>
+            )}
+          </label>
+        ))}
+      </div>
+    );
+  };
+
+  const renderTrueFalse = () => {
+    return (
+      <div className="space-y-3">
+        {[true, false].map((value) => (
+          <label
+            key={value.toString()}
+            className={`flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50 ${
+              answer === value
+                ? "border-blue-500 bg-blue-50"
+                : "border-gray-300"
+            }`}
+          >
+            <input
+              type="radio"
+              name={`question-${question.id}`}
+              value={value.toString()}
+              checked={answer === value}
+              onChange={() => !isReview && onAnswerChange(value)}
+              disabled={isReview}
+              className="mr-3"
+            />
+            <span>{value ? "True" : "False"}</span>
+          </label>
+        ))}
+      </div>
+    );
+  };
+
+  const renderShortAnswer = () => {
+    return (
+      <textarea
+        value={answer || ""}
+        onChange={(e) => !isReview && onAnswerChange(e.target.value)}
+        disabled={isReview}
+        placeholder="Enter your answer..."
+        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        rows="4"
+        maxLength={question.shortAnswerData?.maxLength}
+      />
+    );
+  };
+
+  const renderEssay = () => {
+    const minWords = question.essayData?.minWords || 0;
+    const maxWords = question.essayData?.maxWords || 1000;
+    const wordCount = answer
+      ? answer.split(/\s+/).filter((word) => word.length > 0).length
+      : 0;
+
+    return (
+      <div>
+        <textarea
+          value={answer || ""}
+          onChange={(e) => !isReview && onAnswerChange(e.target.value)}
+          disabled={isReview}
+          placeholder="Write your essay here..."
+          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          rows="8"
+        />
+        <div className="mt-2 text-sm text-gray-600 flex justify-between">
+          <span>Word count: {wordCount}</span>
+          <span>
+            Required: {minWords} - {maxWords} words
+          </span>
+        </div>
+      </div>
+    );
+  };
+
+  const getQuestionContent = () => {
+    switch (question.type) {
+      case "MULTIPLE_CHOICE":
+        return renderMultipleChoice();
+      case "TRUE_FALSE":
+        return renderTrueFalse();
+      case "SHORT_ANSWER":
+        return renderShortAnswer();
+      case "ESSAY":
+        return renderEssay();
+      default:
+        return <div>Unsupported question type</div>;
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-between items-start">
+        <h3 className="text-lg font-medium text-gray-900 flex-1">
+          {question.questionText}
+        </h3>
+        <span className="ml-4 text-sm text-gray-500 font-medium">
+          {question.points} {question.points === 1 ? "point" : "points"}
+        </span>
+      </div>
+
+      {question.imageUrls && question.imageUrls.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {question.imageUrls.map((imageUrl, index) => (
+            <img
+              key={index}
+              src={imageUrl}
+              alt={`Question image ${index + 1}`}
+              className="max-w-full h-auto rounded-lg border"
+            />
+          ))}
+        </div>
+      )}
+
+      {getQuestionContent()}
+
+      {showFeedback && question.explanation && (
+        <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <h4 className="font-medium text-blue-900 mb-2">Explanation:</h4>
+          <p className="text-blue-800">{question.explanation}</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default QuestionRenderer;
+```
+
+## Key Features Implemented
+
+1. **Comprehensive Question Types**
+   - Multiple choice (single/multiple answers)
+   - True/False with explanations
+   - Short answer with flexible matching
+   - Essay questions with word limits
+
+2. **Advanced Quiz Features**
+   - Time limits with countdown timer
+   - Attempt restrictions
+   - Question randomization
+   - Answer shuffling
+
+3. **Intelligent Grading**
+   - Automatic grading for objective questions
+   - Partial credit for multiple answer questions
+   - Manual grading interface for subjective questions
+
+4. **Student Experience**
+   - Intuitive quiz-taking interface
+   - Real-time answer saving
+   - Progress indicators
+   - Navigation between questions
+
+5. **Instructor Tools**
+   - Quiz creation and management
+   - Flexible grading options
+   - Detailed analytics and reporting
+
+[← Previous: Progress Tracking](/proj-online-learning-platform-website/16-progress-tracking) | [Next: Discussion Forum →](/proj-online-learning-platform-website/18-discussion-forum)
+
+<BackToTop />
