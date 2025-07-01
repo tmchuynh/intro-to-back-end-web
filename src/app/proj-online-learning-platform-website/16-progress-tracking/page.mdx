@@ -1,0 +1,899 @@
+import BackToTop from "@/components/BackToTop";
+
+# Progress Tracking System
+
+## Table of Contents
+
+## Introduction
+
+In this module, we'll implement a comprehensive progress tracking system that monitors student learning progress, completion rates, time spent on content, and provides analytics for both students and instructors. This system will track various learning activities and provide meaningful insights.
+
+## Progress Tracking Features
+
+### Core Tracking Components
+
+1. **Lesson Progress**
+   - Individual lesson completion
+   - Time spent on each lesson
+   - Content consumption tracking
+
+2. **Module Progress**
+   - Module completion percentage
+   - Sequential progression tracking
+   - Module milestone achievements
+
+3. **Course Progress**
+   - Overall course completion
+   - Learning path progress
+   - Course milestones and certificates
+
+4. **Learning Analytics**
+   - Study patterns and habits
+   - Performance metrics
+   - Engagement analytics
+
+## Backend Implementation
+
+### Progress Models
+
+```java
+@Document(collection = "student_progress")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class StudentProgress {
+    @Id
+    private String id;
+
+    private String studentId;
+    private String courseId;
+    private String enrollmentId;
+
+    // Overall progress
+    private double completionPercentage;
+    private ProgressStatus status;
+    private LocalDateTime startedAt;
+    private LocalDateTime lastAccessedAt;
+    private LocalDateTime completedAt;
+
+    // Time tracking
+    private long totalTimeSpentMinutes;
+    private long currentSessionStartTime;
+
+    // Module progress
+    private List<ModuleProgress> moduleProgress;
+
+    // Learning path
+    private String currentModuleId;
+    private String currentLessonId;
+    private String lastCompletedLessonId;
+
+    // Milestones and achievements
+    private List<String> achievedMilestones;
+    private List<Achievement> achievements;
+
+    // Analytics data
+    private Map<String, Object> analytics;
+
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+}
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class ModuleProgress {
+    private String moduleId;
+    private String moduleTitle;
+    private double completionPercentage;
+    private ProgressStatus status;
+    private LocalDateTime startedAt;
+    private LocalDateTime completedAt;
+    private long timeSpentMinutes;
+
+    private List<LessonProgress> lessonProgress;
+    private String currentLessonId;
+}
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class LessonProgress {
+    private String lessonId;
+    private String lessonTitle;
+    private double completionPercentage;
+    private ProgressStatus status;
+    private LocalDateTime startedAt;
+    private LocalDateTime completedAt;
+    private long timeSpentMinutes;
+
+    private List<ContentProgress> contentProgress;
+    private String currentContentId;
+}
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class ContentProgress {
+    private String contentId;
+    private String contentTitle;
+    private ContentType contentType;
+    private boolean isCompleted;
+    private double progressPercentage; // For videos, documents with pages
+    private LocalDateTime firstAccessedAt;
+    private LocalDateTime lastAccessedAt;
+    private LocalDateTime completedAt;
+    private long timeSpentMinutes;
+
+    // Content-specific progress
+    private Long lastPosition; // For videos (seconds), documents (page)
+    private Map<String, Object> contentSpecificData;
+}
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class Achievement {
+    private String id;
+    private AchievementType type;
+    private String title;
+    private String description;
+    private String iconUrl;
+    private LocalDateTime earnedAt;
+    private Map<String, Object> metadata;
+}
+
+public enum ProgressStatus {
+    NOT_STARTED,
+    IN_PROGRESS,
+    COMPLETED,
+    PAUSED
+}
+
+public enum AchievementType {
+    FIRST_LESSON,
+    FIRST_MODULE,
+    COURSE_COMPLETION,
+    STUDY_STREAK,
+    QUICK_LEARNER,
+    DEDICATED_STUDENT,
+    MILESTONE
+}
+```
+
+### Progress Service
+
+```java
+@Service
+public class ProgressTrackingService {
+
+    @Autowired
+    private StudentProgressRepository progressRepository;
+
+    @Autowired
+    private CourseRepository courseRepository;
+
+    @Autowired
+    private EnrollmentRepository enrollmentRepository;
+
+    @Autowired
+    private AchievementService achievementService;
+
+    @Autowired
+    private AnalyticsService analyticsService;
+
+    // Initialize progress for new enrollment
+    public StudentProgress initializeProgress(String studentId, String courseId, String enrollmentId) {
+        Course course = courseRepository.findById(courseId)
+            .orElseThrow(() -> new CourseNotFoundException("Course not found"));
+
+        List<ModuleProgress> moduleProgressList = course.getCurriculum().stream()
+            .map(module -> ModuleProgress.builder()
+                .moduleId(module.getId())
+                .moduleTitle(module.getTitle())
+                .completionPercentage(0.0)
+                .status(ProgressStatus.NOT_STARTED)
+                .timeSpentMinutes(0L)
+                .lessonProgress(initializeLessonProgress(module.getLessons()))
+                .build())
+            .collect(Collectors.toList());
+
+        StudentProgress progress = StudentProgress.builder()
+            .studentId(studentId)
+            .courseId(courseId)
+            .enrollmentId(enrollmentId)
+            .completionPercentage(0.0)
+            .status(ProgressStatus.NOT_STARTED)
+            .startedAt(LocalDateTime.now())
+            .lastAccessedAt(LocalDateTime.now())
+            .totalTimeSpentMinutes(0L)
+            .moduleProgress(moduleProgressList)
+            .achievedMilestones(new ArrayList<>())
+            .achievements(new ArrayList<>())
+            .analytics(new HashMap<>())
+            .createdAt(LocalDateTime.now())
+            .updatedAt(LocalDateTime.now())
+            .build();
+
+        return progressRepository.save(progress);
+    }
+
+    // Start learning session
+    public void startLearningSession(String studentId, String courseId, String lessonId) {
+        StudentProgress progress = getStudentProgress(studentId, courseId);
+
+        progress.setCurrentSessionStartTime(System.currentTimeMillis());
+        progress.setCurrentLessonId(lessonId);
+        progress.setLastAccessedAt(LocalDateTime.now());
+
+        // Update lesson status
+        updateLessonProgress(progress, lessonId, lessonProgress -> {
+            if (lessonProgress.getStatus() == ProgressStatus.NOT_STARTED) {
+                lessonProgress.setStatus(ProgressStatus.IN_PROGRESS);
+                lessonProgress.setStartedAt(LocalDateTime.now());
+            }
+        });
+
+        // Update course status
+        if (progress.getStatus() == ProgressStatus.NOT_STARTED) {
+            progress.setStatus(ProgressStatus.IN_PROGRESS);
+        }
+
+        progressRepository.save(progress);
+    }
+
+    // Update content progress
+    public void updateContentProgress(
+            String studentId,
+            String courseId,
+            String contentId,
+            double progressPercentage,
+            Long currentPosition) {
+
+        StudentProgress progress = getStudentProgress(studentId, courseId);
+
+        // Find and update content progress
+        updateContentInProgress(progress, contentId, contentProgress -> {
+            contentProgress.setProgressPercentage(progressPercentage);
+            contentProgress.setLastPosition(currentPosition);
+            contentProgress.setLastAccessedAt(LocalDateTime.now());
+
+            if (contentProgress.getFirstAccessedAt() == null) {
+                contentProgress.setFirstAccessedAt(LocalDateTime.now());
+            }
+
+            // Mark as completed if 90% or more
+            if (progressPercentage >= 90.0 && !contentProgress.isCompleted()) {
+                contentProgress.setCompleted(true);
+                contentProgress.setCompletedAt(LocalDateTime.now());
+
+                // Check for achievements
+                checkContentAchievements(progress, contentProgress);
+            }
+        });
+
+        // Recalculate lesson and module progress
+        recalculateProgress(progress);
+
+        progressRepository.save(progress);
+    }
+
+    // End learning session
+    public void endLearningSession(String studentId, String courseId) {
+        StudentProgress progress = getStudentProgress(studentId, courseId);
+
+        if (progress.getCurrentSessionStartTime() > 0) {
+            long sessionDuration = (System.currentTimeMillis() - progress.getCurrentSessionStartTime()) / (1000 * 60);
+            progress.setTotalTimeSpentMinutes(progress.getTotalTimeSpentMinutes() + sessionDuration);
+
+            // Add session time to current lesson
+            if (progress.getCurrentLessonId() != null) {
+                updateLessonProgress(progress, progress.getCurrentLessonId(), lessonProgress -> {
+                    lessonProgress.setTimeSpentMinutes(lessonProgress.getTimeSpentMinutes() + sessionDuration);
+                });
+            }
+
+            progress.setCurrentSessionStartTime(0);
+        }
+
+        progress.setLastAccessedAt(LocalDateTime.now());
+        progress.setUpdatedAt(LocalDateTime.now());
+
+        // Update analytics
+        updateLearningAnalytics(progress, sessionDuration);
+
+        progressRepository.save(progress);
+    }
+
+    // Mark lesson as completed
+    public void completeLessonManually(String studentId, String courseId, String lessonId) {
+        StudentProgress progress = getStudentProgress(studentId, courseId);
+
+        updateLessonProgress(progress, lessonId, lessonProgress -> {
+            lessonProgress.setStatus(ProgressStatus.COMPLETED);
+            lessonProgress.setCompletionPercentage(100.0);
+            lessonProgress.setCompletedAt(LocalDateTime.now());
+
+            // Mark all content as completed
+            lessonProgress.getContentProgress().forEach(contentProgress -> {
+                if (!contentProgress.isCompleted()) {
+                    contentProgress.setCompleted(true);
+                    contentProgress.setProgressPercentage(100.0);
+                    contentProgress.setCompletedAt(LocalDateTime.now());
+                }
+            });
+        });
+
+        progress.setLastCompletedLessonId(lessonId);
+        recalculateProgress(progress);
+
+        // Check achievements
+        checkLessonAchievements(progress, lessonId);
+
+        progressRepository.save(progress);
+    }
+
+    // Get student progress
+    public StudentProgress getStudentProgress(String studentId, String courseId) {
+        return progressRepository.findByStudentIdAndCourseId(studentId, courseId)
+            .orElseThrow(() -> new ProgressNotFoundException("Progress not found"));
+    }
+
+    // Get progress summary
+    public ProgressSummary getProgressSummary(String studentId, String courseId) {
+        StudentProgress progress = getStudentProgress(studentId, courseId);
+
+        long completedLessons = progress.getModuleProgress().stream()
+            .mapToLong(mp -> mp.getLessonProgress().stream()
+                .mapToLong(lp -> lp.getStatus() == ProgressStatus.COMPLETED ? 1L : 0L)
+                .sum())
+            .sum();
+
+        long totalLessons = progress.getModuleProgress().stream()
+            .mapToLong(mp -> mp.getLessonProgress().size())
+            .sum();
+
+        long completedModules = progress.getModuleProgress().stream()
+            .mapToLong(mp -> mp.getStatus() == ProgressStatus.COMPLETED ? 1L : 0L)
+            .sum();
+
+        return ProgressSummary.builder()
+            .studentId(studentId)
+            .courseId(courseId)
+            .overallProgress(progress.getCompletionPercentage())
+            .completedLessons(completedLessons)
+            .totalLessons(totalLessons)
+            .completedModules(completedModules)
+            .totalModules(progress.getModuleProgress().size())
+            .totalTimeSpent(progress.getTotalTimeSpentMinutes())
+            .achievements(progress.getAchievements())
+            .lastAccessed(progress.getLastAccessedAt())
+            .build();
+    }
+
+    // Get learning analytics
+    public LearningAnalytics getLearningAnalytics(String studentId, String courseId) {
+        StudentProgress progress = getStudentProgress(studentId, courseId);
+
+        // Calculate daily study time for last 30 days
+        Map<LocalDate, Long> dailyStudyTime = calculateDailyStudyTime(studentId, courseId);
+
+        // Calculate average session length
+        double averageSessionLength = calculateAverageSessionLength(progress);
+
+        // Get learning patterns
+        Map<String, Object> learningPatterns = analyzeLearningPatterns(progress);
+
+        return LearningAnalytics.builder()
+            .studentId(studentId)
+            .courseId(courseId)
+            .totalStudyTime(progress.getTotalTimeSpentMinutes())
+            .averageSessionLength(averageSessionLength)
+            .dailyStudyTime(dailyStudyTime)
+            .learningPatterns(learningPatterns)
+            .progressVelocity(calculateProgressVelocity(progress))
+            .engagementScore(calculateEngagementScore(progress))
+            .build();
+    }
+
+    private void recalculateProgress(StudentProgress progress) {
+        // Recalculate lesson progress
+        progress.getModuleProgress().forEach(moduleProgress -> {
+            double totalLessonProgress = moduleProgress.getLessonProgress().stream()
+                .mapToDouble(LessonProgress::getCompletionPercentage)
+                .average()
+                .orElse(0.0);
+
+            moduleProgress.setCompletionPercentage(totalLessonProgress);
+
+            if (totalLessonProgress >= 100.0) {
+                moduleProgress.setStatus(ProgressStatus.COMPLETED);
+                if (moduleProgress.getCompletedAt() == null) {
+                    moduleProgress.setCompletedAt(LocalDateTime.now());
+                }
+            } else if (totalLessonProgress > 0.0) {
+                moduleProgress.setStatus(ProgressStatus.IN_PROGRESS);
+            }
+        });
+
+        // Recalculate overall progress
+        double totalModuleProgress = progress.getModuleProgress().stream()
+            .mapToDouble(ModuleProgress::getCompletionPercentage)
+            .average()
+            .orElse(0.0);
+
+        progress.setCompletionPercentage(totalModuleProgress);
+
+        if (totalModuleProgress >= 100.0) {
+            progress.setStatus(ProgressStatus.COMPLETED);
+            if (progress.getCompletedAt() == null) {
+                progress.setCompletedAt(LocalDateTime.now());
+                checkCourseCompletionAchievements(progress);
+            }
+        } else if (totalModuleProgress > 0.0) {
+            progress.setStatus(ProgressStatus.IN_PROGRESS);
+        }
+
+        progress.setUpdatedAt(LocalDateTime.now());
+    }
+
+    private void checkContentAchievements(StudentProgress progress, ContentProgress contentProgress) {
+        // First content completion
+        boolean isFirstContent = progress.getModuleProgress().stream()
+            .flatMap(mp -> mp.getLessonProgress().stream())
+            .flatMap(lp -> lp.getContentProgress().stream())
+            .filter(ContentProgress::isCompleted)
+            .count() == 1;
+
+        if (isFirstContent) {
+            achievementService.awardAchievement(progress.getStudentId(), AchievementType.FIRST_LESSON);
+        }
+    }
+
+    private void checkLessonAchievements(StudentProgress progress, String lessonId) {
+        // Count completed lessons
+        long completedLessons = progress.getModuleProgress().stream()
+            .flatMap(mp -> mp.getLessonProgress().stream())
+            .filter(lp -> lp.getStatus() == ProgressStatus.COMPLETED)
+            .count();
+
+        // Check for streak achievements, quick completion, etc.
+        achievementService.checkLessonAchievements(progress.getStudentId(), completedLessons);
+    }
+
+    private void checkCourseCompletionAchievements(StudentProgress progress) {
+        achievementService.awardAchievement(progress.getStudentId(), AchievementType.COURSE_COMPLETION);
+
+        // Check if completed quickly (quick learner)
+        if (progress.getStartedAt() != null && progress.getCompletedAt() != null) {
+            long daysTaken = ChronoUnit.DAYS.between(progress.getStartedAt(), progress.getCompletedAt());
+            if (daysTaken <= 7) { // Completed in a week
+                achievementService.awardAchievement(progress.getStudentId(), AchievementType.QUICK_LEARNER);
+            }
+        }
+    }
+}
+```
+
+### Progress Controller
+
+```java
+@RestController
+@RequestMapping("/api/progress")
+public class ProgressController {
+
+    @Autowired
+    private ProgressTrackingService progressService;
+
+    @PostMapping("/{courseId}/start-session")
+    public ResponseEntity<Void> startLearningSession(
+            @PathVariable String courseId,
+            @RequestParam String lessonId,
+            Authentication authentication) {
+
+        String studentId = authentication.getName();
+        progressService.startLearningSession(studentId, courseId, lessonId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/{courseId}/end-session")
+    public ResponseEntity<Void> endLearningSession(
+            @PathVariable String courseId,
+            Authentication authentication) {
+
+        String studentId = authentication.getName();
+        progressService.endLearningSession(studentId, courseId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/{courseId}/content/{contentId}")
+    public ResponseEntity<Void> updateContentProgress(
+            @PathVariable String courseId,
+            @PathVariable String contentId,
+            @RequestBody ContentProgressUpdate update,
+            Authentication authentication) {
+
+        String studentId = authentication.getName();
+        progressService.updateContentProgress(
+            studentId,
+            courseId,
+            contentId,
+            update.getProgressPercentage(),
+            update.getCurrentPosition()
+        );
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/{courseId}/lessons/{lessonId}/complete")
+    public ResponseEntity<Void> completeLesson(
+            @PathVariable String courseId,
+            @PathVariable String lessonId,
+            Authentication authentication) {
+
+        String studentId = authentication.getName();
+        progressService.completeLessonManually(studentId, courseId, lessonId);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/{courseId}")
+    public ResponseEntity<StudentProgress> getProgress(
+            @PathVariable String courseId,
+            Authentication authentication) {
+
+        String studentId = authentication.getName();
+        StudentProgress progress = progressService.getStudentProgress(studentId, courseId);
+        return ResponseEntity.ok(progress);
+    }
+
+    @GetMapping("/{courseId}/summary")
+    public ResponseEntity<ProgressSummary> getProgressSummary(
+            @PathVariable String courseId,
+            Authentication authentication) {
+
+        String studentId = authentication.getName();
+        ProgressSummary summary = progressService.getProgressSummary(studentId, courseId);
+        return ResponseEntity.ok(summary);
+    }
+
+    @GetMapping("/{courseId}/analytics")
+    public ResponseEntity<LearningAnalytics> getLearningAnalytics(
+            @PathVariable String courseId,
+            Authentication authentication) {
+
+        String studentId = authentication.getName();
+        LearningAnalytics analytics = progressService.getLearningAnalytics(studentId, courseId);
+        return ResponseEntity.ok(analytics);
+    }
+}
+```
+
+## Frontend Implementation
+
+### Progress Dashboard Component
+
+```jsx
+import React, { useState, useEffect } from "react";
+import { CircularProgressbar, buildStyles } from "react-circular-progressbar";
+import { Clock, Award, TrendingUp, Calendar } from "lucide-react";
+import { progressService } from "../services/progressService";
+import "react-circular-progressbar/dist/styles.css";
+
+const ProgressDashboard = ({ courseId }) => {
+  const [progress, setProgress] = useState(null);
+  const [summary, setSummary] = useState(null);
+  const [analytics, setAnalytics] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchProgressData();
+  }, [courseId]);
+
+  const fetchProgressData = async () => {
+    try {
+      setLoading(true);
+      const [progressRes, summaryRes, analyticsRes] = await Promise.all([
+        progressService.getProgress(courseId),
+        progressService.getProgressSummary(courseId),
+        progressService.getLearningAnalytics(courseId),
+      ]);
+
+      setProgress(progressRes.data);
+      setSummary(summaryRes.data);
+      setAnalytics(analyticsRes.data);
+    } catch (error) {
+      console.error("Failed to fetch progress data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">Loading...</div>
+    );
+  }
+
+  const formatTime = (minutes) => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return `${hours}h ${mins}m`;
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Overall Progress */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">
+          Learning Progress
+        </h2>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="text-center">
+            <div className="w-32 h-32 mx-auto mb-4">
+              <CircularProgressbar
+                value={summary.overallProgress}
+                text={`${Math.round(summary.overallProgress)}%`}
+                styles={buildStyles({
+                  textColor: "#1f2937",
+                  pathColor: "#3b82f6",
+                  trailColor: "#e5e7eb",
+                })}
+              />
+            </div>
+            <h3 className="font-semibold text-gray-900">Overall Progress</h3>
+          </div>
+
+          <div className="bg-blue-50 rounded-lg p-4">
+            <div className="flex items-center mb-2">
+              <Calendar className="text-blue-600 mr-2" size={20} />
+              <span className="text-sm font-medium text-blue-600">Lessons</span>
+            </div>
+            <div className="text-2xl font-bold text-blue-700">
+              {summary.completedLessons}/{summary.totalLessons}
+            </div>
+            <div className="text-sm text-blue-600">Completed</div>
+          </div>
+
+          <div className="bg-green-50 rounded-lg p-4">
+            <div className="flex items-center mb-2">
+              <Clock className="text-green-600 mr-2" size={20} />
+              <span className="text-sm font-medium text-green-600">
+                Study Time
+              </span>
+            </div>
+            <div className="text-2xl font-bold text-green-700">
+              {formatTime(summary.totalTimeSpent)}
+            </div>
+            <div className="text-sm text-green-600">Total</div>
+          </div>
+
+          <div className="bg-purple-50 rounded-lg p-4">
+            <div className="flex items-center mb-2">
+              <Award className="text-purple-600 mr-2" size={20} />
+              <span className="text-sm font-medium text-purple-600">
+                Achievements
+              </span>
+            </div>
+            <div className="text-2xl font-bold text-purple-700">
+              {summary.achievements.length}
+            </div>
+            <div className="text-sm text-purple-600">Earned</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Module Progress */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-xl font-semibold text-gray-900 mb-4">
+          Module Progress
+        </h3>
+
+        <div className="space-y-4">
+          {progress.moduleProgress.map((module, index) => (
+            <div key={module.moduleId} className="border rounded-lg p-4">
+              <div className="flex justify-between items-center mb-2">
+                <h4 className="font-medium text-gray-900">
+                  {module.moduleTitle}
+                </h4>
+                <span
+                  className={`px-2 py-1 text-xs rounded-full ${
+                    module.status === "COMPLETED"
+                      ? "bg-green-100 text-green-800"
+                      : module.status === "IN_PROGRESS"
+                        ? "bg-blue-100 text-blue-800"
+                        : "bg-gray-100 text-gray-600"
+                  }`}
+                >
+                  {module.status.replace("_", " ")}
+                </span>
+              </div>
+
+              <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+                <div
+                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${module.completionPercentage}%` }}
+                />
+              </div>
+
+              <div className="flex justify-between text-sm text-gray-600">
+                <span>{Math.round(module.completionPercentage)}% complete</span>
+                <span>{formatTime(module.timeSpentMinutes)} spent</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Achievements */}
+      {summary.achievements.length > 0 && (
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-xl font-semibold text-gray-900 mb-4">
+            Recent Achievements
+          </h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {summary.achievements.slice(0, 6).map((achievement) => (
+              <div
+                key={achievement.id}
+                className="flex items-center p-3 bg-yellow-50 rounded-lg"
+              >
+                <div className="text-yellow-600 mr-3">🏆</div>
+                <div>
+                  <div className="font-medium text-gray-900">
+                    {achievement.title}
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    {achievement.description}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Learning Analytics */}
+      {analytics && (
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-xl font-semibold text-gray-900 mb-4">
+            Learning Analytics
+          </h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="text-center">
+              <div className="text-3xl font-bold text-blue-600">
+                {Math.round(analytics.averageSessionLength)}
+              </div>
+              <div className="text-sm text-gray-600">Avg Session (min)</div>
+            </div>
+
+            <div className="text-center">
+              <div className="text-3xl font-bold text-green-600">
+                {analytics.progressVelocity?.toFixed(1) || 0}
+              </div>
+              <div className="text-sm text-gray-600">Progress Velocity</div>
+            </div>
+
+            <div className="text-center">
+              <div className="text-3xl font-bold text-purple-600">
+                {Math.round(analytics.engagementScore || 0)}
+              </div>
+              <div className="text-sm text-gray-600">Engagement Score</div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default ProgressDashboard;
+```
+
+### Progress Tracking Hook
+
+```jsx
+import { useEffect, useRef } from "react";
+import { progressService } from "../services/progressService";
+
+export const useProgressTracking = (courseId, lessonId, contentId) => {
+  const sessionStarted = useRef(false);
+  const progressTimer = useRef(null);
+
+  useEffect(() => {
+    if (courseId && lessonId && !sessionStarted.current) {
+      startSession();
+      sessionStarted.current = true;
+    }
+
+    return () => {
+      if (sessionStarted.current) {
+        endSession();
+      }
+    };
+  }, [courseId, lessonId]);
+
+  const startSession = async () => {
+    try {
+      await progressService.startLearningSession(courseId, lessonId);
+    } catch (error) {
+      console.error("Failed to start learning session:", error);
+    }
+  };
+
+  const endSession = async () => {
+    try {
+      await progressService.endLearningSession(courseId);
+      sessionStarted.current = false;
+    } catch (error) {
+      console.error("Failed to end learning session:", error);
+    }
+  };
+
+  const updateContentProgress = async (
+    progressPercentage,
+    currentPosition = null
+  ) => {
+    if (!contentId) return;
+
+    try {
+      await progressService.updateContentProgress(courseId, contentId, {
+        progressPercentage,
+        currentPosition,
+      });
+    } catch (error) {
+      console.error("Failed to update content progress:", error);
+    }
+  };
+
+  const completeLesson = async () => {
+    try {
+      await progressService.completeLesson(courseId, lessonId);
+    } catch (error) {
+      console.error("Failed to complete lesson:", error);
+    }
+  };
+
+  return {
+    updateContentProgress,
+    completeLesson,
+    endSession,
+  };
+};
+```
+
+## Key Features Implemented
+
+1. **Comprehensive Progress Tracking**
+   - Real-time progress updates
+   - Session-based time tracking
+   - Content-level progress monitoring
+
+2. **Multi-level Progress Calculation**
+   - Content → Lesson → Module → Course
+   - Automatic progress recalculation
+   - Percentage-based completion
+
+3. **Learning Analytics**
+   - Study patterns and habits
+   - Session length tracking
+   - Engagement scoring
+
+4. **Achievement System**
+   - Milestone-based achievements
+   - Automatic achievement detection
+   - Visual achievement display
+
+5. **Student Dashboard**
+   - Visual progress indicators
+   - Time spent analytics
+   - Achievement showcase
+
+[← Previous: Content Delivery](/proj-online-learning-platform-website/15-content-delivery) | [Next: Assessment Quiz System →](/proj-online-learning-platform-website/17-assessment-quiz-system)
+
+<BackToTop />
