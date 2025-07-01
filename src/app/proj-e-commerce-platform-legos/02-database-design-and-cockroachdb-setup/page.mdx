@@ -1,0 +1,260 @@
+# Module 2: Database Design and CockroachDB Setup
+
+## Overview
+
+This module focuses on designing a robust database schema for the Lego e-commerce platform and implementing it using CockroachDB. You'll learn about distributed database concepts, e-commerce data modeling, and CockroachDB-specific features.
+
+## Learning Objectives
+
+- Design a comprehensive e-commerce database schema
+- Understand CockroachDB's distributed architecture
+- Learn about ACID transactions in distributed systems
+- Implement data relationships and constraints
+- Optimize queries for performance
+
+## Topics Covered
+
+### 2.1 E-Commerce Database Design Principles
+
+- **Entity Relationship Modeling**: Identifying core entities and relationships
+- **Normalization**: Reducing data redundancy while maintaining performance
+- **Indexing strategies**: Optimizing query performance
+- **Data integrity**: Constraints, foreign keys, and validation rules
+
+### 2.2 CockroachDB Fundamentals
+
+- **Distributed SQL**: Understanding horizontal scaling
+- **ACID compliance**: Transactions in a distributed environment
+- **Consensus protocol**: How CockroachDB ensures consistency
+- **Multi-region deployment**: Global data distribution strategies
+
+### 2.3 Core Database Entities
+
+#### Products and Catalog
+
+```sql
+-- Products table for Lego sets and pieces
+CREATE TABLE products (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    sku VARCHAR(50) UNIQUE NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    category_id UUID REFERENCES categories(id),
+    price DECIMAL(10,2) NOT NULL,
+    cost DECIMAL(10,2),
+    weight DECIMAL(8,2),
+    dimensions JSONB,
+    age_range VARCHAR(20),
+    piece_count INTEGER,
+    theme_id UUID REFERENCES themes(id),
+    status VARCHAR(20) DEFAULT 'active',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Product variants (different packaging, colors, etc.)
+CREATE TABLE product_variants (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    product_id UUID REFERENCES products(id),
+    sku VARCHAR(50) UNIQUE NOT NULL,
+    name VARCHAR(255),
+    price_adjustment DECIMAL(10,2) DEFAULT 0,
+    attributes JSONB,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+#### Inventory Management
+
+```sql
+-- Inventory tracking
+CREATE TABLE inventory (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    product_id UUID REFERENCES products(id),
+    warehouse_id UUID REFERENCES warehouses(id),
+    quantity_available INTEGER NOT NULL DEFAULT 0,
+    quantity_reserved INTEGER NOT NULL DEFAULT 0,
+    reorder_point INTEGER DEFAULT 10,
+    max_stock INTEGER,
+    last_restocked TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(product_id, warehouse_id)
+);
+
+-- Stock movements for audit trail
+CREATE TABLE stock_movements (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    product_id UUID REFERENCES products(id),
+    warehouse_id UUID REFERENCES warehouses(id),
+    movement_type VARCHAR(20) NOT NULL, -- 'in', 'out', 'transfer', 'adjustment'
+    quantity INTEGER NOT NULL,
+    reference_id UUID, -- order_id, transfer_id, etc.
+    reference_type VARCHAR(50),
+    reason VARCHAR(255),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    created_by UUID REFERENCES users(id)
+);
+```
+
+#### User Management
+
+```sql
+-- Users table for customers and staff
+CREATE TABLE users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    first_name VARCHAR(100),
+    last_name VARCHAR(100),
+    phone VARCHAR(20),
+    role VARCHAR(20) DEFAULT 'customer', -- 'customer', 'admin', 'staff'
+    status VARCHAR(20) DEFAULT 'active',
+    email_verified BOOLEAN DEFAULT FALSE,
+    last_login TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Customer profiles with additional information
+CREATE TABLE customer_profiles (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES users(id) UNIQUE,
+    date_of_birth DATE,
+    preferences JSONB,
+    loyalty_points INTEGER DEFAULT 0,
+    total_spent DECIMAL(12,2) DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+#### Orders and Transactions
+
+```sql
+-- Orders table
+CREATE TABLE orders (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    order_number VARCHAR(50) UNIQUE NOT NULL,
+    customer_id UUID REFERENCES users(id),
+    status VARCHAR(20) DEFAULT 'pending',
+    subtotal DECIMAL(12,2) NOT NULL,
+    tax_amount DECIMAL(10,2) DEFAULT 0,
+    shipping_amount DECIMAL(10,2) DEFAULT 0,
+    discount_amount DECIMAL(10,2) DEFAULT 0,
+    total_amount DECIMAL(12,2) NOT NULL,
+    currency VARCHAR(3) DEFAULT 'USD',
+    payment_status VARCHAR(20) DEFAULT 'pending',
+    shipping_address JSONB,
+    billing_address JSONB,
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Order items
+CREATE TABLE order_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    order_id UUID REFERENCES orders(id),
+    product_id UUID REFERENCES products(id),
+    quantity INTEGER NOT NULL,
+    unit_price DECIMAL(10,2) NOT NULL,
+    total_price DECIMAL(12,2) NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+### 2.4 CockroachDB-Specific Features
+
+- **JSONB support**: Storing flexible product attributes
+- **UUID primary keys**: Distributed-friendly identifiers
+- **Timestamp with timezone**: Global e-commerce considerations
+- **Computed columns**: Automatic calculations
+- **Partial indexes**: Conditional indexing for performance
+
+### 2.5 Performance Optimization
+
+- **Primary key design**: Avoiding hotspots
+- **Secondary indexes**: Optimizing common queries
+- **Query optimization**: Using EXPLAIN to analyze performance
+- **Partitioning**: Distributing data across regions
+
+## Hands-On Exercises
+
+### Exercise 2.1: CockroachDB Installation and Setup
+
+1. Install CockroachDB locally or set up CockroachDB Cloud
+2. Create database and configure connections
+3. Set up database migrations system
+4. Configure backup and monitoring
+
+### Exercise 2.2: Schema Implementation
+
+1. Create all core tables with proper relationships
+2. Add indexes for common query patterns
+3. Implement constraints and validation rules
+4. Set up initial data seeding scripts
+
+### Exercise 2.3: Data Modeling for Lego Products
+
+1. Model Lego themes and categories hierarchy
+2. Handle product bundles and sets
+3. Implement inventory tracking across multiple warehouses
+4. Design flexible attribute system for product variants
+
+### Exercise 2.4: Performance Testing
+
+1. Load test data for performance evaluation
+2. Analyze query performance with EXPLAIN
+3. Optimize slow queries with proper indexing
+4. Test transaction isolation and concurrency
+
+## Key Concepts
+
+- **ACID Properties**: Atomicity, Consistency, Isolation, Durability
+- **CAP Theorem**: Consistency, Availability, Partition tolerance trade-offs
+- **Eventual Consistency**: Understanding distributed data synchronization
+- **Database Sharding**: Horizontal partitioning strategies
+
+## Database Schema Highlights
+
+### Lego-Specific Features
+
+- **Product hierarchy**: Themes → Categories → Products → Variants
+- **Piece tracking**: Individual piece inventory and compatibility
+- **Set collections**: Bundles and related products
+- **Age appropriateness**: Safety and recommendation systems
+
+### E-Commerce Features
+
+- **Multi-warehouse inventory**: Global distribution support
+- **Order lifecycle**: From cart to fulfillment
+- **Payment integration**: Multiple payment processor support
+- **Customer analytics**: Purchase history and preferences
+
+## Tools and Technologies
+
+- **CockroachDB**: Primary database system
+- **pgAdmin/DBeaver**: Database administration tools
+- **Alembic/Django migrations**: Schema version control
+- **Faker**: Test data generation
+- **pgbench**: Performance testing
+
+## Common Pitfalls and Best Practices
+
+### Pitfalls to Avoid
+
+- Using auto-incrementing primary keys in distributed systems
+- Ignoring transaction boundaries in distributed operations
+- Over-normalizing data that affects query performance
+- Not considering time zones in global applications
+
+### Best Practices
+
+- Use UUIDs for distributed primary keys
+- Design indexes based on actual query patterns
+- Implement proper error handling for distributed transactions
+- Use JSONB for flexible, semi-structured data
+
+## Next Steps
+
+After completing this module, proceed to [Module 3: Backend API Development (Django)](../03-backend-api-development-django) to build the REST API layer that will interact with your database.

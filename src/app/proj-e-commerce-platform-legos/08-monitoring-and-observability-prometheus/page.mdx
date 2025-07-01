@@ -1,0 +1,788 @@
+# Module 8: Monitoring and Observability (Prometheus)
+
+## Overview
+
+This module covers implementing comprehensive monitoring, observability, and alerting for the Lego e-commerce platform using Prometheus, Grafana, and related tools. You'll learn about metrics collection, alerting, logging, tracing, and performance monitoring.
+
+## Learning Objectives
+
+- Set up Prometheus for metrics collection and monitoring
+- Configure Grafana for visualization and dashboards
+- Implement application metrics and custom monitoring
+- Set up alerting and notification systems
+- Configure distributed tracing with Jaeger
+- Implement centralized logging with ELK stack
+- Monitor database and infrastructure performance
+
+## Topics Covered
+
+### 8.1 Prometheus Setup and Configuration
+
+```yaml
+# docker-compose.monitoring.yml
+version: "3.8"
+
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./monitoring/prometheus/alerts.yml:/etc/prometheus/alerts.yml
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.console.libraries=/etc/prometheus/console_libraries"
+      - "--web.console.templates=/etc/prometheus/consoles"
+      - "--storage.tsdb.retention.time=200h"
+      - "--web.enable-lifecycle"
+      - "--web.enable-admin-api"
+    networks:
+      - monitoring
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+    networks:
+      - monitoring
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: alertmanager
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+    networks:
+      - monitoring
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: jaeger
+    ports:
+      - "16686:16686"
+      - "14268:14268"
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    networks:
+      - monitoring
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.15.0
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - monitoring
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.15.0
+    container_name: kibana
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    networks:
+      - monitoring
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:7.15.0
+    container_name: logstash
+    volumes:
+      - ./monitoring/logstash/pipeline:/usr/share/logstash/pipeline
+    networks:
+      - monitoring
+
+volumes:
+  prometheus_data:
+  grafana_data:
+  elasticsearch_data:
+
+networks:
+  monitoring:
+    driver: bridge
+```
+
+### 8.2 Prometheus Configuration
+
+```yaml
+# monitoring/prometheus/prometheus.yml
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "alerts.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093
+
+scrape_configs:
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  - job_name: "django-app"
+    static_configs:
+      - targets: ["backend:8000"]
+    metrics_path: "/metrics/"
+    scrape_interval: 30s
+
+  - job_name: "nextjs-app"
+    static_configs:
+      - targets: ["frontend:3000"]
+    metrics_path: "/api/metrics"
+    scrape_interval: 30s
+
+  - job_name: "cockroachdb"
+    static_configs:
+      - targets: ["cockroachdb:8080"]
+    metrics_path: "/_status/vars"
+    scrape_interval: 30s
+
+  - job_name: "redis"
+    static_configs:
+      - targets: ["redis:6379"]
+
+  - job_name: "nginx"
+    static_configs:
+      - targets: ["nginx:9113"]
+    metrics_path: "/metrics"
+
+  - job_name: "node-exporter"
+    static_configs:
+      - targets: ["node-exporter:9100"]
+
+# monitoring/prometheus/alerts.yml
+groups:
+  - name: application.rules
+    rules:
+      - alert: HighErrorRate
+        expr: rate(django_http_requests_total{status=~"5.."}[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value }} errors per second"
+
+      - alert: HighLatency
+        expr: django_http_request_duration_seconds{quantile="0.95"} > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High latency detected"
+          description: "95th percentile latency is {{ $value }} seconds"
+
+      - alert: LowInventory
+        expr: inventory_stock_level < 10
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low inventory detected"
+          description: "Product {{ $labels.product_name }} has only {{ $value }} items left"
+
+      - alert: DatabaseConnectionIssue
+        expr: up{job="cockroachdb"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Database connection lost"
+          description: "CockroachDB instance is down"
+
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage detected"
+          description: "CPU usage is above 80% for more than 5 minutes"
+
+  - name: payment.rules
+    rules:
+      - alert: PaymentFailureRate
+        expr: rate(payment_transactions_total{status="failed"}[5m]) / rate(payment_transactions_total[5m]) > 0.05
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High payment failure rate"
+          description: "Payment failure rate is {{ $value | humanizePercentage }}"
+
+      - alert: StripeWebhookFailure
+        expr: increase(stripe_webhook_failures_total[5m]) > 5
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Stripe webhook failures detected"
+          description: "{{ $value }} webhook failures in the last 5 minutes"
+```
+
+### 8.3 Django Application Metrics
+
+```python
+# monitoring/metrics.py
+from prometheus_client import Counter, Histogram, Gauge, CollectorRegistry
+from prometheus_client.django import DjangoCollector
+from django.conf import settings
+import time
+
+# Create custom registry for Django metrics
+registry = CollectorRegistry()
+registry.register(DjangoCollector())
+
+# Application metrics
+request_count = Counter(
+    'django_http_requests_total',
+    'Total HTTP requests',
+    ['method', 'endpoint', 'status'],
+    registry=registry
+)
+
+request_duration = Histogram(
+    'django_http_request_duration_seconds',
+    'HTTP request duration in seconds',
+    ['method', 'endpoint'],
+    registry=registry
+)
+
+active_users = Gauge(
+    'django_active_users',
+    'Number of active users',
+    registry=registry
+)
+
+database_connections = Gauge(
+    'django_database_connections',
+    'Number of database connections',
+    ['database'],
+    registry=registry
+)
+
+# E-commerce specific metrics
+orders_total = Counter(
+    'ecommerce_orders_total',
+    'Total number of orders',
+    ['status'],
+    registry=registry
+)
+
+revenue_total = Counter(
+    'ecommerce_revenue_total',
+    'Total revenue',
+    ['currency'],
+    registry=registry
+)
+
+inventory_stock = Gauge(
+    'inventory_stock_level',
+    'Current stock level for products',
+    ['product_id', 'product_name', 'warehouse'],
+    registry=registry
+)
+
+payment_transactions = Counter(
+    'payment_transactions_total',
+    'Total payment transactions',
+    ['provider', 'status'],
+    registry=registry
+)
+
+payment_duration = Histogram(
+    'payment_processing_duration_seconds',
+    'Payment processing duration',
+    ['provider'],
+    registry=registry
+)
+
+# Webhook metrics
+stripe_webhooks = Counter(
+    'stripe_webhook_events_total',
+    'Total Stripe webhook events',
+    ['event_type', 'status'],
+    registry=registry
+)
+
+stripe_webhook_failures = Counter(
+    'stripe_webhook_failures_total',
+    'Failed Stripe webhook events',
+    ['event_type'],
+    registry=registry
+)
+
+# monitoring/middleware.py
+from django.utils.deprecation import MiddlewareMixin
+from django.urls import resolve
+from .metrics import request_count, request_duration
+import time
+
+class MetricsMiddleware(MiddlewareMixin):
+    def process_request(self, request):
+        request._start_time = time.time()
+
+    def process_response(self, request, response):
+        if hasattr(request, '_start_time'):
+            duration = time.time() - request._start_time
+
+            try:
+                endpoint = resolve(request.path).url_name or 'unknown'
+            except:
+                endpoint = 'unknown'
+
+            # Record metrics
+            request_count.labels(
+                method=request.method,
+                endpoint=endpoint,
+                status=response.status_code
+            ).inc()
+
+            request_duration.labels(
+                method=request.method,
+                endpoint=endpoint
+            ).observe(duration)
+
+        return response
+
+# monitoring/views.py
+from django.http import HttpResponse
+from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
+from .metrics import registry
+
+def metrics_view(request):
+    """Expose metrics for Prometheus scraping"""
+    metrics_data = generate_latest(registry)
+    return HttpResponse(metrics_data, content_type=CONTENT_TYPE_LATEST)
+
+# monitoring/tasks.py
+from celery import shared_task
+from .metrics import active_users, database_connections, inventory_stock
+from django.contrib.auth import get_user_model
+from django.db import connections
+from inventory.models import Inventory
+
+User = get_user_model()
+
+@shared_task
+def update_active_users_metric():
+    """Update active users metric"""
+    # Count users active in last 24 hours
+    from django.utils import timezone
+    from datetime import timedelta
+
+    yesterday = timezone.now() - timedelta(hours=24)
+    count = User.objects.filter(last_login__gte=yesterday).count()
+    active_users.set(count)
+
+@shared_task
+def update_database_metrics():
+    """Update database connection metrics"""
+    for alias in connections:
+        try:
+            conn = connections[alias]
+            # This is a simplified example - actual implementation would vary
+            database_connections.labels(database=alias).set(1)
+        except:
+            database_connections.labels(database=alias).set(0)
+
+@shared_task
+def update_inventory_metrics():
+    """Update inventory stock levels"""
+    inventory_items = Inventory.objects.select_related('product', 'warehouse').all()
+
+    for item in inventory_items:
+        inventory_stock.labels(
+            product_id=str(item.product.id),
+            product_name=item.product.name,
+            warehouse=item.warehouse.name
+        ).set(item.quantity_available)
+```
+
+### 8.4 Frontend Metrics (Next.js)
+
+```typescript
+// monitoring/metrics.ts
+import {
+  register,
+  collectDefaultMetrics,
+  Counter,
+  Histogram,
+  Gauge,
+} from "prom-client";
+
+// Enable default metrics collection
+collectDefaultMetrics();
+
+// Custom metrics
+export const httpRequestsTotal = new Counter({
+  name: "nextjs_http_requests_total",
+  help: "Total number of HTTP requests",
+  labelNames: ["method", "route", "status_code"],
+});
+
+export const httpRequestDuration = new Histogram({
+  name: "nextjs_http_request_duration_seconds",
+  help: "Duration of HTTP requests in seconds",
+  labelNames: ["method", "route"],
+  buckets: [0.1, 0.5, 1, 2, 5],
+});
+
+export const activeConnections = new Gauge({
+  name: "nextjs_active_connections",
+  help: "Number of active connections",
+});
+
+export const pageViews = new Counter({
+  name: "nextjs_page_views_total",
+  help: "Total page views",
+  labelNames: ["page", "user_type"],
+});
+
+export const apiCalls = new Counter({
+  name: "nextjs_api_calls_total",
+  help: "Total API calls to backend",
+  labelNames: ["endpoint", "status"],
+});
+
+export const cartOperations = new Counter({
+  name: "ecommerce_cart_operations_total",
+  help: "Total cart operations",
+  labelNames: ["operation", "user_type"],
+});
+
+// pages/api/metrics.ts
+import { NextApiRequest, NextApiResponse } from "next";
+import { register } from "prom-client";
+
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  if (req.method === "GET") {
+    res.setHeader("Content-Type", register.contentType);
+    res.send(await register.metrics());
+  } else {
+    res.status(405).json({ message: "Method not allowed" });
+  }
+}
+
+// lib/monitoring.ts
+import {
+  httpRequestsTotal,
+  httpRequestDuration,
+  pageViews,
+  apiCalls,
+} from "../monitoring/metrics";
+
+export class MonitoringService {
+  static recordPageView(
+    page: string,
+    userType: "guest" | "customer" | "admin"
+  ) {
+    pageViews.labels(page, userType).inc();
+  }
+
+  static recordAPICall(endpoint: string, status: number) {
+    apiCalls.labels(endpoint, status.toString()).inc();
+  }
+
+  static recordHttpRequest(
+    method: string,
+    route: string,
+    statusCode: number,
+    duration: number
+  ) {
+    httpRequestsTotal.labels(method, route, statusCode.toString()).inc();
+    httpRequestDuration.labels(method, route).observe(duration);
+  }
+
+  static startTimer() {
+    return Date.now();
+  }
+
+  static endTimer(startTime: number) {
+    return (Date.now() - startTime) / 1000;
+  }
+}
+
+// middleware.ts (Next.js 13+)
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { MonitoringService } from "./lib/monitoring";
+
+export function middleware(request: NextRequest) {
+  const startTime = MonitoringService.startTimer();
+
+  const response = NextResponse.next();
+
+  // Record metrics after response
+  response.headers.set("x-start-time", startTime.toString());
+
+  return response;
+}
+```
+
+### 8.5 Grafana Dashboards
+
+```json
+// monitoring/grafana/dashboards/ecommerce-overview.json
+{
+  "dashboard": {
+    "id": null,
+    "title": "E-commerce Overview",
+    "description": "Overview of e-commerce platform metrics",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Request Rate",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "rate(django_http_requests_total[5m])",
+            "legendFormat": "Requests/sec"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Error Rate",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "rate(django_http_requests_total{status=~\"5..\"}[5m]) / rate(django_http_requests_total[5m]) * 100",
+            "legendFormat": "Error Rate %"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Response Time (95th percentile)",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "django_http_request_duration_seconds{quantile=\"0.95\"}",
+            "legendFormat": "95th percentile"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Orders Per Hour",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(ecommerce_orders_total[1h]) * 3600",
+            "legendFormat": "Orders/hour"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Revenue",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(ecommerce_revenue_total[1h]) * 3600",
+            "legendFormat": "Revenue/hour"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Low Stock Items",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "inventory_stock_level < 10",
+            "legendFormat": "{{ product_name }}"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Payment Success Rate",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "rate(payment_transactions_total{status=\"completed\"}[5m]) / rate(payment_transactions_total[5m]) * 100",
+            "legendFormat": "Success Rate %"
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Database Performance",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "cockroachdb_sql_query_count",
+            "legendFormat": "Queries/sec"
+          }
+        ]
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "refresh": "5s"
+  }
+}
+```
+
+### 8.6 Alerting Configuration
+
+```yaml
+# monitoring/alertmanager/alertmanager.yml
+global:
+  smtp_smarthost: "localhost:587"
+  smtp_from: "alerts@legostore.com"
+  slack_api_url: "https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK"
+
+route:
+  group_by: ["alertname"]
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 1h
+  receiver: "web.hook"
+  routes:
+    - match:
+        severity: critical
+      receiver: "critical-alerts"
+    - match:
+        severity: warning
+      receiver: "warning-alerts"
+
+receivers:
+  - name: "web.hook"
+    webhook_configs:
+      - url: "http://127.0.0.1:5001/"
+
+  - name: "critical-alerts"
+    email_configs:
+      - to: "ops-team@legostore.com"
+        subject: "CRITICAL: {{ .GroupLabels.alertname }}"
+        body: |
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          {{ end }}
+    slack_configs:
+      - channel: "#alerts-critical"
+        title: "Critical Alert"
+        text: |
+          {{ range .Alerts }}
+          {{ .Annotations.summary }}
+          {{ .Annotations.description }}
+          {{ end }}
+
+  - name: "warning-alerts"
+    slack_configs:
+      - channel: "#alerts-warning"
+        title: "Warning Alert"
+        text: |
+          {{ range .Alerts }}
+          {{ .Annotations.summary }}
+          {{ end }}
+
+inhibit_rules:
+  - source_match:
+      severity: "critical"
+    target_match:
+      severity: "warning"
+    equal: ["alertname", "instance"]
+```
+
+## Hands-On Exercises
+
+### Exercise 8.1: Basic Monitoring Setup
+
+1. Set up Prometheus and Grafana with Docker Compose
+2. Configure basic application metrics collection
+3. Create simple dashboards for key metrics
+4. Set up basic alerting rules
+
+### Exercise 8.2: Application Metrics
+
+1. Implement custom metrics in Django backend
+2. Add frontend metrics collection in Next.js
+3. Create business-specific metrics for e-commerce
+4. Set up automated metric collection tasks
+
+### Exercise 8.3: Advanced Monitoring
+
+1. Configure distributed tracing with Jaeger
+2. Set up centralized logging with ELK stack
+3. Create comprehensive Grafana dashboards
+4. Implement intelligent alerting strategies
+
+### Exercise 8.4: Performance Monitoring
+
+1. Monitor database performance and queries
+2. Track payment processing metrics
+3. Set up infrastructure monitoring
+4. Create SLA monitoring and reporting
+
+## Key Concepts
+
+- **Metrics Collection**: Gathering quantitative data about system performance
+- **Observability**: Understanding system behavior through metrics, logs, and traces
+- **Alerting**: Automated notifications for system issues
+- **Dashboards**: Visual representation of system metrics
+- **SLI/SLO**: Service Level Indicators and Objectives
+
+## Monitoring Best Practices
+
+### Metrics Design
+
+- Follow the RED method (Rate, Errors, Duration)
+- Use appropriate metric types (Counter, Gauge, Histogram)
+- Include relevant labels for filtering and grouping
+- Avoid high cardinality labels
+
+### Alerting Strategy
+
+- Alert on symptoms, not causes
+- Use meaningful alert thresholds
+- Implement alert fatigue prevention
+- Create actionable alerts with clear remediation steps
+
+### Dashboard Design
+
+- Focus on business metrics and user experience
+- Use appropriate visualizations for data types
+- Include context and historical trends
+- Design for different audiences (technical vs business)
+
+## Next Steps
+
+After completing this module, proceed to [Module 9: Testing and Quality Assurance](../09-testing-and-quality-assurance) to implement comprehensive testing strategies for your monitored e-commerce platform.

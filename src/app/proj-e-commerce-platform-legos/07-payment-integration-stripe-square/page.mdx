@@ -1,0 +1,787 @@
+# Module 7: Payment Integration (Stripe & Square)
+
+## Overview
+
+This module covers integrating payment processing into the Lego e-commerce platform using Stripe as the primary processor and Square as an alternative. You'll learn about secure payment handling, webhook processing, subscription management, and PCI compliance considerations.
+
+## Learning Objectives
+
+- Integrate Stripe payment processing with secure checkout
+- Implement Square payments as an alternative processor
+- Handle payment webhooks and event processing
+- Implement subscription and recurring billing features
+- Ensure PCI compliance and security best practices
+- Handle payment failures and retry logic
+- Implement refunds and partial refunds
+
+## Topics Covered
+
+### 7.1 Payment Processing Fundamentals
+
+- **PCI Compliance**: Understanding payment security standards
+- **Tokenization**: Secure handling of payment information
+- **3D Secure**: Additional authentication for card payments
+- **Webhooks**: Asynchronous payment event handling
+- **Idempotency**: Preventing duplicate payment processing
+
+### 7.2 Stripe Integration
+
+```python
+# payments/stripe_service.py
+import stripe
+from django.conf import settings
+from django.db import transaction
+from decimal import Decimal
+from .models import Payment, PaymentIntent
+import logging
+
+logger = logging.getLogger(__name__)
+
+class StripeService:
+    def __init__(self):
+        stripe.api_key = settings.STRIPE_SECRET_KEY
+
+    def create_payment_intent(self, order):
+        """Create a Stripe PaymentIntent for an order"""
+        try:
+            # Calculate amount in cents
+            amount_cents = int(order.total_amount * 100)
+
+            intent = stripe.PaymentIntent.create(
+                amount=amount_cents,
+                currency='usd',
+                metadata={
+                    'order_id': str(order.id),
+                    'customer_id': str(order.customer.id),
+                },
+                automatic_payment_methods={
+                    'enabled': True,
+                },
+                # Enable 3D Secure when required
+                confirmation_method='automatic',
+                confirm=False,
+            )
+
+            # Store PaymentIntent in database
+            payment_intent = PaymentIntent.objects.create(
+                order=order,
+                stripe_payment_intent_id=intent.id,
+                amount=order.total_amount,
+                currency='USD',
+                status='requires_payment_method'
+            )
+
+            return {
+                'client_secret': intent.client_secret,
+                'payment_intent_id': intent.id,
+                'amount': amount_cents,
+            }
+
+        except stripe.error.StripeError as e:
+            logger.error(f"Stripe error creating payment intent: {str(e)}")
+            raise PaymentProcessingError(f"Payment initialization failed: {str(e)}")
+
+    def confirm_payment(self, payment_intent_id, payment_method_id):
+        """Confirm a payment with a payment method"""
+        try:
+            intent = stripe.PaymentIntent.confirm(
+                payment_intent_id,
+                payment_method=payment_method_id,
+            )
+
+            return {
+                'status': intent.status,
+                'client_secret': intent.client_secret,
+                'next_action': intent.next_action,
+            }
+
+        except stripe.error.CardError as e:
+            # Card was declined
+            logger.warning(f"Card declined: {str(e)}")
+            return {
+                'status': 'failed',
+                'error': str(e),
+                'decline_code': e.decline_code,
+            }
+        except stripe.error.StripeError as e:
+            logger.error(f"Stripe error confirming payment: {str(e)}")
+            raise PaymentProcessingError(f"Payment confirmation failed: {str(e)}")
+
+    def create_customer(self, user):
+        """Create a Stripe customer"""
+        try:
+            customer = stripe.Customer.create(
+                email=user.email,
+                name=f"{user.first_name} {user.last_name}",
+                metadata={
+                    'user_id': str(user.id),
+                }
+            )
+
+            # Store Stripe customer ID
+            user.stripe_customer_id = customer.id
+            user.save()
+
+            return customer
+
+        except stripe.error.StripeError as e:
+            logger.error(f"Error creating Stripe customer: {str(e)}")
+            raise PaymentProcessingError(f"Customer creation failed: {str(e)}")
+
+    def create_subscription(self, customer_id, price_id, trial_days=None):
+        """Create a subscription for recurring billing"""
+        try:
+            subscription_data = {
+                'customer': customer_id,
+                'items': [{'price': price_id}],
+                'payment_behavior': 'default_incomplete',
+                'payment_settings': {'save_default_payment_method': 'on_subscription'},
+                'expand': ['latest_invoice.payment_intent'],
+            }
+
+            if trial_days:
+                subscription_data['trial_period_days'] = trial_days
+
+            subscription = stripe.Subscription.create(**subscription_data)
+
+            return {
+                'subscription_id': subscription.id,
+                'client_secret': subscription.latest_invoice.payment_intent.client_secret,
+                'status': subscription.status,
+            }
+
+        except stripe.error.StripeError as e:
+            logger.error(f"Error creating subscription: {str(e)}")
+            raise PaymentProcessingError(f"Subscription creation failed: {str(e)}")
+
+    def process_refund(self, payment_intent_id, amount=None, reason=None):
+        """Process a refund for a payment"""
+        try:
+            refund_data = {
+                'payment_intent': payment_intent_id,
+                'reason': reason or 'requested_by_customer',
+            }
+
+            if amount:
+                refund_data['amount'] = int(amount * 100)  # Convert to cents
+
+            refund = stripe.Refund.create(**refund_data)
+
+            # Update payment record
+            payment = Payment.objects.get(stripe_payment_intent_id=payment_intent_id)
+            payment.refunded_amount = Decimal(refund.amount) / 100
+            payment.status = 'refunded' if refund.amount == payment.amount * 100 else 'partially_refunded'
+            payment.save()
+
+            return {
+                'refund_id': refund.id,
+                'amount': Decimal(refund.amount) / 100,
+                'status': refund.status,
+            }
+
+        except stripe.error.StripeError as e:
+            logger.error(f"Error processing refund: {str(e)}")
+            raise PaymentProcessingError(f"Refund failed: {str(e)}")
+
+# payments/views.py
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import status
+from .services import StripeService
+from orders.models import Order
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_payment_intent(request):
+    """Create a payment intent for checkout"""
+    order_id = request.data.get('order_id')
+
+    try:
+        order = Order.objects.get(id=order_id, customer=request.user)
+        stripe_service = StripeService()
+
+        # Create or get Stripe customer
+        if not request.user.stripe_customer_id:
+            stripe_service.create_customer(request.user)
+
+        payment_data = stripe_service.create_payment_intent(order)
+
+        return Response({
+            'client_secret': payment_data['client_secret'],
+            'amount': payment_data['amount'],
+        })
+
+    except Order.DoesNotExist:
+        return Response(
+            {'error': 'Order not found'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        return Response(
+            {'error': str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def confirm_payment(request):
+    """Confirm a payment intent"""
+    payment_intent_id = request.data.get('payment_intent_id')
+    payment_method_id = request.data.get('payment_method_id')
+
+    try:
+        stripe_service = StripeService()
+        result = stripe_service.confirm_payment(payment_intent_id, payment_method_id)
+
+        return Response(result)
+
+    except Exception as e:
+        return Response(
+            {'error': str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+```
+
+### 7.3 Square Integration
+
+```python
+# payments/square_service.py
+import squareup
+from squareup.models import CreatePaymentRequest, Money
+from django.conf import settings
+import uuid
+import logging
+
+logger = logging.getLogger(__name__)
+
+class SquareService:
+    def __init__(self):
+        self.client = squareup.Client(
+            access_token=settings.SQUARE_ACCESS_TOKEN,
+            environment=settings.SQUARE_ENVIRONMENT  # 'sandbox' or 'production'
+        )
+        self.payments_api = self.client.payments
+        self.customers_api = self.client.customers
+
+    def create_payment(self, order, source_id, verification_token=None):
+        """Process a payment with Square"""
+        try:
+            # Convert amount to cents
+            amount_cents = int(order.total_amount * 100)
+
+            # Create payment request
+            body = CreatePaymentRequest(
+                source_id=source_id,
+                idempotency_key=str(uuid.uuid4()),
+                amount_money=Money(
+                    amount=amount_cents,
+                    currency='USD'
+                ),
+                order_id=str(order.id),
+                note=f"Payment for order {order.order_number}",
+                buyer_email_address=order.customer.email,
+            )
+
+            # Add verification token for 3D Secure
+            if verification_token:
+                body.verification_token = verification_token
+
+            result = self.payments_api.create_payment(body)
+
+            if result.is_success():
+                payment = result.body.get('payment', {})
+
+                # Store payment record
+                Payment.objects.create(
+                    order=order,
+                    square_payment_id=payment.get('id'),
+                    amount=order.total_amount,
+                    currency='USD',
+                    status=payment.get('status', '').lower(),
+                    payment_method='square'
+                )
+
+                return {
+                    'payment_id': payment.get('id'),
+                    'status': payment.get('status'),
+                    'receipt_number': payment.get('receipt_number'),
+                    'amount': amount_cents,
+                }
+            else:
+                errors = result.errors
+                logger.error(f"Square payment error: {errors}")
+                raise PaymentProcessingError(f"Payment failed: {errors[0]['detail']}")
+
+        except Exception as e:
+            logger.error(f"Square service error: {str(e)}")
+            raise PaymentProcessingError(f"Payment processing failed: {str(e)}")
+
+    def create_customer(self, user):
+        """Create a Square customer"""
+        try:
+            body = {
+                'given_name': user.first_name,
+                'family_name': user.last_name,
+                'email_address': user.email,
+                'reference_id': str(user.id),
+            }
+
+            result = self.customers_api.create_customer(body)
+
+            if result.is_success():
+                customer = result.body.get('customer', {})
+
+                # Store Square customer ID
+                user.square_customer_id = customer.get('id')
+                user.save()
+
+                return customer
+            else:
+                errors = result.errors
+                logger.error(f"Square customer creation error: {errors}")
+                raise PaymentProcessingError(f"Customer creation failed: {errors[0]['detail']}")
+
+        except Exception as e:
+            logger.error(f"Square customer service error: {str(e)}")
+            raise PaymentProcessingError(f"Customer creation failed: {str(e)}")
+
+    def process_refund(self, payment_id, amount=None, reason=None):
+        """Process a refund with Square"""
+        try:
+            # Get the original payment
+            payment_result = self.payments_api.get_payment(payment_id)
+
+            if not payment_result.is_success():
+                raise PaymentProcessingError("Original payment not found")
+
+            original_payment = payment_result.body.get('payment', {})
+            refund_amount = amount or original_payment.get('amount_money', {}).get('amount', 0)
+
+            body = {
+                'idempotency_key': str(uuid.uuid4()),
+                'amount_money': {
+                    'amount': int(refund_amount * 100) if isinstance(refund_amount, (int, float)) else refund_amount,
+                    'currency': 'USD'
+                },
+                'payment_id': payment_id,
+                'reason': reason or 'Customer requested refund'
+            }
+
+            result = self.client.refunds.refund_payment(body)
+
+            if result.is_success():
+                refund = result.body.get('refund', {})
+
+                # Update payment record
+                payment = Payment.objects.get(square_payment_id=payment_id)
+                payment.refunded_amount = Decimal(refund.get('amount_money', {}).get('amount', 0)) / 100
+                payment.status = 'refunded' if payment.refunded_amount >= payment.amount else 'partially_refunded'
+                payment.save()
+
+                return {
+                    'refund_id': refund.get('id'),
+                    'amount': payment.refunded_amount,
+                    'status': refund.get('status'),
+                }
+            else:
+                errors = result.errors
+                logger.error(f"Square refund error: {errors}")
+                raise PaymentProcessingError(f"Refund failed: {errors[0]['detail']}")
+
+        except Exception as e:
+            logger.error(f"Square refund service error: {str(e)}")
+            raise PaymentProcessingError(f"Refund processing failed: {str(e)}")
+```
+
+### 7.4 Frontend Payment Integration
+
+```typescript
+// services/paymentService.ts
+import { loadStripe, Stripe, StripeElements } from '@stripe/stripe-js';
+import { apiClient } from './api';
+
+export class PaymentService {
+  private stripe: Stripe | null = null;
+  private elements: StripeElements | null = null;
+
+  async initializeStripe(): Promise<Stripe | null> {
+    if (!this.stripe) {
+      this.stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+    }
+    return this.stripe;
+  }
+
+  async createPaymentIntent(orderId: string) {
+    const response = await apiClient.post('/payments/create-intent/', {
+      order_id: orderId,
+    });
+    return response.data;
+  }
+
+  async confirmPayment(paymentIntentId: string, paymentMethodId: string) {
+    const response = await apiClient.post('/payments/confirm/', {
+      payment_intent_id: paymentIntentId,
+      payment_method_id: paymentMethodId,
+    });
+    return response.data;
+  }
+
+  async processSquarePayment(orderId: string, sourceId: string, verificationToken?: string) {
+    const response = await apiClient.post('/payments/square/process/', {
+      order_id: orderId,
+      source_id: sourceId,
+      verification_token: verificationToken,
+    });
+    return response.data;
+  }
+}
+
+// components/StripeCheckoutForm.tsx
+import React, { useState, useEffect } from 'react';
+import {
+  useStripe,
+  useElements,
+  PaymentElement,
+  Elements,
+} from '@stripe/react-stripe-js';
+import { PaymentService } from '../services/paymentService';
+
+interface StripeCheckoutFormProps {
+  orderId: string;
+  onSuccess: (paymentIntent: any) => void;
+  onError: (error: string) => void;
+}
+
+const CheckoutForm: React.FC<StripeCheckoutFormProps> = ({
+  orderId,
+  onSuccess,
+  onError,
+}) => {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [isLoading, setIsLoading] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!stripe || !elements) {
+      return;
+    }
+
+    setIsLoading(true);
+    setMessage(null);
+
+    const { error } = await stripe.confirmPayment({
+      elements,
+      confirmParams: {
+        return_url: `${window.location.origin}/order-confirmation`,
+      },
+      redirect: 'if_required',
+    });
+
+    if (error) {
+      if (error.type === 'card_error' || error.type === 'validation_error') {
+        setMessage(error.message || 'Payment failed');
+        onError(error.message || 'Payment failed');
+      } else {
+        setMessage('An unexpected error occurred.');
+        onError('An unexpected error occurred.');
+      }
+    } else {
+      onSuccess(error);
+    }
+
+    setIsLoading(false);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <PaymentElement
+        options={{
+          layout: 'tabs',
+        }}
+      />
+
+      {message && (
+        <div className="text-red-600 text-sm">{message}</div>
+      )}
+
+      <button
+        disabled={isLoading || !stripe || !elements}
+        className="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {isLoading ? (
+          <div className="flex items-center justify-center">
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+            Processing...
+          </div>
+        ) : (
+          'Pay Now'
+        )}
+      </button>
+    </form>
+  );
+};
+
+export const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = (props) => {
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const paymentService = new PaymentService();
+
+  useEffect(() => {
+    const initializePayment = async () => {
+      try {
+        const { client_secret } = await paymentService.createPaymentIntent(props.orderId);
+        setClientSecret(client_secret);
+      } catch (error) {
+        console.error('Error creating payment intent:', error);
+        props.onError('Failed to initialize payment');
+      }
+    };
+
+    initializePayment();
+  }, [props.orderId]);
+
+  if (!clientSecret) {
+    return (
+      <div className="flex justify-center items-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  const stripePromise = paymentService.initializeStripe();
+
+  return (
+    <Elements stripe={stripePromise} options={{ clientSecret }}>
+      <CheckoutForm {...props} />
+    </Elements>
+  );
+};
+```
+
+### 7.5 Webhook Processing
+
+```python
+# payments/webhooks.py
+import stripe
+import json
+from django.http import HttpResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+from django.conf import settings
+from django.utils.decorators import method_decorator
+from django.views import View
+from .models import Payment, PaymentIntent
+from orders.models import Order
+import logging
+
+logger = logging.getLogger(__name__)
+
+@method_decorator(csrf_exempt, name='dispatch')
+class StripeWebhookView(View):
+    def post(self, request):
+        payload = request.body
+        sig_header = request.META.get('HTTP_STRIPE_SIGNATURE')
+        endpoint_secret = settings.STRIPE_WEBHOOK_SECRET
+
+        try:
+            event = stripe.Webhook.construct_event(
+                payload, sig_header, endpoint_secret
+            )
+        except ValueError:
+            logger.error("Invalid payload in Stripe webhook")
+            return HttpResponse(status=400)
+        except stripe.error.SignatureVerificationError:
+            logger.error("Invalid signature in Stripe webhook")
+            return HttpResponse(status=400)
+
+        # Handle the event
+        if event['type'] == 'payment_intent.succeeded':
+            payment_intent = event['data']['object']
+            self.handle_payment_success(payment_intent)
+
+        elif event['type'] == 'payment_intent.payment_failed':
+            payment_intent = event['data']['object']
+            self.handle_payment_failure(payment_intent)
+
+        elif event['type'] == 'invoice.payment_succeeded':
+            invoice = event['data']['object']
+            self.handle_subscription_payment_success(invoice)
+
+        elif event['type'] == 'customer.subscription.deleted':
+            subscription = event['data']['object']
+            self.handle_subscription_cancellation(subscription)
+
+        else:
+            logger.info(f"Unhandled Stripe event type: {event['type']}")
+
+        return HttpResponse(status=200)
+
+    def handle_payment_success(self, payment_intent):
+        """Handle successful payment"""
+        try:
+            # Update payment intent status
+            pi = PaymentIntent.objects.get(
+                stripe_payment_intent_id=payment_intent['id']
+            )
+            pi.status = 'succeeded'
+            pi.save()
+
+            # Update order status
+            order = pi.order
+            order.payment_status = 'paid'
+            order.status = 'confirmed'
+            order.save()
+
+            # Create payment record
+            Payment.objects.create(
+                order=order,
+                stripe_payment_intent_id=payment_intent['id'],
+                amount=pi.amount,
+                currency=pi.currency,
+                status='completed',
+                payment_method='stripe'
+            )
+
+            # Send confirmation email
+            # send_order_confirmation_email(order)
+
+            logger.info(f"Payment succeeded for order {order.id}")
+
+        except PaymentIntent.DoesNotExist:
+            logger.error(f"PaymentIntent not found: {payment_intent['id']}")
+        except Exception as e:
+            logger.error(f"Error handling payment success: {str(e)}")
+
+    def handle_payment_failure(self, payment_intent):
+        """Handle failed payment"""
+        try:
+            pi = PaymentIntent.objects.get(
+                stripe_payment_intent_id=payment_intent['id']
+            )
+            pi.status = 'failed'
+            pi.save()
+
+            # Update order status
+            order = pi.order
+            order.payment_status = 'failed'
+            order.save()
+
+            # Send failure notification
+            # send_payment_failure_email(order)
+
+            logger.warning(f"Payment failed for order {order.id}")
+
+        except PaymentIntent.DoesNotExist:
+            logger.error(f"PaymentIntent not found: {payment_intent['id']}")
+        except Exception as e:
+            logger.error(f"Error handling payment failure: {str(e)}")
+
+    def handle_subscription_payment_success(self, invoice):
+        """Handle successful subscription payment"""
+        try:
+            subscription_id = invoice['subscription']
+            customer_id = invoice['customer']
+
+            # Update subscription status in database
+            # Handle subscription renewal logic
+
+            logger.info(f"Subscription payment succeeded: {subscription_id}")
+
+        except Exception as e:
+            logger.error(f"Error handling subscription payment success: {str(e)}")
+
+    def handle_subscription_cancellation(self, subscription):
+        """Handle subscription cancellation"""
+        try:
+            # Update subscription status in database
+            # Handle cancellation logic
+
+            logger.info(f"Subscription cancelled: {subscription['id']}")
+
+        except Exception as e:
+            logger.error(f"Error handling subscription cancellation: {str(e)}")
+```
+
+## Hands-On Exercises
+
+### Exercise 7.1: Stripe Integration
+
+1. Set up Stripe account and obtain API keys
+2. Implement payment intent creation and confirmation
+3. Create Stripe checkout form with React
+4. Handle 3D Secure authentication
+
+### Exercise 7.2: Square Integration
+
+1. Set up Square developer account
+2. Implement Square payment processing
+3. Create Square payment form
+4. Handle payment verification
+
+### Exercise 7.3: Webhook Processing
+
+1. Set up webhook endpoints for both Stripe and Square
+2. Implement payment status updates
+3. Handle failed payments and retries
+4. Test webhook processing with simulators
+
+### Exercise 7.4: Advanced Features
+
+1. Implement subscription billing
+2. Create refund processing functionality
+3. Add payment method saving for customers
+4. Implement payment analytics dashboard
+
+## Key Concepts
+
+- **PCI Compliance**: Security standards for payment processing
+- **Tokenization**: Secure payment data handling
+- **Webhooks**: Asynchronous event processing
+- **3D Secure**: Additional authentication layer
+- **Idempotency**: Preventing duplicate transactions
+
+## Security Best Practices
+
+### Payment Data Security
+
+- Never store raw payment card data
+- Use tokenization for payment methods
+- Implement proper SSL/TLS encryption
+- Follow PCI DSS compliance guidelines
+
+### API Security
+
+- Validate webhook signatures
+- Use environment variables for secrets
+- Implement rate limiting on payment endpoints
+- Log all payment activities
+
+### Error Handling
+
+- Provide user-friendly error messages
+- Log detailed errors for debugging
+- Implement retry logic for transient failures
+- Handle network timeouts gracefully
+
+## Testing Strategies
+
+### Stripe Testing
+
+- Use Stripe test cards for different scenarios
+- Test 3D Secure authentication flows
+- Simulate webhook events
+- Test payment failures and recoveries
+
+### Square Testing
+
+- Use Square sandbox environment
+- Test different payment methods
+- Verify webhook processing
+- Test refund scenarios
+
+## Next Steps
+
+After completing this module, proceed to [Module 8: Monitoring and Observability (Prometheus)](../08-monitoring-and-observability-prometheus) to implement comprehensive monitoring for your payment systems and overall application performance.

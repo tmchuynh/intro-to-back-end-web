@@ -1,0 +1,767 @@
+# Module 6: Admin Dashboard & Inventory Management
+
+## Overview
+
+This module focuses on building a comprehensive admin dashboard for managing the Lego e-commerce platform. You'll learn to create inventory management systems, order processing workflows, customer management, analytics dashboards, and administrative tools.
+
+## Learning Objectives
+
+- Build a comprehensive admin dashboard with role-based access
+- Implement inventory management with real-time stock tracking
+- Create order processing and fulfillment workflows
+- Design customer management and support tools
+- Develop analytics and reporting features
+- Implement bulk operations and data import/export
+- Create notification and alert systems
+
+## Topics Covered
+
+### 6.1 Admin Dashboard Architecture
+
+```typescript
+// admin/types/index.ts
+export interface AdminUser {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: "staff" | "admin" | "super_admin";
+  permissions: Permission[];
+  lastLogin: string;
+  isActive: boolean;
+}
+
+export interface Permission {
+  id: string;
+  name: string;
+  codename: string;
+  resource: string;
+  action: string;
+}
+
+export interface DashboardStats {
+  totalOrders: number;
+  totalRevenue: number;
+  pendingOrders: number;
+  lowStockItems: number;
+  newCustomers: number;
+  conversionRate: number;
+  averageOrderValue: number;
+  returnRate: number;
+}
+
+export interface InventoryItem {
+  id: string;
+  product: Product;
+  warehouse: Warehouse;
+  quantityAvailable: number;
+  quantityReserved: number;
+  reorderPoint: number;
+  maxStock: number;
+  lastRestocked: string;
+  status: "in_stock" | "low_stock" | "out_of_stock" | "discontinued";
+}
+
+export interface StockMovement {
+  id: string;
+  product: Product;
+  warehouse: Warehouse;
+  movementType: "in" | "out" | "transfer" | "adjustment";
+  quantity: number;
+  referenceId?: string;
+  referenceType?: string;
+  reason: string;
+  createdAt: string;
+  createdBy: AdminUser;
+}
+
+export interface Warehouse {
+  id: string;
+  name: string;
+  address: Address;
+  isActive: boolean;
+  capacity: number;
+  currentUtilization: number;
+}
+```
+
+### 6.2 Inventory Management System
+
+```python
+# inventory/models.py
+from django.db import models
+from django.contrib.auth import get_user_model
+import uuid
+
+User = get_user_model()
+
+class Warehouse(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=255)
+    address = models.JSONField()
+    is_active = models.BooleanField(default=True)
+    capacity = models.IntegerField(help_text="Maximum number of items")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+class Inventory(models.Model):
+    STOCK_STATUS_CHOICES = [
+        ('in_stock', 'In Stock'),
+        ('low_stock', 'Low Stock'),
+        ('out_of_stock', 'Out of Stock'),
+        ('discontinued', 'Discontinued'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    product = models.ForeignKey('products.Product', on_delete=models.CASCADE)
+    warehouse = models.ForeignKey(Warehouse, on_delete=models.CASCADE)
+    quantity_available = models.IntegerField(default=0)
+    quantity_reserved = models.IntegerField(default=0)
+    reorder_point = models.IntegerField(default=10)
+    max_stock = models.IntegerField(null=True, blank=True)
+    last_restocked = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ['product', 'warehouse']
+        indexes = [
+            models.Index(fields=['product', 'warehouse']),
+            models.Index(fields=['quantity_available']),
+        ]
+
+    @property
+    def status(self):
+        if self.quantity_available == 0:
+            return 'out_of_stock'
+        elif self.quantity_available <= self.reorder_point:
+            return 'low_stock'
+        else:
+            return 'in_stock'
+
+    @property
+    def total_quantity(self):
+        return self.quantity_available + self.quantity_reserved
+
+# inventory/services.py
+from django.db import transaction
+from django.utils import timezone
+from .models import Inventory, StockMovement
+from orders.models import OrderItem
+
+class InventoryService:
+    @staticmethod
+    def reserve_stock(order_items):
+        """Reserve stock for order items"""
+        with transaction.atomic():
+            reservations = []
+
+            for item in order_items:
+                try:
+                    inventory = Inventory.objects.select_for_update().get(
+                        product=item.product,
+                        warehouse__is_active=True
+                    )
+
+                    if inventory.quantity_available >= item.quantity:
+                        inventory.quantity_available -= item.quantity
+                        inventory.quantity_reserved += item.quantity
+                        inventory.save()
+
+                        # Create stock movement record
+                        StockMovement.objects.create(
+                            product=item.product,
+                            warehouse=inventory.warehouse,
+                            movement_type='out',
+                            quantity=item.quantity,
+                            reference_id=str(item.order.id),
+                            reference_type='order',
+                            reason=f"Reserved for order {item.order.order_number}",
+                            created_by_id=item.order.customer.id
+                        )
+
+                        reservations.append({
+                            'product_id': item.product.id,
+                            'quantity': item.quantity,
+                            'warehouse_id': inventory.warehouse.id
+                        })
+                    else:
+                        raise InsufficientStockError(
+                            f"Insufficient stock for {item.product.name}. "
+                            f"Available: {inventory.quantity_available}, Required: {item.quantity}"
+                        )
+
+                except Inventory.DoesNotExist:
+                    raise InsufficientStockError(f"No inventory found for {item.product.name}")
+
+            return reservations
+
+    @staticmethod
+    def fulfill_order(order):
+        """Fulfill order by moving reserved stock to shipped"""
+        with transaction.atomic():
+            for item in order.items.all():
+                inventory = Inventory.objects.select_for_update().get(
+                    product=item.product,
+                    warehouse__is_active=True
+                )
+
+                if inventory.quantity_reserved >= item.quantity:
+                    inventory.quantity_reserved -= item.quantity
+                    inventory.save()
+
+                    # Create fulfillment record
+                    StockMovement.objects.create(
+                        product=item.product,
+                        warehouse=inventory.warehouse,
+                        movement_type='out',
+                        quantity=item.quantity,
+                        reference_id=str(order.id),
+                        reference_type='fulfillment',
+                        reason=f"Shipped for order {order.order_number}",
+                    )
+
+    @staticmethod
+    def adjust_stock(product, warehouse, quantity, reason, user):
+        """Manually adjust stock levels"""
+        with transaction.atomic():
+            inventory, created = Inventory.objects.get_or_create(
+                product=product,
+                warehouse=warehouse,
+                defaults={'quantity_available': 0}
+            )
+
+            old_quantity = inventory.quantity_available
+            inventory.quantity_available = max(0, inventory.quantity_available + quantity)
+
+            if quantity > 0:
+                inventory.last_restocked = timezone.now()
+
+            inventory.save()
+
+            # Record movement
+            StockMovement.objects.create(
+                product=product,
+                warehouse=warehouse,
+                movement_type='adjustment',
+                quantity=quantity,
+                reason=reason,
+                created_by=user
+            )
+
+            return {
+                'old_quantity': old_quantity,
+                'new_quantity': inventory.quantity_available,
+                'adjustment': quantity
+            }
+
+    @staticmethod
+    def get_low_stock_items(warehouse=None):
+        """Get items with low stock levels"""
+        queryset = Inventory.objects.select_related('product', 'warehouse').filter(
+            quantity_available__lte=models.F('reorder_point'),
+            product__status='active'
+        )
+
+        if warehouse:
+            queryset = queryset.filter(warehouse=warehouse)
+
+        return queryset.order_by('quantity_available')
+```
+
+### 6.3 Admin Dashboard Components
+
+```typescript
+// admin/components/DashboardOverview.tsx
+import React, { useEffect, useState } from 'react';
+import { DashboardStats } from '../types';
+import { adminAPI } from '../services/api';
+import {
+  ShoppingCartIcon,
+  CurrencyDollarIcon,
+  ClockIcon,
+  ExclamationTriangleIcon
+} from '@heroicons/react/24/outline';
+
+const DashboardOverview: React.FC = () => {
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const response = await adminAPI.getDashboardStats();
+        setStats(response.data);
+      } catch (error) {
+        console.error('Error fetching dashboard stats:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, []);
+
+  if (loading) {
+    return <div className="animate-pulse">Loading dashboard...</div>;
+  }
+
+  if (!stats) {
+    return <div>Error loading dashboard stats</div>;
+  }
+
+  const statCards = [
+    {
+      title: 'Total Orders',
+      value: stats.totalOrders.toLocaleString(),
+      icon: ShoppingCartIcon,
+      change: '+12%',
+      changeType: 'positive' as const,
+    },
+    {
+      title: 'Revenue',
+      value: `$${stats.totalRevenue.toLocaleString()}`,
+      icon: CurrencyDollarIcon,
+      change: '+8%',
+      changeType: 'positive' as const,
+    },
+    {
+      title: 'Pending Orders',
+      value: stats.pendingOrders.toLocaleString(),
+      icon: ClockIcon,
+      change: '-5%',
+      changeType: 'negative' as const,
+    },
+    {
+      title: 'Low Stock Items',
+      value: stats.lowStockItems.toLocaleString(),
+      icon: ExclamationTriangleIcon,
+      change: '+3',
+      changeType: 'neutral' as const,
+    },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {statCards.map((stat) => (
+          <div key={stat.title} className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <stat.icon className="h-8 w-8 text-gray-400" />
+              </div>
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className="text-sm font-medium text-gray-500 truncate">
+                    {stat.title}
+                  </dt>
+                  <dd className="flex items-baseline">
+                    <div className="text-2xl font-semibold text-gray-900">
+                      {stat.value}
+                    </div>
+                    <div className={`ml-2 flex items-baseline text-sm font-semibold ${
+                      stat.changeType === 'positive' ? 'text-green-600' :
+                      stat.changeType === 'negative' ? 'text-red-600' : 'text-gray-500'
+                    }`}>
+                      {stat.change}
+                    </div>
+                  </dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <RecentOrders />
+        <LowStockAlerts />
+      </div>
+    </div>
+  );
+};
+
+// admin/components/InventoryManagement.tsx
+import React, { useState, useEffect } from 'react';
+import { InventoryItem, StockMovement } from '../types';
+import { adminAPI } from '../services/api';
+import { PencilIcon, PlusIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+
+const InventoryManagement: React.FC = () => {
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedWarehouse, setSelectedWarehouse] = useState<string>('all');
+  const [stockFilter, setStockFilter] = useState<string>('all');
+
+  useEffect(() => {
+    fetchInventory();
+  }, [selectedWarehouse, stockFilter]);
+
+  const fetchInventory = async () => {
+    try {
+      setLoading(true);
+      const response = await adminAPI.getInventory({
+        warehouse: selectedWarehouse !== 'all' ? selectedWarehouse : undefined,
+        status: stockFilter !== 'all' ? stockFilter : undefined,
+      });
+      setInventory(response.data.results);
+    } catch (error) {
+      console.error('Error fetching inventory:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleStockAdjustment = async (item: InventoryItem, adjustment: number, reason: string) => {
+    try {
+      await adminAPI.adjustStock(item.product.id, item.warehouse.id, adjustment, reason);
+      fetchInventory(); // Refresh data
+    } catch (error) {
+      console.error('Error adjusting stock:', error);
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'in_stock':
+        return 'bg-green-100 text-green-800';
+      case 'low_stock':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'out_of_stock':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold text-gray-900">Inventory Management</h1>
+        <button className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
+          <PlusIcon className="h-5 w-5 mr-2 inline" />
+          Add Stock
+        </button>
+      </div>
+
+      <div className="bg-white shadow rounded-lg">
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex space-x-4">
+            <select
+              value={selectedWarehouse}
+              onChange={(e) => setSelectedWarehouse(e.target.value)}
+              className="block w-48 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            >
+              <option value="all">All Warehouses</option>
+              {/* Add warehouse options */}
+            </select>
+
+            <select
+              value={stockFilter}
+              onChange={(e) => setStockFilter(e.target.value)}
+              className="block w-48 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            >
+              <option value="all">All Items</option>
+              <option value="low_stock">Low Stock</option>
+              <option value="out_of_stock">Out of Stock</option>
+            </select>
+
+            <button
+              onClick={fetchInventory}
+              className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+            >
+              <ArrowPathIcon className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Product
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  SKU
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Warehouse
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Available
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Reserved
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {inventory.map((item) => (
+                <tr key={item.id}>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0 h-10 w-10">
+                        {item.product.images.length > 0 && (
+                          <img
+                            className="h-10 w-10 rounded-full object-cover"
+                            src={item.product.images[0].image}
+                            alt={item.product.name}
+                          />
+                        )}
+                      </div>
+                      <div className="ml-4">
+                        <div className="text-sm font-medium text-gray-900">
+                          {item.product.name}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {item.product.sku}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {item.warehouse.name}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {item.quantityAvailable}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {item.quantityReserved}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(item.status)}`}>
+                      {item.status.replace('_', ' ')}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <button className="text-blue-600 hover:text-blue-900 mr-4">
+                      <PencilIcon className="h-4 w-4" />
+                    </button>
+                    <StockAdjustmentModal
+                      item={item}
+                      onAdjust={handleStockAdjustment}
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+};
+```
+
+### 6.4 Order Processing Workflow
+
+```python
+# orders/admin_views.py
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from django.db import transaction
+from .models import Order, OrderItem
+from .serializers import AdminOrderSerializer
+from inventory.services import InventoryService
+
+class AdminOrderViewSet(viewsets.ModelViewSet):
+    serializer_class = AdminOrderSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        queryset = Order.objects.select_related('customer').prefetch_related('items__product')
+
+        # Filter by status
+        status_filter = self.request.query_params.get('status')
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+
+        # Filter by date range
+        start_date = self.request.query_params.get('start_date')
+        end_date = self.request.query_params.get('end_date')
+        if start_date and end_date:
+            queryset = queryset.filter(created_at__date__range=[start_date, end_date])
+
+        return queryset.order_by('-created_at')
+
+    @action(detail=True, methods=['post'])
+    def confirm_order(self, request, pk=None):
+        """Confirm an order and reserve inventory"""
+        order = self.get_object()
+
+        if order.status != 'pending':
+            return Response(
+                {'error': 'Order cannot be confirmed in current status'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            with transaction.atomic():
+                # Reserve inventory
+                InventoryService.reserve_stock(order.items.all())
+
+                # Update order status
+                order.status = 'confirmed'
+                order.save()
+
+                # Send confirmation email
+                # send_order_confirmation_email(order)
+
+                return Response({'message': 'Order confirmed successfully'})
+
+        except InsufficientStockError as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(detail=True, methods=['post'])
+    def fulfill_order(self, request, pk=None):
+        """Fulfill an order and update inventory"""
+        order = self.get_object()
+
+        if order.status != 'confirmed':
+            return Response(
+                {'error': 'Order must be confirmed before fulfillment'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        tracking_number = request.data.get('tracking_number')
+        shipping_carrier = request.data.get('shipping_carrier')
+
+        try:
+            with transaction.atomic():
+                # Fulfill inventory
+                InventoryService.fulfill_order(order)
+
+                # Update order status
+                order.status = 'shipped'
+                order.tracking_number = tracking_number
+                order.shipping_carrier = shipping_carrier
+                order.save()
+
+                # Send shipping notification
+                # send_shipping_notification(order)
+
+                return Response({'message': 'Order fulfilled successfully'})
+
+        except Exception as e:
+            return Response(
+                {'error': f'Fulfillment failed: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=True, methods=['post'])
+    def cancel_order(self, request, pk=None):
+        """Cancel an order and release reserved inventory"""
+        order = self.get_object()
+
+        if order.status not in ['pending', 'confirmed']:
+            return Response(
+                {'error': 'Order cannot be cancelled in current status'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        cancellation_reason = request.data.get('reason', 'Cancelled by admin')
+
+        try:
+            with transaction.atomic():
+                # Release reserved inventory if order was confirmed
+                if order.status == 'confirmed':
+                    InventoryService.release_reservation(order)
+
+                # Update order status
+                order.status = 'cancelled'
+                order.cancellation_reason = cancellation_reason
+                order.save()
+
+                # Process refund if payment was made
+                if order.payment_status == 'paid':
+                    # Process refund logic here
+                    pass
+
+                return Response({'message': 'Order cancelled successfully'})
+
+        except Exception as e:
+            return Response(
+                {'error': f'Cancellation failed: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+```
+
+## Hands-On Exercises
+
+### Exercise 6.1: Admin Dashboard Setup
+
+1. Create admin user roles and permissions
+2. Build dashboard overview with key metrics
+3. Implement real-time data updates
+4. Add responsive design for mobile access
+
+### Exercise 6.2: Inventory Management
+
+1. Build inventory tracking system
+2. Implement stock adjustment workflows
+3. Create low stock alerts and notifications
+4. Add bulk import/export functionality
+
+### Exercise 6.3: Order Processing
+
+1. Create order management interface
+2. Implement order status workflows
+3. Build fulfillment tracking system
+4. Add customer communication features
+
+### Exercise 6.4: Analytics and Reporting
+
+1. Build sales analytics dashboard
+2. Create inventory reports
+3. Implement customer analytics
+4. Add export functionality for reports
+
+## Key Concepts
+
+- **Role-Based Access Control**: Securing admin functions
+- **Real-time Updates**: Live dashboard data
+- **Workflow Management**: Order processing states
+- **Inventory Tracking**: Stock movement and adjustments
+- **Business Intelligence**: Analytics and reporting
+
+## Admin Dashboard Features
+
+### Core Management
+
+- Product catalog management
+- Inventory tracking and adjustments
+- Order processing and fulfillment
+- Customer management and support
+- User and role management
+
+### Analytics and Reporting
+
+- Sales performance metrics
+- Inventory turnover reports
+- Customer behavior analytics
+- Financial reporting
+- Operational dashboards
+
+### System Administration
+
+- Configuration management
+- System health monitoring
+- Audit logs and tracking
+- Backup and maintenance tools
+- Integration management
+
+## Next Steps
+
+After completing this module, proceed to [Module 7: Payment Integration (Stripe & Square)](../07-payment-integration-stripe-square) to implement secure payment processing for your e-commerce platform.

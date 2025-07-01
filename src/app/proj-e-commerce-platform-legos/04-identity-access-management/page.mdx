@@ -1,0 +1,552 @@
+# Module 4: Identity Access Management
+
+## Overview
+
+This module focuses on implementing comprehensive identity and access management (IAM) for the Lego e-commerce platform. You'll learn about modern authentication methods, role-based access control, security best practices, and integration with third-party identity providers.
+
+## Learning Objectives
+
+- Implement secure user authentication and authorization
+- Design role-based access control (RBAC) systems
+- Integrate OAuth2 and social login providers
+- Implement multi-factor authentication (MFA)
+- Handle password security and account recovery
+- Understand security compliance and best practices
+
+## Topics Covered
+
+### 4.1 Authentication Fundamentals
+
+- **Authentication vs Authorization**: Understanding the difference
+- **Session-based vs Token-based**: Comparing authentication methods
+- **JWT (JSON Web Tokens)**: Structure, benefits, and security considerations
+- **OAuth2 and OpenID Connect**: Third-party authentication protocols
+
+### 4.2 User Management System
+
+```python
+# authentication/models.py
+from django.contrib.auth.models import AbstractUser
+from django.db import models
+import uuid
+
+class User(AbstractUser):
+    ROLE_CHOICES = [
+        ('customer', 'Customer'),
+        ('staff', 'Staff'),
+        ('admin', 'Administrator'),
+        ('super_admin', 'Super Administrator'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    email = models.EmailField(unique=True)
+    phone = models.CharField(max_length=20, blank=True)
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='customer')
+    is_email_verified = models.BooleanField(default=False)
+    is_phone_verified = models.BooleanField(default=False)
+    last_password_change = models.DateTimeField(auto_now_add=True)
+    failed_login_attempts = models.IntegerField(default=0)
+    account_locked_until = models.DateTimeField(null=True, blank=True)
+    mfa_enabled = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['username']
+
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
+    date_of_birth = models.DateField(null=True, blank=True)
+    preferred_language = models.CharField(max_length=10, default='en')
+    timezone = models.CharField(max_length=50, default='UTC')
+    marketing_consent = models.BooleanField(default=False)
+    privacy_settings = models.JSONField(default=dict)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+class UserAddress(models.Model):
+    ADDRESS_TYPES = [
+        ('shipping', 'Shipping'),
+        ('billing', 'Billing'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='addresses')
+    type = models.CharField(max_length=20, choices=ADDRESS_TYPES)
+    first_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100)
+    company = models.CharField(max_length=100, blank=True)
+    address_line_1 = models.CharField(max_length=255)
+    address_line_2 = models.CharField(max_length=255, blank=True)
+    city = models.CharField(max_length=100)
+    state = models.CharField(max_length=100)
+    postal_code = models.CharField(max_length=20)
+    country = models.CharField(max_length=100)
+    is_default = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+```
+
+### 4.3 Role-Based Access Control (RBAC)
+
+```python
+# permissions/models.py
+from django.db import models
+import uuid
+
+class Permission(models.Model):
+    """Individual permissions for specific actions"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=100, unique=True)
+    codename = models.CharField(max_length=100, unique=True)
+    description = models.TextField(blank=True)
+    resource = models.CharField(max_length=50)  # 'product', 'order', 'user', etc.
+    action = models.CharField(max_length=50)    # 'create', 'read', 'update', 'delete'
+    created_at = models.DateTimeField(auto_now_add=True)
+
+class Role(models.Model):
+    """Roles that group permissions together"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=100, unique=True)
+    description = models.TextField(blank=True)
+    permissions = models.ManyToManyField(Permission, related_name='roles')
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+class UserRole(models.Model):
+    """Assignment of roles to users with optional expiration"""
+    user = models.ForeignKey('authentication.User', on_delete=models.CASCADE)
+    role = models.ForeignKey(Role, on_delete=models.CASCADE)
+    assigned_by = models.ForeignKey('authentication.User', on_delete=models.SET_NULL, null=True, related_name='assigned_roles')
+    assigned_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        unique_together = ['user', 'role']
+
+# permissions/permissions.py
+from rest_framework.permissions import BasePermission
+
+class HasPermission(BasePermission):
+    """
+    Custom permission class that checks user permissions
+    """
+    def __init__(self, required_permission):
+        self.required_permission = required_permission
+
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+
+        return request.user.has_permission(self.required_permission)
+
+    def has_object_permission(self, request, view, obj):
+        return self.has_permission(request, view)
+
+class IsOwnerOrAdmin(BasePermission):
+    """
+    Permission to only allow owners of an object or admins to access it
+    """
+    def has_object_permission(self, request, view, obj):
+        # Admin users have full access
+        if request.user.role in ['admin', 'super_admin']:
+            return True
+
+        # Check if user owns the object
+        if hasattr(obj, 'user'):
+            return obj.user == request.user
+        elif hasattr(obj, 'customer'):
+            return obj.customer == request.user
+
+        return False
+```
+
+### 4.4 JWT Authentication Implementation
+
+```python
+# authentication/jwt_auth.py
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from django.contrib.auth import authenticate
+from rest_framework import serializers
+
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    username_field = 'email'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields[self.username_field] = serializers.EmailField()
+        self.fields['password'] = serializers.CharField()
+
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+
+        # Add custom claims
+        token['user_id'] = str(user.id)
+        token['email'] = user.email
+        token['role'] = user.role
+        token['is_email_verified'] = user.is_email_verified
+
+        return token
+
+    def validate(self, attrs):
+        email = attrs.get('email')
+        password = attrs.get('password')
+
+        if email and password:
+            user = authenticate(username=email, password=password)
+
+            if user:
+                if not user.is_active:
+                    raise serializers.ValidationError('User account is disabled.')
+
+                if user.account_locked_until and timezone.now() < user.account_locked_until:
+                    raise serializers.ValidationError('Account is temporarily locked.')
+
+                # Reset failed login attempts on successful login
+                if user.failed_login_attempts > 0:
+                    user.failed_login_attempts = 0
+                    user.save()
+
+                refresh = self.get_token(user)
+                return {
+                    'refresh': str(refresh),
+                    'access': str(refresh.access_token),
+                }
+            else:
+                # Increment failed login attempts
+                if email:
+                    try:
+                        user = User.objects.get(email=email)
+                        user.failed_login_attempts += 1
+                        if user.failed_login_attempts >= 5:
+                            user.account_locked_until = timezone.now() + timedelta(minutes=30)
+                        user.save()
+                    except User.DoesNotExist:
+                        pass
+
+                raise serializers.ValidationError('Invalid credentials.')
+
+        raise serializers.ValidationError('Must include email and password.')
+
+class CustomTokenObtainPairView(TokenObtainPairView):
+    serializer_class = CustomTokenObtainPairSerializer
+```
+
+### 4.5 Multi-Factor Authentication (MFA)
+
+```python
+# authentication/mfa.py
+import pyotp
+import qrcode
+from io import BytesIO
+import base64
+from django.conf import settings
+
+class MFAManager:
+    @staticmethod
+    def generate_secret_key():
+        """Generate a new secret key for TOTP"""
+        return pyotp.random_base32()
+
+    @staticmethod
+    def generate_qr_code(user, secret_key):
+        """Generate QR code for TOTP setup"""
+        totp_uri = pyotp.totp.TOTP(secret_key).provisioning_uri(
+            name=user.email,
+            issuer_name=settings.MFA_ISSUER_NAME
+        )
+
+        qr = qrcode.QRCode(version=1, box_size=10, border=5)
+        qr.add_data(totp_uri)
+        qr.make(fit=True)
+
+        img = qr.make_image(fill_color="black", back_color="white")
+        buffer = BytesIO()
+        img.save(buffer)
+        buffer.seek(0)
+
+        return base64.b64encode(buffer.getvalue()).decode()
+
+    @staticmethod
+    def verify_totp(secret_key, token):
+        """Verify TOTP token"""
+        totp = pyotp.TOTP(secret_key)
+        return totp.verify(token, valid_window=1)
+
+# authentication/models.py (additional MFA models)
+class UserMFA(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='mfa')
+    secret_key = models.CharField(max_length=32)
+    backup_codes = models.JSONField(default=list)
+    is_enabled = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+class LoginAttempt(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+    email = models.EmailField()
+    ip_address = models.GenericIPAddressField()
+    user_agent = models.TextField()
+    success = models.BooleanField()
+    mfa_required = models.BooleanField(default=False)
+    mfa_success = models.BooleanField(null=True, blank=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+```
+
+### 4.6 OAuth2 Integration
+
+```python
+# authentication/oauth.py
+from django.conf import settings
+import requests
+from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def google_oauth(request):
+    """Handle Google OAuth login"""
+    access_token = request.data.get('access_token')
+
+    if not access_token:
+        return Response(
+            {'error': 'Access token is required'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Verify token with Google
+    google_response = requests.get(
+        f'https://www.googleapis.com/oauth2/v1/userinfo?access_token={access_token}'
+    )
+
+    if google_response.status_code != 200:
+        return Response(
+            {'error': 'Invalid access token'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    google_data = google_response.json()
+    email = google_data.get('email')
+
+    if not email:
+        return Response(
+            {'error': 'Email not provided by Google'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Get or create user
+    user, created = User.objects.get_or_create(
+        email=email,
+        defaults={
+            'username': email,
+            'first_name': google_data.get('given_name', ''),
+            'last_name': google_data.get('family_name', ''),
+            'is_email_verified': True,
+        }
+    )
+
+    # Create social account record
+    SocialAccount.objects.get_or_create(
+        user=user,
+        provider='google',
+        uid=google_data.get('id'),
+        defaults={
+            'extra_data': google_data
+        }
+    )
+
+    # Generate JWT tokens
+    refresh = RefreshToken.for_user(user)
+
+    return Response({
+        'user': UserProfileSerializer(user).data,
+        'refresh': str(refresh),
+        'access': str(refresh.access_token),
+        'created': created
+    })
+
+# Similar implementations for Facebook, GitHub, etc.
+```
+
+### 4.7 Password Security and Recovery
+
+```python
+# authentication/password_utils.py
+import re
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
+from django.contrib.auth.tokens import PasswordResetTokenGenerator
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
+import secrets
+
+class PasswordValidator:
+    @staticmethod
+    def validate_strength(password):
+        """Validate password strength"""
+        errors = []
+
+        if len(password) < 8:
+            errors.append("Password must be at least 8 characters long.")
+
+        if not re.search(r'[A-Z]', password):
+            errors.append("Password must contain at least one uppercase letter.")
+
+        if not re.search(r'[a-z]', password):
+            errors.append("Password must contain at least one lowercase letter.")
+
+        if not re.search(r'\d', password):
+            errors.append("Password must contain at least one digit.")
+
+        if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
+            errors.append("Password must contain at least one special character.")
+
+        # Check against common passwords
+        common_passwords = ['password', '123456', 'qwerty', 'abc123']
+        if password.lower() in common_passwords:
+            errors.append("Password is too common.")
+
+        return errors
+
+class PasswordResetManager:
+    @staticmethod
+    def generate_reset_token(user):
+        """Generate password reset token"""
+        token_generator = PasswordResetTokenGenerator()
+        token = token_generator.make_token(user)
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        return {'token': token, 'uid': uid}
+
+    @staticmethod
+    def verify_reset_token(user, token):
+        """Verify password reset token"""
+        token_generator = PasswordResetTokenGenerator()
+        return token_generator.check_token(user, token)
+
+# authentication/views.py (password reset views)
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def request_password_reset(request):
+    email = request.data.get('email')
+
+    try:
+        user = User.objects.get(email=email)
+        reset_data = PasswordResetManager.generate_reset_token(user)
+
+        # Send reset email (implement email service)
+        send_password_reset_email(user, reset_data)
+
+        return Response({
+            'message': 'Password reset email sent if account exists'
+        })
+    except User.DoesNotExist:
+        # Don't reveal if email exists or not
+        return Response({
+            'message': 'Password reset email sent if account exists'
+        })
+```
+
+## Hands-On Exercises
+
+### Exercise 4.1: Basic Authentication Setup
+
+1. Implement custom User model with additional fields
+2. Set up JWT authentication with custom claims
+3. Create user registration and login endpoints
+4. Implement password validation and security
+
+### Exercise 4.2: Role-Based Access Control
+
+1. Design permission system for different user roles
+2. Create role management interface
+3. Implement permission decorators and middleware
+4. Test access control across different endpoints
+
+### Exercise 4.3: Multi-Factor Authentication
+
+1. Implement TOTP-based MFA
+2. Create MFA setup and verification endpoints
+3. Generate backup codes for account recovery
+4. Integrate MFA into login flow
+
+### Exercise 4.4: OAuth Integration
+
+1. Set up Google OAuth integration
+2. Implement social login endpoints
+3. Handle account linking and creation
+4. Add Facebook and GitHub providers
+
+### Exercise 4.5: Security Features
+
+1. Implement account lockout mechanisms
+2. Create password reset functionality
+3. Add login attempt monitoring
+4. Implement session management
+
+## Key Concepts
+
+- **Authentication**: Verifying user identity
+- **Authorization**: Determining user permissions
+- **JWT Tokens**: Stateless authentication mechanism
+- **OAuth2**: Delegated authorization framework
+- **RBAC**: Role-based access control system
+- **MFA**: Multi-factor authentication for enhanced security
+
+## Security Best Practices
+
+### Password Security
+
+- Enforce strong password policies
+- Use secure password hashing (Django's default PBKDF2)
+- Implement password history to prevent reuse
+- Regular password expiration policies
+
+### Account Security
+
+- Account lockout after failed attempts
+- Rate limiting on authentication endpoints
+- Secure password reset mechanisms
+- Session timeout and management
+
+### Data Protection
+
+- Encrypt sensitive data at rest
+- Use HTTPS for all communications
+- Implement proper input validation
+- Log security events for monitoring
+
+## Authentication Flow Diagrams
+
+### Standard Login Flow
+
+1. User submits credentials
+2. Server validates credentials
+3. Server generates JWT tokens
+4. Client stores tokens securely
+5. Client includes token in API requests
+
+### MFA Login Flow
+
+1. User submits credentials
+2. Server validates credentials
+3. Server requests MFA token
+4. User provides TOTP code
+5. Server validates MFA token
+6. Server generates JWT tokens
+
+## Integration Points
+
+- **Frontend**: Token storage and management
+- **API Gateway**: Token validation middleware
+- **Microservices**: Service-to-service authentication
+- **External Services**: OAuth provider integration
+
+## Next Steps
+
+After completing this module, proceed to [Module 5: Frontend Customer Storefront (TypeScript)](../05-frontend-customer-storefront-typescript) to build the customer-facing interface that will integrate with your authentication system.

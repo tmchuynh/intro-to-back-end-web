@@ -1,0 +1,880 @@
+# Module 5: Frontend Customer Storefront (TypeScript)
+
+## Overview
+
+This module covers building a modern, responsive customer-facing storefront using TypeScript, React, and Next.js. You'll learn about component architecture, state management, API integration, and creating an excellent user experience for Lego enthusiasts.
+
+## Learning Objectives
+
+- Build a responsive e-commerce frontend with TypeScript and React
+- Implement modern state management with Redux Toolkit
+- Create reusable UI components with proper TypeScript typing
+- Integrate with backend APIs for authentication and data
+- Implement shopping cart and checkout functionality
+- Optimize performance and user experience
+- Handle responsive design and accessibility
+
+## Topics Covered
+
+### 5.1 Project Setup and Architecture
+
+```json
+// package.json
+{
+  "name": "lego-storefront",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "next": "^14.0.0",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "@reduxjs/toolkit": "^1.9.0",
+    "react-redux": "^8.1.0",
+    "axios": "^1.5.0",
+    "react-hook-form": "^7.45.0",
+    "@hookform/resolvers": "^3.3.0",
+    "zod": "^3.22.0",
+    "tailwindcss": "^3.3.0",
+    "@headlessui/react": "^1.7.0",
+    "@heroicons/react": "^2.0.0",
+    "framer-motion": "^10.16.0",
+    "react-query": "^3.39.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.0",
+    "typescript": "^5.0.0",
+    "eslint": "^8.0.0",
+    "eslint-config-next": "^14.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "prettier": "^3.0.0"
+  }
+}
+```
+
+### 5.2 TypeScript Types and Interfaces
+
+```typescript
+// types/index.ts
+export interface User {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: "customer" | "staff" | "admin";
+  isEmailVerified: boolean;
+  createdAt: string;
+  profile?: UserProfile;
+}
+
+export interface UserProfile {
+  avatar?: string;
+  dateOfBirth?: string;
+  preferredLanguage: string;
+  timezone: string;
+  marketingConsent: boolean;
+}
+
+export interface Product {
+  id: string;
+  sku: string;
+  name: string;
+  description: string;
+  category: Category;
+  price: number;
+  weight?: number;
+  dimensions?: ProductDimensions;
+  ageRange?: string;
+  pieceCount?: number;
+  status: "active" | "discontinued" | "draft";
+  featured: boolean;
+  images: ProductImage[];
+  averageRating: number;
+  reviewCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProductDimensions {
+  length: number;
+  width: number;
+  height: number;
+  unit: "cm" | "in";
+}
+
+export interface ProductImage {
+  id: string;
+  image: string;
+  altText: string;
+  isPrimary: boolean;
+  order: number;
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  parent?: string;
+}
+
+export interface CartItem {
+  id: string;
+  product: Product;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+}
+
+export interface Cart {
+  id: string;
+  items: CartItem[];
+  itemCount: number;
+  subtotal: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Order {
+  id: string;
+  orderNumber: string;
+  customer: User;
+  status:
+    | "pending"
+    | "confirmed"
+    | "processing"
+    | "shipped"
+    | "delivered"
+    | "cancelled";
+  subtotal: number;
+  taxAmount: number;
+  shippingAmount: number;
+  discountAmount: number;
+  totalAmount: number;
+  paymentStatus: "pending" | "paid" | "failed" | "refunded";
+  shippingAddress: Address;
+  billingAddress: Address;
+  items: OrderItem[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OrderItem {
+  id: string;
+  product: Product;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+}
+
+export interface Address {
+  firstName: string;
+  lastName: string;
+  company?: string;
+  addressLine1: string;
+  addressLine2?: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+}
+
+export interface ApiResponse<T> {
+  data: T;
+  message?: string;
+  status: number;
+}
+
+export interface PaginatedResponse<T> {
+  results: T[];
+  count: number;
+  next: string | null;
+  previous: string | null;
+}
+```
+
+### 5.3 Redux Store Configuration
+
+```typescript
+// store/index.ts
+import { configureStore } from "@reduxjs/toolkit";
+import authReducer from "./slices/authSlice";
+import cartReducer from "./slices/cartSlice";
+import productsReducer from "./slices/productsSlice";
+import ordersReducer from "./slices/ordersSlice";
+import uiReducer from "./slices/uiSlice";
+
+export const store = configureStore({
+  reducer: {
+    auth: authReducer,
+    cart: cartReducer,
+    products: productsReducer,
+    orders: ordersReducer,
+    ui: uiReducer,
+  },
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware({
+      serializableCheck: {
+        ignoredActions: ["persist/PERSIST"],
+      },
+    }),
+});
+
+export type RootState = ReturnType<typeof store.getState>;
+export type AppDispatch = typeof store.dispatch;
+
+// store/slices/authSlice.ts
+import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
+import { User } from "../../types";
+import { authAPI } from "../../services/api";
+
+interface AuthState {
+  user: User | null;
+  accessToken: string | null;
+  refreshToken: string | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  error: string | null;
+}
+
+const initialState: AuthState = {
+  user: null,
+  accessToken: null,
+  refreshToken: null,
+  isAuthenticated: false,
+  isLoading: false,
+  error: null,
+};
+
+export const loginUser = createAsyncThunk(
+  "auth/login",
+  async (
+    credentials: { email: string; password: string },
+    { rejectWithValue }
+  ) => {
+    try {
+      const response = await authAPI.login(credentials);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || "Login failed");
+    }
+  }
+);
+
+export const registerUser = createAsyncThunk(
+  "auth/register",
+  async (
+    userData: {
+      email: string;
+      password: string;
+      firstName: string;
+      lastName: string;
+    },
+    { rejectWithValue }
+  ) => {
+    try {
+      const response = await authAPI.register(userData);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(
+        error.response?.data?.message || "Registration failed"
+      );
+    }
+  }
+);
+
+const authSlice = createSlice({
+  name: "auth",
+  initialState,
+  reducers: {
+    logout: (state) => {
+      state.user = null;
+      state.accessToken = null;
+      state.refreshToken = null;
+      state.isAuthenticated = false;
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+    },
+    clearError: (state) => {
+      state.error = null;
+    },
+    setTokens: (
+      state,
+      action: PayloadAction<{ access: string; refresh: string }>
+    ) => {
+      state.accessToken = action.payload.access;
+      state.refreshToken = action.payload.refresh;
+      state.isAuthenticated = true;
+      localStorage.setItem("accessToken", action.payload.access);
+      localStorage.setItem("refreshToken", action.payload.refresh);
+    },
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(loginUser.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(loginUser.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.user = action.payload.user;
+        state.accessToken = action.payload.access;
+        state.refreshToken = action.payload.refresh;
+        state.isAuthenticated = true;
+        localStorage.setItem("accessToken", action.payload.access);
+        localStorage.setItem("refreshToken", action.payload.refresh);
+      })
+      .addCase(loginUser.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+      });
+  },
+});
+
+export const { logout, clearError, setTokens } = authSlice.actions;
+export default authSlice.reducer;
+```
+
+### 5.4 API Services
+
+```typescript
+// services/api.ts
+import axios, { AxiosInstance, AxiosRequestConfig } from "axios";
+import { store } from "../store";
+import { setTokens, logout } from "../store/slices/authSlice";
+
+class ApiClient {
+  private client: AxiosInstance;
+
+  constructor() {
+    this.client = axios.create({
+      baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    this.setupInterceptors();
+  }
+
+  private setupInterceptors() {
+    // Request interceptor to add auth token
+    this.client.interceptors.request.use(
+      (config) => {
+        const token = store.getState().auth.accessToken;
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+      },
+      (error) => {
+        return Promise.reject(error);
+      }
+    );
+
+    // Response interceptor to handle token refresh
+    this.client.interceptors.response.use(
+      (response) => response,
+      async (error) => {
+        const originalRequest = error.config;
+
+        if (error.response?.status === 401 && !originalRequest._retry) {
+          originalRequest._retry = true;
+
+          try {
+            const refreshToken = store.getState().auth.refreshToken;
+            if (refreshToken) {
+              const response = await axios.post(
+                `${process.env.NEXT_PUBLIC_API_URL}/auth/refresh/`,
+                { refresh: refreshToken }
+              );
+
+              const { access } = response.data;
+              store.dispatch(setTokens({ access, refresh: refreshToken }));
+
+              originalRequest.headers.Authorization = `Bearer ${access}`;
+              return this.client(originalRequest);
+            }
+          } catch (refreshError) {
+            store.dispatch(logout());
+            window.location.href = "/login";
+          }
+        }
+
+        return Promise.reject(error);
+      }
+    );
+  }
+
+  public get<T>(url: string, config?: AxiosRequestConfig) {
+    return this.client.get<T>(url, config);
+  }
+
+  public post<T>(url: string, data?: any, config?: AxiosRequestConfig) {
+    return this.client.post<T>(url, data, config);
+  }
+
+  public put<T>(url: string, data?: any, config?: AxiosRequestConfig) {
+    return this.client.put<T>(url, data, config);
+  }
+
+  public delete<T>(url: string, config?: AxiosRequestConfig) {
+    return this.client.delete<T>(url, config);
+  }
+}
+
+export const apiClient = new ApiClient();
+
+// Authentication API
+export const authAPI = {
+  login: (credentials: { email: string; password: string }) =>
+    apiClient.post("/auth/login/", credentials),
+
+  register: (userData: {
+    email: string;
+    password: string;
+    firstName: string;
+    lastName: string;
+  }) => apiClient.post("/auth/register/", userData),
+
+  logout: () => apiClient.post("/auth/logout/"),
+
+  refreshToken: (refresh: string) =>
+    apiClient.post("/auth/refresh/", { refresh }),
+
+  profile: () => apiClient.get("/auth/profile/"),
+
+  updateProfile: (data: Partial<User>) => apiClient.put("/auth/profile/", data),
+};
+
+// Products API
+export const productsAPI = {
+  getProducts: (params?: {
+    page?: number;
+    category?: string;
+    search?: string;
+    minPrice?: number;
+    maxPrice?: number;
+    ordering?: string;
+  }) => apiClient.get("/products/", { params }),
+
+  getProduct: (id: string) => apiClient.get(`/products/${id}/`),
+
+  getFeaturedProducts: () => apiClient.get("/products/featured/"),
+
+  getCategories: () => apiClient.get("/categories/"),
+};
+
+// Cart API
+export const cartAPI = {
+  getCart: () => apiClient.get("/cart/"),
+
+  addToCart: (productId: string, quantity: number) =>
+    apiClient.post("/cart/items/", { product_id: productId, quantity }),
+
+  updateCartItem: (itemId: string, quantity: number) =>
+    apiClient.put(`/cart/items/${itemId}/`, { quantity }),
+
+  removeFromCart: (itemId: string) =>
+    apiClient.delete(`/cart/items/${itemId}/`),
+
+  clearCart: () => apiClient.delete("/cart/clear/"),
+};
+
+// Orders API
+export const ordersAPI = {
+  getOrders: () => apiClient.get("/orders/"),
+
+  getOrder: (id: string) => apiClient.get(`/orders/${id}/`),
+
+  createOrder: (orderData: {
+    shipping_address: Address;
+    billing_address: Address;
+    payment_method: string;
+  }) => apiClient.post("/orders/create-from-cart/", orderData),
+};
+```
+
+### 5.5 React Components
+
+```typescript
+// components/ProductCard.tsx
+import React from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
+import { Product } from '../types';
+import { StarIcon } from '@heroicons/react/24/solid';
+import { StarIcon as StarOutlineIcon } from '@heroicons/react/24/outline';
+
+interface ProductCardProps {
+  product: Product;
+  className?: string;
+}
+
+const ProductCard: React.FC<ProductCardProps> = ({ product, className = '' }) => {
+  const renderStars = (rating: number) => {
+    const stars = [];
+    for (let i = 1; i <= 5; i++) {
+      stars.push(
+        <span key={i}>
+          {i <= rating ? (
+            <StarIcon className="h-4 w-4 text-yellow-400" />
+          ) : (
+            <StarOutlineIcon className="h-4 w-4 text-gray-300" />
+          )}
+        </span>
+      );
+    }
+    return stars;
+  };
+
+  const primaryImage = product.images.find(img => img.isPrimary) || product.images[0];
+
+  return (
+    <div className={`group relative bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow ${className}`}>
+      <Link href={`/products/${product.id}`}>
+        <div className="aspect-w-4 aspect-h-3 rounded-t-lg overflow-hidden">
+          {primaryImage && (
+            <Image
+              src={primaryImage.image}
+              alt={primaryImage.altText || product.name}
+              fill
+              className="object-cover object-center group-hover:opacity-75 transition-opacity"
+            />
+          )}
+          {product.featured && (
+            <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 text-xs rounded">
+              Featured
+            </div>
+          )}
+        </div>
+
+        <div className="p-4">
+          <h3 className="text-sm font-medium text-gray-900 line-clamp-2 group-hover:text-blue-600 transition-colors">
+            {product.name}
+          </h3>
+
+          <div className="mt-2 flex items-center">
+            <div className="flex items-center">
+              {renderStars(Math.round(product.averageRating))}
+            </div>
+            <span className="ml-2 text-sm text-gray-500">
+              ({product.reviewCount})
+            </span>
+          </div>
+
+          <div className="mt-2 flex items-center justify-between">
+            <p className="text-lg font-semibold text-gray-900">
+              ${product.price.toFixed(2)}
+            </p>
+
+            {product.pieceCount && (
+              <span className="text-sm text-gray-500">
+                {product.pieceCount} pcs
+              </span>
+            )}
+          </div>
+
+          {product.ageRange && (
+            <p className="mt-1 text-sm text-gray-500">
+              Ages {product.ageRange}
+            </p>
+          )}
+        </div>
+      </Link>
+    </div>
+  );
+};
+
+export default ProductCard;
+
+// components/AddToCartButton.tsx
+import React, { useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { addToCart } from '../store/slices/cartSlice';
+import { RootState, AppDispatch } from '../store';
+import { ShoppingCartIcon } from '@heroicons/react/24/outline';
+
+interface AddToCartButtonProps {
+  productId: string;
+  variant?: 'primary' | 'secondary';
+  size?: 'sm' | 'md' | 'lg';
+  className?: string;
+}
+
+const AddToCartButton: React.FC<AddToCartButtonProps> = ({
+  productId,
+  variant = 'primary',
+  size = 'md',
+  className = '',
+}) => {
+  const dispatch = useDispatch<AppDispatch>();
+  const { isLoading } = useSelector((state: RootState) => state.cart);
+  const [quantity, setQuantity] = useState(1);
+
+  const handleAddToCart = async () => {
+    try {
+      await dispatch(addToCart({ productId, quantity })).unwrap();
+      // Show success notification
+    } catch (error) {
+      // Show error notification
+    }
+  };
+
+  const baseClasses = 'inline-flex items-center justify-center rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none';
+
+  const variantClasses = {
+    primary: 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500',
+    secondary: 'bg-gray-200 text-gray-900 hover:bg-gray-300 focus:ring-gray-500',
+  };
+
+  const sizeClasses = {
+    sm: 'px-3 py-2 text-sm',
+    md: 'px-4 py-2 text-base',
+    lg: 'px-6 py-3 text-lg',
+  };
+
+  return (
+    <div className="flex items-center space-x-2">
+      <select
+        value={quantity}
+        onChange={(e) => setQuantity(parseInt(e.target.value))}
+        className="block w-20 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+      >
+        {[...Array(10)].map((_, i) => (
+          <option key={i + 1} value={i + 1}>
+            {i + 1}
+          </option>
+        ))}
+      </select>
+
+      <button
+        onClick={handleAddToCart}
+        disabled={isLoading}
+        className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
+      >
+        {isLoading ? (
+          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+        ) : (
+          <>
+            <ShoppingCartIcon className="h-5 w-5 mr-2" />
+            Add to Cart
+          </>
+        )}
+      </button>
+    </div>
+  );
+};
+
+export default AddToCartButton;
+```
+
+### 5.6 Shopping Cart Implementation
+
+```typescript
+// components/ShoppingCart.tsx
+import React from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import { RootState, AppDispatch } from '../store';
+import { updateCartItem, removeFromCart } from '../store/slices/cartSlice';
+import { XMarkIcon, MinusIcon, PlusIcon } from '@heroicons/react/24/outline';
+import Image from 'next/image';
+
+const ShoppingCart: React.FC = () => {
+  const dispatch = useDispatch<AppDispatch>();
+  const { items, subtotal, isLoading } = useSelector((state: RootState) => state.cart);
+
+  const handleQuantityChange = (itemId: string, newQuantity: number) => {
+    if (newQuantity < 1) {
+      dispatch(removeFromCart(itemId));
+    } else {
+      dispatch(updateCartItem({ itemId, quantity: newQuantity }));
+    }
+  };
+
+  const handleRemoveItem = (itemId: string) => {
+    dispatch(removeFromCart(itemId));
+  };
+
+  if (items.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <ShoppingCartIcon className="mx-auto h-12 w-12 text-gray-400" />
+        <h3 className="mt-2 text-sm font-medium text-gray-900">Your cart is empty</h3>
+        <p className="mt-1 text-sm text-gray-500">Start shopping to add items to your cart.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white">
+      <h2 className="text-lg font-medium text-gray-900 mb-4">Shopping Cart</h2>
+
+      <div className="space-y-4">
+        {items.map((item) => {
+          const primaryImage = item.product.images.find(img => img.isPrimary) || item.product.images[0];
+
+          return (
+            <div key={item.id} className="flex items-center space-x-4 py-4 border-b border-gray-200">
+              <div className="flex-shrink-0 h-16 w-16">
+                {primaryImage && (
+                  <Image
+                    src={primaryImage.image}
+                    alt={item.product.name}
+                    width={64}
+                    height={64}
+                    className="h-16 w-16 object-cover rounded-md"
+                  />
+                )}
+              </div>
+
+              <div className="flex-1 min-w-0">
+                <h4 className="text-sm font-medium text-gray-900 line-clamp-2">
+                  {item.product.name}
+                </h4>
+                <p className="text-sm text-gray-500">SKU: {item.product.sku}</p>
+                <p className="text-sm font-medium text-gray-900">
+                  ${item.unitPrice.toFixed(2)}
+                </p>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
+                  className="p-1 rounded-md hover:bg-gray-100"
+                  disabled={isLoading}
+                >
+                  <MinusIcon className="h-4 w-4" />
+                </button>
+
+                <span className="px-2 py-1 min-w-[2rem] text-center text-sm">
+                  {item.quantity}
+                </span>
+
+                <button
+                  onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
+                  className="p-1 rounded-md hover:bg-gray-100"
+                  disabled={isLoading}
+                >
+                  <PlusIcon className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="text-right">
+                <p className="text-sm font-medium text-gray-900">
+                  ${item.totalPrice.toFixed(2)}
+                </p>
+                <button
+                  onClick={() => handleRemoveItem(item.id)}
+                  className="text-red-600 hover:text-red-500 text-sm"
+                  disabled={isLoading}
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="mt-6 border-t border-gray-200 pt-4">
+        <div className="flex justify-between text-base font-medium text-gray-900">
+          <p>Subtotal</p>
+          <p>${subtotal.toFixed(2)}</p>
+        </div>
+        <p className="mt-0.5 text-sm text-gray-500">
+          Shipping and taxes calculated at checkout.
+        </p>
+
+        <div className="mt-6">
+          <button className="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 transition-colors">
+            Proceed to Checkout
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ShoppingCart;
+```
+
+## Hands-On Exercises
+
+### Exercise 5.1: Project Setup
+
+1. Initialize Next.js project with TypeScript
+2. Set up Tailwind CSS for styling
+3. Configure ESLint and Prettier
+4. Set up Redux store with proper typing
+
+### Exercise 5.2: Authentication UI
+
+1. Create login and registration forms
+2. Implement form validation with Zod
+3. Handle authentication state in Redux
+4. Create protected route components
+
+### Exercise 5.3: Product Catalog
+
+1. Build product listing page with filtering
+2. Create product detail page
+3. Implement search functionality
+4. Add pagination and infinite scroll
+
+### Exercise 5.4: Shopping Cart
+
+1. Implement cart functionality
+2. Create cart sidebar/modal
+3. Handle quantity updates and item removal
+4. Persist cart state across sessions
+
+### Exercise 5.5: Checkout Process
+
+1. Build checkout form with address validation
+2. Integrate with payment processing
+3. Handle order confirmation
+4. Create order history page
+
+## Key Concepts
+
+- **TypeScript**: Type safety and better development experience
+- **Component Architecture**: Reusable and maintainable UI components
+- **State Management**: Redux Toolkit for predictable state updates
+- **API Integration**: Axios with interceptors for authentication
+- **Form Handling**: React Hook Form with Zod validation
+- **Performance**: Code splitting, lazy loading, and optimization
+
+## UI/UX Best Practices
+
+### Responsive Design
+
+- Mobile-first approach
+- Flexible grid systems
+- Touch-friendly interface elements
+- Progressive enhancement
+
+### Accessibility
+
+- Semantic HTML structure
+- ARIA labels and roles
+- Keyboard navigation support
+- Screen reader compatibility
+
+### Performance
+
+- Image optimization with Next.js
+- Code splitting and lazy loading
+- Efficient API calls and caching
+- Bundle size optimization
+
+## Next Steps
+
+After completing this module, proceed to [Module 6: Admin Dashboard & Inventory Management](../06-admin-dashboard-inventory-management) to build the administrative interface for managing the e-commerce platform.

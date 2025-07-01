@@ -1,0 +1,470 @@
+# Module 3: Backend API Development (Django)
+
+## Overview
+
+This module covers building a robust REST API using Django and Django REST Framework (DRF) to power the Lego e-commerce platform. You'll learn about API design patterns, authentication, serialization, and best practices for building scalable backend services.
+
+## Learning Objectives
+
+- Build RESTful APIs with Django REST Framework
+- Implement proper API authentication and authorization
+- Design efficient serializers and viewsets
+- Handle file uploads and media management
+- Implement API versioning and documentation
+- Optimize API performance and caching
+
+## Topics Covered
+
+### 3.1 Django Project Setup and Configuration
+
+- **Project structure**: Organizing Django apps by domain
+- **Settings management**: Environment-specific configurations
+- **Database integration**: Connecting Django to CockroachDB
+- **Middleware configuration**: CORS, authentication, logging
+
+### 3.2 Django Models and ORM
+
+```python
+# products/models.py
+from django.db import models
+from django.contrib.auth.models import AbstractUser
+import uuid
+
+class User(AbstractUser):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    email = models.EmailField(unique=True)
+    phone = models.CharField(max_length=20, blank=True)
+    role = models.CharField(max_length=20, default='customer')
+    email_verified = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+class Category(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=255)
+    slug = models.SlugField(unique=True)
+    description = models.TextField(blank=True)
+    parent = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+class Product(models.Model):
+    STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('discontinued', 'Discontinued'),
+        ('draft', 'Draft'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    sku = models.CharField(max_length=50, unique=True)
+    name = models.CharField(max_length=255)
+    description = models.TextField()
+    category = models.ForeignKey(Category, on_delete=models.PROTECT)
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    cost = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    weight = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    dimensions = models.JSONField(null=True, blank=True)
+    age_range = models.CharField(max_length=20, blank=True)
+    piece_count = models.IntegerField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    featured = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['status', 'featured']),
+            models.Index(fields=['category', 'status']),
+            models.Index(fields=['created_at']),
+        ]
+```
+
+### 3.3 Django REST Framework Serializers
+
+```python
+# products/serializers.py
+from rest_framework import serializers
+from .models import Product, Category, ProductImage
+
+class CategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = ['id', 'name', 'slug', 'description', 'parent']
+
+class ProductImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductImage
+        fields = ['id', 'image', 'alt_text', 'is_primary', 'order']
+
+class ProductSerializer(serializers.ModelSerializer):
+    category = CategorySerializer(read_only=True)
+    category_id = serializers.UUIDField(write_only=True)
+    images = ProductImageSerializer(many=True, read_only=True)
+    average_rating = serializers.SerializerMethodField()
+    review_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Product
+        fields = [
+            'id', 'sku', 'name', 'description', 'category', 'category_id',
+            'price', 'weight', 'dimensions', 'age_range', 'piece_count',
+            'status', 'featured', 'images', 'average_rating', 'review_count',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def get_average_rating(self, obj):
+        return obj.reviews.aggregate(
+            avg_rating=models.Avg('rating')
+        )['avg_rating'] or 0
+
+    def get_review_count(self, obj):
+        return obj.reviews.count()
+
+class ProductListSerializer(ProductSerializer):
+    """Optimized serializer for product list views"""
+    class Meta(ProductSerializer.Meta):
+        fields = [
+            'id', 'sku', 'name', 'price', 'featured', 'images',
+            'average_rating', 'review_count'
+        ]
+```
+
+### 3.4 API Views and ViewSets
+
+```python
+# products/views.py
+from rest_framework import viewsets, filters, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
+from django_filters.rest_framework import DjangoFilterBackend
+from .models import Product, Category
+from .serializers import ProductSerializer, ProductListSerializer, CategorySerializer
+from .filters import ProductFilter
+from .permissions import IsAdminOrReadOnly
+
+class ProductViewSet(viewsets.ModelViewSet):
+    queryset = Product.objects.select_related('category').prefetch_related('images', 'reviews')
+    permission_classes = [IsAuthenticatedOrReadOnly]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_class = ProductFilter
+    search_fields = ['name', 'description', 'sku']
+    ordering_fields = ['name', 'price', 'created_at', 'average_rating']
+    ordering = ['-created_at']
+
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return ProductListSerializer
+        return ProductSerializer
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        if self.action == 'list':
+            # Only show active products to non-admin users
+            if not self.request.user.is_staff:
+                queryset = queryset.filter(status='active')
+        return queryset
+
+    @action(detail=False, methods=['get'])
+    def featured(self, request):
+        """Get featured products"""
+        featured_products = self.get_queryset().filter(featured=True, status='active')[:8]
+        serializer = self.get_serializer(featured_products, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    def add_to_wishlist(self, request, pk=None):
+        """Add product to user's wishlist"""
+        product = self.get_object()
+        wishlist, created = Wishlist.objects.get_or_create(
+            user=request.user,
+            product=product
+        )
+        if created:
+            return Response({'message': 'Added to wishlist'}, status=status.HTTP_201_CREATED)
+        return Response({'message': 'Already in wishlist'}, status=status.HTTP_200_OK)
+```
+
+### 3.5 Authentication and Permissions
+
+```python
+# authentication/views.py
+from rest_framework import status
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth import authenticate
+from .serializers import UserRegistrationSerializer, UserProfileSerializer
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def register(request):
+    serializer = UserRegistrationSerializer(data=request.data)
+    if serializer.is_valid():
+        user = serializer.save()
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            'user': UserProfileSerializer(user).data,
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+        }, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def login(request):
+    email = request.data.get('email')
+    password = request.data.get('password')
+
+    if email and password:
+        user = authenticate(username=email, password=password)
+        if user:
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                'user': UserProfileSerializer(user).data,
+                'refresh': str(refresh),
+                'access': str(refresh.access_token),
+            })
+
+    return Response(
+        {'error': 'Invalid credentials'},
+        status=status.HTTP_401_UNAUTHORIZED
+    )
+```
+
+### 3.6 Order Management API
+
+```python
+# orders/views.py
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from django.db import transaction
+from .models import Order, OrderItem, Cart, CartItem
+from .serializers import OrderSerializer, CartSerializer
+
+class OrderViewSet(viewsets.ModelViewSet):
+    serializer_class = OrderSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Order.objects.filter(customer=self.request.user).select_related('customer').prefetch_related('items__product')
+
+    @action(detail=False, methods=['post'])
+    def create_from_cart(self, request):
+        """Create order from user's cart"""
+        try:
+            with transaction.atomic():
+                cart = Cart.objects.get(user=request.user)
+                cart_items = cart.items.select_related('product')
+
+                if not cart_items.exists():
+                    return Response(
+                        {'error': 'Cart is empty'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+                # Calculate totals
+                subtotal = sum(item.product.price * item.quantity for item in cart_items)
+                tax_amount = subtotal * 0.08  # 8% tax
+                shipping_amount = 0 if subtotal > 50 else 9.99
+                total_amount = subtotal + tax_amount + shipping_amount
+
+                # Create order
+                order = Order.objects.create(
+                    customer=request.user,
+                    subtotal=subtotal,
+                    tax_amount=tax_amount,
+                    shipping_amount=shipping_amount,
+                    total_amount=total_amount,
+                    shipping_address=request.data.get('shipping_address'),
+                    billing_address=request.data.get('billing_address')
+                )
+
+                # Create order items
+                for cart_item in cart_items:
+                    OrderItem.objects.create(
+                        order=order,
+                        product=cart_item.product,
+                        quantity=cart_item.quantity,
+                        unit_price=cart_item.product.price,
+                        total_price=cart_item.product.price * cart_item.quantity
+                    )
+
+                # Clear cart
+                cart_items.delete()
+
+                serializer = self.get_serializer(order)
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        except Cart.DoesNotExist:
+            return Response(
+                {'error': 'Cart not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {'error': 'Failed to create order'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+```
+
+### 3.7 API Testing and Documentation
+
+```python
+# tests/test_products.py
+from django.test import TestCase
+from django.urls import reverse
+from rest_framework.test import APIClient
+from rest_framework import status
+from django.contrib.auth import get_user_model
+from products.models import Product, Category
+
+User = get_user_model()
+
+class ProductAPITestCase(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123'
+        )
+        self.category = Category.objects.create(
+            name='Building Sets',
+            slug='building-sets'
+        )
+        self.product = Product.objects.create(
+            sku='LEGO-001',
+            name='Test Lego Set',
+            description='A test lego set',
+            category=self.category,
+            price=29.99,
+            piece_count=100
+        )
+
+    def test_get_product_list(self):
+        url = reverse('product-list')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 1)
+
+    def test_get_product_detail(self):
+        url = reverse('product-detail', kwargs={'pk': self.product.id})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['name'], 'Test Lego Set')
+
+    def test_create_product_requires_authentication(self):
+        url = reverse('product-list')
+        data = {
+            'sku': 'LEGO-002',
+            'name': 'New Lego Set',
+            'description': 'Another test set',
+            'category_id': self.category.id,
+            'price': 39.99
+        }
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+```
+
+## Hands-On Exercises
+
+### Exercise 3.1: Django Project Setup
+
+1. Create Django project with proper app structure
+2. Configure CockroachDB connection
+3. Set up Django REST Framework
+4. Configure CORS and authentication
+
+### Exercise 3.2: Models and Migrations
+
+1. Implement all core models with relationships
+2. Create and run database migrations
+3. Set up Django admin interface
+4. Create data fixtures for testing
+
+### Exercise 3.3: API Development
+
+1. Build complete product catalog API
+2. Implement user authentication endpoints
+3. Create order management API
+4. Add cart functionality
+
+### Exercise 3.4: API Testing
+
+1. Write comprehensive unit tests
+2. Create integration tests for API endpoints
+3. Set up API documentation with drf-spectacular
+4. Test API performance and optimization
+
+## Key Concepts
+
+- **RESTful API Design**: Following REST principles and conventions
+- **Serialization**: Converting between Python objects and JSON
+- **ViewSets and Routers**: DRF's class-based views for APIs
+- **Authentication**: JWT tokens and session-based auth
+- **Permissions**: Role-based access control
+- **Filtering and Pagination**: Handling large datasets efficiently
+
+## API Endpoints Overview
+
+### Authentication
+
+- `POST /api/auth/register/` - User registration
+- `POST /api/auth/login/` - User login
+- `POST /api/auth/logout/` - User logout
+- `POST /api/auth/refresh/` - Refresh JWT token
+
+### Products
+
+- `GET /api/products/` - List products with filtering
+- `GET /api/products/{id}/` - Get product details
+- `POST /api/products/` - Create product (admin only)
+- `PUT /api/products/{id}/` - Update product (admin only)
+- `DELETE /api/products/{id}/` - Delete product (admin only)
+- `GET /api/products/featured/` - Get featured products
+
+### Orders
+
+- `GET /api/orders/` - List user's orders
+- `GET /api/orders/{id}/` - Get order details
+- `POST /api/orders/create-from-cart/` - Create order from cart
+
+### Cart
+
+- `GET /api/cart/` - Get user's cart
+- `POST /api/cart/items/` - Add item to cart
+- `PUT /api/cart/items/{id}/` - Update cart item
+- `DELETE /api/cart/items/{id}/` - Remove item from cart
+
+## Performance Optimization
+
+### Database Optimization
+
+- Use `select_related()` and `prefetch_related()` for efficient queries
+- Implement database indexes for common query patterns
+- Use pagination for large result sets
+- Cache expensive queries with Redis
+
+### API Optimization
+
+- Implement API response caching
+- Use different serializers for list vs detail views
+- Optimize image handling with CDN integration
+- Implement API rate limiting
+
+## Security Best Practices
+
+- Use HTTPS in production
+- Implement proper input validation
+- Use parameterized queries to prevent SQL injection
+- Implement rate limiting and throttling
+- Validate file uploads securely
+- Use environment variables for sensitive settings
+
+## Next Steps
+
+After completing this module, proceed to [Module 4: Identity Access Management](../04-identity-access-management) to implement comprehensive user authentication and authorization systems.

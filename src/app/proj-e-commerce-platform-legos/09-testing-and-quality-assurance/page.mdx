@@ -1,0 +1,1366 @@
+# Module 9: Testing and Quality Assurance
+
+## Overview
+
+This module covers implementing comprehensive testing strategies for the Lego e-commerce platform. You'll learn about unit testing, integration testing, end-to-end testing, performance testing, security testing, and automated quality assurance processes.
+
+## Learning Objectives
+
+- Implement comprehensive unit testing for backend and frontend
+- Create integration tests for API endpoints and database operations
+- Set up end-to-end testing with automated user scenarios
+- Perform load testing and performance benchmarking
+- Implement security testing and vulnerability assessments
+- Set up continuous integration and automated testing pipelines
+- Create test data management and mocking strategies
+
+## Topics Covered
+
+### 9.1 Backend Testing Strategy (Django)
+
+```python
+# tests/conftest.py
+import pytest
+from django.test import TestCase
+from django.contrib.auth import get_user_model
+from rest_framework.test import APIClient
+from products.models import Product, Category
+from orders.models import Order, OrderItem
+from inventory.models import Inventory, Warehouse
+from decimal import Decimal
+
+User = get_user_model()
+
+@pytest.fixture
+def api_client():
+    return APIClient()
+
+@pytest.fixture
+def test_user():
+    return User.objects.create_user(
+        email='test@example.com',
+        password='testpass123',
+        first_name='Test',
+        last_name='User'
+    )
+
+@pytest.fixture
+def admin_user():
+    return User.objects.create_user(
+        email='admin@example.com',
+        password='adminpass123',
+        role='admin',
+        is_staff=True
+    )
+
+@pytest.fixture
+def test_category():
+    return Category.objects.create(
+        name='Test Category',
+        slug='test-category',
+        description='A test category'
+    )
+
+@pytest.fixture
+def test_product(test_category):
+    return Product.objects.create(
+        sku='TEST-001',
+        name='Test Lego Set',
+        description='A test lego set for testing',
+        category=test_category,
+        price=Decimal('29.99'),
+        piece_count=100,
+        age_range='6-12',
+        status='active'
+    )
+
+@pytest.fixture
+def test_warehouse():
+    return Warehouse.objects.create(
+        name='Test Warehouse',
+        address={
+            'street': '123 Test St',
+            'city': 'Test City',
+            'state': 'TS',
+            'zip': '12345'
+        },
+        is_active=True,
+        capacity=10000
+    )
+
+@pytest.fixture
+def test_inventory(test_product, test_warehouse):
+    return Inventory.objects.create(
+        product=test_product,
+        warehouse=test_warehouse,
+        quantity_available=100,
+        reorder_point=10
+    )
+
+# tests/test_models.py
+import pytest
+from django.core.exceptions import ValidationError
+from products.models import Product, Category
+from orders.models import Order
+from decimal import Decimal
+
+@pytest.mark.django_db
+class TestProductModel:
+    def test_product_creation(self, test_category):
+        product = Product.objects.create(
+            sku='TEST-002',
+            name='Test Product',
+            description='Test description',
+            category=test_category,
+            price=Decimal('19.99'),
+            status='active'
+        )
+
+        assert product.sku == 'TEST-002'
+        assert product.name == 'Test Product'
+        assert product.price == Decimal('19.99')
+        assert product.status == 'active'
+        assert str(product) == 'Test Product'
+
+    def test_product_sku_unique(self, test_category, test_product):
+        with pytest.raises(Exception):  # Should raise IntegrityError
+            Product.objects.create(
+                sku=test_product.sku,  # Duplicate SKU
+                name='Another Product',
+                category=test_category,
+                price=Decimal('39.99')
+            )
+
+    def test_product_price_validation(self, test_category):
+        with pytest.raises(ValidationError):
+            product = Product(
+                sku='TEST-003',
+                name='Invalid Product',
+                category=test_category,
+                price=Decimal('-10.00')  # Negative price
+            )
+            product.full_clean()
+
+    def test_product_status_choices(self, test_category):
+        product = Product.objects.create(
+            sku='TEST-004',
+            name='Status Test',
+            category=test_category,
+            price=Decimal('29.99'),
+            status='draft'
+        )
+        assert product.status == 'draft'
+
+@pytest.mark.django_db
+class TestOrderModel:
+    def test_order_creation(self, test_user):
+        order = Order.objects.create(
+            customer=test_user,
+            order_number='ORD-001',
+            subtotal=Decimal('100.00'),
+            total_amount=Decimal('108.00'),
+            status='pending'
+        )
+
+        assert order.customer == test_user
+        assert order.order_number == 'ORD-001'
+        assert order.total_amount == Decimal('108.00')
+
+    def test_order_number_generation(self, test_user):
+        order = Order.objects.create(
+            customer=test_user,
+            subtotal=Decimal('50.00'),
+            total_amount=Decimal('54.00')
+        )
+
+        # Order number should be auto-generated
+        assert order.order_number is not None
+        assert order.order_number.startswith('ORD-')
+
+# tests/test_api.py
+import pytest
+from rest_framework import status
+from rest_framework.test import APIClient
+from django.urls import reverse
+from products.models import Product
+
+@pytest.mark.django_db
+class TestProductAPI:
+    def test_get_products_list(self, api_client, test_product):
+        url = reverse('product-list')
+        response = api_client.get(url)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data['results']) == 1
+        assert response.data['results'][0]['name'] == test_product.name
+
+    def test_get_product_detail(self, api_client, test_product):
+        url = reverse('product-detail', kwargs={'pk': test_product.id})
+        response = api_client.get(url)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data['name'] == test_product.name
+        assert response.data['sku'] == test_product.sku
+
+    def test_create_product_requires_authentication(self, api_client, test_category):
+        url = reverse('product-list')
+        data = {
+            'sku': 'NEW-001',
+            'name': 'New Product',
+            'description': 'New description',
+            'category_id': test_category.id,
+            'price': '39.99'
+        }
+        response = api_client.post(url, data)
+
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+    def test_create_product_with_admin(self, api_client, admin_user, test_category):
+        api_client.force_authenticate(user=admin_user)
+        url = reverse('product-list')
+        data = {
+            'sku': 'NEW-002',
+            'name': 'Admin Product',
+            'description': 'Created by admin',
+            'category_id': str(test_category.id),
+            'price': '49.99',
+            'piece_count': 200
+        }
+        response = api_client.post(url, data)
+
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.data['name'] == 'Admin Product'
+
+    def test_product_filtering(self, api_client, test_product):
+        url = reverse('product-list')
+        response = api_client.get(url, {'category': test_product.category.id})
+
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data['results']) == 1
+
+    def test_product_search(self, api_client, test_product):
+        url = reverse('product-list')
+        response = api_client.get(url, {'search': 'Test Lego'})
+
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data['results']) >= 1
+
+@pytest.mark.django_db
+class TestCartAPI:
+    def test_add_to_cart(self, api_client, test_user, test_product):
+        api_client.force_authenticate(user=test_user)
+        url = reverse('cart-add-item')
+        data = {
+            'product_id': str(test_product.id),
+            'quantity': 2
+        }
+        response = api_client.post(url, data)
+
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.data['quantity'] == 2
+
+    def test_get_cart(self, api_client, test_user):
+        api_client.force_authenticate(user=test_user)
+        url = reverse('cart-detail')
+        response = api_client.get(url)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert 'items' in response.data
+
+    def test_update_cart_item(self, api_client, test_user, test_product):
+        # First add item to cart
+        api_client.force_authenticate(user=test_user)
+        add_url = reverse('cart-add-item')
+        api_client.post(add_url, {
+            'product_id': str(test_product.id),
+            'quantity': 1
+        })
+
+        # Get cart to find item ID
+        cart_url = reverse('cart-detail')
+        cart_response = api_client.get(cart_url)
+        item_id = cart_response.data['items'][0]['id']
+
+        # Update item quantity
+        update_url = reverse('cart-update-item', kwargs={'pk': item_id})
+        response = api_client.put(update_url, {'quantity': 3})
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data['quantity'] == 3
+
+# tests/test_services.py
+import pytest
+from inventory.services import InventoryService
+from orders.models import Order, OrderItem
+from decimal import Decimal
+
+@pytest.mark.django_db
+class TestInventoryService:
+    def test_reserve_stock_success(self, test_user, test_product, test_inventory):
+        # Create order with items
+        order = Order.objects.create(
+            customer=test_user,
+            order_number='ORD-TEST-001',
+            subtotal=Decimal('59.98'),
+            total_amount=Decimal('64.78')
+        )
+
+        order_item = OrderItem.objects.create(
+            order=order,
+            product=test_product,
+            quantity=2,
+            unit_price=test_product.price,
+            total_price=test_product.price * 2
+        )
+
+        # Reserve stock
+        reservations = InventoryService.reserve_stock([order_item])
+
+        # Check reservation was successful
+        assert len(reservations) == 1
+        assert reservations[0]['quantity'] == 2
+
+        # Check inventory was updated
+        test_inventory.refresh_from_db()
+        assert test_inventory.quantity_available == 98
+        assert test_inventory.quantity_reserved == 2
+
+    def test_reserve_insufficient_stock(self, test_user, test_product, test_inventory):
+        # Update inventory to have low stock
+        test_inventory.quantity_available = 1
+        test_inventory.save()
+
+        order = Order.objects.create(
+            customer=test_user,
+            order_number='ORD-TEST-002',
+            subtotal=Decimal('119.96'),
+            total_amount=Decimal('129.56')
+        )
+
+        order_item = OrderItem.objects.create(
+            order=order,
+            product=test_product,
+            quantity=5,  # More than available
+            unit_price=test_product.price,
+            total_price=test_product.price * 5
+        )
+
+        # Should raise exception for insufficient stock
+        with pytest.raises(Exception):
+            InventoryService.reserve_stock([order_item])
+
+    def test_stock_adjustment(self, test_user, test_product, test_warehouse):
+        # Test positive adjustment
+        result = InventoryService.adjust_stock(
+            product=test_product,
+            warehouse=test_warehouse,
+            quantity=50,
+            reason='Restock',
+            user=test_user
+        )
+
+        assert result['adjustment'] == 50
+        assert result['new_quantity'] == 50
+
+# tests/test_payment_integration.py
+import pytest
+from unittest.mock import patch, Mock
+from payments.services import StripeService
+from orders.models import Order
+from decimal import Decimal
+
+@pytest.mark.django_db
+class TestStripeService:
+    @patch('stripe.PaymentIntent.create')
+    def test_create_payment_intent(self, mock_create, test_user):
+        # Mock Stripe response
+        mock_intent = Mock()
+        mock_intent.id = 'pi_test_123'
+        mock_intent.client_secret = 'pi_test_123_secret'
+        mock_create.return_value = mock_intent
+
+        order = Order.objects.create(
+            customer=test_user,
+            order_number='ORD-PAY-001',
+            subtotal=Decimal('100.00'),
+            total_amount=Decimal('108.00')
+        )
+
+        stripe_service = StripeService()
+        result = stripe_service.create_payment_intent(order)
+
+        assert result['payment_intent_id'] == 'pi_test_123'
+        assert result['client_secret'] == 'pi_test_123_secret'
+        assert result['amount'] == 10800  # Amount in cents
+
+    @patch('stripe.PaymentIntent.confirm')
+    def test_confirm_payment_success(self, mock_confirm):
+        mock_intent = Mock()
+        mock_intent.status = 'succeeded'
+        mock_intent.client_secret = 'pi_test_123_secret'
+        mock_intent.next_action = None
+        mock_confirm.return_value = mock_intent
+
+        stripe_service = StripeService()
+        result = stripe_service.confirm_payment('pi_test_123', 'pm_test_456')
+
+        assert result['status'] == 'succeeded'
+        assert result['client_secret'] == 'pi_test_123_secret'
+
+    @patch('stripe.PaymentIntent.confirm')
+    def test_confirm_payment_card_declined(self, mock_confirm):
+        from stripe.error import CardError
+
+        mock_confirm.side_effect = CardError(
+            message='Your card was declined.',
+            param='card',
+            code='card_declined',
+            decline_code='generic_decline'
+        )
+
+        stripe_service = StripeService()
+        result = stripe_service.confirm_payment('pi_test_123', 'pm_test_456')
+
+        assert result['status'] == 'failed'
+        assert 'declined' in result['error'].lower()
+```
+
+### 9.2 Frontend Testing (TypeScript/React)
+
+```typescript
+// __tests__/components/ProductCard.test.tsx
+import React from 'react';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { Provider } from 'react-redux';
+import { configureStore } from '@reduxjs/toolkit';
+import ProductCard from '../components/ProductCard';
+import { Product } from '../types';
+
+const mockProduct: Product = {
+  id: '1',
+  sku: 'TEST-001',
+  name: 'Test Lego Set',
+  description: 'A test lego set',
+  category: {
+    id: '1',
+    name: 'Building Sets',
+    slug: 'building-sets',
+    description: 'Building sets category'
+  },
+  price: 29.99,
+  weight: 0.5,
+  dimensions: {
+    length: 10,
+    width: 8,
+    height: 6,
+    unit: 'cm'
+  },
+  ageRange: '6-12',
+  pieceCount: 100,
+  status: 'active',
+  featured: true,
+  images: [
+    {
+      id: '1',
+      image: '/test-image.jpg',
+      altText: 'Test Lego Set',
+      isPrimary: true,
+      order: 1
+    }
+  ],
+  averageRating: 4.5,
+  reviewCount: 25,
+  createdAt: '2023-01-01T00:00:00Z',
+  updatedAt: '2023-01-01T00:00:00Z'
+};
+
+const mockStore = configureStore({
+  reducer: {
+    cart: (state = { items: [], isLoading: false }) => state,
+    auth: (state = { isAuthenticated: false }) => state
+  }
+});
+
+describe('ProductCard', () => {
+  it('renders product information correctly', () => {
+    render(
+      <Provider store={mockStore}>
+        <ProductCard product={mockProduct} />
+      </Provider>
+    );
+
+    expect(screen.getByText('Test Lego Set')).toBeInTheDocument();
+    expect(screen.getByText('$29.99')).toBeInTheDocument();
+    expect(screen.getByText('100 pcs')).toBeInTheDocument();
+    expect(screen.getByText('Ages 6-12')).toBeInTheDocument();
+    expect(screen.getByText('(25)')).toBeInTheDocument();
+  });
+
+  it('displays featured badge for featured products', () => {
+    render(
+      <Provider store={mockStore}>
+        <ProductCard product={mockProduct} />
+      </Provider>
+    );
+
+    expect(screen.getByText('Featured')).toBeInTheDocument();
+  });
+
+  it('renders product image with correct alt text', () => {
+    render(
+      <Provider store={mockStore}>
+        <ProductCard product={mockProduct} />
+      </Provider>
+    );
+
+    const image = screen.getByAltText('Test Lego Set');
+    expect(image).toBeInTheDocument();
+    expect(image).toHaveAttribute('src', '/test-image.jpg');
+  });
+
+  it('displays star rating correctly', () => {
+    render(
+      <Provider store={mockStore}>
+        <ProductCard product={mockProduct} />
+      </Provider>
+    );
+
+    // Should have 4-5 filled stars based on 4.5 rating
+    const stars = screen.getAllByTestId(/star-/);
+    expect(stars).toHaveLength(5);
+  });
+});
+
+// __tests__/components/AddToCartButton.test.tsx
+import React from 'react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { Provider } from 'react-redux';
+import { configureStore } from '@reduxjs/toolkit';
+import AddToCartButton from '../components/AddToCartButton';
+import cartReducer from '../store/slices/cartSlice';
+
+const mockStore = configureStore({
+  reducer: {
+    cart: cartReducer
+  },
+  preloadedState: {
+    cart: {
+      items: [],
+      subtotal: 0,
+      isLoading: false,
+      error: null
+    }
+  }
+});
+
+// Mock API call
+jest.mock('../services/api', () => ({
+  cartAPI: {
+    addToCart: jest.fn(() => Promise.resolve({ data: { id: '1', quantity: 1 } }))
+  }
+}));
+
+describe('AddToCartButton', () => {
+  it('renders add to cart button', () => {
+    render(
+      <Provider store={mockStore}>
+        <AddToCartButton productId="1" />
+      </Provider>
+    );
+
+    expect(screen.getByText('Add to Cart')).toBeInTheDocument();
+  });
+
+  it('allows quantity selection', () => {
+    render(
+      <Provider store={mockStore}>
+        <AddToCartButton productId="1" />
+      </Provider>
+    );
+
+    const quantitySelect = screen.getByDisplayValue('1');
+    fireEvent.change(quantitySelect, { target: { value: '3' } });
+
+    expect(quantitySelect).toHaveValue('3');
+  });
+
+  it('shows loading state when adding to cart', async () => {
+    render(
+      <Provider store={mockStore}>
+        <AddToCartButton productId="1" />
+      </Provider>
+    );
+
+    const addButton = screen.getByText('Add to Cart');
+    fireEvent.click(addButton);
+
+    // Should show loading state briefly
+    await waitFor(() => {
+      expect(screen.getByTestId('loading-spinner')).toBeInTheDocument();
+    });
+  });
+});
+
+// __tests__/pages/ProductDetail.test.tsx
+import React from 'react';
+import { render, screen, waitFor } from '@testing-library/react';
+import { Provider } from 'react-redux';
+import { QueryClient, QueryClientProvider } from 'react-query';
+import ProductDetail from '../pages/products/[id]';
+import { mockProduct } from '../__mocks__/products';
+
+// Mock Next.js router
+jest.mock('next/router', () => ({
+  useRouter: () => ({
+    query: { id: '1' },
+    push: jest.fn(),
+    pathname: '/products/[id]'
+  })
+}));
+
+// Mock API call
+jest.mock('../services/api', () => ({
+  productsAPI: {
+    getProduct: jest.fn(() => Promise.resolve({ data: mockProduct }))
+  }
+}));
+
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { retry: false } }
+});
+
+const mockStore = configureStore({
+  reducer: {
+    cart: (state = { items: [], isLoading: false }) => state,
+    auth: (state = { isAuthenticated: false }) => state
+  }
+});
+
+describe('ProductDetail', () => {
+  it('loads and displays product details', async () => {
+    render(
+      <QueryClientProvider client={queryClient}>
+        <Provider store={mockStore}>
+          <ProductDetail />
+        </Provider>
+      </QueryClientProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Test Lego Set')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('$29.99')).toBeInTheDocument();
+    expect(screen.getByText('A test lego set')).toBeInTheDocument();
+  });
+
+  it('shows loading state initially', () => {
+    render(
+      <QueryClientProvider client={queryClient}>
+        <Provider store={mockStore}>
+          <ProductDetail />
+        </Provider>
+      </QueryClientProvider>
+    );
+
+    expect(screen.getByTestId('loading-spinner')).toBeInTheDocument();
+  });
+});
+
+// __tests__/utils/helpers.test.ts
+import { formatPrice, calculateDiscountedPrice, validateEmail } from '../utils/helpers';
+
+describe('Helper functions', () => {
+  describe('formatPrice', () => {
+    it('formats price correctly', () => {
+      expect(formatPrice(29.99)).toBe('$29.99');
+      expect(formatPrice(100)).toBe('$100.00');
+      expect(formatPrice(0)).toBe('$0.00');
+    });
+
+    it('handles different currencies', () => {
+      expect(formatPrice(29.99, 'EUR')).toBe('€29.99');
+      expect(formatPrice(29.99, 'GBP')).toBe('£29.99');
+    });
+  });
+
+  describe('calculateDiscountedPrice', () => {
+    it('calculates discount correctly', () => {
+      expect(calculateDiscountedPrice(100, 10)).toBe(90);
+      expect(calculateDiscountedPrice(50, 25)).toBe(37.5);
+    });
+
+    it('handles zero discount', () => {
+      expect(calculateDiscountedPrice(100, 0)).toBe(100);
+    });
+  });
+
+  describe('validateEmail', () => {
+    it('validates correct email addresses', () => {
+      expect(validateEmail('test@example.com')).toBe(true);
+      expect(validateEmail('user.name+tag@domain.co.uk')).toBe(true);
+    });
+
+    it('rejects invalid email addresses', () => {
+      expect(validateEmail('invalid-email')).toBe(false);
+      expect(validateEmail('@domain.com')).toBe(false);
+      expect(validateEmail('test@')).toBe(false);
+    });
+  });
+});
+```
+
+### 9.3 End-to-End Testing (Cypress)
+
+```typescript
+// cypress/e2e/product-browsing.cy.ts
+describe("Product Browsing", () => {
+  beforeEach(() => {
+    cy.visit("/");
+  });
+
+  it("should display product catalog", () => {
+    cy.get('[data-testid="product-grid"]').should("be.visible");
+    cy.get('[data-testid="product-card"]').should("have.length.at.least", 1);
+  });
+
+  it("should filter products by category", () => {
+    cy.get('[data-testid="category-filter"]').click();
+    cy.get('[data-testid="category-option"]').first().click();
+
+    cy.get('[data-testid="product-card"]').should("be.visible");
+    // Verify products match selected category
+  });
+
+  it("should search for products", () => {
+    const searchTerm = "Star Wars";
+
+    cy.get('[data-testid="search-input"]').type(searchTerm);
+    cy.get('[data-testid="search-button"]').click();
+
+    cy.url().should("include", `search=${encodeURIComponent(searchTerm)}`);
+    cy.get('[data-testid="product-card"]').should("contain.text", searchTerm);
+  });
+
+  it("should navigate to product detail page", () => {
+    cy.get('[data-testid="product-card"]').first().click();
+
+    cy.url().should("match", /\/products\/[a-f0-9-]+/);
+    cy.get('[data-testid="product-title"]').should("be.visible");
+    cy.get('[data-testid="product-price"]').should("be.visible");
+    cy.get('[data-testid="add-to-cart-button"]').should("be.visible");
+  });
+});
+
+// cypress/e2e/shopping-cart.cy.ts
+describe("Shopping Cart", () => {
+  beforeEach(() => {
+    // Login as test user
+    cy.login("test@example.com", "testpass123");
+    cy.visit("/products");
+  });
+
+  it("should add product to cart", () => {
+    cy.get('[data-testid="product-card"]').first().click();
+
+    // Select quantity
+    cy.get('[data-testid="quantity-select"]').select("2");
+
+    // Add to cart
+    cy.get('[data-testid="add-to-cart-button"]').click();
+
+    // Verify cart icon shows item count
+    cy.get('[data-testid="cart-icon-count"]').should("contain", "2");
+
+    // Verify success message
+    cy.get('[data-testid="success-message"]').should(
+      "contain",
+      "Added to cart"
+    );
+  });
+
+  it("should update cart item quantity", () => {
+    // Add item to cart first
+    cy.addToCart("test-product-id", 1);
+
+    // Open cart
+    cy.get('[data-testid="cart-icon"]').click();
+
+    // Update quantity
+    cy.get('[data-testid="quantity-input"]').clear().type("3");
+    cy.get('[data-testid="update-quantity-button"]').click();
+
+    // Verify updated quantity and total
+    cy.get('[data-testid="cart-item-quantity"]').should("contain", "3");
+  });
+
+  it("should remove item from cart", () => {
+    // Add item to cart first
+    cy.addToCart("test-product-id", 1);
+
+    // Open cart
+    cy.get('[data-testid="cart-icon"]').click();
+
+    // Remove item
+    cy.get('[data-testid="remove-item-button"]').click();
+
+    // Confirm removal
+    cy.get('[data-testid="confirm-remove-button"]').click();
+
+    // Verify cart is empty
+    cy.get('[data-testid="empty-cart-message"]').should("be.visible");
+  });
+});
+
+// cypress/e2e/checkout-flow.cy.ts
+describe("Checkout Flow", () => {
+  beforeEach(() => {
+    cy.login("test@example.com", "testpass123");
+    cy.addToCart("test-product-id", 2);
+  });
+
+  it("should complete checkout process", () => {
+    // Go to checkout
+    cy.get('[data-testid="cart-icon"]').click();
+    cy.get('[data-testid="checkout-button"]').click();
+
+    // Fill shipping address
+    cy.get('[data-testid="shipping-first-name"]').type("John");
+    cy.get('[data-testid="shipping-last-name"]').type("Doe");
+    cy.get('[data-testid="shipping-address"]').type("123 Main St");
+    cy.get('[data-testid="shipping-city"]').type("Anytown");
+    cy.get('[data-testid="shipping-state"]').select("CA");
+    cy.get('[data-testid="shipping-zip"]').type("12345");
+
+    // Continue to payment
+    cy.get('[data-testid="continue-to-payment"]').click();
+
+    // Fill payment information (using test Stripe card)
+    cy.get('[data-testid="card-number"]').type("4242424242424242");
+    cy.get('[data-testid="card-expiry"]').type("1225");
+    cy.get('[data-testid="card-cvc"]').type("123");
+
+    // Complete order
+    cy.get('[data-testid="place-order-button"]').click();
+
+    // Verify order confirmation
+    cy.url().should("include", "/order-confirmation");
+    cy.get('[data-testid="order-success-message"]').should("be.visible");
+    cy.get('[data-testid="order-number"]').should("match", /ORD-\d+/);
+  });
+
+  it("should handle payment failure gracefully", () => {
+    // Go to checkout
+    cy.get('[data-testid="cart-icon"]').click();
+    cy.get('[data-testid="checkout-button"]').click();
+
+    // Fill shipping address (abbreviated)
+    cy.fillShippingAddress();
+
+    // Continue to payment
+    cy.get('[data-testid="continue-to-payment"]').click();
+
+    // Use declined test card
+    cy.get('[data-testid="card-number"]').type("4000000000000002");
+    cy.get('[data-testid="card-expiry"]').type("1225");
+    cy.get('[data-testid="card-cvc"]').type("123");
+
+    // Attempt to place order
+    cy.get('[data-testid="place-order-button"]').click();
+
+    // Verify error message
+    cy.get('[data-testid="payment-error"]').should("contain", "declined");
+
+    // Verify user stays on checkout page
+    cy.url().should("include", "/checkout");
+  });
+});
+
+// cypress/support/commands.ts
+declare global {
+  namespace Cypress {
+    interface Chainable {
+      login(email: string, password: string): Chainable<void>;
+      addToCart(productId: string, quantity: number): Chainable<void>;
+      fillShippingAddress(): Chainable<void>;
+    }
+  }
+}
+
+Cypress.Commands.add("login", (email: string, password: string) => {
+  cy.visit("/login");
+  cy.get('[data-testid="email-input"]').type(email);
+  cy.get('[data-testid="password-input"]').type(password);
+  cy.get('[data-testid="login-button"]').click();
+  cy.url().should("not.include", "/login");
+});
+
+Cypress.Commands.add("addToCart", (productId: string, quantity: number) => {
+  cy.request({
+    method: "POST",
+    url: "/api/cart/items/",
+    headers: {
+      Authorization: `Bearer ${window.localStorage.getItem("accessToken")}`,
+    },
+    body: {
+      product_id: productId,
+      quantity: quantity,
+    },
+  });
+});
+
+Cypress.Commands.add("fillShippingAddress", () => {
+  cy.get('[data-testid="shipping-first-name"]').type("John");
+  cy.get('[data-testid="shipping-last-name"]').type("Doe");
+  cy.get('[data-testid="shipping-address"]').type("123 Main St");
+  cy.get('[data-testid="shipping-city"]').type("Anytown");
+  cy.get('[data-testid="shipping-state"]').select("CA");
+  cy.get('[data-testid="shipping-zip"]').type("12345");
+});
+```
+
+### 9.4 Performance Testing
+
+```python
+# load_tests/locustfile.py
+from locust import HttpUser, task, between
+import random
+import json
+
+class EcommerceUser(HttpUser):
+    wait_time = between(1, 3)
+
+    def on_start(self):
+        """Called when a user starts"""
+        self.client.verify = False  # Disable SSL verification for testing
+        self.auth_token = None
+        self.product_ids = []
+        self.cart_items = []
+
+        # Get product list for testing
+        response = self.client.get("/api/products/")
+        if response.status_code == 200:
+            products = response.json()['results']
+            self.product_ids = [p['id'] for p in products[:10]]  # Use first 10 products
+
+    def login(self):
+        """Login as test user"""
+        if self.auth_token:
+            return
+
+        response = self.client.post("/api/auth/login/", json={
+            "email": f"test{random.randint(1, 1000)}@example.com",
+            "password": "testpass123"
+        })
+
+        if response.status_code == 200:
+            self.auth_token = response.json()['access']
+            self.client.headers.update({'Authorization': f'Bearer {self.auth_token}'})
+
+    @task(10)
+    def browse_products(self):
+        """Browse product catalog"""
+        # Get products list
+        self.client.get("/api/products/")
+
+        # Get random product detail
+        if self.product_ids:
+            product_id = random.choice(self.product_ids)
+            self.client.get(f"/api/products/{product_id}/")
+
+    @task(5)
+    def search_products(self):
+        """Search for products"""
+        search_terms = ['lego', 'star wars', 'city', 'technic', 'friends']
+        term = random.choice(search_terms)
+        self.client.get(f"/api/products/?search={term}")
+
+    @task(3)
+    def add_to_cart(self):
+        """Add items to cart"""
+        if not self.product_ids:
+            return
+
+        self.login()
+
+        product_id = random.choice(self.product_ids)
+        quantity = random.randint(1, 3)
+
+        response = self.client.post("/api/cart/items/", json={
+            "product_id": product_id,
+            "quantity": quantity
+        })
+
+        if response.status_code == 201:
+            self.cart_items.append(response.json())
+
+    @task(2)
+    def view_cart(self):
+        """View shopping cart"""
+        if not self.auth_token:
+            self.login()
+
+        self.client.get("/api/cart/")
+
+    @task(1)
+    def checkout_simulation(self):
+        """Simulate checkout process (without actual payment)"""
+        if not self.cart_items:
+            self.add_to_cart()
+
+        if not self.auth_token:
+            self.login()
+
+        # Create order
+        order_data = {
+            "shipping_address": {
+                "firstName": "Load",
+                "lastName": "Test",
+                "addressLine1": "123 Test St",
+                "city": "Test City",
+                "state": "CA",
+                "postalCode": "12345",
+                "country": "US"
+            },
+            "billing_address": {
+                "firstName": "Load",
+                "lastName": "Test",
+                "addressLine1": "123 Test St",
+                "city": "Test City",
+                "state": "CA",
+                "postalCode": "12345",
+                "country": "US"
+            }
+        }
+
+        response = self.client.post("/api/orders/create-from-cart/", json=order_data)
+
+        if response.status_code == 201:
+            # Clear cart items for next simulation
+            self.cart_items = []
+
+class AdminUser(HttpUser):
+    wait_time = between(2, 5)
+
+    def on_start(self):
+        """Login as admin user"""
+        response = self.client.post("/api/auth/login/", json={
+            "email": "admin@example.com",
+            "password": "adminpass123"
+        })
+
+        if response.status_code == 200:
+            token = response.json()['access']
+            self.client.headers.update({'Authorization': f'Bearer {token}'})
+
+    @task(5)
+    def view_dashboard(self):
+        """View admin dashboard"""
+        self.client.get("/api/admin/dashboard/stats/")
+
+    @task(3)
+    def manage_orders(self):
+        """Manage orders"""
+        self.client.get("/api/admin/orders/")
+
+        # Get specific order
+        orders_response = self.client.get("/api/admin/orders/?limit=5")
+        if orders_response.status_code == 200:
+            orders = orders_response.json()['results']
+            if orders:
+                order_id = orders[0]['id']
+                self.client.get(f"/api/admin/orders/{order_id}/")
+
+    @task(2)
+    def manage_inventory(self):
+        """Manage inventory"""
+        self.client.get("/api/admin/inventory/")
+
+        # Check low stock items
+        self.client.get("/api/admin/inventory/?status=low_stock")
+
+    @task(1)
+    def view_analytics(self):
+        """View analytics"""
+        self.client.get("/api/admin/analytics/sales/")
+        self.client.get("/api/admin/analytics/customers/")
+
+# Performance test configuration
+# Run with: locust -f locustfile.py --host=http://localhost:8000
+```
+
+### 9.5 Security Testing
+
+```python
+# security_tests/test_security.py
+import pytest
+import requests
+from django.test import TestCase, Client
+from django.contrib.auth import get_user_model
+from django.urls import reverse
+
+User = get_user_model()
+
+class SecurityTestCase(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.user = User.objects.create_user(
+            email='test@example.com',
+            password='testpass123'
+        )
+
+    def test_sql_injection_protection(self):
+        """Test protection against SQL injection"""
+        malicious_input = "'; DROP TABLE products; --"
+
+        response = self.client.get('/api/products/', {
+            'search': malicious_input
+        })
+
+        # Should not cause server error
+        self.assertNotEqual(response.status_code, 500)
+
+        # Database should still be intact
+        from products.models import Product
+        self.assertTrue(Product._meta.db_table in [
+            table.name for table in Product._meta.db_table
+        ])
+
+    def test_xss_protection(self):
+        """Test protection against XSS attacks"""
+        malicious_script = "<script>alert('XSS')</script>"
+
+        # Try to inject script in product search
+        response = self.client.get('/api/products/', {
+            'search': malicious_script
+        })
+
+        # Response should not contain unescaped script
+        if response.status_code == 200:
+            self.assertNotIn('<script>', response.content.decode())
+
+    def test_authentication_required_endpoints(self):
+        """Test that protected endpoints require authentication"""
+        protected_endpoints = [
+            '/api/cart/',
+            '/api/orders/',
+            '/api/auth/profile/',
+        ]
+
+        for endpoint in protected_endpoints:
+            response = self.client.get(endpoint)
+            self.assertEqual(response.status_code, 401)
+
+    def test_authorization_enforcement(self):
+        """Test that users can only access their own data"""
+        # Create another user
+        other_user = User.objects.create_user(
+            email='other@example.com',
+            password='otherpass123'
+        )
+
+        # Login as first user
+        self.client.force_login(self.user)
+
+        # Try to access other user's data
+        response = self.client.get(f'/api/users/{other_user.id}/')
+        self.assertIn(response.status_code, [403, 404])
+
+    def test_rate_limiting(self):
+        """Test rate limiting on sensitive endpoints"""
+        login_url = reverse('login')
+
+        # Make multiple rapid requests
+        for _ in range(10):
+            response = self.client.post(login_url, {
+                'email': 'wrong@example.com',
+                'password': 'wrongpassword'
+            })
+
+        # Should eventually be rate limited
+        response = self.client.post(login_url, {
+            'email': 'wrong@example.com',
+            'password': 'wrongpassword'
+        })
+
+        self.assertIn(response.status_code, [429, 403])
+
+    def test_password_security(self):
+        """Test password security requirements"""
+        weak_passwords = [
+            'password',
+            '123456',
+            'qwerty',
+            'abc123'
+        ]
+
+        for weak_password in weak_passwords:
+            response = self.client.post('/api/auth/register/', {
+                'email': 'newuser@example.com',
+                'password': weak_password,
+                'first_name': 'Test',
+                'last_name': 'User'
+            })
+
+            # Should reject weak passwords
+            self.assertEqual(response.status_code, 400)
+
+    def test_csrf_protection(self):
+        """Test CSRF protection on state-changing operations"""
+        # This test would depend on your CSRF implementation
+        pass
+
+    def test_secure_headers(self):
+        """Test security headers are present"""
+        response = self.client.get('/')
+
+        # Check for important security headers
+        security_headers = [
+            'X-Content-Type-Options',
+            'X-Frame-Options',
+            'X-XSS-Protection',
+        ]
+
+        for header in security_headers:
+            self.assertIn(header, response.headers)
+
+# security_tests/penetration_test.py
+import requests
+import json
+from urllib.parse import urljoin
+
+class PenetrationTester:
+    def __init__(self, base_url):
+        self.base_url = base_url
+        self.session = requests.Session()
+
+    def test_directory_traversal(self):
+        """Test for directory traversal vulnerabilities"""
+        payloads = [
+            '../../../etc/passwd',
+            '..\\..\\..\\windows\\system32\\drivers\\etc\\hosts',
+            '....//....//....//etc/passwd'
+        ]
+
+        for payload in payloads:
+            url = urljoin(self.base_url, f'/api/files/{payload}')
+            response = self.session.get(url)
+
+            if response.status_code == 200 and ('root:' in response.text or 'localhost' in response.text):
+                print(f"VULNERABILITY: Directory traversal found with payload: {payload}")
+                return True
+
+        return False
+
+    def test_file_upload_vulnerabilities(self):
+        """Test file upload security"""
+        # Test malicious file uploads
+        malicious_files = [
+            ('shell.php', b'<?php system($_GET["cmd"]); ?>'),
+            ('script.js', b'<script>alert("XSS")</script>'),
+            ('large_file.txt', b'A' * (10 * 1024 * 1024))  # 10MB file
+        ]
+
+        for filename, content in malicious_files:
+            files = {'file': (filename, content)}
+            response = self.session.post(
+                urljoin(self.base_url, '/api/upload/'),
+                files=files
+            )
+
+            if response.status_code == 200:
+                print(f"WARNING: File upload accepted malicious file: {filename}")
+
+    def test_api_security(self):
+        """Test API security issues"""
+        # Test for exposed API documentation
+        docs_endpoints = ['/docs/', '/swagger/', '/api-docs/', '/graphql/']
+
+        for endpoint in docs_endpoints:
+            response = self.session.get(urljoin(self.base_url, endpoint))
+            if response.status_code == 200:
+                print(f"INFO: API documentation exposed at: {endpoint}")
+
+        # Test for information disclosure
+        response = self.session.get(urljoin(self.base_url, '/api/debug/'))
+        if response.status_code == 200:
+            print("WARNING: Debug endpoint accessible")
+
+if __name__ == "__main__":
+    tester = PenetrationTester('http://localhost:8000')
+    tester.test_directory_traversal()
+    tester.test_file_upload_vulnerabilities()
+    tester.test_api_security()
+```
+
+## Hands-On Exercises
+
+### Exercise 9.1: Unit Testing Setup
+
+1. Set up pytest for Django backend testing
+2. Configure Jest and React Testing Library for frontend
+3. Create comprehensive test fixtures and mocks
+4. Implement tests for core business logic
+
+### Exercise 9.2: Integration Testing
+
+1. Create API integration tests
+2. Test database operations and transactions
+3. Test payment integration with mock services
+4. Verify email and notification systems
+
+### Exercise 9.3: End-to-End Testing
+
+1. Set up Cypress for E2E testing
+2. Create user journey test scenarios
+3. Test critical business workflows
+4. Implement visual regression testing
+
+### Exercise 9.4: Performance Testing
+
+1. Set up Locust for load testing
+2. Create realistic user behavior simulations
+3. Test database performance under load
+4. Identify and fix performance bottlenecks
+
+### Exercise 9.5: Security Testing
+
+1. Implement security test suite
+2. Conduct basic penetration testing
+3. Test authentication and authorization
+4. Verify input validation and sanitization
+
+## Key Concepts
+
+- **Test Pyramid**: Unit tests at the base, integration tests in the middle, E2E tests at the top
+- **Test-Driven Development (TDD)**: Writing tests before implementation
+- **Behavior-Driven Development (BDD)**: Tests written in natural language
+- **Continuous Testing**: Automated testing in CI/CD pipelines
+- **Security Testing**: Proactive security vulnerability assessment
+
+## Testing Best Practices
+
+### Test Organization
+
+- Follow AAA pattern (Arrange, Act, Assert)
+- Use descriptive test names
+- Keep tests isolated and independent
+- Use proper test data management
+
+### Test Coverage
+
+- Aim for high code coverage but focus on critical paths
+- Test edge cases and error conditions
+- Include performance and security testing
+- Test across different environments
+
+### Automation
+
+- Integrate tests into CI/CD pipelines
+- Run tests on every code change
+- Automate test data setup and teardown
+- Generate test reports and metrics
+
+## Next Steps
+
+After completing this module, proceed to [Module 10: Deployment and DevOps](../10-deployment-and-devops) to learn how to deploy your thoroughly tested e-commerce platform to production environments.

@@ -1,0 +1,1254 @@
+# Module 12: Advanced Features and Architecture
+
+## Overview
+
+This final module covers advanced features and architectural patterns for scaling the Lego e-commerce platform. You'll learn about microservices architecture, real-time features, internationalization, advanced analytics, machine learning integration, and future-proofing strategies.
+
+## Learning Objectives
+
+- Implement microservices architecture patterns
+- Add real-time features with WebSockets
+- Implement internationalization and localization
+- Integrate machine learning for recommendations
+- Build advanced analytics and reporting
+- Implement event-driven architecture
+- Add progressive web app (PWA) features
+- Plan for future scalability and technology evolution
+
+## Topics Covered
+
+### 12.1 Microservices Architecture
+
+```python
+# backend/services/product_service/main.py
+from fastapi import FastAPI, Depends, HTTPException
+from sqlalchemy.orm import Session
+from typing import List, Optional
+import uvicorn
+from prometheus_fastapi_instrumentator import Instrumentator
+
+from .database import get_db
+from .models import Product, ProductCreate, ProductUpdate
+from .schemas import ProductResponse, ProductListResponse
+from .dependencies import get_current_user
+from .cache import cache_manager
+from .events import publish_event
+
+app = FastAPI(
+    title="Product Service",
+    description="Microservice for product management",
+    version="1.0.0"
+)
+
+# Add Prometheus metrics
+Instrumentator().instrument(app).expose(app)
+
+@app.post("/products/", response_model=ProductResponse)
+async def create_product(
+    product: ProductCreate,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """Create a new product"""
+    if not current_user.is_staff:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    db_product = Product(**product.dict())
+    db.add(db_product)
+    db.commit()
+    db.refresh(db_product)
+
+    # Publish event for other services
+    await publish_event("product.created", {
+        "product_id": db_product.id,
+        "name": db_product.name,
+        "category_id": db_product.category_id,
+        "price": float(db_product.price)
+    })
+
+    # Clear cache
+    cache_manager.delete_pattern("products:*")
+
+    return ProductResponse.from_orm(db_product)
+
+@app.get("/products/", response_model=ProductListResponse)
+async def list_products(
+    skip: int = 0,
+    limit: int = 100,
+    category_id: Optional[int] = None,
+    search: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """List products with filtering"""
+    cache_key = f"products:list:{skip}:{limit}:{category_id}:{search}"
+    cached_result = cache_manager.get(cache_key)
+
+    if cached_result:
+        return cached_result
+
+    query = db.query(Product).filter(Product.is_active == True)
+
+    if category_id:
+        query = query.filter(Product.category_id == category_id)
+
+    if search:
+        query = query.filter(Product.name.ilike(f"%{search}%"))
+
+    total = query.count()
+    products = query.offset(skip).limit(limit).all()
+
+    result = ProductListResponse(
+        items=[ProductResponse.from_orm(p) for p in products],
+        total=total,
+        skip=skip,
+        limit=limit
+    )
+
+    cache_manager.set(cache_key, result, timeout=300)
+    return result
+
+# backend/services/order_service/main.py
+from fastapi import FastAPI, Depends, HTTPException, BackgroundTasks
+from sqlalchemy.orm import Session
+import asyncio
+from typing import List
+
+from .database import get_db
+from .models import Order, OrderItem, OrderCreate
+from .schemas import OrderResponse, OrderCreateRequest
+from .dependencies import get_current_user
+from .payment_client import PaymentServiceClient
+from .inventory_client import InventoryServiceClient
+from .notification_service import send_order_confirmation
+from .events import subscribe_to_events, publish_event
+
+app = FastAPI(title="Order Service", version="1.0.0")
+
+payment_client = PaymentServiceClient()
+inventory_client = InventoryServiceClient()
+
+@app.post("/orders/", response_model=OrderResponse)
+async def create_order(
+    order_request: OrderCreateRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """Create a new order with saga pattern"""
+    # Start distributed transaction
+    saga_id = f"order_saga_{uuid.uuid4()}"
+
+    try:
+        # Step 1: Reserve inventory
+        reservation_result = await inventory_client.reserve_items(
+            items=order_request.items,
+            saga_id=saga_id
+        )
+
+        if not reservation_result.success:
+            raise HTTPException(status_code=400, detail="Insufficient inventory")
+
+        # Step 2: Process payment
+        payment_result = await payment_client.process_payment(
+            amount=order_request.total_amount,
+            payment_method=order_request.payment_method,
+            saga_id=saga_id
+        )
+
+        if not payment_result.success:
+            # Compensate: Release inventory
+            await inventory_client.release_reservation(saga_id)
+            raise HTTPException(status_code=400, detail="Payment failed")
+
+        # Step 3: Create order
+        db_order = Order(
+            user_id=current_user.id,
+            total_amount=order_request.total_amount,
+            payment_id=payment_result.payment_id,
+            status="confirmed"
+        )
+        db.add(db_order)
+        db.flush()
+
+        # Add order items
+        for item in order_request.items:
+            order_item = OrderItem(
+                order_id=db_order.id,
+                product_id=item.product_id,
+                quantity=item.quantity,
+                price=item.price
+            )
+            db.add(order_item)
+
+        db.commit()
+
+        # Publish success event
+        await publish_event("order.created", {
+            "order_id": db_order.id,
+            "user_id": current_user.id,
+            "total_amount": float(order_request.total_amount),
+            "saga_id": saga_id
+        })
+
+        # Send confirmation email in background
+        background_tasks.add_task(
+            send_order_confirmation,
+            order_id=db_order.id,
+            user_email=current_user.email
+        )
+
+        return OrderResponse.from_orm(db_order)
+
+    except Exception as e:
+        # Compensate all steps
+        await inventory_client.release_reservation(saga_id)
+        await payment_client.refund_payment(saga_id)
+        raise HTTPException(status_code=500, detail=str(e))
+
+# API Gateway with Kong or custom implementation
+# docker-compose.api-gateway.yml
+version: '3.8'
+
+services:
+  kong:
+    image: kong:latest
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: kong-database
+      KONG_PG_DATABASE: kong
+      KONG_PG_USER: kong
+      KONG_PG_PASSWORD: kong
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001
+    ports:
+      - "8000:8000"  # Proxy port
+      - "8001:8001"  # Admin API port
+    depends_on:
+      - kong-database
+
+  kong-database:
+    image: postgres:13
+    environment:
+      POSTGRES_DB: kong
+      POSTGRES_USER: kong
+      POSTGRES_PASSWORD: kong
+    volumes:
+      - kong_data:/var/lib/postgresql/data
+
+  # Service Discovery with Consul
+  consul:
+    image: consul:latest
+    ports:
+      - "8500:8500"
+    command: consul agent -dev -client=0.0.0.0 -ui
+
+volumes:
+  kong_data:
+```
+
+### 12.2 Real-time Features with WebSockets
+
+```python
+# backend/apps/realtime/consumers.py
+import json
+import asyncio
+from channels.generic.websocket import AsyncWebsocketConsumer
+from channels.db import database_sync_to_async
+from django.contrib.auth.models import AnonymousUser
+from rest_framework_simplejwt.tokens import UntypedToken
+from rest_framework_simplejwt.exceptions import InvalidToken
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
+class NotificationConsumer(AsyncWebsocketConsumer):
+    """WebSocket consumer for real-time notifications"""
+
+    async def connect(self):
+        """Handle WebSocket connection"""
+        # Get user from token
+        token = self.scope['query_string'].decode().split('token=')[1]
+        self.user = await self.get_user_from_token(token)
+
+        if self.user and not isinstance(self.user, AnonymousUser):
+            self.group_name = f"user_{self.user.id}"
+
+            # Join user-specific group
+            await self.channel_layer.group_add(
+                self.group_name,
+                self.channel_name
+            )
+
+            await self.accept()
+
+            # Send welcome message
+            await self.send(text_data=json.dumps({
+                'type': 'connection_established',
+                'message': 'Connected to notifications'
+            }))
+        else:
+            await self.close()
+
+    async def disconnect(self, close_code):
+        """Handle WebSocket disconnection"""
+        if hasattr(self, 'group_name'):
+            await self.channel_layer.group_discard(
+                self.group_name,
+                self.channel_name
+            )
+
+    async def receive(self, text_data):
+        """Handle incoming WebSocket messages"""
+        try:
+            data = json.loads(text_data)
+            message_type = data.get('type')
+
+            if message_type == 'mark_notification_read':
+                await self.mark_notification_read(data.get('notification_id'))
+            elif message_type == 'get_unread_count':
+                await self.send_unread_count()
+
+        except json.JSONDecodeError:
+            await self.send(text_data=json.dumps({
+                'type': 'error',
+                'message': 'Invalid JSON'
+            }))
+
+    async def notification_message(self, event):
+        """Handle notification message from group"""
+        await self.send(text_data=json.dumps({
+            'type': 'notification',
+            'notification': event['notification']
+        }))
+
+    async def order_update(self, event):
+        """Handle order status update"""
+        await self.send(text_data=json.dumps({
+            'type': 'order_update',
+            'order': event['order']
+        }))
+
+    @database_sync_to_async
+    def get_user_from_token(self, token):
+        """Get user from JWT token"""
+        try:
+            UntypedToken(token)
+            # Decode token and get user
+            from rest_framework_simplejwt.authentication import JWTAuthentication
+            jwt_auth = JWTAuthentication()
+            validated_token = jwt_auth.get_validated_token(token)
+            user = jwt_auth.get_user(validated_token)
+            return user
+        except InvalidToken:
+            return AnonymousUser()
+
+    @database_sync_to_async
+    def mark_notification_read(self, notification_id):
+        """Mark notification as read"""
+        from apps.notifications.models import Notification
+        try:
+            notification = Notification.objects.get(
+                id=notification_id,
+                user=self.user
+            )
+            notification.is_read = True
+            notification.save()
+        except Notification.DoesNotExist:
+            pass
+
+    async def send_unread_count(self):
+        """Send unread notification count"""
+        count = await self.get_unread_count()
+        await self.send(text_data=json.dumps({
+            'type': 'unread_count',
+            'count': count
+        }))
+
+    @database_sync_to_async
+    def get_unread_count(self):
+        """Get unread notification count"""
+        from apps.notifications.models import Notification
+        return Notification.objects.filter(
+            user=self.user,
+            is_read=False
+        ).count()
+
+class OrderTrackingConsumer(AsyncWebsocketConsumer):
+    """WebSocket consumer for order tracking"""
+
+    async def connect(self):
+        self.order_id = self.scope['url_route']['kwargs']['order_id']
+        self.user = self.scope['user']
+
+        # Verify user can access this order
+        if await self.can_access_order():
+            self.group_name = f"order_{self.order_id}"
+
+            await self.channel_layer.group_add(
+                self.group_name,
+                self.channel_name
+            )
+
+            await self.accept()
+
+            # Send current order status
+            order_status = await self.get_order_status()
+            await self.send(text_data=json.dumps({
+                'type': 'order_status',
+                'status': order_status
+            }))
+        else:
+            await self.close()
+
+    async def disconnect(self, close_code):
+        if hasattr(self, 'group_name'):
+            await self.channel_layer.group_discard(
+                self.group_name,
+                self.channel_name
+            )
+
+    async def order_status_update(self, event):
+        """Handle order status update"""
+        await self.send(text_data=json.dumps({
+            'type': 'status_update',
+            'status': event['status'],
+            'timestamp': event['timestamp'],
+            'message': event['message']
+        }))
+
+    @database_sync_to_async
+    def can_access_order(self):
+        """Check if user can access this order"""
+        from apps.orders.models import Order
+        try:
+            order = Order.objects.get(id=self.order_id)
+            return order.user == self.user or self.user.is_staff
+        except Order.DoesNotExist:
+            return False
+
+    @database_sync_to_async
+    def get_order_status(self):
+        """Get current order status"""
+        from apps.orders.models import Order
+        try:
+            order = Order.objects.get(id=self.order_id)
+            return {
+                'status': order.status,
+                'created_at': order.created_at.isoformat(),
+                'updated_at': order.updated_at.isoformat()
+            }
+        except Order.DoesNotExist:
+            return None
+
+# Real-time notification service
+class NotificationService:
+    """Service for sending real-time notifications"""
+
+    def __init__(self):
+        from channels.layers import get_channel_layer
+        self.channel_layer = get_channel_layer()
+
+    async def send_notification(self, user_id: int, notification_data: dict):
+        """Send notification to specific user"""
+        group_name = f"user_{user_id}"
+
+        await self.channel_layer.group_send(
+            group_name,
+            {
+                'type': 'notification_message',
+                'notification': notification_data
+            }
+        )
+
+    async def send_order_update(self, order_id: int, status_data: dict):
+        """Send order update to order tracking group"""
+        group_name = f"order_{order_id}"
+
+        await self.channel_layer.group_send(
+            group_name,
+            {
+                'type': 'order_status_update',
+                **status_data
+            }
+        )
+
+    async def broadcast_announcement(self, announcement_data: dict):
+        """Broadcast announcement to all connected users"""
+        await self.channel_layer.group_send(
+            "announcements",
+            {
+                'type': 'announcement_message',
+                'announcement': announcement_data
+            }
+        )
+
+notification_service = NotificationService()
+```
+
+### 12.3 Internationalization and Localization
+
+```typescript
+// frontend/lib/i18n.ts
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
+import Backend from 'i18next-http-backend';
+import LanguageDetector from 'i18next-browser-languagedetector';
+
+// Language resources
+const resources = {
+  en: {
+    common: {
+      loading: 'Loading...',
+      error: 'An error occurred',
+      success: 'Success',
+      cancel: 'Cancel',
+      confirm: 'Confirm',
+      save: 'Save',
+      delete: 'Delete',
+      edit: 'Edit',
+      search: 'Search',
+      filter: 'Filter',
+      sort: 'Sort',
+      next: 'Next',
+      previous: 'Previous',
+      submit: 'Submit',
+      close: 'Close'
+    },
+    navigation: {
+      home: 'Home',
+      products: 'Products',
+      categories: 'Categories',
+      cart: 'Cart',
+      account: 'Account',
+      login: 'Login',
+      logout: 'Logout',
+      register: 'Register'
+    },
+    product: {
+      addToCart: 'Add to Cart',
+      outOfStock: 'Out of Stock',
+      inStock: 'In Stock',
+      price: 'Price',
+      description: 'Description',
+      specifications: 'Specifications',
+      reviews: 'Reviews',
+      rating: 'Rating',
+      availability: 'Availability'
+    },
+    cart: {
+      title: 'Shopping Cart',
+      empty: 'Your cart is empty',
+      total: 'Total',
+      subtotal: 'Subtotal',
+      shipping: 'Shipping',
+      tax: 'Tax',
+      checkout: 'Checkout',
+      removeItem: 'Remove Item',
+      updateQuantity: 'Update Quantity'
+    },
+    checkout: {
+      title: 'Checkout',
+      shippingAddress: 'Shipping Address',
+      billingAddress: 'Billing Address',
+      paymentMethod: 'Payment Method',
+      orderSummary: 'Order Summary',
+      placeOrder: 'Place Order'
+    }
+  },
+  es: {
+    common: {
+      loading: 'Cargando...',
+      error: 'Ocurrió un error',
+      success: 'Éxito',
+      cancel: 'Cancelar',
+      confirm: 'Confirmar',
+      save: 'Guardar',
+      delete: 'Eliminar',
+      edit: 'Editar',
+      search: 'Buscar',
+      filter: 'Filtrar',
+      sort: 'Ordenar',
+      next: 'Siguiente',
+      previous: 'Anterior',
+      submit: 'Enviar',
+      close: 'Cerrar'
+    },
+    navigation: {
+      home: 'Inicio',
+      products: 'Productos',
+      categories: 'Categorías',
+      cart: 'Carrito',
+      account: 'Cuenta',
+      login: 'Iniciar Sesión',
+      logout: 'Cerrar Sesión',
+      register: 'Registrarse'
+    },
+    product: {
+      addToCart: 'Añadir al Carrito',
+      outOfStock: 'Agotado',
+      inStock: 'En Stock',
+      price: 'Precio',
+      description: 'Descripción',
+      specifications: 'Especificaciones',
+      reviews: 'Reseñas',
+      rating: 'Calificación',
+      availability: 'Disponibilidad'
+    },
+    cart: {
+      title: 'Carrito de Compras',
+      empty: 'Tu carrito está vacío',
+      total: 'Total',
+      subtotal: 'Subtotal',
+      shipping: 'Envío',
+      tax: 'Impuestos',
+      checkout: 'Finalizar Compra',
+      removeItem: 'Eliminar Artículo',
+      updateQuantity: 'Actualizar Cantidad'
+    },
+    checkout: {
+      title: 'Finalizar Compra',
+      shippingAddress: 'Dirección de Envío',
+      billingAddress: 'Dirección de Facturación',
+      paymentMethod: 'Método de Pago',
+      orderSummary: 'Resumen del Pedido',
+      placeOrder: 'Realizar Pedido'
+    }
+  },
+  fr: {
+    common: {
+      loading: 'Chargement...',
+      error: 'Une erreur est survenue',
+      success: 'Succès',
+      cancel: 'Annuler',
+      confirm: 'Confirmer',
+      save: 'Sauvegarder',
+      delete: 'Supprimer',
+      edit: 'Modifier',
+      search: 'Rechercher',
+      filter: 'Filtrer',
+      sort: 'Trier',
+      next: 'Suivant',
+      previous: 'Précédent',
+      submit: 'Soumettre',
+      close: 'Fermer'
+    },
+    navigation: {
+      home: 'Accueil',
+      products: 'Produits',
+      categories: 'Catégories',
+      cart: 'Panier',
+      account: 'Compte',
+      login: 'Connexion',
+      logout: 'Déconnexion',
+      register: "S'inscrire"
+    },
+    product: {
+      addToCart: 'Ajouter au Panier',
+      outOfStock: 'Rupture de Stock',
+      inStock: 'En Stock',
+      price: 'Prix',
+      description: 'Description',
+      specifications: 'Spécifications',
+      reviews: 'Avis',
+      rating: 'Note',
+      availability: 'Disponibilité'
+    },
+    cart: {
+      title: 'Panier',
+      empty: 'Votre panier est vide',
+      total: 'Total',
+      subtotal: 'Sous-total',
+      shipping: 'Livraison',
+      tax: 'Taxes',
+      checkout: 'Commander',
+      removeItem: 'Supprimer',
+      updateQuantity: 'Modifier la Quantité'
+    },
+    checkout: {
+      title: 'Commander',
+      shippingAddress: 'Adresse de Livraison',
+      billingAddress: 'Adresse de Facturation',
+      paymentMethod: 'Méthode de Paiement',
+      orderSummary: 'Résumé de Commande',
+      placeOrder: 'Passer Commande'
+    }
+  }
+};
+
+i18n
+  .use(Backend)
+  .use(LanguageDetector)
+  .use(initReactI18next)
+  .init({
+    fallbackLng: 'en',
+    debug: process.env.NODE_ENV === 'development',
+
+    interpolation: {
+      escapeValue: false,
+    },
+
+    resources,
+
+    detection: {
+      order: ['localStorage', 'navigator', 'htmlTag'],
+      caches: ['localStorage'],
+    },
+
+    backend: {
+      loadPath: '/locales/{{lng}}/{{ns}}.json',
+    },
+  });
+
+export default i18n;
+
+// frontend/components/LanguageSwitcher.tsx
+import React from 'react';
+import { useTranslation } from 'react-i18next';
+import { ChevronDownIcon } from '@heroicons/react/24/outline';
+
+const languages = [
+  { code: 'en', name: 'English', flag: '🇺🇸' },
+  { code: 'es', name: 'Español', flag: '🇪🇸' },
+  { code: 'fr', name: 'Français', flag: '🇫🇷' },
+  { code: 'de', name: 'Deutsch', flag: '🇩🇪' },
+  { code: 'ja', name: '日本語', flag: '🇯🇵' },
+  { code: 'zh', name: '中文', flag: '🇨🇳' },
+];
+
+export const LanguageSwitcher: React.FC = () => {
+  const { i18n } = useTranslation();
+  const currentLanguage = languages.find(lang => lang.code === i18n.language) || languages[0];
+
+  const handleLanguageChange = (languageCode: string) => {
+    i18n.changeLanguage(languageCode);
+
+    // Update document direction for RTL languages
+    const rtlLanguages = ['ar', 'he', 'fa'];
+    document.dir = rtlLanguages.includes(languageCode) ? 'rtl' : 'ltr';
+
+    // Save preference
+    localStorage.setItem('preferred-language', languageCode);
+  };
+
+  return (
+    <div className="relative inline-block text-left">
+      <div className="group">
+        <button
+          type="button"
+          className="inline-flex items-center justify-center w-full px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+        >
+          <span className="mr-2">{currentLanguage.flag}</span>
+          {currentLanguage.name}
+          <ChevronDownIcon className="w-4 h-4 ml-2" />
+        </button>
+
+        <div className="absolute right-0 z-10 w-48 mt-2 origin-top-right bg-white border border-gray-200 rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+          <div className="py-1">
+            {languages.map((language) => (
+              <button
+                key={language.code}
+                onClick={() => handleLanguageChange(language.code)}
+                className={`flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 ${
+                  language.code === i18n.language ? 'bg-blue-50 text-blue-600' : 'text-gray-700'
+                }`}
+              >
+                <span className="mr-3">{language.flag}</span>
+                {language.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Currency and number formatting
+export const useCurrencyFormatter = () => {
+  const { i18n } = useTranslation();
+
+  const formatCurrency = (amount: number) => {
+    const locale = i18n.language;
+    const currencyMap = {
+      'en': 'USD',
+      'es': 'EUR',
+      'fr': 'EUR',
+      'de': 'EUR',
+      'ja': 'JPY',
+      'zh': 'CNY',
+    };
+
+    const currency = currencyMap[locale as keyof typeof currencyMap] || 'USD';
+
+    return new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency,
+    }).format(amount);
+  };
+
+  const formatNumber = (number: number) => {
+    return new Intl.NumberFormat(i18n.language).format(number);
+  };
+
+  const formatDate = (date: Date | string) => {
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    return new Intl.DateTimeFormat(i18n.language, {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    }).format(dateObj);
+  };
+
+  return { formatCurrency, formatNumber, formatDate };
+};
+```
+
+### 12.4 Machine Learning Integration
+
+```python
+# backend/apps/ml/recommendation_engine.py
+import numpy as np
+import pandas as pd
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.decomposition import TruncatedSVD
+from sklearn.model_selection import train_test_split
+from django.core.management.base import BaseCommand
+from django.conf import settings
+import joblib
+import logging
+from typing import List, Dict, Tuple
+
+logger = logging.getLogger(__name__)
+
+class ProductRecommendationEngine:
+    """Machine learning-based product recommendation system"""
+
+    def __init__(self):
+        self.content_vectorizer = TfidfVectorizer(
+            max_features=5000,
+            stop_words='english',
+            ngram_range=(1, 2)
+        )
+        self.collaborative_model = TruncatedSVD(n_components=100, random_state=42)
+        self.content_similarity_matrix = None
+        self.user_item_matrix = None
+        self.model_trained = False
+
+    def prepare_content_features(self, products_df: pd.DataFrame) -> np.ndarray:
+        """Prepare content features for content-based filtering"""
+        # Combine product features into text
+        content_features = products_df.apply(
+            lambda x: f"{x['name']} {x['description']} {x['category']} {x['tags']}",
+            axis=1
+        )
+
+        # Create TF-IDF vectors
+        tfidf_matrix = self.content_vectorizer.fit_transform(content_features)
+        return tfidf_matrix
+
+    def train_content_based_model(self, products_df: pd.DataFrame):
+        """Train content-based recommendation model"""
+        logger.info("Training content-based recommendation model...")
+
+        tfidf_matrix = self.prepare_content_features(products_df)
+        self.content_similarity_matrix = cosine_similarity(tfidf_matrix)
+
+        logger.info("Content-based model training completed")
+
+    def train_collaborative_model(self, interactions_df: pd.DataFrame):
+        """Train collaborative filtering model"""
+        logger.info("Training collaborative filtering model...")
+
+        # Create user-item matrix
+        self.user_item_matrix = interactions_df.pivot_table(
+            index='user_id',
+            columns='product_id',
+            values='rating',
+            fill_value=0
+        )
+
+        # Apply SVD for dimensionality reduction
+        self.collaborative_model.fit(self.user_item_matrix)
+
+        logger.info("Collaborative filtering model training completed")
+
+    def get_content_based_recommendations(
+        self,
+        product_id: int,
+        products_df: pd.DataFrame,
+        n_recommendations: int = 10
+    ) -> List[int]:
+        """Get content-based recommendations for a product"""
+        if self.content_similarity_matrix is None:
+            raise ValueError("Content-based model not trained")
+
+        # Find product index
+        product_idx = products_df[products_df['id'] == product_id].index[0]
+
+        # Get similarity scores
+        sim_scores = list(enumerate(self.content_similarity_matrix[product_idx]))
+        sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
+
+        # Get top similar products (excluding the product itself)
+        similar_products = sim_scores[1:n_recommendations + 1]
+        product_indices = [i[0] for i in similar_products]
+
+        return products_df.iloc[product_indices]['id'].tolist()
+
+    def get_collaborative_recommendations(
+        self,
+        user_id: int,
+        n_recommendations: int = 10
+    ) -> List[int]:
+        """Get collaborative filtering recommendations for a user"""
+        if not self.model_trained:
+            raise ValueError("Collaborative model not trained")
+
+        if user_id not in self.user_item_matrix.index:
+            return []  # Cold start problem - return popular items
+
+        # Get user vector
+        user_idx = self.user_item_matrix.index.get_loc(user_id)
+        user_vector = self.user_item_matrix.iloc[user_idx].values.reshape(1, -1)
+
+        # Transform user vector using SVD
+        user_svd = self.collaborative_model.transform(user_vector)
+
+        # Calculate recommendations
+        all_items_svd = self.collaborative_model.transform(self.user_item_matrix)
+        similarities = cosine_similarity(user_svd, all_items_svd).flatten()
+
+        # Get top recommendations
+        item_indices = similarities.argsort()[::-1][:n_recommendations]
+        recommended_items = self.user_item_matrix.columns[item_indices].tolist()
+
+        # Filter out items user has already interacted with
+        user_items = self.user_item_matrix.iloc[user_idx]
+        user_interacted_items = user_items[user_items > 0].index.tolist()
+
+        recommendations = [
+            item for item in recommended_items
+            if item not in user_interacted_items
+        ]
+
+        return recommendations[:n_recommendations]
+
+    def get_hybrid_recommendations(
+        self,
+        user_id: int,
+        products_df: pd.DataFrame,
+        n_recommendations: int = 10,
+        content_weight: float = 0.3,
+        collaborative_weight: float = 0.7
+    ) -> List[Dict]:
+        """Get hybrid recommendations combining content and collaborative filtering"""
+        recommendations = []
+
+        try:
+            # Get collaborative recommendations
+            collaborative_recs = self.get_collaborative_recommendations(user_id, n_recommendations * 2)
+
+            # Get content-based recommendations based on user's purchase history
+            user_purchases = self.get_user_purchase_history(user_id)
+            content_recs = []
+
+            for product_id in user_purchases[-5:]:  # Use last 5 purchases
+                similar_products = self.get_content_based_recommendations(
+                    product_id, products_df, 5
+                )
+                content_recs.extend(similar_products)
+
+            # Combine and score recommendations
+            all_recs = {}
+
+            # Score collaborative recommendations
+            for i, product_id in enumerate(collaborative_recs):
+                score = collaborative_weight * (1 - i / len(collaborative_recs))
+                all_recs[product_id] = all_recs.get(product_id, 0) + score
+
+            # Score content recommendations
+            for i, product_id in enumerate(content_recs):
+                score = content_weight * (1 - i / len(content_recs))
+                all_recs[product_id] = all_recs.get(product_id, 0) + score
+
+            # Sort by score and format response
+            sorted_recs = sorted(all_recs.items(), key=lambda x: x[1], reverse=True)
+
+            for product_id, score in sorted_recs[:n_recommendations]:
+                product_info = products_df[products_df['id'] == product_id].iloc[0]
+                recommendations.append({
+                    'product_id': product_id,
+                    'score': score,
+                    'name': product_info['name'],
+                    'price': product_info['price'],
+                    'image_url': product_info['image_url'],
+                    'category': product_info['category']
+                })
+
+        except Exception as e:
+            logger.error(f"Error generating hybrid recommendations: {e}")
+            # Fallback to popular products
+            recommendations = self.get_popular_products(products_df, n_recommendations)
+
+        return recommendations
+
+    def get_user_purchase_history(self, user_id: int) -> List[int]:
+        """Get user's purchase history"""
+        from apps.orders.models import Order, OrderItem
+
+        orders = Order.objects.filter(user_id=user_id, status='completed')
+        product_ids = OrderItem.objects.filter(
+            order__in=orders
+        ).values_list('product_id', flat=True)
+
+        return list(product_ids)
+
+    def get_popular_products(self, products_df: pd.DataFrame, n_products: int = 10) -> List[Dict]:
+        """Get popular products as fallback"""
+        popular_products = products_df.nlargest(n_products, 'popularity_score')
+
+        return [
+            {
+                'product_id': row['id'],
+                'score': 1.0,
+                'name': row['name'],
+                'price': row['price'],
+                'image_url': row['image_url'],
+                'category': row['category']
+            }
+            for _, row in popular_products.iterrows()
+        ]
+
+    def save_model(self, filepath: str):
+        """Save trained model to disk"""
+        model_data = {
+            'content_vectorizer': self.content_vectorizer,
+            'collaborative_model': self.collaborative_model,
+            'content_similarity_matrix': self.content_similarity_matrix,
+            'user_item_matrix': self.user_item_matrix,
+            'model_trained': self.model_trained
+        }
+        joblib.dump(model_data, filepath)
+        logger.info(f"Model saved to {filepath}")
+
+    def load_model(self, filepath: str):
+        """Load trained model from disk"""
+        model_data = joblib.load(filepath)
+        self.content_vectorizer = model_data['content_vectorizer']
+        self.collaborative_model = model_data['collaborative_model']
+        self.content_similarity_matrix = model_data['content_similarity_matrix']
+        self.user_item_matrix = model_data['user_item_matrix']
+        self.model_trained = model_data['model_trained']
+        logger.info(f"Model loaded from {filepath}")
+
+# Recommendation API
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from apps.ml.recommendation_engine import ProductRecommendationEngine
+
+class RecommendationViewSet(viewsets.ViewSet):
+    """API for ML-based recommendations"""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.recommendation_engine = ProductRecommendationEngine()
+
+        # Load pre-trained model
+        try:
+            model_path = settings.ML_MODEL_PATH
+            self.recommendation_engine.load_model(model_path)
+        except Exception as e:
+            logger.warning(f"Could not load ML model: {e}")
+
+    @action(detail=False, methods=['get'])
+    def for_user(self, request):
+        """Get personalized recommendations for user"""
+        user_id = request.user.id
+        n_recommendations = int(request.query_params.get('limit', 10))
+
+        try:
+            # Get product data
+            products_df = self.get_products_dataframe()
+
+            # Get recommendations
+            recommendations = self.recommendation_engine.get_hybrid_recommendations(
+                user_id=user_id,
+                products_df=products_df,
+                n_recommendations=n_recommendations
+            )
+
+            return Response({
+                'recommendations': recommendations,
+                'user_id': user_id,
+                'algorithm': 'hybrid'
+            })
+
+        except Exception as e:
+            logger.error(f"Error getting recommendations for user {user_id}: {e}")
+            return Response(
+                {'error': 'Unable to generate recommendations'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=True, methods=['get'])
+    def similar_products(self, request, pk=None):
+        """Get similar products based on content"""
+        product_id = int(pk)
+        n_recommendations = int(request.query_params.get('limit', 10))
+
+        try:
+            products_df = self.get_products_dataframe()
+
+            similar_product_ids = self.recommendation_engine.get_content_based_recommendations(
+                product_id=product_id,
+                products_df=products_df,
+                n_recommendations=n_recommendations
+            )
+
+            # Format response
+            similar_products = []
+            for pid in similar_product_ids:
+                product_info = products_df[products_df['id'] == pid].iloc[0]
+                similar_products.append({
+                    'product_id': pid,
+                    'name': product_info['name'],
+                    'price': product_info['price'],
+                    'image_url': product_info['image_url'],
+                    'category': product_info['category']
+                })
+
+            return Response({
+                'similar_products': similar_products,
+                'base_product_id': product_id,
+                'algorithm': 'content_based'
+            })
+
+        except Exception as e:
+            logger.error(f"Error getting similar products for {product_id}: {e}")
+            return Response(
+                {'error': 'Unable to generate similar products'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    def get_products_dataframe(self) -> pd.DataFrame:
+        """Get products data as pandas DataFrame"""
+        from apps.products.models import Product
+
+        products = Product.objects.filter(is_active=True).values(
+            'id', 'name', 'description', 'category__name', 'price',
+            'image_url', 'tags', 'popularity_score'
+        )
+
+        df = pd.DataFrame(products)
+        df.rename(columns={'category__name': 'category'}, inplace=True)
+        df['tags'] = df['tags'].fillna('')
+
+        return df
+```
+
+## Hands-On Exercises
+
+### Exercise 12.1: Microservices Implementation
+
+1. Break down the monolith into microservices
+2. Implement API gateway with Kong
+3. Set up service discovery with Consul
+4. Implement distributed tracing
+
+### Exercise 12.2: Real-time Features
+
+1. Implement WebSocket notifications
+2. Add real-time order tracking
+3. Create live chat support
+4. Implement real-time inventory updates
+
+### Exercise 12.3: Internationalization
+
+1. Set up multi-language support
+2. Implement currency conversion
+3. Add right-to-left language support
+4. Create localized content management
+
+### Exercise 12.4: Machine Learning
+
+1. Implement recommendation engine
+2. Add A/B testing for recommendations
+3. Create customer segmentation
+4. Implement demand forecasting
+
+### Exercise 12.5: Advanced Architecture
+
+1. Implement event sourcing
+2. Add CQRS pattern
+3. Create domain-driven design structure
+4. Implement saga pattern for transactions
+
+## Key Architecture Patterns
+
+### Microservices Benefits
+
+- Independent deployment and scaling
+- Technology diversity
+- Fault isolation
+- Team autonomy
+
+### Event-Driven Architecture
+
+- Asynchronous communication
+- Loose coupling
+- Scalability and resilience
+- Real-time processing
+
+### Domain-Driven Design
+
+- Business-focused modeling
+- Bounded contexts
+- Ubiquitous language
+- Strategic design
+
+## Future Considerations
+
+### Emerging Technologies
+
+- GraphQL for flexible APIs
+- Serverless computing
+- Edge computing and CDN
+- Blockchain for supply chain
+
+### Scalability Strategies
+
+- Database sharding
+- Multi-region deployment
+- Event streaming platforms
+- Container orchestration
+
+### Security Evolution
+
+- Zero-trust architecture
+- API security best practices
+- Privacy regulations compliance
+- Threat detection and response
+
+## Project Completion
+
+Congratulations! You have successfully completed the comprehensive Lego E-commerce Platform project. This 12-module curriculum has covered:
+
+1. **Project Setup and Architecture** - Foundation and planning
+2. **Database Design** - CockroachDB implementation
+3. **Backend API Development** - Django REST framework
+4. **Identity and Access Management** - JWT and OAuth
+5. **Frontend Development** - TypeScript and React
+6. **Admin Dashboard** - Inventory and order management
+7. **Payment Integration** - Stripe and Square
+8. **Monitoring and Observability** - Prometheus and Grafana
+9. **Testing and Quality Assurance** - Comprehensive testing strategies
+10. **Deployment and DevOps** - Docker, Kubernetes, and CI/CD
+11. **Performance Optimization** - Caching and scaling
+12. **Advanced Features** - Microservices and ML integration
+
+You now have the knowledge and practical experience to build production-ready e-commerce platforms using modern technologies and best practices. The modular approach ensures you can adapt these concepts to various project requirements and continue learning as technology evolves.
