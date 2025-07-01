@@ -1,0 +1,1765 @@
+import BackToTop from "@/components/BackToTop";
+
+# Notifications System
+
+## Table of Contents
+
+## Introduction
+
+In this module, we'll implement a comprehensive notifications system that keeps users informed about important events and activities within the online learning platform. The system will support real-time notifications, email notifications, push notifications, and provide users with granular control over their notification preferences.
+
+## Notification Features
+
+### Core Notification Types
+
+1. **Course Notifications**
+   - New course enrollment
+   - Course updates and announcements
+   - Assignment deadlines approaching
+   - Quiz availability and results
+
+2. **Learning Progress Notifications**
+   - Lesson completion achievements
+   - Certificate earned
+   - Progress milestones reached
+   - Learning streak reminders
+
+3. **Social Notifications**
+   - Forum replies and mentions
+   - Discussion thread updates
+   - Instructor feedback
+   - Peer interactions
+
+4. **System Notifications**
+   - Account security alerts
+   - Platform maintenance notices
+   - Policy updates
+   - Payment and subscription reminders
+
+## Backend Implementation
+
+### Notification Models
+
+```java
+@Document(collection = "notifications")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class Notification {
+    @Id
+    private String id;
+
+    // Recipient information
+    private String userId;
+    private String userEmail;
+    private String userFullName;
+
+    // Notification content
+    private String title;
+    private String message;
+    private String shortMessage; // For mobile/brief displays
+    private NotificationType type;
+    private NotificationCategory category;
+    private NotificationPriority priority;
+
+    // Context and metadata
+    private String sourceId; // ID of the entity that triggered the notification
+    private String sourceType; // Type of source (COURSE, ASSIGNMENT, FORUM_POST, etc.)
+    private String courseId;
+    private String lessonId;
+    private Map<String, Object> metadata;
+    private String actionUrl; // Deep link for the notification
+
+    // Delivery channels
+    private List<DeliveryChannel> deliveryChannels;
+    private Map<DeliveryChannel, DeliveryStatus> deliveryStatus;
+    private Map<DeliveryChannel, LocalDateTime> deliveredAt;
+    private Map<DeliveryChannel, String> deliveryFailureReason;
+
+    // User interaction
+    private boolean isRead;
+    private LocalDateTime readAt;
+    private boolean isArchived;
+    private LocalDateTime archivedAt;
+    private boolean isClicked;
+    private LocalDateTime clickedAt;
+
+    // Scheduling
+    private LocalDateTime scheduledFor;
+    private boolean isScheduled;
+    private LocalDateTime expiresAt;
+
+    // Lifecycle
+    private NotificationStatus status;
+    private int retryCount;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+}
+
+@Document(collection = "notification_preferences")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class NotificationPreferences {
+    @Id
+    private String id;
+
+    private String userId;
+
+    // Global preferences
+    private boolean enableNotifications;
+    private boolean enableEmailNotifications;
+    private boolean enablePushNotifications;
+    private boolean enableInAppNotifications;
+    private boolean enableSmsNotifications;
+
+    // Quiet hours
+    private LocalTime quietHoursStart;
+    private LocalTime quietHoursEnd;
+    private String timezone;
+    private List<DayOfWeek> quietDays;
+
+    // Category preferences
+    private Map<NotificationCategory, CategoryPreference> categoryPreferences;
+
+    // Course-specific preferences
+    private Map<String, CourseNotificationPreference> coursePreferences;
+
+    // Frequency settings
+    private DigestFrequency digestFrequency;
+    private boolean enableInstantNotifications;
+    private boolean enableBatchNotifications;
+
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+}
+
+@Embeddable
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class CategoryPreference {
+    private boolean enabled;
+    private List<DeliveryChannel> allowedChannels;
+    private NotificationPriority minimumPriority;
+    private boolean enableDigest;
+}
+
+@Embeddable
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class CourseNotificationPreference {
+    private String courseId;
+    private boolean enabled;
+    private List<NotificationType> enabledTypes;
+    private List<DeliveryChannel> allowedChannels;
+}
+
+@Document(collection = "notification_templates")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class NotificationTemplate {
+    @Id
+    private String id;
+
+    private String templateKey;
+    private NotificationType type;
+    private NotificationCategory category;
+    private String language;
+
+    // Template content
+    private String titleTemplate;
+    private String messageTemplate;
+    private String shortMessageTemplate;
+    private String emailSubjectTemplate;
+    private String emailBodyTemplate;
+    private String pushTitleTemplate;
+    private String pushBodyTemplate;
+
+    // Template variables
+    private List<String> requiredVariables;
+    private Map<String, Object> defaultVariables;
+
+    // Styling and formatting
+    private String iconUrl;
+    private String imageUrl;
+    private String primaryColor;
+    private String actionButtonText;
+
+    private boolean isActive;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+}
+
+@Document(collection = "notification_digest")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class NotificationDigest {
+    @Id
+    private String id;
+
+    private String userId;
+    private DigestFrequency frequency;
+    private LocalDate digestDate;
+
+    // Digest content
+    private List<String> notificationIds;
+    private Map<NotificationCategory, Integer> categoryCounts;
+    private String digestContent;
+    private String digestSubject;
+
+    // Delivery
+    private DeliveryStatus status;
+    private LocalDateTime scheduledFor;
+    private LocalDateTime sentAt;
+    private String failureReason;
+
+    private LocalDateTime createdAt;
+}
+
+@Document(collection = "push_subscriptions")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class PushSubscription {
+    @Id
+    private String id;
+
+    private String userId;
+    private String deviceId;
+    private String platform; // WEB, ANDROID, IOS
+
+    // Subscription details
+    private String endpoint;
+    private String p256dhKey;
+    private String authKey;
+    private Map<String, Object> subscriptionData;
+
+    // Device information
+    private String userAgent;
+    private String deviceName;
+    private String appVersion;
+
+    private boolean isActive;
+    private LocalDateTime lastUsed;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+}
+
+public enum NotificationType {
+    // Course notifications
+    COURSE_ENROLLMENT,
+    COURSE_UPDATE,
+    COURSE_COMPLETION,
+    NEW_LESSON_AVAILABLE,
+    ASSIGNMENT_CREATED,
+    ASSIGNMENT_DUE_SOON,
+    ASSIGNMENT_GRADED,
+    QUIZ_AVAILABLE,
+    QUIZ_GRADED,
+
+    // Progress notifications
+    LESSON_COMPLETED,
+    ACHIEVEMENT_UNLOCKED,
+    CERTIFICATE_EARNED,
+    PROGRESS_MILESTONE,
+    LEARNING_STREAK,
+
+    // Social notifications
+    FORUM_REPLY,
+    FORUM_MENTION,
+    INSTRUCTOR_FEEDBACK,
+    PEER_INTERACTION,
+    DISCUSSION_UPDATE,
+
+    // System notifications
+    ACCOUNT_SECURITY,
+    MAINTENANCE_NOTICE,
+    POLICY_UPDATE,
+    PAYMENT_REMINDER,
+    SUBSCRIPTION_EXPIRY
+}
+
+public enum NotificationCategory {
+    COURSE_ACTIVITY,
+    LEARNING_PROGRESS,
+    SOCIAL_INTERACTION,
+    SYSTEM_ALERT,
+    PROMOTIONAL,
+    SECURITY
+}
+
+public enum NotificationPriority {
+    LOW,
+    NORMAL,
+    HIGH,
+    URGENT
+}
+
+public enum DeliveryChannel {
+    IN_APP,
+    EMAIL,
+    PUSH,
+    SMS
+}
+
+public enum DeliveryStatus {
+    PENDING,
+    SENT,
+    DELIVERED,
+    FAILED,
+    SKIPPED
+}
+
+public enum NotificationStatus {
+    DRAFT,
+    SCHEDULED,
+    SENT,
+    DELIVERED,
+    FAILED,
+    EXPIRED
+}
+
+public enum DigestFrequency {
+    NEVER,
+    DAILY,
+    WEEKLY,
+    MONTHLY
+}
+```
+
+### Notification Service
+
+```java
+@Service
+public class NotificationService {
+
+    @Autowired
+    private NotificationRepository notificationRepository;
+
+    @Autowired
+    private NotificationPreferencesRepository preferencesRepository;
+
+    @Autowired
+    private NotificationTemplateRepository templateRepository;
+
+    @Autowired
+    private PushSubscriptionRepository pushSubscriptionRepository;
+
+    @Autowired
+    private EmailService emailService;
+
+    @Autowired
+    private PushNotificationService pushNotificationService;
+
+    @Autowired
+    private SmsService smsService;
+
+    @Autowired
+    private WebSocketService webSocketService;
+
+    @Autowired
+    private UserService userService;
+
+    @Autowired
+    private MongoTemplate mongoTemplate;
+
+    @Value("${app.notifications.batch-size:100}")
+    private int batchSize;
+
+    @Value("${app.notifications.retry-attempts:3}")
+    private int maxRetryAttempts;
+
+    // Create and send notification
+    @Async
+    public CompletableFuture<Notification> createAndSendNotification(CreateNotificationRequest request) {
+        try {
+            // Create notification
+            Notification notification = createNotification(request);
+
+            // Check user preferences
+            NotificationPreferences preferences = getUserPreferences(request.getUserId());
+            if (!shouldSendNotification(notification, preferences)) {
+                notification.setStatus(NotificationStatus.SKIPPED);
+                notificationRepository.save(notification);
+                return CompletableFuture.completedFuture(notification);
+            }
+
+            // Determine delivery channels
+            List<DeliveryChannel> channels = determineDeliveryChannels(notification, preferences);
+            notification.setDeliveryChannels(channels);
+
+            // Send notification through each channel
+            Map<DeliveryChannel, DeliveryStatus> deliveryStatus = new HashMap<>();
+            Map<DeliveryChannel, LocalDateTime> deliveredAt = new HashMap<>();
+            Map<DeliveryChannel, String> failureReasons = new HashMap<>();
+
+            for (DeliveryChannel channel : channels) {
+                try {
+                    boolean sent = sendThroughChannel(notification, channel, preferences);
+                    deliveryStatus.put(channel, sent ? DeliveryStatus.SENT : DeliveryStatus.FAILED);
+                    if (sent) {
+                        deliveredAt.put(channel, LocalDateTime.now());
+                    }
+                } catch (Exception e) {
+                    log.error("Failed to send notification through channel: " + channel, e);
+                    deliveryStatus.put(channel, DeliveryStatus.FAILED);
+                    failureReasons.put(channel, e.getMessage());
+                }
+            }
+
+            // Update notification with delivery status
+            notification.setDeliveryStatus(deliveryStatus);
+            notification.setDeliveredAt(deliveredAt);
+            notification.setDeliveryFailureReason(failureReasons);
+
+            // Determine overall status
+            boolean anySent = deliveryStatus.values().stream().anyMatch(status -> status == DeliveryStatus.SENT);
+            notification.setStatus(anySent ? NotificationStatus.SENT : NotificationStatus.FAILED);
+
+            notification = notificationRepository.save(notification);
+
+            return CompletableFuture.completedFuture(notification);
+
+        } catch (Exception e) {
+            log.error("Failed to create and send notification", e);
+            throw new NotificationException("Failed to send notification: " + e.getMessage());
+        }
+    }
+
+    // Bulk notification creation
+    @Async
+    public CompletableFuture<List<Notification>> createBulkNotifications(BulkNotificationRequest request) {
+        List<CompletableFuture<Notification>> futures = request.getUserIds().stream()
+            .map(userId -> {
+                CreateNotificationRequest individualRequest = CreateNotificationRequest.builder()
+                    .userId(userId)
+                    .type(request.getType())
+                    .category(request.getCategory())
+                    .priority(request.getPriority())
+                    .title(request.getTitle())
+                    .message(request.getMessage())
+                    .sourceId(request.getSourceId())
+                    .sourceType(request.getSourceType())
+                    .courseId(request.getCourseId())
+                    .actionUrl(request.getActionUrl())
+                    .metadata(request.getMetadata())
+                    .scheduledFor(request.getScheduledFor())
+                    .build();
+
+                return createAndSendNotification(individualRequest);
+            })
+            .collect(Collectors.toList());
+
+        return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+            .thenApply(v -> futures.stream()
+                .map(CompletableFuture::join)
+                .collect(Collectors.toList()));
+    }
+
+    // Get user notifications
+    public Page<Notification> getUserNotifications(String userId, boolean includeRead,
+                                                 NotificationCategory category, Pageable pageable) {
+
+        Criteria criteria = Criteria.where("userId").is(userId);
+
+        if (!includeRead) {
+            criteria.and("isRead").is(false);
+        }
+
+        if (category != null) {
+            criteria.and("category").is(category);
+        }
+
+        criteria.and("isArchived").is(false);
+        criteria.and("status").in(NotificationStatus.SENT, NotificationStatus.DELIVERED);
+
+        Query query = new Query(criteria);
+        query.with(Sort.by(Sort.Direction.DESC, "createdAt"));
+        query.with(pageable);
+
+        List<Notification> notifications = mongoTemplate.find(query, Notification.class);
+        long total = mongoTemplate.count(Query.of(query).limit(-1).skip(-1), Notification.class);
+
+        return new PageImpl<>(notifications, pageable, total);
+    }
+
+    // Mark notification as read
+    public void markAsRead(String notificationId, String userId) {
+        Notification notification = notificationRepository.findByIdAndUserId(notificationId, userId)
+            .orElseThrow(() -> new NotificationNotFoundException("Notification not found"));
+
+        if (!notification.isRead()) {
+            notification.setRead(true);
+            notification.setReadAt(LocalDateTime.now());
+            notificationRepository.save(notification);
+
+            // Send real-time update
+            webSocketService.sendToUser(userId, "notification-read", Map.of("notificationId", notificationId));
+        }
+    }
+
+    // Mark all notifications as read
+    public void markAllAsRead(String userId) {
+        Query query = new Query(Criteria.where("userId").is(userId)
+            .and("isRead").is(false)
+            .and("isArchived").is(false));
+
+        Update update = new Update()
+            .set("isRead", true)
+            .set("readAt", LocalDateTime.now());
+
+        mongoTemplate.updateMulti(query, update, Notification.class);
+
+        // Send real-time update
+        webSocketService.sendToUser(userId, "all-notifications-read", Map.of("timestamp", LocalDateTime.now()));
+    }
+
+    // Archive notification
+    public void archiveNotification(String notificationId, String userId) {
+        Notification notification = notificationRepository.findByIdAndUserId(notificationId, userId)
+            .orElseThrow(() -> new NotificationNotFoundException("Notification not found"));
+
+        notification.setArchived(true);
+        notification.setArchivedAt(LocalDateTime.now());
+        notificationRepository.save(notification);
+    }
+
+    // Get notification preferences
+    public NotificationPreferences getUserPreferences(String userId) {
+        return preferencesRepository.findByUserId(userId)
+            .orElseGet(() -> createDefaultPreferences(userId));
+    }
+
+    // Update notification preferences
+    public NotificationPreferences updatePreferences(String userId, UpdatePreferencesRequest request) {
+        NotificationPreferences preferences = getUserPreferences(userId);
+
+        // Update global settings
+        preferences.setEnableNotifications(request.isEnableNotifications());
+        preferences.setEnableEmailNotifications(request.isEnableEmailNotifications());
+        preferences.setEnablePushNotifications(request.isEnablePushNotifications());
+        preferences.setEnableInAppNotifications(request.isEnableInAppNotifications());
+        preferences.setEnableSmsNotifications(request.isEnableSmsNotifications());
+
+        // Update quiet hours
+        preferences.setQuietHoursStart(request.getQuietHoursStart());
+        preferences.setQuietHoursEnd(request.getQuietHoursEnd());
+        preferences.setTimezone(request.getTimezone());
+        preferences.setQuietDays(request.getQuietDays());
+
+        // Update category preferences
+        if (request.getCategoryPreferences() != null) {
+            preferences.setCategoryPreferences(request.getCategoryPreferences());
+        }
+
+        // Update course preferences
+        if (request.getCoursePreferences() != null) {
+            preferences.setCoursePreferences(request.getCoursePreferences());
+        }
+
+        // Update frequency settings
+        preferences.setDigestFrequency(request.getDigestFrequency());
+        preferences.setEnableInstantNotifications(request.isEnableInstantNotifications());
+        preferences.setEnableBatchNotifications(request.isEnableBatchNotifications());
+
+        preferences.setUpdatedAt(LocalDateTime.now());
+
+        return preferencesRepository.save(preferences);
+    }
+
+    // Subscribe to push notifications
+    public PushSubscription subscribeToPush(String userId, PushSubscriptionRequest request) {
+        // Check if subscription already exists
+        Optional<PushSubscription> existingSubscription = pushSubscriptionRepository
+            .findByUserIdAndEndpoint(userId, request.getEndpoint());
+
+        if (existingSubscription.isPresent()) {
+            PushSubscription subscription = existingSubscription.get();
+            subscription.setP256dhKey(request.getP256dhKey());
+            subscription.setAuthKey(request.getAuthKey());
+            subscription.setUserAgent(request.getUserAgent());
+            subscription.setDeviceName(request.getDeviceName());
+            subscription.setAppVersion(request.getAppVersion());
+            subscription.setActive(true);
+            subscription.setLastUsed(LocalDateTime.now());
+            subscription.setUpdatedAt(LocalDateTime.now());
+            return pushSubscriptionRepository.save(subscription);
+        }
+
+        // Create new subscription
+        PushSubscription subscription = PushSubscription.builder()
+            .userId(userId)
+            .deviceId(request.getDeviceId())
+            .platform(request.getPlatform())
+            .endpoint(request.getEndpoint())
+            .p256dhKey(request.getP256dhKey())
+            .authKey(request.getAuthKey())
+            .subscriptionData(request.getSubscriptionData())
+            .userAgent(request.getUserAgent())
+            .deviceName(request.getDeviceName())
+            .appVersion(request.getAppVersion())
+            .isActive(true)
+            .lastUsed(LocalDateTime.now())
+            .createdAt(LocalDateTime.now())
+            .updatedAt(LocalDateTime.now())
+            .build();
+
+        return pushSubscriptionRepository.save(subscription);
+    }
+
+    // Unsubscribe from push notifications
+    public void unsubscribeFromPush(String userId, String endpoint) {
+        Optional<PushSubscription> subscription = pushSubscriptionRepository
+            .findByUserIdAndEndpoint(userId, endpoint);
+
+        if (subscription.isPresent()) {
+            PushSubscription sub = subscription.get();
+            sub.setActive(false);
+            sub.setUpdatedAt(LocalDateTime.now());
+            pushSubscriptionRepository.save(sub);
+        }
+    }
+
+    // Get notification statistics
+    public NotificationStats getNotificationStats(String userId, LocalDate startDate, LocalDate endDate) {
+        Criteria criteria = Criteria.where("userId").is(userId)
+            .and("createdAt").gte(startDate.atStartOfDay())
+            .and("createdAt").lte(endDate.atTime(23, 59, 59));
+
+        // Total notifications
+        long totalNotifications = mongoTemplate.count(new Query(criteria), Notification.class);
+
+        // Read notifications
+        Criteria readCriteria = criteria.and("isRead").is(true);
+        long readNotifications = mongoTemplate.count(new Query(readCriteria), Notification.class);
+
+        // By category
+        MatchOperation matchOp = Aggregation.match(criteria);
+        GroupOperation groupOp = Aggregation.group("category").count().as("count");
+        Aggregation aggregation = Aggregation.newAggregation(matchOp, groupOp);
+        List<Document> categoryStats = mongoTemplate.aggregate(aggregation, "notifications", Document.class)
+            .getMappedResults();
+
+        Map<NotificationCategory, Long> categoryCount = categoryStats.stream()
+            .collect(Collectors.toMap(
+                doc -> NotificationCategory.valueOf(doc.getString("_id")),
+                doc -> doc.getLong("count")
+            ));
+
+        return NotificationStats.builder()
+            .totalNotifications(totalNotifications)
+            .readNotifications(readNotifications)
+            .unreadNotifications(totalNotifications - readNotifications)
+            .readRate(totalNotifications > 0 ? (double) readNotifications / totalNotifications : 0.0)
+            .categoryBreakdown(categoryCount)
+            .build();
+    }
+
+    // Process scheduled notifications
+    @Scheduled(fixedRate = 60000) // Every minute
+    public void processScheduledNotifications() {
+        LocalDateTime now = LocalDateTime.now();
+
+        Query query = new Query(Criteria.where("isScheduled").is(true)
+            .and("scheduledFor").lte(now)
+            .and("status").is(NotificationStatus.SCHEDULED));
+
+        List<Notification> scheduledNotifications = mongoTemplate.find(query, Notification.class);
+
+        for (Notification notification : scheduledNotifications) {
+            try {
+                // Convert to create request and send
+                CreateNotificationRequest request = CreateNotificationRequest.builder()
+                    .userId(notification.getUserId())
+                    .type(notification.getType())
+                    .category(notification.getCategory())
+                    .priority(notification.getPriority())
+                    .title(notification.getTitle())
+                    .message(notification.getMessage())
+                    .sourceId(notification.getSourceId())
+                    .sourceType(notification.getSourceType())
+                    .courseId(notification.getCourseId())
+                    .actionUrl(notification.getActionUrl())
+                    .metadata(notification.getMetadata())
+                    .build();
+
+                createAndSendNotification(request);
+
+                // Mark as processed
+                notification.setScheduled(false);
+                notification.setStatus(NotificationStatus.SENT);
+                notificationRepository.save(notification);
+
+            } catch (Exception e) {
+                log.error("Failed to process scheduled notification: " + notification.getId(), e);
+
+                // Increment retry count
+                notification.setRetryCount(notification.getRetryCount() + 1);
+
+                if (notification.getRetryCount() >= maxRetryAttempts) {
+                    notification.setStatus(NotificationStatus.FAILED);
+                } else {
+                    // Reschedule for retry (exponential backoff)
+                    notification.setScheduledFor(now.plusMinutes(notification.getRetryCount() * 5));
+                }
+
+                notificationRepository.save(notification);
+            }
+        }
+    }
+
+    private Notification createNotification(CreateNotificationRequest request) {
+        User user = userService.findById(request.getUserId());
+
+        // Get or create template
+        NotificationTemplate template = getTemplate(request.getType(), user.getPreferredLanguage());
+
+        // Process template variables
+        Map<String, Object> variables = buildTemplateVariables(request, user);
+        String processedTitle = processTemplate(template.getTitleTemplate(), variables);
+        String processedMessage = processTemplate(template.getMessageTemplate(), variables);
+        String processedShortMessage = template.getShortMessageTemplate() != null ?
+            processTemplate(template.getShortMessageTemplate(), variables) : processedMessage;
+
+        Notification notification = Notification.builder()
+            .userId(request.getUserId())
+            .userEmail(user.getEmail())
+            .userFullName(user.getFullName())
+            .title(processedTitle)
+            .message(processedMessage)
+            .shortMessage(processedShortMessage)
+            .type(request.getType())
+            .category(request.getCategory())
+            .priority(request.getPriority())
+            .sourceId(request.getSourceId())
+            .sourceType(request.getSourceType())
+            .courseId(request.getCourseId())
+            .lessonId(request.getLessonId())
+            .actionUrl(request.getActionUrl())
+            .metadata(request.getMetadata())
+            .deliveryStatus(new HashMap<>())
+            .deliveredAt(new HashMap<>())
+            .deliveryFailureReason(new HashMap<>())
+            .isRead(false)
+            .isArchived(false)
+            .isClicked(false)
+            .scheduledFor(request.getScheduledFor())
+            .isScheduled(request.getScheduledFor() != null)
+            .expiresAt(request.getExpiresAt())
+            .status(request.getScheduledFor() != null ? NotificationStatus.SCHEDULED : NotificationStatus.DRAFT)
+            .retryCount(0)
+            .createdAt(LocalDateTime.now())
+            .updatedAt(LocalDateTime.now())
+            .build();
+
+        return notificationRepository.save(notification);
+    }
+
+    private boolean sendThroughChannel(Notification notification, DeliveryChannel channel,
+                                     NotificationPreferences preferences) {
+
+        switch (channel) {
+            case IN_APP:
+                return sendInAppNotification(notification);
+            case EMAIL:
+                return sendEmailNotification(notification, preferences);
+            case PUSH:
+                return sendPushNotification(notification);
+            case SMS:
+                return sendSmsNotification(notification);
+            default:
+                return false;
+        }
+    }
+
+    private boolean sendInAppNotification(Notification notification) {
+        try {
+            // Send real-time notification via WebSocket
+            Map<String, Object> payload = Map.of(
+                "id", notification.getId(),
+                "title", notification.getTitle(),
+                "message", notification.getShortMessage(),
+                "type", notification.getType(),
+                "category", notification.getCategory(),
+                "priority", notification.getPriority(),
+                "actionUrl", notification.getActionUrl(),
+                "createdAt", notification.getCreatedAt()
+            );
+
+            webSocketService.sendToUser(notification.getUserId(), "new-notification", payload);
+            return true;
+        } catch (Exception e) {
+            log.error("Failed to send in-app notification", e);
+            return false;
+        }
+    }
+}
+```
+
+### Notification Controller
+
+```java
+@RestController
+@RequestMapping("/api/notifications")
+public class NotificationController {
+
+    @Autowired
+    private NotificationService notificationService;
+
+    // Get user notifications
+    @GetMapping
+    public ResponseEntity<Page<Notification>> getUserNotifications(
+            @RequestParam(defaultValue = "false") boolean includeRead,
+            @RequestParam(required = false) NotificationCategory category,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable,
+            Authentication authentication) {
+
+        String userId = authentication.getName();
+        Page<Notification> notifications = notificationService.getUserNotifications(
+            userId, includeRead, category, pageable);
+        return ResponseEntity.ok(notifications);
+    }
+
+    // Get notification count
+    @GetMapping("/count")
+    public ResponseEntity<NotificationCountResponse> getNotificationCount(
+            Authentication authentication) {
+
+        String userId = authentication.getName();
+        NotificationCountResponse count = notificationService.getNotificationCount(userId);
+        return ResponseEntity.ok(count);
+    }
+
+    // Mark notification as read
+    @PutMapping("/{notificationId}/read")
+    public ResponseEntity<Void> markAsRead(
+            @PathVariable String notificationId,
+            Authentication authentication) {
+
+        String userId = authentication.getName();
+        notificationService.markAsRead(notificationId, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    // Mark all notifications as read
+    @PutMapping("/read-all")
+    public ResponseEntity<Void> markAllAsRead(Authentication authentication) {
+        String userId = authentication.getName();
+        notificationService.markAllAsRead(userId);
+        return ResponseEntity.ok().build();
+    }
+
+    // Archive notification
+    @PutMapping("/{notificationId}/archive")
+    public ResponseEntity<Void> archiveNotification(
+            @PathVariable String notificationId,
+            Authentication authentication) {
+
+        String userId = authentication.getName();
+        notificationService.archiveNotification(notificationId, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    // Get notification preferences
+    @GetMapping("/preferences")
+    public ResponseEntity<NotificationPreferences> getPreferences(
+            Authentication authentication) {
+
+        String userId = authentication.getName();
+        NotificationPreferences preferences = notificationService.getUserPreferences(userId);
+        return ResponseEntity.ok(preferences);
+    }
+
+    // Update notification preferences
+    @PutMapping("/preferences")
+    public ResponseEntity<NotificationPreferences> updatePreferences(
+            @RequestBody @Valid UpdatePreferencesRequest request,
+            Authentication authentication) {
+
+        String userId = authentication.getName();
+        NotificationPreferences preferences = notificationService.updatePreferences(userId, request);
+        return ResponseEntity.ok(preferences);
+    }
+
+    // Subscribe to push notifications
+    @PostMapping("/push/subscribe")
+    public ResponseEntity<PushSubscription> subscribeToPush(
+            @RequestBody @Valid PushSubscriptionRequest request,
+            Authentication authentication) {
+
+        String userId = authentication.getName();
+        PushSubscription subscription = notificationService.subscribeToPush(userId, request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(subscription);
+    }
+
+    // Unsubscribe from push notifications
+    @DeleteMapping("/push/unsubscribe")
+    public ResponseEntity<Void> unsubscribeFromPush(
+            @RequestParam String endpoint,
+            Authentication authentication) {
+
+        String userId = authentication.getName();
+        notificationService.unsubscribeFromPush(userId, endpoint);
+        return ResponseEntity.noContent().build();
+    }
+
+    // Get notification statistics
+    @GetMapping("/stats")
+    public ResponseEntity<NotificationStats> getNotificationStats(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            Authentication authentication) {
+
+        String userId = authentication.getName();
+        NotificationStats stats = notificationService.getNotificationStats(userId, startDate, endDate);
+        return ResponseEntity.ok(stats);
+    }
+
+    // Create notification (admin/instructor only)
+    @PostMapping
+    @PreAuthorize("hasRole('ADMIN') or hasRole('INSTRUCTOR')")
+    public ResponseEntity<Notification> createNotification(
+            @RequestBody @Valid CreateNotificationRequest request) {
+
+        CompletableFuture<Notification> future = notificationService.createAndSendNotification(request);
+        try {
+            Notification notification = future.get();
+            return ResponseEntity.status(HttpStatus.CREATED).body(notification);
+        } catch (Exception e) {
+            throw new NotificationException("Failed to create notification: " + e.getMessage());
+        }
+    }
+
+    // Create bulk notifications (admin only)
+    @PostMapping("/bulk")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<Notification>> createBulkNotifications(
+            @RequestBody @Valid BulkNotificationRequest request) {
+
+        CompletableFuture<List<Notification>> future = notificationService.createBulkNotifications(request);
+        try {
+            List<Notification> notifications = future.get();
+            return ResponseEntity.status(HttpStatus.CREATED).body(notifications);
+        } catch (Exception e) {
+            throw new NotificationException("Failed to create bulk notifications: " + e.getMessage());
+        }
+    }
+}
+```
+
+## Frontend Implementation
+
+### Notification Component
+
+```jsx
+import React, { useState, useEffect, useRef } from "react";
+import { Bell, Check, Archive, Settings, X, Filter } from "lucide-react";
+import { notificationService } from "../services/notificationService";
+
+const NotificationCenter = () => {
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [isOpen, setIsOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [filter, setFilter] = useState("all");
+  const [showSettings, setShowSettings] = useState(false);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+
+  const dropdownRef = useRef();
+
+  useEffect(() => {
+    fetchNotifications();
+    fetchUnreadCount();
+
+    // Set up WebSocket connection for real-time notifications
+    const ws = notificationService.connectWebSocket();
+    ws.onMessage("new-notification", handleNewNotification);
+    ws.onMessage("notification-read", handleNotificationRead);
+    ws.onMessage("all-notifications-read", handleAllNotificationsRead);
+
+    return () => {
+      ws.disconnect();
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const fetchNotifications = async (pageNum = 0, append = false) => {
+    try {
+      setLoading(!append);
+      const response = await notificationService.getUserNotifications({
+        includeRead: filter === "all",
+        page: pageNum,
+        size: 20,
+      });
+
+      if (append) {
+        setNotifications((prev) => [...prev, ...response.data.content]);
+      } else {
+        setNotifications(response.data.content);
+      }
+
+      setHasMore(!response.data.last);
+      setPage(pageNum);
+    } catch (error) {
+      console.error("Failed to fetch notifications:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchUnreadCount = async () => {
+    try {
+      const response = await notificationService.getNotificationCount();
+      setUnreadCount(response.data.unreadCount);
+    } catch (error) {
+      console.error("Failed to fetch unread count:", error);
+    }
+  };
+
+  const handleNewNotification = (notification) => {
+    setNotifications((prev) => [notification, ...prev]);
+    setUnreadCount((prev) => prev + 1);
+
+    // Show browser notification if permitted
+    if (Notification.permission === "granted") {
+      new Notification(notification.title, {
+        body: notification.message,
+        icon: "/icons/notification-icon.png",
+        tag: notification.id,
+      });
+    }
+  };
+
+  const handleNotificationRead = (data) => {
+    setNotifications((prev) =>
+      prev.map((notification) =>
+        notification.id === data.notificationId
+          ? { ...notification, isRead: true, readAt: new Date() }
+          : notification
+      )
+    );
+    setUnreadCount((prev) => Math.max(0, prev - 1));
+  };
+
+  const handleAllNotificationsRead = () => {
+    setNotifications((prev) =>
+      prev.map((notification) => ({
+        ...notification,
+        isRead: true,
+        readAt: new Date(),
+      }))
+    );
+    setUnreadCount(0);
+  };
+
+  const markAsRead = async (notificationId) => {
+    try {
+      await notificationService.markAsRead(notificationId);
+      // Real-time update will be handled by WebSocket
+    } catch (error) {
+      console.error("Failed to mark notification as read:", error);
+    }
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      await notificationService.markAllAsRead();
+      // Real-time update will be handled by WebSocket
+    } catch (error) {
+      console.error("Failed to mark all notifications as read:", error);
+    }
+  };
+
+  const archiveNotification = async (notificationId) => {
+    try {
+      await notificationService.archiveNotification(notificationId);
+      setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
+      if (!notifications.find((n) => n.id === notificationId)?.isRead) {
+        setUnreadCount((prev) => Math.max(0, prev - 1));
+      }
+    } catch (error) {
+      console.error("Failed to archive notification:", error);
+    }
+  };
+
+  const handleNotificationClick = async (notification) => {
+    if (!notification.isRead) {
+      await markAsRead(notification.id);
+    }
+
+    if (notification.actionUrl) {
+      // Navigate to the linked content
+      window.location.href = notification.actionUrl;
+    }
+
+    setIsOpen(false);
+  };
+
+  const loadMoreNotifications = () => {
+    if (hasMore && !loading) {
+      fetchNotifications(page + 1, true);
+    }
+  };
+
+  const getNotificationIcon = (type, category) => {
+    const iconClass =
+      "w-8 h-8 rounded-full flex items-center justify-center text-white text-sm";
+
+    switch (category) {
+      case "COURSE_ACTIVITY":
+        return <div className={`${iconClass} bg-blue-500`}>📚</div>;
+      case "LEARNING_PROGRESS":
+        return <div className={`${iconClass} bg-green-500`}>🎯</div>;
+      case "SOCIAL_INTERACTION":
+        return <div className={`${iconClass} bg-purple-500`}>💬</div>;
+      case "SYSTEM_ALERT":
+        return <div className={`${iconClass} bg-red-500`}>⚠️</div>;
+      default:
+        return <div className={`${iconClass} bg-gray-500`}>📢</div>;
+    }
+  };
+
+  const formatTimeAgo = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInMinutes = Math.floor((now - date) / (1000 * 60));
+
+    if (diffInMinutes < 1) return "Just now";
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
+    if (diffInMinutes < 10080)
+      return `${Math.floor(diffInMinutes / 1440)}d ago`;
+    return date.toLocaleDateString();
+  };
+
+  const filteredNotifications =
+    filter === "unread"
+      ? notifications.filter((n) => !n.isRead)
+      : notifications;
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      {/* Notification Bell */}
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="relative p-2 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg"
+      >
+        <Bell size={24} />
+        {unreadCount > 0 && (
+          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+            {unreadCount > 99 ? "99+" : unreadCount}
+          </span>
+        )}
+      </button>
+
+      {/* Notification Dropdown */}
+      {isOpen && (
+        <div className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-96 overflow-hidden">
+          {/* Header */}
+          <div className="p-4 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-medium text-gray-900">
+                Notifications
+              </h3>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowSettings(!showSettings)}
+                  className="p-1 text-gray-400 hover:text-gray-600 rounded"
+                >
+                  <Settings size={16} />
+                </button>
+                <button
+                  onClick={() => setIsOpen(false)}
+                  className="p-1 text-gray-400 hover:text-gray-600 rounded"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+
+            {/* Filter and Actions */}
+            <div className="flex items-center justify-between mt-3">
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    setFilter("all");
+                    fetchNotifications(0);
+                  }}
+                  className={`px-3 py-1 text-sm rounded ${
+                    filter === "all"
+                      ? "bg-blue-100 text-blue-700"
+                      : "text-gray-600 hover:bg-gray-100"
+                  }`}
+                >
+                  All
+                </button>
+                <button
+                  onClick={() => {
+                    setFilter("unread");
+                    fetchNotifications(0);
+                  }}
+                  className={`px-3 py-1 text-sm rounded ${
+                    filter === "unread"
+                      ? "bg-blue-100 text-blue-700"
+                      : "text-gray-600 hover:bg-gray-100"
+                  }`}
+                >
+                  Unread
+                </button>
+              </div>
+
+              {unreadCount > 0 && (
+                <button
+                  onClick={markAllAsRead}
+                  className="text-sm text-blue-600 hover:text-blue-800"
+                >
+                  Mark all read
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Notifications List */}
+          <div className="max-h-80 overflow-y-auto">
+            {loading && notifications.length === 0 ? (
+              <div className="p-4 text-center text-gray-500">
+                Loading notifications...
+              </div>
+            ) : filteredNotifications.length === 0 ? (
+              <div className="p-4 text-center text-gray-500">
+                {filter === "unread"
+                  ? "No unread notifications"
+                  : "No notifications"}
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-100">
+                {filteredNotifications.map((notification) => (
+                  <div
+                    key={notification.id}
+                    className={`p-4 hover:bg-gray-50 cursor-pointer transition-colors ${
+                      !notification.isRead ? "bg-blue-50" : ""
+                    }`}
+                    onClick={() => handleNotificationClick(notification)}
+                  >
+                    <div className="flex items-start gap-3">
+                      {getNotificationIcon(
+                        notification.type,
+                        notification.category
+                      )}
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <p
+                            className={`text-sm ${
+                              !notification.isRead
+                                ? "font-medium text-gray-900"
+                                : "text-gray-800"
+                            }`}
+                          >
+                            {notification.title}
+                          </p>
+                          <span className="text-xs text-gray-500">
+                            {formatTimeAgo(notification.createdAt)}
+                          </span>
+                        </div>
+
+                        <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+                          {notification.shortMessage || notification.message}
+                        </p>
+
+                        {/* Action Buttons */}
+                        <div className="flex items-center gap-2 mt-2">
+                          {!notification.isRead && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                markAsRead(notification.id);
+                              }}
+                              className="text-xs text-blue-600 hover:text-blue-800"
+                            >
+                              <Check size={12} className="inline mr-1" />
+                              Mark read
+                            </button>
+                          )}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              archiveNotification(notification.id);
+                            }}
+                            className="text-xs text-gray-600 hover:text-gray-800"
+                          >
+                            <Archive size={12} className="inline mr-1" />
+                            Archive
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Load More */}
+            {hasMore && !loading && filteredNotifications.length > 0 && (
+              <div className="p-4 border-t border-gray-200">
+                <button
+                  onClick={loadMoreNotifications}
+                  className="w-full text-sm text-blue-600 hover:text-blue-800"
+                >
+                  Load more notifications
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="p-3 border-t border-gray-200 bg-gray-50">
+            <button
+              onClick={() => {
+                // Navigate to full notifications page
+                window.location.href = "/notifications";
+              }}
+              className="w-full text-sm text-center text-blue-600 hover:text-blue-800"
+            >
+              View all notifications
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Settings Panel */}
+      {showSettings && (
+        <NotificationSettings onClose={() => setShowSettings(false)} />
+      )}
+    </div>
+  );
+};
+
+export default NotificationCenter;
+```
+
+### Notification Settings Component
+
+```jsx
+import React, { useState, useEffect } from "react";
+import { X, Save, Bell, Mail, Smartphone, MessageSquare } from "lucide-react";
+import { notificationService } from "../services/notificationService";
+
+const NotificationSettings = ({ onClose }) => {
+  const [preferences, setPreferences] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    fetchPreferences();
+  }, []);
+
+  const fetchPreferences = async () => {
+    try {
+      const response = await notificationService.getPreferences();
+      setPreferences(response.data);
+    } catch (error) {
+      console.error("Failed to fetch preferences:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const savePreferences = async () => {
+    try {
+      setSaving(true);
+      await notificationService.updatePreferences(preferences);
+      onClose();
+    } catch (error) {
+      console.error("Failed to save preferences:", error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const updatePreference = (key, value) => {
+    setPreferences((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+  };
+
+  const updateCategoryPreference = (category, key, value) => {
+    setPreferences((prev) => ({
+      ...prev,
+      categoryPreferences: {
+        ...prev.categoryPreferences,
+        [category]: {
+          ...prev.categoryPreferences[category],
+          [key]: value,
+        },
+      },
+    }));
+  };
+
+  if (loading) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg p-6">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="text-center mt-2">Loading preferences...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto m-4">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <h2 className="text-xl font-semibold text-gray-900">
+            Notification Settings
+          </h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600"
+          >
+            <X size={24} />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 space-y-6">
+          {/* Global Settings */}
+          <div>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">
+              Global Settings
+            </h3>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Bell className="text-gray-400" size={20} />
+                  <div>
+                    <p className="font-medium text-gray-900">
+                      Enable Notifications
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      Receive all types of notifications
+                    </p>
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={preferences?.enableNotifications || false}
+                  onChange={(e) =>
+                    updatePreference("enableNotifications", e.target.checked)
+                  }
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Mail className="text-gray-400" size={20} />
+                  <div>
+                    <p className="font-medium text-gray-900">
+                      Email Notifications
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      Receive notifications via email
+                    </p>
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={preferences?.enableEmailNotifications || false}
+                  onChange={(e) =>
+                    updatePreference(
+                      "enableEmailNotifications",
+                      e.target.checked
+                    )
+                  }
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Smartphone className="text-gray-400" size={20} />
+                  <div>
+                    <p className="font-medium text-gray-900">
+                      Push Notifications
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      Receive browser/mobile push notifications
+                    </p>
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={preferences?.enablePushNotifications || false}
+                  onChange={(e) =>
+                    updatePreference(
+                      "enablePushNotifications",
+                      e.target.checked
+                    )
+                  }
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <MessageSquare className="text-gray-400" size={20} />
+                  <div>
+                    <p className="font-medium text-gray-900">
+                      In-App Notifications
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      Show notifications within the application
+                    </p>
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={preferences?.enableInAppNotifications || false}
+                  onChange={(e) =>
+                    updatePreference(
+                      "enableInAppNotifications",
+                      e.target.checked
+                    )
+                  }
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Category Settings */}
+          <div>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">
+              Notification Categories
+            </h3>
+            <div className="space-y-4">
+              {Object.entries(preferences?.categoryPreferences || {}).map(
+                ([category, prefs]) => (
+                  <div
+                    key={category}
+                    className="border border-gray-200 rounded-lg p-4"
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-medium text-gray-900 capitalize">
+                        {category.replace(/_/g, " ").toLowerCase()}
+                      </h4>
+                      <input
+                        type="checkbox"
+                        checked={prefs?.enabled || false}
+                        onChange={(e) =>
+                          updateCategoryPreference(
+                            category,
+                            "enabled",
+                            e.target.checked
+                          )
+                        }
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    {prefs?.enabled && (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-4">
+                          <span className="text-sm text-gray-600">
+                            Channels:
+                          </span>
+                          {["IN_APP", "EMAIL", "PUSH"].map((channel) => (
+                            <label key={channel} className="flex items-center">
+                              <input
+                                type="checkbox"
+                                checked={
+                                  prefs?.allowedChannels?.includes(channel) ||
+                                  false
+                                }
+                                onChange={(e) => {
+                                  const channels = prefs?.allowedChannels || [];
+                                  const newChannels = e.target.checked
+                                    ? [...channels, channel]
+                                    : channels.filter((c) => c !== channel);
+                                  updateCategoryPreference(
+                                    category,
+                                    "allowedChannels",
+                                    newChannels
+                                  );
+                                }}
+                                className="mr-1 text-blue-600 focus:ring-blue-500"
+                              />
+                              <span className="text-sm text-gray-700">
+                                {channel}
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              )}
+            </div>
+          </div>
+
+          {/* Digest Settings */}
+          <div>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">
+              Digest Settings
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Email Digest Frequency
+                </label>
+                <select
+                  value={preferences?.digestFrequency || "NEVER"}
+                  onChange={(e) =>
+                    updatePreference("digestFrequency", e.target.value)
+                  }
+                  className="border border-gray-300 rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="NEVER">Never</option>
+                  <option value="DAILY">Daily</option>
+                  <option value="WEEKLY">Weekly</option>
+                  <option value="MONTHLY">Monthly</option>
+                </select>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium text-gray-900">
+                    Instant Notifications
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Receive notifications immediately
+                  </p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={preferences?.enableInstantNotifications || false}
+                  onChange={(e) =>
+                    updatePreference(
+                      "enableInstantNotifications",
+                      e.target.checked
+                    )
+                  }
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Quiet Hours */}
+          <div>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">
+              Quiet Hours
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Start Time
+                </label>
+                <input
+                  type="time"
+                  value={preferences?.quietHoursStart || ""}
+                  onChange={(e) =>
+                    updatePreference("quietHoursStart", e.target.value)
+                  }
+                  className="border border-gray-300 rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  End Time
+                </label>
+                <input
+                  type="time"
+                  value={preferences?.quietHoursEnd || ""}
+                  onChange={(e) =>
+                    updatePreference("quietHoursEnd", e.target.value)
+                  }
+                  className="border border-gray-300 rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={savePreferences}
+            disabled={saving}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+          >
+            <Save size={16} />
+            {saving ? "Saving..." : "Save Changes"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default NotificationSettings;
+```
+
+## Key Features Implemented
+
+1. **Comprehensive Notification System**
+   - Multiple delivery channels (in-app, email, push, SMS)
+   - Real-time notifications via WebSocket
+   - Rich notification templates and customization
+
+2. **Advanced User Preferences**
+   - Granular control over notification types
+   - Category-specific settings
+   - Quiet hours and digest frequency options
+
+3. **Smart Delivery Management**
+   - Scheduled notifications and retry logic
+   - Delivery status tracking and analytics
+   - Bulk notification capabilities
+
+4. **User Experience Features**
+   - Real-time notification center
+   - Mark as read/archive functionality
+   - Visual indicators and priority levels
+
+5. **Analytics and Insights**
+   - Notification delivery statistics
+   - User engagement tracking
+   - Popular notification trends
+
+[← Previous: Search Functionality](/proj-online-learning-platform-website/20-search-functionality) | [Next: Testing →](/proj-online-learning-platform-website/22-testing)
+
+<BackToTop />
