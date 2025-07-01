@@ -1,0 +1,611 @@
+import BackToTop from "@/components/BackToTop";
+
+# Course Management System
+
+## Table of Contents
+
+## Introduction
+
+In this module, we'll implement a comprehensive course management system that allows instructors to create, edit, and manage their courses. This includes course metadata, curriculum organization, publishing controls, and student enrollment management.
+
+## Course Management Features
+
+### Core Course Operations
+
+1. **Course Creation**
+   - Basic course information
+   - Course metadata and settings
+   - Initial curriculum structure
+
+2. **Course Editing**
+   - Update course details
+   - Modify curriculum structure
+   - Add/remove modules and lessons
+
+3. **Publishing Controls**
+   - Draft and published states
+   - Preview functionality
+   - Publishing workflows
+
+4. **Enrollment Management**
+   - View enrolled students
+   - Manage enrollment settings
+   - Handle enrollment requests
+
+## Backend Implementation
+
+### Course Service Extension
+
+Let's extend our `CourseService` to include comprehensive management features:
+
+```java
+@Service
+public class CourseService {
+
+    @Autowired
+    private CourseRepository courseRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private EnrollmentRepository enrollmentRepository;
+
+    // Create a new course
+    public Course createCourse(CreateCourseRequest request, String instructorId) {
+        User instructor = userRepository.findById(instructorId)
+            .orElseThrow(() -> new UserNotFoundException("Instructor not found"));
+
+        if (!instructor.getRoles().contains(Role.INSTRUCTOR)) {
+            throw new UnauthorizedException("User is not an instructor");
+        }
+
+        Course course = Course.builder()
+            .title(request.getTitle())
+            .description(request.getDescription())
+            .instructorId(instructorId)
+            .instructorName(instructor.getFirstName() + " " + instructor.getLastName())
+            .category(request.getCategory())
+            .level(request.getLevel())
+            .price(request.getPrice())
+            .estimatedDuration(request.getEstimatedDuration())
+            .status(CourseStatus.DRAFT)
+            .curriculum(new ArrayList<>())
+            .enrollmentCount(0)
+            .averageRating(0.0)
+            .createdAt(LocalDateTime.now())
+            .updatedAt(LocalDateTime.now())
+            .build();
+
+        return courseRepository.save(course);
+    }
+
+    // Update course details
+    public Course updateCourse(String courseId, UpdateCourseRequest request, String instructorId) {
+        Course course = courseRepository.findById(courseId)
+            .orElseThrow(() -> new CourseNotFoundException("Course not found"));
+
+        if (!course.getInstructorId().equals(instructorId)) {
+            throw new UnauthorizedException("You can only edit your own courses");
+        }
+
+        course.setTitle(request.getTitle());
+        course.setDescription(request.getDescription());
+        course.setCategory(request.getCategory());
+        course.setLevel(request.getLevel());
+        course.setPrice(request.getPrice());
+        course.setEstimatedDuration(request.getEstimatedDuration());
+        course.setLearningObjectives(request.getLearningObjectives());
+        course.setPrerequisites(request.getPrerequisites());
+        course.setUpdatedAt(LocalDateTime.now());
+
+        return courseRepository.save(course);
+    }
+
+    // Get courses by instructor
+    public List<Course> getCoursesByInstructor(String instructorId) {
+        return courseRepository.findByInstructorIdOrderByCreatedAtDesc(instructorId);
+    }
+
+    // Publish course
+    public Course publishCourse(String courseId, String instructorId) {
+        Course course = courseRepository.findById(courseId)
+            .orElseThrow(() -> new CourseNotFoundException("Course not found"));
+
+        if (!course.getInstructorId().equals(instructorId)) {
+            throw new UnauthorizedException("You can only publish your own courses");
+        }
+
+        // Validate course is ready for publishing
+        validateCourseForPublishing(course);
+
+        course.setStatus(CourseStatus.PUBLISHED);
+        course.setPublishedAt(LocalDateTime.now());
+        course.setUpdatedAt(LocalDateTime.now());
+
+        return courseRepository.save(course);
+    }
+
+    // Unpublish course
+    public Course unpublishCourse(String courseId, String instructorId) {
+        Course course = courseRepository.findById(courseId)
+            .orElseThrow(() -> new CourseNotFoundException("Course not found"));
+
+        if (!course.getInstructorId().equals(instructorId)) {
+            throw new UnauthorizedException("You can only unpublish your own courses");
+        }
+
+        course.setStatus(CourseStatus.DRAFT);
+        course.setUpdatedAt(LocalDateTime.now());
+
+        return courseRepository.save(course);
+    }
+
+    // Delete course
+    public void deleteCourse(String courseId, String instructorId) {
+        Course course = courseRepository.findById(courseId)
+            .orElseThrow(() -> new CourseNotFoundException("Course not found"));
+
+        if (!course.getInstructorId().equals(instructorId)) {
+            throw new UnauthorizedException("You can only delete your own courses");
+        }
+
+        // Check if course has enrollments
+        long enrollmentCount = enrollmentRepository.countByCourseId(courseId);
+        if (enrollmentCount > 0) {
+            throw new IllegalStateException("Cannot delete course with active enrollments");
+        }
+
+        courseRepository.delete(course);
+    }
+
+    // Get course analytics for instructor
+    public CourseAnalytics getCourseAnalytics(String courseId, String instructorId) {
+        Course course = courseRepository.findById(courseId)
+            .orElseThrow(() -> new CourseNotFoundException("Course not found"));
+
+        if (!course.getInstructorId().equals(instructorId)) {
+            throw new UnauthorizedException("You can only view analytics for your own courses");
+        }
+
+        // Calculate analytics
+        List<Enrollment> enrollments = enrollmentRepository.findByCourseId(courseId);
+        long totalEnrollments = enrollments.size();
+        long completedEnrollments = enrollments.stream()
+            .mapToLong(e -> e.getCompletionPercentage() == 100 ? 1L : 0L)
+            .sum();
+
+        double averageProgress = enrollments.stream()
+            .mapToDouble(Enrollment::getCompletionPercentage)
+            .average()
+            .orElse(0.0);
+
+        return CourseAnalytics.builder()
+            .courseId(courseId)
+            .totalEnrollments(totalEnrollments)
+            .completedEnrollments(completedEnrollments)
+            .averageProgress(averageProgress)
+            .averageRating(course.getAverageRating())
+            .totalRevenue(calculateTotalRevenue(courseId))
+            .build();
+    }
+
+    private void validateCourseForPublishing(Course course) {
+        List<String> errors = new ArrayList<>();
+
+        if (course.getTitle() == null || course.getTitle().trim().isEmpty()) {
+            errors.add("Course title is required");
+        }
+
+        if (course.getDescription() == null || course.getDescription().trim().isEmpty()) {
+            errors.add("Course description is required");
+        }
+
+        if (course.getCurriculum() == null || course.getCurriculum().isEmpty()) {
+            errors.add("Course must have at least one module");
+        }
+
+        if (course.getPrice() == null || course.getPrice().compareTo(BigDecimal.ZERO) < 0) {
+            errors.add("Course price must be set and non-negative");
+        }
+
+        if (!errors.isEmpty()) {
+            throw new ValidationException("Course validation failed: " + String.join(", ", errors));
+        }
+    }
+
+    private BigDecimal calculateTotalRevenue(String courseId) {
+        // Implementation to calculate total revenue from enrollments
+        return enrollmentRepository.findByCourseId(courseId).stream()
+            .map(Enrollment::getAmountPaid)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+}
+```
+
+### Course Management Controller
+
+```java
+@RestController
+@RequestMapping("/api/courses/manage")
+@PreAuthorize("hasRole('INSTRUCTOR')")
+public class CourseManagementController {
+
+    @Autowired
+    private CourseService courseService;
+
+    @PostMapping
+    public ResponseEntity<Course> createCourse(
+            @RequestBody @Valid CreateCourseRequest request,
+            Authentication authentication) {
+
+        String instructorId = authentication.getName();
+        Course course = courseService.createCourse(request, instructorId);
+        return ResponseEntity.status(HttpStatus.CREATED).body(course);
+    }
+
+    @PutMapping("/{courseId}")
+    public ResponseEntity<Course> updateCourse(
+            @PathVariable String courseId,
+            @RequestBody @Valid UpdateCourseRequest request,
+            Authentication authentication) {
+
+        String instructorId = authentication.getName();
+        Course course = courseService.updateCourse(courseId, request, instructorId);
+        return ResponseEntity.ok(course);
+    }
+
+    @GetMapping("/my-courses")
+    public ResponseEntity<List<Course>> getMyCourses(Authentication authentication) {
+        String instructorId = authentication.getName();
+        List<Course> courses = courseService.getCoursesByInstructor(instructorId);
+        return ResponseEntity.ok(courses);
+    }
+
+    @PostMapping("/{courseId}/publish")
+    public ResponseEntity<Course> publishCourse(
+            @PathVariable String courseId,
+            Authentication authentication) {
+
+        String instructorId = authentication.getName();
+        Course course = courseService.publishCourse(courseId, instructorId);
+        return ResponseEntity.ok(course);
+    }
+
+    @PostMapping("/{courseId}/unpublish")
+    public ResponseEntity<Course> unpublishCourse(
+            @PathVariable String courseId,
+            Authentication authentication) {
+
+        String instructorId = authentication.getName();
+        Course course = courseService.unpublishCourse(courseId, instructorId);
+        return ResponseEntity.ok(course);
+    }
+
+    @DeleteMapping("/{courseId}")
+    public ResponseEntity<Void> deleteCourse(
+            @PathVariable String courseId,
+            Authentication authentication) {
+
+        String instructorId = authentication.getName();
+        courseService.deleteCourse(courseId, instructorId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{courseId}/analytics")
+    public ResponseEntity<CourseAnalytics> getCourseAnalytics(
+            @PathVariable String courseId,
+            Authentication authentication) {
+
+        String instructorId = authentication.getName();
+        CourseAnalytics analytics = courseService.getCourseAnalytics(courseId, instructorId);
+        return ResponseEntity.ok(analytics);
+    }
+
+    @GetMapping("/{courseId}/enrollments")
+    public ResponseEntity<List<EnrollmentInfo>> getCourseEnrollments(
+            @PathVariable String courseId,
+            Authentication authentication) {
+
+        String instructorId = authentication.getName();
+        List<EnrollmentInfo> enrollments = courseService.getCourseEnrollments(courseId, instructorId);
+        return ResponseEntity.ok(enrollments);
+    }
+}
+```
+
+## Frontend Implementation
+
+### Course Management Dashboard
+
+```jsx
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { PlusIcon, EditIcon, TrashIcon, EyeIcon } from "lucide-react";
+import { courseService } from "../services/courseService";
+import LoadingSpinner from "../components/LoadingSpinner";
+import CourseCard from "../components/CourseCard";
+
+const CourseManagementDashboard = () => {
+  const [courses, setCourses] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    fetchMyCourses();
+  }, []);
+
+  const fetchMyCourses = async () => {
+    try {
+      setLoading(true);
+      const response = await courseService.getMyCourses();
+      setCourses(response.data);
+    } catch (err) {
+      setError("Failed to fetch courses");
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteCourse = async (courseId) => {
+    if (!window.confirm("Are you sure you want to delete this course?")) {
+      return;
+    }
+
+    try {
+      await courseService.deleteCourse(courseId);
+      setCourses(courses.filter((course) => course.id !== courseId));
+    } catch (err) {
+      setError("Failed to delete course");
+      console.error(err);
+    }
+  };
+
+  const handleTogglePublish = async (courseId, currentStatus) => {
+    try {
+      if (currentStatus === "PUBLISHED") {
+        await courseService.unpublishCourse(courseId);
+      } else {
+        await courseService.publishCourse(courseId);
+      }
+      fetchMyCourses(); // Refresh the list
+    } catch (err) {
+      setError("Failed to update course status");
+      console.error(err);
+    }
+  };
+
+  if (loading) return <LoadingSpinner />;
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="flex justify-between items-center mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">My Courses</h1>
+          <p className="text-gray-600">
+            Manage your courses and track their performance
+          </p>
+        </div>
+        <Link
+          to="/instructor/courses/create"
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
+        >
+          <PlusIcon size={20} />
+          Create New Course
+        </Link>
+      </div>
+
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+          {error}
+        </div>
+      )}
+
+      {courses.length === 0 ? (
+        <div className="text-center py-12">
+          <div className="text-gray-500 mb-4">
+            You haven't created any courses yet.
+          </div>
+          <Link
+            to="/instructor/courses/create"
+            className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700"
+          >
+            Create Your First Course
+          </Link>
+        </div>
+      ) : (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {courses.map((course) => (
+            <div
+              key={course.id}
+              className="bg-white rounded-lg shadow-md overflow-hidden"
+            >
+              <img
+                src={course.thumbnail || "/placeholder-course.jpg"}
+                alt={course.title}
+                className="w-full h-48 object-cover"
+              />
+              <div className="p-6">
+                <div className="flex justify-between items-start mb-2">
+                  <h3 className="text-xl font-semibold text-gray-900 truncate">
+                    {course.title}
+                  </h3>
+                  <span
+                    className={`px-2 py-1 text-xs rounded-full ${
+                      course.status === "PUBLISHED"
+                        ? "bg-green-100 text-green-800"
+                        : "bg-yellow-100 text-yellow-800"
+                    }`}
+                  >
+                    {course.status}
+                  </span>
+                </div>
+
+                <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                  {course.description}
+                </p>
+
+                <div className="flex justify-between items-center mb-4 text-sm text-gray-500">
+                  <span>{course.enrollmentCount} students</span>
+                  <span>${course.price}</span>
+                </div>
+
+                <div className="flex gap-2">
+                  <Link
+                    to={`/instructor/courses/${course.id}/edit`}
+                    className="flex-1 bg-blue-600 text-white text-center py-2 px-3 rounded hover:bg-blue-700 text-sm"
+                  >
+                    Edit
+                  </Link>
+                  <Link
+                    to={`/courses/${course.id}`}
+                    className="bg-gray-200 text-gray-700 py-2 px-3 rounded hover:bg-gray-300 text-sm"
+                  >
+                    <EyeIcon size={16} />
+                  </Link>
+                  <button
+                    onClick={() =>
+                      handleTogglePublish(course.id, course.status)
+                    }
+                    className={`py-2 px-3 rounded text-sm ${
+                      course.status === "PUBLISHED"
+                        ? "bg-red-100 text-red-700 hover:bg-red-200"
+                        : "bg-green-100 text-green-700 hover:bg-green-200"
+                    }`}
+                  >
+                    {course.status === "PUBLISHED" ? "Unpublish" : "Publish"}
+                  </button>
+                  <button
+                    onClick={() => handleDeleteCourse(course.id)}
+                    className="bg-red-100 text-red-700 py-2 px-3 rounded hover:bg-red-200 text-sm"
+                  >
+                    <TrashIcon size={16} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default CourseManagementDashboard;
+```
+
+### Course Analytics Component
+
+```jsx
+import React, { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+import { courseService } from "../services/courseService";
+
+const CourseAnalytics = () => {
+  const { courseId } = useParams();
+  const [analytics, setAnalytics] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchAnalytics();
+  }, [courseId]);
+
+  const fetchAnalytics = async () => {
+    try {
+      const response = await courseService.getCourseAnalytics(courseId);
+      setAnalytics(response.data);
+    } catch (error) {
+      console.error("Failed to fetch analytics:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">Loading...</div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold text-gray-900">Course Analytics</h2>
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h3 className="text-sm font-medium text-gray-500">
+            Total Enrollments
+          </h3>
+          <p className="text-3xl font-bold text-blue-600">
+            {analytics.totalEnrollments}
+          </p>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h3 className="text-sm font-medium text-gray-500">Completed</h3>
+          <p className="text-3xl font-bold text-green-600">
+            {analytics.completedEnrollments}
+          </p>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h3 className="text-sm font-medium text-gray-500">Avg Progress</h3>
+          <p className="text-3xl font-bold text-yellow-600">
+            {analytics.averageProgress.toFixed(1)}%
+          </p>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h3 className="text-sm font-medium text-gray-500">Total Revenue</h3>
+          <p className="text-3xl font-bold text-purple-600">
+            ${analytics.totalRevenue}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default CourseAnalytics;
+```
+
+## Key Features Implemented
+
+1. **Complete Course Lifecycle Management**
+   - Create, update, delete courses
+   - Draft and published states
+   - Publishing validation
+
+2. **Instructor Dashboard**
+   - View all courses
+   - Quick actions (edit, delete, publish)
+   - Course status indicators
+
+3. **Analytics and Insights**
+   - Enrollment statistics
+   - Revenue tracking
+   - Progress monitoring
+
+4. **Security and Authorization**
+   - Instructor-only access
+   - Ownership validation
+   - Role-based permissions
+
+5. **User Experience**
+   - Intuitive interface
+   - Responsive design
+   - Error handling
+
+[← Previous: User Management](/proj-online-learning-platform-website/13-user-management) | [Next: Content Delivery →](/proj-online-learning-platform-website/15-content-delivery)
+
+<BackToTop />
