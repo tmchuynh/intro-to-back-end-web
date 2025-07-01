@@ -71,6 +71,8 @@ Understanding the different levels of caching helps in designing comprehensive c
 - Best for: Query results, computed aggregations
 - Control: Database configuration or external cache systems
 
+<BackToTop />
+
 ## Common Caching Strategies
 
 ### Cache-aside (Lazy Loading)
@@ -116,6 +118,7 @@ Disadvantages:
 - Potential for cache stampede during high traffic
 - Application code becomes more complex with cache management logic
 
+<BackToTop />
 ### Read-through
 
 In the read-through pattern, the cache sits between the application and the data source, acting as a proxy. The cache itself is responsible for loading data from the primary source when a cache miss occurs.
@@ -154,6 +157,7 @@ Disadvantages:
 - Potential single point of failure
 - May cache data that's never requested again
 
+<BackToTop />
 ### Write-through
 
 Write-through caching ensures data consistency by writing to both the cache and the primary data source simultaneously during every write operation.
@@ -191,6 +195,8 @@ Disadvantages:
 - Reduced write throughput
 - Cache may contain data that's rarely read
 - More complex error handling (what if one write fails?)
+
+<BackToTop />
 
 ### Write-back (Write-behind)
 
@@ -273,6 +279,7 @@ Read:  Application → Cache → Database (on miss) → Cache → Application
 
 ## Cache Implementation Patterns
 
+<BackToTop />
 ### Cache Partitioning (Sharding)
 
 Cache partitioning involves distributing cache data across multiple cache instances based on a partitioning strategy. This approach helps scale cache capacity and throughput beyond what a single cache instance can provide.
@@ -325,6 +332,7 @@ Key Characteristics:
 
 ## Important Considerations
 
+<BackToTop />
 ### Cache Invalidation
 
 Cache invalidation is one of the most challenging aspects of caching, often cited as one of the "two hard things in computer science" along with naming things and off-by-one errors. The goal is to ensure that stale or incorrect data is removed from the cache while maintaining optimal performance.
@@ -376,6 +384,7 @@ When invalidating one cache entry requires invalidating related entries. This ca
 - Hierarchical invalidation strategies
 - Graph-based invalidation algorithms
 
+<BackToTop />
 ### Cache Size and Eviction Policies
 
 Cache size management is crucial for optimal performance. Caches have finite memory, so when they reach capacity, they must decide which data to remove to make room for new data.
@@ -437,6 +446,7 @@ Cache size management is crucial for optimal performance. Caches have finite mem
 - Cache should ideally hold the entire working set
 - Monitor cache hit rates to determine optimal size
 
+<BackToTop />
 ### Cache Consistency
 
 Cache consistency addresses how well the cached data matches the data in the primary data source. Different applications have different consistency requirements.
@@ -493,6 +503,7 @@ Cache consistency addresses how well the cached data matches the data in the pri
 - More complex but necessary for distributed caches
 - Handle scenarios like cache-to-cache transfers
 
+<BackToTop />
 ### Cache Scalability
 
 Cache scalability involves designing caching systems that can handle increasing loads and data volumes without significant performance degradation.
@@ -536,6 +547,7 @@ Cache scalability involves designing caching systems that can handle increasing 
 - Minimize lock contention in multi-threaded environments
 - Use connection pooling for distributed caches
 
+<BackToTop />
 ### Cache Monitoring and Metrics
 
 Effective cache monitoring provides insights into performance, helps identify issues, and guides optimization efforts.
@@ -600,6 +612,7 @@ Effective cache monitoring provides insights into performance, helps identify is
 - Network timeouts and retries
 - Helps identify infrastructure issues
 
+<BackToTop />
 ### Cache Security
 
 Security considerations become critical when caching sensitive data or when cache infrastructure is shared across multiple applications.
@@ -659,6 +672,7 @@ Security considerations become critical when caching sensitive data or when cach
 - Consider container or VM-based isolation
 - Prevent cache data leakage between applications
 
+<BackToTop />
 ### Cache Testing and Validation
 
 Comprehensive testing ensures that caching strategies meet performance, reliability, and correctness requirements.
@@ -725,6 +739,7 @@ Comprehensive testing ensures that caching strategies meet performance, reliabil
 - Track test metrics alongside production metrics
 - Use synthetic transactions for ongoing validation
 
+<BackToTop />
 ### Cache Placement
 
 The physical and logical placement of caches significantly impacts performance, latency, and system architecture.
@@ -784,6 +799,7 @@ The physical and logical placement of caches significantly impacts performance, 
 - Balance between cost, performance, and data sovereignty
 - Plan for disaster recovery and business continuity
 
+<BackToTop />
 ## Best Practices
 
 ### Strategic Cache Planning
@@ -916,6 +932,7 @@ Establish Performance Baselines:
 - Conduct regular security assessments and penetration testing
 - Maintain incident response procedures for cache security breaches
 
+<BackToTop />
 ### Advanced Optimization Techniques
 
 #### Cache Key Optimization:
