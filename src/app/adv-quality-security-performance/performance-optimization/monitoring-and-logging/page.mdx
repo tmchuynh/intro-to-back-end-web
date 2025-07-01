@@ -1,6 +1,6 @@
 import BackToTop from "@/components/BackToTop";
 
-# Performance Monitoring
+# Performance Monitoring and Logging
 
 ## Table of Contents
 
@@ -51,6 +51,7 @@ From a technical perspective, monitoring provides:
 ### The Cost of Not Monitoring
 
 Without proper monitoring:
+
 - **Blind Spots**: Issues go undetected until users complain
 - **Reactive Mode**: Always fighting fires instead of preventing them
 - **Resource Waste**: Over-provisioning to compensate for unknown performance
@@ -162,6 +163,7 @@ system_metrics:
 ```
 
 **Why It Matters**: Infrastructure issues often cascade to application problems. Monitoring infrastructure helps identify:
+
 - Resource exhaustion before it impacts users
 - Capacity planning needs
 - Hardware failures
@@ -204,14 +206,15 @@ const synthethicTest = {
     { action: "type", selector: "#username", text: "testuser" },
     { action: "type", selector: "#password", text: "password123" },
     { action: "click", selector: "#login-button" },
-    { action: "assert", selector: "#dashboard", condition: "visible" }
+    { action: "assert", selector: "#dashboard", condition: "visible" },
   ],
   frequency: "5 minutes",
-  locations: ["us-east", "eu-west", "asia-pacific"]
+  locations: ["us-east", "eu-west", "asia-pacific"],
 };
 ```
 
 **Benefits**:
+
 - Detects issues before users report them
 - Tests critical user journeys continuously
 - Provides external perspective on performance
@@ -223,17 +226,19 @@ Collects performance data from actual user sessions:
 
 ```javascript title="public/js/rum-implementation.js"
 // Example RUM implementation
-window.addEventListener('load', function() {
-  const navigationTiming = performance.getEntriesByType('navigation')[0];
+window.addEventListener("load", function () {
+  const navigationTiming = performance.getEntriesByType("navigation")[0];
   const metrics = {
-    pageLoadTime: navigationTiming.loadEventEnd - navigationTiming.navigationStart,
-    domInteractive: navigationTiming.domInteractive - navigationTiming.navigationStart,
-    firstContentfulPaint: performance.getEntriesByType('paint')[0]?.startTime,
+    pageLoadTime:
+      navigationTiming.loadEventEnd - navigationTiming.navigationStart,
+    domInteractive:
+      navigationTiming.domInteractive - navigationTiming.navigationStart,
+    firstContentfulPaint: performance.getEntriesByType("paint")[0]?.startTime,
     timeToInteractive: calculateTTI(),
     userAgent: navigator.userAgent,
-    connectionType: navigator.connection?.effectiveType
+    connectionType: navigator.connection?.effectiveType,
   };
-  
+
   sendMetrics(metrics);
 });
 ```
@@ -269,17 +274,17 @@ backend_metrics:
     - p50: "50th percentile response time"
     - p95: "95th percentile response time"
     - p99: "99th percentile response time"
-  
+
   throughput:
     - requests_per_second
     - transactions_per_minute
     - concurrent_users
-  
+
   error_rates:
     - http_4xx_errors
     - http_5xx_errors
     - business_logic_errors
-  
+
   resource_utilization:
     - cpu_usage
     - memory_consumption
@@ -294,24 +299,24 @@ backend_metrics:
 ```sql title="scripts/database-performance-queries.sql"
 -- Example database performance queries
 -- Query execution time
-SELECT 
+SELECT
   query_text,
   total_exec_time / calls as avg_exec_time,
   calls,
   mean_exec_time
-FROM pg_stat_statements 
-ORDER BY avg_exec_time DESC 
+FROM pg_stat_statements
+ORDER BY avg_exec_time DESC
 LIMIT 10;
 
 -- Connection pool metrics
-SELECT 
+SELECT
   state,
   count(*) as connection_count
-FROM pg_stat_activity 
+FROM pg_stat_activity
 GROUP BY state;
 
 -- Lock monitoring
-SELECT 
+SELECT
   l.locktype,
   l.database,
   l.relation,
@@ -337,6 +342,7 @@ WHERE NOT l.granted;
 ### Pull vs Push Models
 
 #### Pull Model (Prometheus-style):
+
 ```txt
 ┌─────────────┐    HTTP GET     ┌─────────────┐
 │ Monitoring  │ ──────────────► │ Application │
@@ -345,6 +351,7 @@ WHERE NOT l.granted;
 ```
 
 #### Push Model (StatsD-style):
+
 ```txt
 ┌─────────────┐    UDP/TCP      ┌─────────────┐
 │ Application │ ──────────────► │ Monitoring  │
@@ -354,13 +361,13 @@ WHERE NOT l.granted;
 
 #### Comparison:
 
-| Aspect | Pull Model | Push Model |
-|--------|------------|------------|
-| Network | HTTP-based | UDP/TCP |
-| Reliability | Service discovery | Fire-and-forget |
-| Scaling | Horizontal | Vertical |
-| Debugging | Easy to test endpoints | Harder to verify delivery |
-| Firewalls | Requires open ports | Works through NAT |
+| Aspect      | Pull Model             | Push Model                |
+| ----------- | ---------------------- | ------------------------- |
+| Network     | HTTP-based             | UDP/TCP                   |
+| Reliability | Service discovery      | Fire-and-forget           |
+| Scaling     | Horizontal             | Vertical                  |
+| Debugging   | Easy to test endpoints | Harder to verify delivery |
+| Firewalls   | Requires open ports    | Works through NAT         |
 
 <BackToTop />
 
@@ -409,6 +416,7 @@ Modern APM tools offer several key capabilities:
 Prometheus is an open-source monitoring and alerting toolkit designed for reliability and scalability. It was originally built at SoundCloud and is now part of the Cloud Native Computing Foundation (CNCF).
 
 ##### Architecture Overview:
+
 ```txt
 ┌─────────────────────────────────────────────────────────────┐
 │                 Prometheus Architecture                     │
@@ -448,7 +456,7 @@ Prometheus is an open-source monitoring and alerting toolkit designed for reliab
 ```yaml title="config/prometheus.yml"
 # prometheus.yml
 global:
-  scrape_interval: 15s     # How frequently to scrape targets
+  scrape_interval: 15s # How frequently to scrape targets
   evaluation_interval: 15s # How frequently to evaluate rules
 
 # Alertmanager configuration
@@ -456,7 +464,7 @@ alerting:
   alertmanagers:
     - static_configs:
         - targets:
-          - alertmanager:9093
+            - alertmanager:9093
 
 # Load rules and evaluate them according to the global 'evaluation_interval'
 rule_files:
@@ -466,33 +474,33 @@ rule_files:
 # Scrape configuration
 scrape_configs:
   # The job name is added as a label `job=<job_name>` to any timeseries
-  - job_name: 'prometheus'
+  - job_name: "prometheus"
     static_configs:
-      - targets: ['localhost:9090']
+      - targets: ["localhost:9090"]
 
-  - job_name: 'node-exporter'
+  - job_name: "node-exporter"
     static_configs:
-      - targets: ['localhost:9100']
+      - targets: ["localhost:9100"]
 
   # Example application monitoring
-  - job_name: 'my-application'
-    metrics_path: '/metrics'
+  - job_name: "my-application"
+    metrics_path: "/metrics"
     static_configs:
-      - targets: ['app1:8080', 'app2:8080']
-    
+      - targets: ["app1:8080", "app2:8080"]
+
   # Service discovery with consul
-  - job_name: 'consul-services'
+  - job_name: "consul-services"
     consul_sd_configs:
-      - server: 'localhost:8500'
-        services: ['web', 'api', 'database']
+      - server: "localhost:8500"
+        services: ["web", "api", "database"]
 ```
 
 ##### Application instrumentation example:
 
 ```javascript title="src/monitoring/prometheus-instrumentation.js"
 // Node.js application with Prometheus metrics
-const express = require('express');
-const promClient = require('prom-client');
+const express = require("express");
+const promClient = require("prom-client");
 
 // Create a Registry to register the metrics
 const register = new promClient.Registry();
@@ -506,21 +514,21 @@ promClient.collectDefaultMetrics({
 
 // Custom metrics
 const httpRequestDuration = new promClient.Histogram({
-  name: 'http_request_duration_seconds',
-  help: 'Duration of HTTP requests in seconds',
-  labelNames: ['method', 'route', 'status'],
-  buckets: [0.1, 0.3, 0.5, 0.7, 1, 3, 5, 7, 10]
+  name: "http_request_duration_seconds",
+  help: "Duration of HTTP requests in seconds",
+  labelNames: ["method", "route", "status"],
+  buckets: [0.1, 0.3, 0.5, 0.7, 1, 3, 5, 7, 10],
 });
 
 const httpRequestsTotal = new promClient.Counter({
-  name: 'http_requests_total',
-  help: 'Total number of HTTP requests',
-  labelNames: ['method', 'route', 'status']
+  name: "http_requests_total",
+  help: "Total number of HTTP requests",
+  labelNames: ["method", "route", "status"],
 });
 
 const activeConnections = new promClient.Gauge({
-  name: 'active_connections',
-  help: 'Number of active connections'
+  name: "active_connections",
+  help: "Number of active connections",
 });
 
 // Register metrics
@@ -533,27 +541,25 @@ const app = express();
 // Middleware to track metrics
 app.use((req, res, next) => {
   const start = Date.now();
-  
-  res.on('finish', () => {
+
+  res.on("finish", () => {
     const duration = (Date.now() - start) / 1000;
     const route = req.route ? req.route.path : req.path;
-    
+
     httpRequestDuration
       .labels(req.method, route, res.statusCode)
       .observe(duration);
-    
-    httpRequestsTotal
-      .labels(req.method, route, res.statusCode)
-      .inc();
+
+    httpRequestsTotal.labels(req.method, route, res.statusCode).inc();
   });
-  
+
   next();
 });
 
 // Metrics endpoint
-app.get('/metrics', async (req, res) => {
+app.get("/metrics", async (req, res) => {
   try {
-    res.set('Content-Type', register.contentType);
+    res.set("Content-Type", register.contentType);
     res.end(await register.metrics());
   } catch (ex) {
     res.status(500).end(ex);
@@ -625,6 +631,7 @@ predict_linear(disk_usage[4h], 3600)                # Predict disk usage in 1 ho
 Grafana is an open-source platform for monitoring and observability that provides powerful and flexible dashboarding capabilities. It integrates with numerous data sources and offers rich visualization options.
 
 ##### Grafana Ecosystem:
+
 ```txt
 ┌──────────────────────────────────────────────────────────────────┐
 │                    Grafana Ecosystem                             │
@@ -654,6 +661,7 @@ Grafana is an open-source platform for monitoring and observability that provide
 ##### Dashboard Configuration Examples
 
 ###### Data Source Configuration:
+
 ```yaml title="grafana/datasources.yml"
 # grafana/datasources.yml
 apiVersion: 1
@@ -688,6 +696,7 @@ datasources:
 ```
 
 ##### Dashboard JSON Configuration:
+
 ```json title="grafana/dashboards/performance-dashboard.json"
 {
   "dashboard": {
@@ -745,42 +754,46 @@ datasources:
 ```
 
 ##### Advanced Dashboard Features:
+
 ```javascript title="grafana/plugins/custom-panel.js"
 // Custom panel plugin example
-import { PanelPlugin } from '@grafana/data';
-import { SimplePanel } from './SimplePanel';
+import { PanelPlugin } from "@grafana/data";
+import { SimplePanel } from "./SimplePanel";
 
-export const plugin = new PanelPlugin(SimplePanel).setPanelOptions(builder => {
-  return builder
-    .addTextInput({
-      path: 'text',
-      name: 'Simple text option',
-      description: 'Description of panel option',
-      defaultValue: 'Default value',
-    })
-    .addBooleanSwitch({
-      path: 'showSeriesCount',
-      name: 'Show series counter',
-      defaultValue: false,
-    });
-});
+export const plugin = new PanelPlugin(SimplePanel).setPanelOptions(
+  (builder) => {
+    return builder
+      .addTextInput({
+        path: "text",
+        name: "Simple text option",
+        description: "Description of panel option",
+        defaultValue: "Default value",
+      })
+      .addBooleanSwitch({
+        path: "showSeriesCount",
+        name: "Show series counter",
+        defaultValue: false,
+      });
+  }
+);
 ```
 
 ##### Best Practices for Grafana Dashboards
 
 1. **Dashboard Design Principles:**
+
 ```yaml title="config/dashboard-design-principles.yml"
 dashboard_design:
   layout:
     - "Use consistent time ranges across panels"
     - "Group related metrics together"
     - "Place most important metrics at the top"
-  
+
   performance:
     - "Limit number of queries per panel"
     - "Use appropriate time intervals"
     - "Avoid too many data points"
-  
+
   usability:
     - "Use meaningful titles and descriptions"
     - "Add units to metrics"
@@ -789,6 +802,7 @@ dashboard_design:
 ```
 
 2. **Variable Usage:**
+
 ```json title="grafana/templates/variable-usage.json"
 {
   "templating": {
@@ -825,6 +839,7 @@ Log monitoring tools help collect, analyze, and visualize log data from applicat
 The ELK Stack is a powerful combination of three open-source projects that together provide a comprehensive solution for log management and analysis.
 
 ##### ELK Stack Architecture:
+
 ```txt
 ┌─────────────────────────────────────────────────────────────────┐
 │                    ELK Stack Flow                               │
@@ -857,6 +872,7 @@ The ELK Stack is a powerful combination of three open-source projects that toget
 **Elasticsearch** is a distributed search and analytics engine built on Apache Lucene.
 
 **Key Capabilities:**
+
 - **Full-text search** with advanced query capabilities
 - **Real-time analytics** and aggregations
 - **Horizontal scaling** across multiple nodes
@@ -864,6 +880,7 @@ The ELK Stack is a powerful combination of three open-source projects that toget
 - **Machine learning** for anomaly detection
 
 ###### Configuration Example:
+
 ```yaml title="config/elasticsearch.yml"
 # elasticsearch.yml
 cluster.name: production-logs
@@ -918,17 +935,18 @@ cluster.initial_master_nodes: ["node1", "node2", "node3"]
 **Logstash** is a data processing pipeline that ingests, transforms, and outputs data.
 
 ###### Pipeline Configuration:
+
 ```ruby title="config/logstash.conf"
 # logstash.conf
 input {
   beats {
     port => 5044
   }
-  
+
   syslog {
     port => 514
   }
-  
+
   http {
     port => 8080
     codec => json
@@ -939,15 +957,15 @@ filter {
   # Parse application logs
   if [fields][service] == "web-app" {
     grok {
-      match => { 
+      match => {
         "message" => "%{TIMESTAMP_ISO8601:timestamp} %{LOGLEVEL:level} \[%{DATA:thread}\] %{DATA:logger} - %{GREEDYDATA:log_message}"
       }
     }
-    
+
     date {
       match => [ "timestamp", "ISO8601" ]
     }
-    
+
     if [log_message] =~ /response_time:(\d+)/ {
       mutate {
         add_field => { "response_time" => "%{[1]}" }
@@ -957,7 +975,7 @@ filter {
       }
     }
   }
-  
+
   # Parse nginx access logs
   if [fields][log_type] == "nginx" {
     grok {
@@ -965,7 +983,7 @@ filter {
         "message" => '%{IPORHOST:remote_addr} - %{DATA:remote_user} \[%{HTTPDATE:time_local}\] "%{WORD:method} %{DATA:request} HTTP/%{NUMBER:http_version}" %{INT:status} %{INT:body_bytes_sent} "%{DATA:http_referer}" "%{DATA:http_user_agent}" %{NUMBER:request_time}'
       }
     }
-    
+
     mutate {
       convert => {
         "status" => "integer"
@@ -974,7 +992,7 @@ filter {
       }
     }
   }
-  
+
   # Enrich with GeoIP
   if [remote_addr] {
     geoip {
@@ -982,7 +1000,7 @@ filter {
       target => "geoip"
     }
   }
-  
+
   # Add common fields
   mutate {
     add_field => {
@@ -998,7 +1016,7 @@ output {
     index => "%{[fields][service]}-%{+YYYY.MM.dd}"
     template_name => "app-logs"
   }
-  
+
   # For debugging
   if [@metadata][debug] {
     stdout {
@@ -1015,6 +1033,7 @@ output {
 **Kibana** provides visualization and exploration capabilities for Elasticsearch data.
 
 **Key Features:**
+
 - **Discover**: Explore and search through log data
 - **Visualize**: Create charts, graphs, and other visualizations
 - **Dashboard**: Combine visualizations into comprehensive dashboards
@@ -1023,6 +1042,7 @@ output {
 - **Machine Learning**: Anomaly detection and forecasting
 
 ###### Dashboard Configuration:
+
 ```json title="kibana/dashboards/performance-dashboard.json"
 {
   "version": "7.15.0",
@@ -1056,6 +1076,7 @@ output {
 ##### Advanced ELK Features
 
 ###### Index Lifecycle Management (ILM):
+
 ```json title="elasticsearch/policies/ilm-policy.json"
 {
   "policy": {
@@ -1114,6 +1135,7 @@ output {
 Fluentd is an open-source data collector that provides a unified logging layer between data sources and destinations.
 
 ##### Fluentd Architecture:
+
 ```txt
 ┌────────────────────────────────────────────────────────────────┐
 │                  Fluentd Architecture                          │
@@ -1149,6 +1171,7 @@ Fluentd is an open-source data collector that provides a unified logging layer b
 ##### Configuration Examples
 
 ###### Basic Fluentd Configuration:
+
 ```ruby title="config/fluent.conf"
 # fluent.conf
 
@@ -1247,7 +1270,7 @@ Fluentd is an open-source data collector that provides a unified logging layer b
       flush_interval 10s
     </buffer>
   </store>
-  
+
   <store>
     @type s3
     aws_key_id YOUR_AWS_KEY_ID
@@ -1282,9 +1305,10 @@ Fluentd is an open-source data collector that provides a unified logging layer b
 ```
 
 ##### Docker Deployment:
+
 ```yaml title="docker/docker-compose.fluentd.yml"
 # docker-compose.yml for Fluentd
-version: '3.8'
+version: "3.8"
 services:
   fluentd:
     image: fluent/fluentd:v1.14-debian
@@ -1308,37 +1332,38 @@ volumes:
 <BackToTop />
 
 ##### Application Integration:
+
 ```javascript title="src/logging/fluentd-integration.js"
 // Node.js application with Fluentd logging
-const winston = require('winston');
-require('winston-fluentd').Fluentd;
+const winston = require("winston");
+require("winston-fluentd").Fluentd;
 
 const logger = winston.createLogger({
   transports: [
-    new winston.transports.Fluentd('myapp.api', {
-      host: 'fluentd-server',
+    new winston.transports.Fluentd("myapp.api", {
+      host: "fluentd-server",
       port: 24224,
       timeout: 3.0,
-      requireAckResponse: true
+      requireAckResponse: true,
     }),
     new winston.transports.Console({
-      format: winston.format.simple()
-    })
-  ]
+      format: winston.format.simple(),
+    }),
+  ],
 });
 
 // Usage
-logger.info('User login', {
+logger.info("User login", {
   user_id: 12345,
-  ip_address: '192.168.1.100',
-  user_agent: 'Mozilla/5.0...',
-  response_time: 150
+  ip_address: "192.168.1.100",
+  user_agent: "Mozilla/5.0...",
+  response_time: 150,
 });
 
-logger.error('Database connection failed', {
-  error: 'Connection timeout',
-  database: 'primary',
-  retry_count: 3
+logger.error("Database connection failed", {
+  error: "Connection timeout",
+  database: "primary",
+  retry_count: 3,
 });
 ```
 
@@ -1347,6 +1372,7 @@ logger.error('Database connection failed', {
 ##### Performance Tuning
 
 ###### High-Throughput Configuration:
+
 ```ruby title="config/fluent-high-performance.conf"
 # High-performance configuration
 <system>
@@ -1410,6 +1436,7 @@ Infrastructure monitoring tools focus on system resources, network performance, 
 New Relic is a comprehensive observability platform that provides monitoring for applications, infrastructure, and digital customer experiences. It offers real-time insights into performance across the entire technology stack.
 
 ##### New Relic Ecosystem:
+
 ```txt
 ┌───────────────────────────────────────────────────────────────┐
 │                 New Relic Platform                            │
@@ -1444,85 +1471,87 @@ New Relic is a comprehensive observability platform that provides monitoring for
 ##### Implementation Examples
 
 ###### APM Agent Installation:
+
 ```javascript title="config/newrelic.js"
 // newrelic.js configuration file
-'use strict'
+"use strict";
 
 exports.config = {
-  app_name: ['My Application'],
-  license_key: 'your-license-key',
-  
+  app_name: ["My Application"],
+  license_key: "your-license-key",
+
   // Logging configuration
   logging: {
-    level: 'info'
+    level: "info",
   },
-  
+
   // Performance monitoring settings
   allow_all_headers: true,
   attributes: {
     exclude: [
-      'request.headers.cookie',
-      'request.headers.authorization',
-      'request.headers.proxyAuthorization',
-    ]
+      "request.headers.cookie",
+      "request.headers.authorization",
+      "request.headers.proxyAuthorization",
+    ],
   },
-  
+
   // Distributed tracing
   distributed_tracing: {
-    enabled: true
+    enabled: true,
   },
-  
+
   // Browser monitoring
   browser_monitoring: {
-    enable: true
+    enable: true,
   },
-  
+
   // Database configuration
   database_name_reporting: {
-    enabled: true
+    enabled: true,
   },
   datastore_tracer: {
     instance_reporting: {
-      enabled: true
+      enabled: true,
     },
     database_name_reporting: {
-      enabled: true
-    }
-  }
-}
+      enabled: true,
+    },
+  },
+};
 
 // Application entry point
-require('newrelic');
-const express = require('express');
-const newrelic = require('newrelic');
+require("newrelic");
+const express = require("express");
+const newrelic = require("newrelic");
 
 const app = express();
 
 // Custom metrics
 app.use((req, res, next) => {
   // Record custom metric
-  newrelic.recordMetric('Custom/API/RequestCount', 1);
-  
+  newrelic.recordMetric("Custom/API/RequestCount", 1);
+
   // Add custom attributes
   newrelic.addCustomAttributes({
-    'user.id': req.user?.id,
-    'request.path': req.path,
-    'request.method': req.method
+    "user.id": req.user?.id,
+    "request.path": req.path,
+    "request.method": req.method,
   });
-  
+
   next();
 });
 
 // Error tracking
 app.use((err, req, res, next) => {
   newrelic.noticeError(err);
-  res.status(500).send('Something broke!');
+  res.status(500).send("Something broke!");
 });
 ```
 
 <BackToTop />
 
 ##### Infrastructure Agent Configuration:
+
 ```yaml title="config/newrelic-infra.yml"
 # newrelic-infra.yml
 license_key: your-license-key
@@ -1545,7 +1574,7 @@ integrations:
       status_url: http://127.0.0.1/server-status?auto
       metrics: true
       inventory: true
-  
+
   - name: nri-mysql
     config:
       hostname: localhost
@@ -1555,7 +1584,7 @@ integrations:
       database: mysql
       metrics: true
       inventory: true
-  
+
   - name: nri-redis
     config:
       hostname: localhost
@@ -1567,6 +1596,7 @@ integrations:
 <BackToTop />
 
 ##### Custom Dashboard Configuration:
+
 ```json title="newrelic/dashboards/application-performance.json"
 {
   "dashboard": {
@@ -1623,43 +1653,44 @@ integrations:
 ##### Advanced Features
 
 ###### Custom Instrumentation:
+
 ```javascript title="src/monitoring/newrelic-custom-instrumentation.js"
-const newrelic = require('newrelic');
+const newrelic = require("newrelic");
 
 // Custom transaction
 function processOrder(orderData) {
-  return newrelic.startWebTransaction('/api/orders/process', function() {
+  return newrelic.startWebTransaction("/api/orders/process", function () {
     const startTime = Date.now();
-    
+
     // Create custom segment
-    return newrelic.startSegment('order-validation', true, function() {
+    return newrelic.startSegment("order-validation", true, function () {
       validateOrder(orderData);
-      
+
       // Record custom metrics
       const processingTime = Date.now() - startTime;
-      newrelic.recordMetric('Custom/Order/ProcessingTime', processingTime);
-      
+      newrelic.recordMetric("Custom/Order/ProcessingTime", processingTime);
+
       // Add custom events
-      newrelic.recordCustomEvent('OrderProcessed', {
+      newrelic.recordCustomEvent("OrderProcessed", {
         orderId: orderData.id,
         customerId: orderData.customerId,
         amount: orderData.amount,
-        processingTime: processingTime
+        processingTime: processingTime,
       });
-      
+
       return processPayment(orderData);
     });
   });
 }
 
 // Database query instrumentation
-const mysql = require('mysql');
+const mysql = require("mysql");
 const connection = mysql.createConnection(config);
 
 function getUserData(userId) {
-  return newrelic.startSegment('database-query', true, function() {
+  return newrelic.startSegment("database-query", true, function () {
     return new Promise((resolve, reject) => {
-      const query = 'SELECT * FROM users WHERE id = ?';
+      const query = "SELECT * FROM users WHERE id = ?";
       connection.query(query, [userId], (error, results) => {
         if (error) {
           newrelic.noticeError(error);
@@ -1686,6 +1717,7 @@ function getUserData(userId) {
 Datadog is a comprehensive monitoring and analytics platform that provides observability across applications, infrastructure, and logs. It offers real-time monitoring with advanced alerting and collaboration features.
 
 ##### Datadog Architecture:
+
 ```txt
 ┌───────────────────────────────────────────────────────────────┐
 │                      Datadog Platform                         │
@@ -1736,6 +1768,7 @@ Datadog is a comprehensive monitoring and analytics platform that provides obser
 ##### Implementation Examples
 
 ###### Agent Configuration:
+
 ```yaml title="config/datadog.yaml"
 # datadog.yaml
 api_key: your-api-key
@@ -1753,24 +1786,24 @@ tags:
 logs_enabled: true
 logs_config:
   container_collect_all: true
-  
+
 # APM
 apm_config:
   enabled: true
   env: production
-  
+
 # Process monitoring
 process_config:
   enabled: true
-  
+
 # Network monitoring
 network_config:
   enabled: true
-  
+
 # System probe
 system_probe_config:
   enabled: true
-  
+
 # Integrations
 init_config:
 instances:
@@ -1796,89 +1829,91 @@ class CustomCheck(AgentCheck):
         # Custom metric collection
         self.gauge('custom.metric.value', 42, tags=['custom:tag'])
         self.increment('custom.metric.counter')
-        
+
         # Service check
         self.service_check('custom.service.status', AgentCheck.OK)
 ```
 
 ###### Application Instrumentation:
+
 ```javascript title="src/monitoring/datadog-instrumentation.js"
 // Node.js APM setup
-const tracer = require('dd-trace').init({
-  service: 'web-application',
-  env: 'production',
-  version: '1.2.3',
-  
+const tracer = require("dd-trace").init({
+  service: "web-application",
+  env: "production",
+  version: "1.2.3",
+
   // Sampling configuration
   sampleRate: 1.0,
   runtimeMetrics: true,
-  
+
   // Plugin configuration
   plugins: {
     express: {
       hooks: {
         request: (span, req, res) => {
-          span.setTag('user.id', req.user?.id);
-          span.setTag('request.size', req.headers['content-length']);
-        }
-      }
+          span.setTag("user.id", req.user?.id);
+          span.setTag("request.size", req.headers["content-length"]);
+        },
+      },
     },
     mysql: {
-      service: 'mysql-db'
+      service: "mysql-db",
     },
     redis: {
-      service: 'redis-cache'
-    }
-  }
+      service: "redis-cache",
+    },
+  },
 });
 
 // Custom instrumentation
-const express = require('express');
+const express = require("express");
 const app = express();
 
 app.use((req, res, next) => {
   const span = tracer.scope().active();
-  
+
   // Add custom tags
-  span.setTag('http.url', req.url);
-  span.setTag('http.method', req.method);
-  span.setTag('user.type', req.user?.type);
-  
+  span.setTag("http.url", req.url);
+  span.setTag("http.method", req.method);
+  span.setTag("user.type", req.user?.type);
+
   // Custom metrics
-  tracer.dogstatsd.increment('api.requests', 1, {
+  tracer.dogstatsd.increment("api.requests", 1, {
     endpoint: req.route?.path || req.path,
-    method: req.method
+    method: req.method,
   });
-  
+
   const start = Date.now();
-  res.on('finish', () => {
+  res.on("finish", () => {
     const duration = Date.now() - start;
-    tracer.dogstatsd.histogram('api.request.duration', duration, {
+    tracer.dogstatsd.histogram("api.request.duration", duration, {
       endpoint: req.route?.path || req.path,
-      status: res.statusCode
+      status: res.statusCode,
     });
   });
-  
+
   next();
 });
 
 // Error tracking
 app.use((err, req, res, next) => {
   const span = tracer.scope().active();
-  span.setTag('error', true);
-  span.setTag('error.msg', err.message);
-  span.setTag('error.type', err.constructor.name);
-  
-  tracer.dogstatsd.increment('api.errors', 1, {
+  span.setTag("error", true);
+  span.setTag("error.msg", err.message);
+  span.setTag("error.type", err.constructor.name);
+
+  tracer.dogstatsd.increment("api.errors", 1, {
     error_type: err.constructor.name,
-    endpoint: req.route?.path || req.path
+    endpoint: req.route?.path || req.path,
   });
-  
+
   next(err);
 });
 ```
 
 ###### Dashboard as Code:
+
 ```json title="datadog/dashboards/application-performance.json"
 {
   "title": "Application Performance Dashboard",
@@ -1955,6 +1990,7 @@ app.use((err, req, res, next) => {
 ```
 
 ###### Monitor Configuration:
+
 ```json title="datadog/monitors/error-rate-alert.json"
 {
   "name": "High Error Rate Alert",
@@ -1981,6 +2017,7 @@ app.use((err, req, res, next) => {
 ##### Advanced Monitoring Patterns
 
 ###### Service Level Objectives (SLOs):
+
 ```json title="datadog/slos/api-availability.json"
 {
   "name": "API Availability SLO",
@@ -2027,6 +2064,7 @@ Modern cloud-native applications require specialized monitoring approaches that 
 Monitoring Kubernetes clusters requires understanding of both the infrastructure layer (nodes, pods, containers) and the application layer (services, workloads).
 
 ##### Kubernetes Monitoring Stack:
+
 ```txt
 ┌─────────────────────────────────────────────────────────────┐
 │                 Kubernetes Monitoring                       │
@@ -2055,6 +2093,7 @@ Monitoring Kubernetes clusters requires understanding of both the infrastructure
 ```
 
 ##### Monitoring Configuration:
+
 ```yaml title="k8s/monitoring/prometheus-config.yaml"
 # Prometheus configuration for Kubernetes
 apiVersion: v1
@@ -2067,10 +2106,10 @@ data:
     global:
       scrape_interval: 15s
       evaluation_interval: 15s
-    
+
     rule_files:
       - "kubernetes-alerts.yml"
-    
+
     scrape_configs:
       # Kubernetes API server
       - job_name: 'kubernetes-apiservers'
@@ -2190,6 +2229,7 @@ data:
 <BackToTop />
 
 ##### Application Monitoring in Kubernetes:
+
 ```yaml title="k8s/apps/web-app-monitoring.yaml"
 # Service with monitoring annotations
 apiVersion: v1
@@ -2232,32 +2272,32 @@ spec:
         prometheus.io/path: "/metrics"
     spec:
       containers:
-      - name: web-app
-        image: web-app:latest
-        ports:
-        - containerPort: 8080
-        env:
-        - name: METRICS_ENABLED
-          value: "true"
-        resources:
-          requests:
-            memory: "256Mi"
-            cpu: "250m"
-          limits:
-            memory: "512Mi"
-            cpu: "500m"
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 8080
-          initialDelaySeconds: 30
-          periodSeconds: 10
-        readinessProbe:
-          httpGet:
-            path: /ready
-            port: 8080
-          initialDelaySeconds: 5
-          periodSeconds: 5
+        - name: web-app
+          image: web-app:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: METRICS_ENABLED
+              value: "true"
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
 ```
 
 #### Service Mesh Monitoring
@@ -2265,6 +2305,7 @@ spec:
 Service meshes like Istio provide additional observability capabilities for microservices communication.
 
 ##### Istio Monitoring Architecture:
+
 ```txt
 ┌─────────────────────────────────────────────────────────────┐
 │                  Istio Service Mesh                         │
@@ -2296,6 +2337,7 @@ Service meshes like Istio provide additional observability capabilities for micr
 <BackToTop />
 
 ##### Istio Telemetry Configuration:
+
 ```yaml title="istio/telemetry/istio-operator.yaml"
 # Telemetry v2 configuration
 apiVersion: install.istio.io/v1alpha1
@@ -2310,21 +2352,21 @@ spec:
         prometheus:
           configOverride:
             metric_relabeling_configs:
-            - source_labels: [__name__]
-              target_label: __name__
-              regex: 'istio_(.*)'
-              replacement: '${1}'
+              - source_labels: [__name__]
+                target_label: __name__
+                regex: "istio_(.*)"
+                replacement: "${1}"
   meshConfig:
     extensionProviders:
-    - name: jaeger
-      envoyExtAuthzHttp:
-        service: jaeger-collector.istio-system.svc.cluster.local
-        port: 14268
-        pathPrefix: /api/traces
-    - name: prometheus
-      prometheus:
-        configOverride:
-          disable_host_header_fallback: true
+      - name: jaeger
+        envoyExtAuthzHttp:
+          service: jaeger-collector.istio-system.svc.cluster.local
+          port: 14268
+          pathPrefix: /api/traces
+      - name: prometheus
+        prometheus:
+          configOverride:
+            disable_host_header_fallback: true
 
 ---
 # Custom telemetry configuration
@@ -2335,26 +2377,26 @@ metadata:
   namespace: istio-system
 spec:
   metrics:
-  - providers:
-    - name: prometheus
-  - overrides:
-    - match:
-        metric: ALL_METRICS
-      tagOverrides:
-        request_protocol:
-          value: "http"
-    - match:
-        metric: REQUEST_COUNT
-      disabled: false
-    - match:
-        metric: REQUEST_DURATION
-      disabled: false
-    - match:
-        metric: REQUEST_SIZE
-      disabled: false
-    - match:
-        metric: RESPONSE_SIZE
-      disabled: false
+    - providers:
+        - name: prometheus
+    - overrides:
+        - match:
+            metric: ALL_METRICS
+          tagOverrides:
+            request_protocol:
+              value: "http"
+        - match:
+            metric: REQUEST_COUNT
+          disabled: false
+        - match:
+            metric: REQUEST_DURATION
+          disabled: false
+        - match:
+            metric: REQUEST_SIZE
+          disabled: false
+        - match:
+            metric: RESPONSE_SIZE
+          disabled: false
 
 ---
 # Distributed tracing configuration
@@ -2365,17 +2407,17 @@ metadata:
   namespace: istio-system
 spec:
   tracing:
-  - providers:
-    - name: jaeger
-  - customTags:
-      custom_header:
-        header:
-          name: custom-header
-          defaultValue: "unknown"
-      user_agent:
-        header:
-          name: user-agent
-          defaultValue: "unknown"
+    - providers:
+        - name: jaeger
+    - customTags:
+        custom_header:
+          header:
+            name: custom-header
+            defaultValue: "unknown"
+        user_agent:
+          header:
+            name: user-agent
+            defaultValue: "unknown"
 ```
 
 ##### Resources
