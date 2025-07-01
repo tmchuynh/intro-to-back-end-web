@@ -4,25 +4,6 @@ import BackToTop from "@/components/BackToTop";
 
 ## Table of Contents
 
-- [Overview](#overview)
-- [pgBackRest](#pgbackrest)
-- [Barman](#barman)
-- [pg_dump](#pg_dump)
-- [pg_restore](#pg_restore)
-- [pg_dumpall](#pg_dumpall)
-- [mongodump](#mongodump)
-- [mongorestore](#mongorestore)
-- [mysqldump](#mysqldump)
-- [Redis Backup Tools](#redis-backup-tools)
-- [Percona XtraBackup](#percona-xtrabackup)
-- [WAL-E / WAL-G](#wal-e--wal-g)
-- [Restic](#restic)
-- [Borg Backup](#borg-backup)
-- [Bacula](#bacula)
-- [Amanda](#amanda)
-- [Cloud-Specific Backup Tools](#cloud-specific-backup-tools)
-- [Best Practices for Database Backups](#best-practices-for-database-backups)
-
 ## Overview
 
 Backup and recovery tools are essential for ensuring data integrity and availability in case of failures or disasters. They help in creating backups of databases, restoring them when needed, and managing data loss scenarios effectively.
@@ -113,6 +94,7 @@ barman recover myserver 20231201T120000 /path/to/recovery
 - [Barman Quick Start Guide](http://docs.pgbarman.org/quickstart.html)
 - [PostgreSQL Backup and Recovery with Barman](http://docs.pgbarman.org/tutorial.html)
 
+<BackToTop />
 ## pg_dump
 
 pg_dump is a utility for backing up PostgreSQL databases. It creates a logical backup by generating SQL scripts that can be used to recreate the database schema and data. pg_dump supports various output formats, including plain text, custom, and directory formats, allowing flexibility in backup storage.
@@ -145,6 +127,7 @@ pg_dump -Fd mydb -f mydb_backup_dir
 - [pg_dump Documentation](https://www.postgresql.org/docs/current/app-pgdump.html)
 - [PostgreSQL Backup Guide](https://www.postgresql.org/docs/current/backup.html)
 
+<BackToTop />
 ## pg_restore
 
 pg_restore is a utility for restoring PostgreSQL databases from backups created by pg_dump. It can restore databases in various formats, including custom and directory formats. pg_restore allows selective restoration of database objects, such as tables or schemas, providing flexibility in recovery operations.
@@ -177,6 +160,8 @@ pg_restore -d mydb_restored mydb_backup.dump
 
 - [pg_restore Documentation](https://www.postgresql.org/docs/current/app-pgrestore.html)
 
+<BackToTop />
+
 ## pg_dumpall
 
 pg_dumpall is a utility for backing up all PostgreSQL databases in a cluster. It creates a single SQL script that contains the schema and data for all databases, including global objects like roles and tablespaces. pg_dumpall is useful for creating comprehensive backups of an entire PostgreSQL instance.
@@ -207,6 +192,8 @@ pg_dumpall | gzip > cluster_backup.sql.gz
 ### Documentation
 
 - [pg_dumpall Documentation](https://www.postgresql.org/docs/current/app-pg-dumpall.html)
+
+<BackToTop />
 
 ## mongodump
 
@@ -242,6 +229,8 @@ mongodump --username admin --password secret --authenticationDatabase admin
 - [mongodump Documentation](https://docs.mongodb.com/database-tools/mongodump/)
 - [MongoDB Backup Methods](https://docs.mongodb.com/manual/core/backups/)
 
+<BackToTop />
+
 ## mongorestore
 
 mongorestore is the companion utility to mongodump for restoring MongoDB databases from BSON backups. It can restore entire databases, specific collections, or filtered documents based on queries.
@@ -272,6 +261,8 @@ mongorestore --gzip /backup/path
 ### Documentation
 
 - [mongorestore Documentation](https://docs.mongodb.com/database-tools/mongorestore/)
+
+<BackToTop />
 
 ## mysqldump
 
@@ -306,6 +297,8 @@ mysqldump -u root -p --no-create-info mydb > mydb_data.sql
 
 - [mysqldump Documentation](https://dev.mysql.com/doc/refman/8.0/en/mysqldump.html)
 - [MySQL Backup Strategies](https://dev.mysql.com/doc/refman/8.0/en/backup-methods.html)
+
+<BackToTop />
 
 ## Redis Backup Tools
 
@@ -344,6 +337,8 @@ redis-cli SAVE
 
 - [Redis Persistence Documentation](https://redis.io/topics/persistence)
 - [Redis BGSAVE Command](https://redis.io/commands/bgsave)
+
+<BackToTop />
 
 ## Percona XtraBackup
 
@@ -384,6 +379,8 @@ xtrabackup --copy-back --target-dir=/backup/full
 
 - [Percona XtraBackup Documentation](https://docs.percona.com/percona-xtrabackup/)
 - [XtraBackup User Manual](https://docs.percona.com/percona-xtrabackup/8.0/index.html)
+
+<BackToTop />
 
 ## WAL-E / WAL-G
 
@@ -426,6 +423,8 @@ wal-g backup-fetch /path/to/restore LATEST
 - [WAL-G Documentation](https://github.com/wal-g/wal-g)
 - [PostgreSQL WAL Archiving Guide](https://www.postgresql.org/docs/current/continuous-archiving.html)
 
+<BackToTop />
+
 ## Restic
 
 Restic is a modern backup program that is fast, secure, and efficient. While not database-specific, it's excellent for backing up database files, configuration files, and creating comprehensive system backups with deduplication and encryption.
@@ -465,6 +464,8 @@ restic check --repo /backup/repo
 
 - [Restic Documentation](https://restic.readthedocs.io/)
 - [Restic GitHub Repository](https://github.com/restic/restic)
+
+<BackToTop />
 
 ## Borg Backup
 
@@ -506,6 +507,8 @@ borg prune /path/to/repo --keep-daily=7 --keep-weekly=4 --keep-monthly=12
 - [BorgBackup Documentation](https://borgbackup.readthedocs.io/)
 - [BorgBackup Quick Start](https://borgbackup.readthedocs.io/en/stable/quickstart.html)
 
+<BackToTop />
+
 ## Bacula
 
 Bacula is an enterprise-grade network backup solution that can backup, restore, and verify data across heterogeneous networks. It's particularly useful for large-scale database backup scenarios requiring centralized management.
@@ -543,6 +546,8 @@ sudo bconsole
 - [Bacula Documentation](https://www.bacula.org/documentation/)
 - [Bacula Main Reference Manual](https://www.bacula.org/9.6.x-manuals/en/main/main.html)
 
+<BackToTop />
+
 ## Amanda
 
 Amanda (Advanced Maryland Automatic Network Disk Archiver) is a backup solution that can back up data residing on multiple computers on a network. It's designed for enterprise environments requiring centralized backup management.
@@ -579,6 +584,8 @@ sudo amstatus DailySet1
 
 - [Amanda Documentation](http://wiki.zmanda.com/index.php/Documentation)
 - [Amanda Quick Start Guide](http://wiki.zmanda.com/index.php/Quick_Start)
+
+<BackToTop />
 
 ## Cloud-Specific Backup Tools
 
