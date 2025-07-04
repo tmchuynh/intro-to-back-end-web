@@ -50,7 +50,6 @@ const rehypeExpressiveCodeOptions = {
         preserveIndent: false,
         frame: "none",
         showLineNumbers: false,
-        preserveIndent: false,
       },
       bash: {
         preserveIndent: false, // Disable indentation for bash scripts
